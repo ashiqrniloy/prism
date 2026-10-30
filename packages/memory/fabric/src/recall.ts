@@ -1,25 +1,28 @@
-import { type Memory } from "@arnilo/prism-memory-core";
-import { parseMemoryNoteMetadata, isMemoryNoteValidAt } from "./types.js";
-import { isActiveNote } from "./lifecycle/index.js";
-import { MemoryValidationError } from "@arnilo/prism-memory-core";
-import { HARD_TOP_K_CAP, resolveMemoryLimits, type MemoryLimits } from "@arnilo/prism-memory-core";
-import { RECALL_OVERSAMPLE } from "@arnilo/prism-memory-core";
 import type { MemoryVectorHit, MemoryVectorRecord, RecallScoringOptions } from "@arnilo/prism-memory-core";
-import { ARCHIVE_SEARCH_COVERAGE, MAX_ARCHIVED_HITS } from "./lifecycle/index.js";
+import {
+  HARD_TOP_K_CAP,
+  type Memory,
+  type MemoryLimits,
+  MemoryValidationError,
+  RECALL_OVERSAMPLE,
+  resolveMemoryLimits,
+} from "@arnilo/prism-memory-core";
+import { ARCHIVE_SEARCH_COVERAGE, isActiveNote, MAX_ARCHIVED_HITS } from "./lifecycle/index.js";
 import {
   baseScore,
   DEFAULT_SCOPE_PRIORS,
+  type ScopeCandidateLoader,
   scopeOf,
   selectWithScopeReserve,
   shadowedExplain,
-  type ScopeCandidateLoader,
 } from "./scope/recall.js";
 import {
+  type CreateMemoryFabricOptions,
   DEFAULT_RECALL_KINDS,
   estimateNoteTokens,
   isMemoryNoteKind,
+  isMemoryNoteValidAt,
   MEMORY_NOTE_KINDS,
-  noteFields,
   type MemoryFabric,
   type MemoryFabricExplainEntry,
   type MemoryFabricRecallOptions,
@@ -27,6 +30,8 @@ import {
   type MemoryNoteHit,
   type MemoryNoteKind,
   type MemoryNoteMetadata,
+  noteFields,
+  parseMemoryNoteMetadata,
 } from "./types.js";
 
 /** A recalled row plus its parsed fabric metadata (kind and validity already checked). */
@@ -102,13 +107,17 @@ function verifiedFirst(chosen: readonly ChosenHit[]): ChosenHit[] {
     let end = start + 1;
     while (end < chosen.length && chosen[end]!.candidate.hit.score === chosen[start]!.candidate.hit.score) end += 1;
     const run = chosen.slice(start, end);
-    out.push(...run.filter(({ candidate }) => candidate.metadata.status !== "candidate"), ...run.filter(({ candidate }) => candidate.metadata.status === "candidate"));
+    out.push(
+      ...run.filter(({ candidate }) => candidate.metadata.status !== "candidate"),
+      ...run.filter(({ candidate }) => candidate.metadata.status === "candidate"),
+    );
     start = end;
   }
   return out;
 }
 
 export function createFabricRecall(deps: {
+  readonly onRecall?: CreateMemoryFabricOptions["onRecall"];
   readonly loadCandidates: ScopeCandidateLoader;
   readonly limits: MemoryLimits;
   readonly memory: Memory;
@@ -153,7 +162,12 @@ export function createFabricRecall(deps: {
   }
 
   return async function recall(query: string, recallOptions: MemoryFabricRecallOptions = {}): Promise<MemoryFabricRecallResult> {
-    if (recallOptions.tRef && (!Number.isFinite(Date.parse(recallOptions.tRef.from)) || !Number.isFinite(Date.parse(recallOptions.tRef.to)) || Date.parse(recallOptions.tRef.from) >= Date.parse(recallOptions.tRef.to))) {
+    if (
+      recallOptions.tRef &&
+      (!Number.isFinite(Date.parse(recallOptions.tRef.from)) ||
+        !Number.isFinite(Date.parse(recallOptions.tRef.to)) ||
+        Date.parse(recallOptions.tRef.from) >= Date.parse(recallOptions.tRef.to))
+    ) {
       throw new MemoryValidationError("tRef must be a valid increasing timestamp interval");
     }
     const kinds = resolveRecallKinds(recallOptions.kinds);
@@ -172,7 +186,7 @@ export function createFabricRecall(deps: {
     );
     const candidates = loaded.candidates;
 
-    const eligible = candidates.filter(candidate => {
+    const eligible = candidates.filter((candidate) => {
       if (!recallOptions.tRef) return true;
       const time = candidate.metadata.tRef ?? candidate.hit.createdAt;
       return Date.parse(time) >= Date.parse(recallOptions.tRef.from) && Date.parse(time) < Date.parse(recallOptions.tRef.to);
@@ -180,7 +194,9 @@ export function createFabricRecall(deps: {
     const chosen = new Map<string, ChosenHit>();
     for (const candidate of eligible.slice(0, topK)) chosen.set(candidate.hit.id, { candidate, link: false });
 
-    const ids = [...new Set([...chosen.values()].flatMap(({ candidate }) => (candidate.metadata.links ?? []).map(link => link.id)))].filter(id => !chosen.has(id)).slice(0, topK);
+    const ids = [...new Set([...chosen.values()].flatMap(({ candidate }) => (candidate.metadata.links ?? []).map((link) => link.id)))]
+      .filter((id) => !chosen.has(id))
+      .slice(0, topK);
     const linked = ids.length
       ? deps.getNotes === undefined
         ? await deps.memory.get(ids, { signal: recallOptions.signal })
@@ -189,7 +205,13 @@ export function createFabricRecall(deps: {
     const byId = new Map<string, FabricCandidate>();
     for (const record of linked) {
       const metadata = parseMemoryNoteMetadata(record.metadata);
-      if (!metadata || !kinds.has(metadata.kind) || !isMemoryNoteValidAt(metadata, asOfMs) || !isActiveNote(metadata, { asOfMs, allowCandidate: true })) continue;
+      if (
+        !metadata ||
+        !kinds.has(metadata.kind) ||
+        !isMemoryNoteValidAt(metadata, asOfMs) ||
+        !isActiveNote(metadata, { asOfMs, allowCandidate: true })
+      )
+        continue;
       if (recallOptions.tRef) {
         const time = metadata.tRef ?? record.createdAt;
         if (Date.parse(time) < Date.parse(recallOptions.tRef.from) || Date.parse(time) >= Date.parse(recallOptions.tRef.to)) continue;
@@ -251,9 +273,29 @@ export function createFabricRecall(deps: {
       const { candidate, link } = item;
       const hit = toHit(candidate);
       hits.push(hit);
-      explain.push({ ...toExplain(candidate.hit, link), ...(candidate.metadata.links === undefined ? {} : { links: candidate.metadata.links }) });
+      explain.push({
+        ...toExplain(candidate.hit, link),
+        ...(candidate.metadata.links === undefined ? {} : { links: candidate.metadata.links }),
+      });
     }
     explain.push(...shadowedExplain(loaded.shadowed, deps.priors ?? DEFAULT_SCOPE_PRIORS, recallOptions.touchedPaths ?? []));
+    // Observers are diagnostic only: a broken observer must not break a recall.
+    try {
+      deps.onRecall?.({
+        query,
+        options: recallOptions,
+        candidates: [
+          ...new Map(
+            [...eligible, ...ranked.map((item) => item.candidate)].map(
+              (candidate) => [candidate.hit.id, { id: candidate.hit.id, score: candidate.hit.score }] as const,
+            ),
+          ).values(),
+        ],
+        returnedIds: hits.map((hit) => hit.id),
+      });
+    } catch {
+      /* Diagnostic observers cannot affect retrieval. */
+    }
     return { hits, explain };
   };
 }

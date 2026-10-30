@@ -1,0 +1,3543 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 2,
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "usageSource": "wire-proxy",
+  "phase": "all",
+  "labelInjections": "off",
+  "concurrency": 1,
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 8192
+  },
+  "freeOnly": false,
+  "boundedWire": true,
+  "writeGeneration": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "generatedAt": "2026-10-29T18:24:14.005Z",
+  "suite": "locomo",
+  "subset": "dev",
+  "ability": null,
+  "seed": null,
+  "config": "lexical-topk",
+  "ingestion": "none",
+  "embeddings": null,
+  "provider": "commandcode",
+  "model": "meta/muse-spark-1.3-contributor",
+  "judge": "commandcode/minimax/minimax-m3.1-flash",
+  "judgePanel": [
+    "commandcode/minimax/minimax-m3.1-flash",
+    "commandcode/z-ai/glm-5.3-flash"
+  ],
+  "judgeCalibration": null,
+  "repeats": 1,
+  "judgeProtocol": "plain-text-v1",
+  "dataset": {
+    "file": "locomo.json",
+    "bytes": 2805274,
+    "sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+    "license": "CC BY-NC 4.0 (noncommercial)",
+    "url": "https://raw.githubusercontent.com/snap-research/locomo/3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376/data/locomo10.json",
+    "licenseUrl": "https://github.com/snap-research/locomo/blob/3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376/LICENSE.txt"
+  },
+  "maxInputTokens": 10000000,
+  "ablations": [],
+  "sourceVariants": [],
+  "sourceRevision": "5c2570df52a084b43120ee4e77921746a029480e",
+  "protocol": {
+    "answerAttempts": 3,
+    "answerBackoffMs": [
+      2000,
+      10000
+    ],
+    "judgeAttempts": 8,
+    "judgeBackoffMs": [
+      1000,
+      2000
+    ],
+    "maxTurns": 8
+  },
+  "memoryConfig": {
+    "observational": null,
+    "fabric": null
+  },
+  "inputTokens": 63583,
+  "cacheReadTokens": 9675,
+  "cacheWriteTokens": 0,
+  "outputTokens": 52638,
+  "calls": {
+    "observer": 0,
+    "reflector": 0,
+    "dropper": 0,
+    "embedding": 0,
+    "decider": 0,
+    "consolidate": 0,
+    "judge": 84,
+    "judgeAttempts": 84,
+    "gatewayRetries": 0,
+    "judgeCacheHits": 36,
+    "judgeCacheMisses": 84,
+    "concurrencyHalvings": 0,
+    "overloads": 0
+  },
+  "turns": 60,
+  "injectedContextTokens": 0,
+  "injections": [],
+  "attemptId": "202-baseline.locomo.lexical-topk.commandcode.meta/muse-spark-1.3-contributor@1",
+  "measurementVersion": "product-phases-attribution-v2",
+  "analysisVersion": "202-paired-cluster-v1",
+  "judgeTemplateVersion": "e3883a2aa5910f76c3f6b377f1758fd4a57ca6dda1449cd86291abd0eea5f306",
+  "gradedTemplateVersion": "f7ff5f9c24afd87f0a5e00bd168103019f6e7140d64031f3e5bec264043c24cb",
+  "protocolHash": "f079b3b74e63953be3c789947e245db88b70a26aba687c32c1da5d690d4afdde",
+  "resumedResults": 0,
+  "results": [
+    {
+      "id": "conv-41:21",
+      "ability": "multi-hop",
+      "cluster": "locomo-conv-41",
+      "phaseTiming": {
+        "ingestion": 12.4,
+        "answer": 6938.3,
+        "evaluation": 3213.3
+      },
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-44:24",
+      "ability": "multi-hop",
+      "cluster": "locomo-conv-44",
+      "phaseTiming": {
+        "ingestion": 8.4,
+        "answer": 6591.1,
+        "evaluation": 2859
+      },
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 6,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-49:21",
+      "ability": "multi-hop",
+      "cluster": "locomo-conv-49",
+      "phaseTiming": {
+        "ingestion": 6.7,
+        "answer": 4263.2,
+        "evaluation": 4606.6
+      },
+      "correct": false,
+      "f1": 0.4109697320223636,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 3,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 3,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-44:32",
+      "ability": "multi-hop",
+      "cluster": "locomo-conv-44",
+      "phaseTiming": {
+        "ingestion": 7.9,
+        "answer": 7733.4,
+        "evaluation": 4774.7
+      },
+      "correct": true,
+      "f1": 0.5263157894736842,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 3,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 3,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-49:78",
+      "ability": "multi-hop",
+      "cluster": "locomo-conv-49",
+      "phaseTiming": {
+        "ingestion": 6.5,
+        "answer": 5795.6,
+        "evaluation": 3508.7
+      },
+      "correct": false,
+      "f1": 0.25,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 4,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 5,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-26:38",
+      "ability": "multi-hop",
+      "cluster": "locomo-conv-26",
+      "phaseTiming": {
+        "ingestion": 5.7,
+        "answer": 7074.8,
+        "evaluation": 3172.8
+      },
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 6,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 6,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-42:34",
+      "ability": "multi-hop",
+      "cluster": "locomo-conv-42",
+      "phaseTiming": {
+        "ingestion": 7.7,
+        "answer": 6666.7,
+        "evaluation": 5784
+      },
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 3,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 3,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-43:4",
+      "ability": "multi-hop",
+      "cluster": "locomo-conv-43",
+      "phaseTiming": {
+        "ingestion": 9.2,
+        "answer": 10838.1,
+        "evaluation": 6939.2
+      },
+      "correct": false,
+      "f1": 0.10714285714285714,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 7,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 7,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-43:48",
+      "ability": "multi-hop",
+      "cluster": "locomo-conv-43",
+      "phaseTiming": {
+        "ingestion": 8.7,
+        "answer": 9705.2,
+        "evaluation": 2735.2
+      },
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-43:43",
+      "ability": "multi-hop",
+      "cluster": "locomo-conv-43",
+      "phaseTiming": {
+        "ingestion": 8.5,
+        "answer": 8308.5,
+        "evaluation": 3028.7
+      },
+      "correct": true,
+      "f1": 0.3630952380952381,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-47:9",
+      "ability": "multi-hop",
+      "cluster": "locomo-conv-47",
+      "phaseTiming": {
+        "ingestion": 8.4,
+        "answer": 13155.3,
+        "evaluation": 2550.7
+      },
+      "correct": false,
+      "f1": 0.05555555555555555,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-42:42",
+      "ability": "multi-hop",
+      "cluster": "locomo-conv-42",
+      "phaseTiming": {
+        "ingestion": 7.6,
+        "answer": 5580.3,
+        "evaluation": 3565.7
+      },
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 3,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 3,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-48:81",
+      "ability": "temporal",
+      "cluster": "locomo-conv-48",
+      "phaseTiming": {
+        "ingestion": 7.5,
+        "answer": 9236.1,
+        "evaluation": 0.3
+      },
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-44:30",
+      "ability": "temporal",
+      "cluster": "locomo-conv-44",
+      "phaseTiming": {
+        "ingestion": 10.7,
+        "answer": 5692,
+        "evaluation": 3197.6
+      },
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-42:29",
+      "ability": "temporal",
+      "cluster": "locomo-conv-42",
+      "phaseTiming": {
+        "ingestion": 7.3,
+        "answer": 8924.8,
+        "evaluation": 3974
+      },
+      "correct": true,
+      "f1": 0.25,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-44:1",
+      "ability": "temporal",
+      "cluster": "locomo-conv-44",
+      "phaseTiming": {
+        "ingestion": 9.2,
+        "answer": 5167.2,
+        "evaluation": 3605.1
+      },
+      "correct": true,
+      "f1": 0.5714285714285714,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-49:52",
+      "ability": "temporal",
+      "cluster": "locomo-conv-49",
+      "phaseTiming": {
+        "ingestion": 6.9,
+        "answer": 9161.4,
+        "evaluation": 3463.9
+      },
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 29,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 3,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-42:32",
+      "ability": "temporal",
+      "cluster": "locomo-conv-42",
+      "phaseTiming": {
+        "ingestion": 8,
+        "answer": 4411.7,
+        "evaluation": 8.5
+      },
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-42:21",
+      "ability": "temporal",
+      "cluster": "locomo-conv-42",
+      "phaseTiming": {
+        "ingestion": 7.5,
+        "answer": 5086.3,
+        "evaluation": 4115.3
+      },
+      "correct": true,
+      "f1": 0.5,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 4,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-41:4",
+      "ability": "temporal",
+      "cluster": "locomo-conv-41",
+      "phaseTiming": {
+        "ingestion": 8.7,
+        "answer": 6108.7,
+        "evaluation": 6087.7
+      },
+      "correct": true,
+      "f1": 0.47058823529411764,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-26:57",
+      "ability": "temporal",
+      "cluster": "locomo-conv-26",
+      "phaseTiming": {
+        "ingestion": 6.3,
+        "answer": 12657.2,
+        "evaluation": 5622.6
+      },
+      "correct": true,
+      "f1": 0.26666666666666666,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-41:16",
+      "ability": "temporal",
+      "cluster": "locomo-conv-41",
+      "phaseTiming": {
+        "ingestion": 8.6,
+        "answer": 8996.2,
+        "evaluation": 3458.4
+      },
+      "correct": false,
+      "f1": 0.42857142857142855,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-50:65",
+      "ability": "temporal",
+      "cluster": "locomo-conv-50",
+      "phaseTiming": {
+        "ingestion": 8.7,
+        "answer": 9139.7,
+        "evaluation": 3573
+      },
+      "correct": true,
+      "f1": 0.2222222222222222,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-48:55",
+      "ability": "temporal",
+      "cluster": "locomo-conv-48",
+      "phaseTiming": {
+        "ingestion": 8.2,
+        "answer": 10529.6,
+        "evaluation": 0.2
+      },
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 7,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 3,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-48:36",
+      "ability": "open-domain",
+      "cluster": "locomo-conv-48",
+      "phaseTiming": {
+        "ingestion": 8.4,
+        "answer": 4311.5,
+        "evaluation": 0.3
+      },
+      "correct": false,
+      "f1": 0.25,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 10,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 10,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-26:50",
+      "ability": "open-domain",
+      "cluster": "locomo-conv-26",
+      "phaseTiming": {
+        "ingestion": 6.5,
+        "answer": 9763.3,
+        "evaluation": 5408.8
+      },
+      "correct": true,
+      "f1": 0.14285714285714285,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-48:23",
+      "ability": "open-domain",
+      "cluster": "locomo-conv-48",
+      "phaseTiming": {
+        "ingestion": 7.9,
+        "answer": 6462.1,
+        "evaluation": 2657.2
+      },
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-43:5",
+      "ability": "open-domain",
+      "cluster": "locomo-conv-43",
+      "phaseTiming": {
+        "ingestion": 8.7,
+        "answer": 8220.5,
+        "evaluation": 3300.7
+      },
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-43:8",
+      "ability": "open-domain",
+      "cluster": "locomo-conv-43",
+      "phaseTiming": {
+        "ingestion": 9.8,
+        "answer": 7775.4,
+        "evaluation": 4475.1
+      },
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 3,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-26:81",
+      "ability": "open-domain",
+      "cluster": "locomo-conv-26",
+      "phaseTiming": {
+        "ingestion": 6.6,
+        "answer": 5536.1,
+        "evaluation": 0.3
+      },
+      "correct": false,
+      "f1": 0.5,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-48:11",
+      "ability": "open-domain",
+      "cluster": "locomo-conv-48",
+      "phaseTiming": {
+        "ingestion": 8.1,
+        "answer": 6261.8,
+        "evaluation": 2976.7
+      },
+      "correct": true,
+      "f1": 0.18181818181818182,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 18,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 4,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-26:14",
+      "ability": "open-domain",
+      "cluster": "locomo-conv-26",
+      "phaseTiming": {
+        "ingestion": 6.8,
+        "answer": 19128.2,
+        "evaluation": 3774.5
+      },
+      "correct": true,
+      "f1": 0.07407407407407407,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-44:44",
+      "ability": "open-domain",
+      "cluster": "locomo-conv-44",
+      "phaseTiming": {
+        "ingestion": 9.9,
+        "answer": 8936.7,
+        "evaluation": 0.2
+      },
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-47:44",
+      "ability": "open-domain",
+      "cluster": "locomo-conv-47",
+      "phaseTiming": {
+        "ingestion": 9.4,
+        "answer": 13013.4,
+        "evaluation": 3872.5
+      },
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-50:21",
+      "ability": "open-domain",
+      "cluster": "locomo-conv-50",
+      "phaseTiming": {
+        "ingestion": 9,
+        "answer": 7147.9,
+        "evaluation": 3390.2
+      },
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-42:0",
+      "ability": "open-domain",
+      "cluster": "locomo-conv-42",
+      "phaseTiming": {
+        "ingestion": 8.4,
+        "answer": 6819.5,
+        "evaluation": 3756.5
+      },
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-26:82",
+      "ability": "single-hop",
+      "cluster": "locomo-conv-26",
+      "phaseTiming": {
+        "ingestion": 6.9,
+        "answer": 5154,
+        "evaluation": 4142.5
+      },
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 13,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-26:103",
+      "ability": "single-hop",
+      "cluster": "locomo-conv-26",
+      "phaseTiming": {
+        "ingestion": 6.6,
+        "answer": 4772.4,
+        "evaluation": 2811.2
+      },
+      "correct": true,
+      "f1": 0.4444444444444444,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-49:111",
+      "ability": "single-hop",
+      "cluster": "locomo-conv-49",
+      "phaseTiming": {
+        "ingestion": 7.5,
+        "answer": 6292.3,
+        "evaluation": 4143.2
+      },
+      "correct": true,
+      "f1": 0.25,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-49:121",
+      "ability": "single-hop",
+      "cluster": "locomo-conv-49",
+      "phaseTiming": {
+        "ingestion": 7.4,
+        "answer": 7484.3,
+        "evaluation": 4748.3
+      },
+      "correct": false,
+      "f1": 0.5,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-47:128",
+      "ability": "single-hop",
+      "cluster": "locomo-conv-47",
+      "phaseTiming": {
+        "ingestion": 8.8,
+        "answer": 6221.9,
+        "evaluation": 3231.8
+      },
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-47:131",
+      "ability": "single-hop",
+      "cluster": "locomo-conv-47",
+      "phaseTiming": {
+        "ingestion": 9.2,
+        "answer": 4978,
+        "evaluation": 2911
+      },
+      "correct": true,
+      "f1": 0.3333333333333333,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 3,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-43:123",
+      "ability": "single-hop",
+      "cluster": "locomo-conv-43",
+      "phaseTiming": {
+        "ingestion": 9.1,
+        "answer": 4047,
+        "evaluation": 4078.6
+      },
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 30,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-42:185",
+      "ability": "single-hop",
+      "cluster": "locomo-conv-42",
+      "phaseTiming": {
+        "ingestion": 8.2,
+        "answer": 5929.4,
+        "evaluation": 3575
+      },
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-42:175",
+      "ability": "single-hop",
+      "cluster": "locomo-conv-42",
+      "phaseTiming": {
+        "ingestion": 8.1,
+        "answer": 7496.2,
+        "evaluation": 7185.1
+      },
+      "correct": true,
+      "f1": 0.6,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-48:159",
+      "ability": "single-hop",
+      "cluster": "locomo-conv-48",
+      "phaseTiming": {
+        "ingestion": 8.5,
+        "answer": 4161.3,
+        "evaluation": 0.3
+      },
+      "correct": true,
+      "f1": 0.26666666666666666,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-47:98",
+      "ability": "single-hop",
+      "cluster": "locomo-conv-47",
+      "phaseTiming": {
+        "ingestion": 8.9,
+        "answer": 4319.7,
+        "evaluation": 3702
+      },
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-50:91",
+      "ability": "single-hop",
+      "cluster": "locomo-conv-50",
+      "phaseTiming": {
+        "ingestion": 8.9,
+        "answer": 6168.4,
+        "evaluation": 3410.8
+      },
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 4,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-41:163",
+      "ability": "adversarial",
+      "cluster": "locomo-conv-41",
+      "phaseTiming": {
+        "ingestion": 9.3,
+        "answer": 6935.7,
+        "evaluation": 4445.1
+      },
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-43:183",
+      "ability": "adversarial",
+      "cluster": "locomo-conv-43",
+      "phaseTiming": {
+        "ingestion": 9.6,
+        "answer": 9509.2,
+        "evaluation": 0.2
+      },
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-43:212",
+      "ability": "adversarial",
+      "cluster": "locomo-conv-43",
+      "phaseTiming": {
+        "ingestion": 9.2,
+        "answer": 8201.8,
+        "evaluation": 0.3
+      },
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-44:154",
+      "ability": "adversarial",
+      "cluster": "locomo-conv-44",
+      "phaseTiming": {
+        "ingestion": 9.1,
+        "answer": 9959,
+        "evaluation": 0.2
+      },
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-49:164",
+      "ability": "adversarial",
+      "cluster": "locomo-conv-49",
+      "phaseTiming": {
+        "ingestion": 7.2,
+        "answer": 4196.8,
+        "evaluation": 0.2
+      },
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-49:185",
+      "ability": "adversarial",
+      "cluster": "locomo-conv-49",
+      "phaseTiming": {
+        "ingestion": 9.2,
+        "answer": 6066.3,
+        "evaluation": 0.2
+      },
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-43:234",
+      "ability": "adversarial",
+      "cluster": "locomo-conv-43",
+      "phaseTiming": {
+        "ingestion": 9.2,
+        "answer": 7743.9,
+        "evaluation": 0.3
+      },
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "conv-50:180",
+      "ability": "adversarial",
+      "cluster": "locomo-conv-50",
+      "phaseTiming": {
+        "ingestion": 9.1,
+        "answer": 5884.9,
+        "evaluation": 0.2
+      },
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-41:175",
+      "ability": "adversarial",
+      "cluster": "locomo-conv-41",
+      "phaseTiming": {
+        "ingestion": 9.3,
+        "answer": 6047.2,
+        "evaluation": 0.2
+      },
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-43:214",
+      "ability": "adversarial",
+      "cluster": "locomo-conv-43",
+      "phaseTiming": {
+        "ingestion": 9.6,
+        "answer": 12114,
+        "evaluation": 0.2
+      },
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-48:227",
+      "ability": "adversarial",
+      "cluster": "locomo-conv-48",
+      "phaseTiming": {
+        "ingestion": 9.1,
+        "answer": 8090.7,
+        "evaluation": 0.2
+      },
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-43:224",
+      "ability": "adversarial",
+      "cluster": "locomo-conv-43",
+      "phaseTiming": {
+        "ingestion": 9.6,
+        "answer": 7423.8,
+        "evaluation": 0.2
+      },
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    }
+  ],
+  "status": "completed",
+  "limitations": [
+    "Block-level injection accounting until item metadata lands in Tasks 4, 9, 11 and 12.",
+    "Injection token allocations are character estimates, not billing usage.",
+    "OpenCode Go and Hyper judges differ from the papers; scores are not directly comparable."
+  ],
+  "ratesAsOf": "2026-10-29",
+  "ratesStatus": "provider-catalog",
+  "inputCap": 1047552,
+  "selectedQuestionIds": [
+    "conv-41:21",
+    "conv-44:24",
+    "conv-49:21",
+    "conv-44:32",
+    "conv-49:78",
+    "conv-26:38",
+    "conv-42:34",
+    "conv-43:4",
+    "conv-43:48",
+    "conv-43:43",
+    "conv-47:9",
+    "conv-42:42",
+    "conv-48:81",
+    "conv-44:30",
+    "conv-42:29",
+    "conv-44:1",
+    "conv-49:52",
+    "conv-42:32",
+    "conv-42:21",
+    "conv-41:4",
+    "conv-26:57",
+    "conv-41:16",
+    "conv-50:65",
+    "conv-48:55",
+    "conv-48:36",
+    "conv-26:50",
+    "conv-48:23",
+    "conv-43:5",
+    "conv-43:8",
+    "conv-26:81",
+    "conv-48:11",
+    "conv-26:14",
+    "conv-44:44",
+    "conv-47:44",
+    "conv-50:21",
+    "conv-42:0",
+    "conv-26:82",
+    "conv-26:103",
+    "conv-49:111",
+    "conv-49:121",
+    "conv-47:128",
+    "conv-47:131",
+    "conv-43:123",
+    "conv-42:185",
+    "conv-42:175",
+    "conv-48:159",
+    "conv-47:98",
+    "conv-50:91",
+    "conv-41:163",
+    "conv-43:183",
+    "conv-43:212",
+    "conv-44:154",
+    "conv-49:164",
+    "conv-49:185",
+    "conv-43:234",
+    "conv-50:180",
+    "conv-41:175",
+    "conv-43:214",
+    "conv-48:227",
+    "conv-43:224"
+  ],
+  "runPathFingerprint": "ef79492de8391e0cb350c5777d430e87bb1056258ec7b4f6137411d19b7c0c64",
+  "measurementPolicy": {
+    "version": "product-phases-v1",
+    "judgeCallsPerHour": 450,
+    "injectionAnnotation": false,
+    "retriesAndBackoffIncluded": true,
+    "queueWaitIncluded": false,
+    "seedSnapshot": false
+  },
+  "roleUsage": {
+    "product": {
+      "inputTokens": 41634,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 50848,
+      "exchanges": 60,
+      "complete": true,
+      "measured": 0.014335,
+      "cold": 0.014335,
+      "warm": 0.014335,
+      "inputWarm": 0.004162,
+      "inputCold": 0.004162
+    },
+    "evaluation": {
+      "inputTokens": 21949,
+      "cacheReadTokens": 9675,
+      "cacheWriteTokens": 0,
+      "outputTokens": 1790,
+      "exchanges": 84,
+      "complete": true,
+      "measured": 0.002982,
+      "cold": 0.004285,
+      "warm": 0.002982,
+      "inputWarm": 0.001983,
+      "inputCold": 0.003297
+    },
+    "unknown": {
+      "inputTokens": 0,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 0,
+      "exchanges": 0,
+      "complete": true,
+      "measured": 0,
+      "cold": 0,
+      "warm": 0,
+      "inputWarm": 0,
+      "inputCold": 0
+    },
+    "total": {
+      "inputTokens": 63583,
+      "cacheReadTokens": 9675,
+      "cacheWriteTokens": 0,
+      "outputTokens": 52638,
+      "exchanges": 144,
+      "measured": 0.017317
+    }
+  },
+  "accountedInputTokens": 63583,
+  "usageComplete": true,
+  "usageMissingExchanges": 0,
+  "wireExchanges": 144,
+  "timing": {
+    "wallMs": 617095.6,
+    "concurrency": {
+      "initial": 1,
+      "active": 1,
+      "floor": 1
+    },
+    "questions": {
+      "n": 60,
+      "wallMs": {
+        "p50": 9514.4,
+        "p95": 16896.9,
+        "mean": 10280.1
+      }
+    },
+    "phases": {
+      "ingestion": {
+        "n": 60,
+        "wallMs": {
+          "p50": 8.5,
+          "p95": 9.8,
+          "mean": 8.4
+        }
+      },
+      "restore": {
+        "n": 0,
+        "wallMs": {
+          "p50": null,
+          "p95": null,
+          "mean": null
+        }
+      },
+      "answer": {
+        "n": 60,
+        "wallMs": {
+          "p50": 6935.7,
+          "p95": 12657.2,
+          "mean": 7505.6
+        }
+      },
+      "evaluation": {
+        "n": 60,
+        "wallMs": {
+          "p50": 3231.8,
+          "p95": 5784,
+          "mean": 2764.1
+        }
+      }
+    },
+    "policy": {
+      "answer": "after ingestion, before grading, annotation, final background settlement and disposal",
+      "queueWaitIncluded": false,
+      "retriesAndBackoffIncluded": true
+    },
+    "roles": {
+      "judge": {
+        "calls": 84,
+        "firstByteMs": {
+          "p50": 1561.3,
+          "p95": 2887,
+          "mean": 1775.3
+        },
+        "totalMs": {
+          "p50": 1561.3,
+          "p95": 2887,
+          "mean": 1775.3
+        }
+      },
+      "solver": {
+        "calls": 60,
+        "firstByteMs": {
+          "p50": 6829.4,
+          "p95": 12558.5,
+          "mean": 7403.3
+        },
+        "totalMs": {
+          "p50": 6928,
+          "p95": 12655.3,
+          "mean": 7503.4
+        }
+      }
+    },
+    "calls": 144
+  },
+  "metricVersion": 2,
+  "abilities": {
+    "multi-hop": {
+      "n": 12,
+      "correct": 2,
+      "scored": 12,
+      "f1": 0.14275659769080823,
+      "recallAtK": null,
+      "accuracy": 0.16666666666666666,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "multi-hop",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "temporal": {
+      "n": 12,
+      "correct": 7,
+      "scored": 12,
+      "f1": 0.3091230936819172,
+      "recallAtK": null,
+      "accuracy": 0.5833333333333334,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "temporal",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "open-domain": {
+      "n": 12,
+      "correct": 3,
+      "scored": 12,
+      "f1": 0.09572911656244991,
+      "recallAtK": null,
+      "accuracy": 0.25,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "open-domain",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "single-hop": {
+      "n": 12,
+      "correct": 8,
+      "scored": 12,
+      "f1": 0.44953703703703707,
+      "recallAtK": null,
+      "accuracy": 0.6666666666666666,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "single-hop",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "adversarial": {
+      "n": 12,
+      "correct": 11,
+      "scored": 12,
+      "f1": 0.9166666666666666,
+      "recallAtK": null,
+      "accuracy": 0.9166666666666666,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "adversarial",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    }
+  },
+  "abilityGroups": {
+    "multi-hop": {
+      "n": 12,
+      "correct": 2,
+      "scored": 12,
+      "f1": 0.14275659769080823,
+      "recallAtK": null,
+      "accuracy": 0.16666666666666666,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "multi-hop",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "temporal": {
+      "n": 12,
+      "correct": 7,
+      "scored": 12,
+      "f1": 0.3091230936819172,
+      "recallAtK": null,
+      "accuracy": 0.5833333333333334,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "temporal",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "open-domain": {
+      "n": 12,
+      "correct": 3,
+      "scored": 12,
+      "f1": 0.09572911656244991,
+      "recallAtK": null,
+      "accuracy": 0.25,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "open-domain",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "single-hop": {
+      "n": 12,
+      "correct": 8,
+      "scored": 12,
+      "f1": 0.44953703703703707,
+      "recallAtK": null,
+      "accuracy": 0.6666666666666666,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "single-hop",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "adversarial": {
+      "n": 12,
+      "correct": 11,
+      "scored": 12,
+      "f1": 0.9166666666666666,
+      "recallAtK": null,
+      "accuracy": 0.9166666666666666,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "adversarial",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    }
+  },
+  "metricDefinitions": {
+    "multi-hop": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "temporal": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "open-domain": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "single-hop": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "adversarial": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    }
+  },
+  "runLimitRate": 0,
+  "errorRate": 0,
+  "cacheReadRatio": 0.15216331409338973,
+  "cacheWriteRatio": 0,
+  "cost": {
+    "currency": "USD",
+    "unit": "per_million_tokens",
+    "rates": null,
+    "pricingStatus": "priced",
+    "measured": 0.017317,
+    "cachedPrefixSimulation": null,
+    "simulationAssumption": "product warm: full input is a cached prefix; other arms use reported cache tokens; cold reprices input uncached",
+    "ratesAsOf": "2026-10-29",
+    "ratesStatus": "provider-catalog",
+    "scope": "campaign: product plus evaluation plus unknown historical usage",
+    "product": {
+      "inputTokens": 41634,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 50848,
+      "exchanges": 60,
+      "complete": true,
+      "measured": 0.014335,
+      "cold": 0.014335,
+      "warm": 0.014335,
+      "inputWarm": 0.004162,
+      "inputCold": 0.004162
+    },
+    "evaluation": {
+      "inputTokens": 21949,
+      "cacheReadTokens": 9675,
+      "cacheWriteTokens": 0,
+      "outputTokens": 1790,
+      "exchanges": 84,
+      "complete": true,
+      "measured": 0.002982,
+      "cold": 0.004285,
+      "warm": 0.002982,
+      "inputWarm": 0.001983,
+      "inputCold": 0.003297
+    }
+  },
+  "judgeAgreement": {
+    "n": 60,
+    "judges": {
+      "commandcode/minimax/minimax-m3.1-flash": {
+        "scored": 60,
+        "agreementWithPanel": 0.9833333333333333
+      },
+      "commandcode/z-ai/glm-5.3-flash": {
+        "scored": 60,
+        "agreementWithPanel": 1
+      }
+    },
+    "pairs": [
+      {
+        "a": "commandcode/minimax/minimax-m3.1-flash",
+        "b": "commandcode/z-ai/glm-5.3-flash",
+        "n": 60,
+        "agreement": 0.9833333333333333,
+        "kappa": 0.9665924276169265
+      }
+    ],
+    "fleissKappa": null
+  },
+  "injectionPrecision": null,
+  "injectionPrecisionReason": "not-labelled",
+  "toolCalls": 0,
+  "toolCallsPerQuestion": 0,
+  "recallCalls": 0,
+  "retrievedSnippetTokens": 0,
+  "answerSessionHitAtK": null,
+  "evidenceRoundCoverage": null,
+  "evidenceAllRequired": null,
+  "fineEvidenceRecall": null,
+  "fineEvidencePrecision": null,
+  "legacyRetrievalRecallAtK": null,
+  "retrievalRecallAtK": null,
+  "stages": {
+    "candidate_gap": 29,
+    "correct": 31
+  }
+}

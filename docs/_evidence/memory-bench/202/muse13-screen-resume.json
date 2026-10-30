@@ -1,0 +1,30 @@
+{
+  "kind": "202-muse13-screen-quota-resume",
+  "generatedAt": "2026-10-29T22:50:47.331299+00:00",
+  "status": "closed-by-owner",
+  "processes": [
+    {
+      "pid": 305760,
+      "command": "bun scripts/memory-bench/campaign.mjs --baseline-202 --parallel-arms 1"
+    }
+  ],
+  "completedCellsPreserved": 20,
+  "unfinishedCells": 5,
+  "operationalProof": "readiness-operations.json",
+  "readiness": "ready",
+  "originalJobsAndJournalIdentityMatch": true,
+  "journal": ".cache/memory-bench/202-muse13-screen/journal.json",
+  "log": ".cache/memory-bench/muse13-screen-resume-campaign.log",
+  "currentAttempt": "202-baseline.beam-100k.full.commandcode.meta/muse-spark-1.3-contributor@2",
+  "sourceVerification": "muse13-screen-verification.json",
+  "policy": "Same 25 jobs, same answer/judge models, same source/protocol, same aggregate bounds; completed scores reused; unknown reservations retained",
+  "observedAt": "2026-10-30T00:07:33.312152+00:00",
+  "completedCells": 23,
+  "acceptedCells": 23,
+  "originallyPlannedCells": 25,
+  "screenComplete": true,
+  "baselineComplete": false,
+  "closure": "muse13-screen-closure.json",
+  "finalReport": "muse13-screen-final/README.md",
+  "activeProcess": false
+}

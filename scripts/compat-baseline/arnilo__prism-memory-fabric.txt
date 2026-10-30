@@ -180,6 +180,7 @@ ephemeralReason	export declare function ephemeralReason(text: string, scratchDir
 episodeClusters	export declare function episodeClusters(notes: readonly CapacityNote[], minCluster: number): readonly EpisodeCluster[]
 estimateNoteTokens	export declare function estimateNoteTokens(text: string): number
 evictionOrder	export declare function evictionOrder(notes: readonly CapacityNote[], clock: number, options?: ArchiveDecisionOptions): readonly CapacityNote[]
+exchangeKeywords	export declare function exchangeKeywords(text: string): readonly string[]
 exchangeNoteId	export declare function exchangeNoteId(sessionId: string, userEntryId: string, assistantEntryId: string, part: number): string
 exchangePairs	export declare function exchangePairs(entries: readonly SessionEntry[]): readonly ExchangePair[]
 exportMemoryOkf	export declare function exportMemoryOkf(memory: Memory, options: ExportMemoryOkfOptions): Promise<ExportMemoryOkfResult>

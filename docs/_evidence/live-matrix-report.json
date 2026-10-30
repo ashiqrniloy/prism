@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-25T17:54:17.453Z",
-  "envFile": null,
+  "generatedAt": "2026-10-27T20:52:55.350Z",
+  "envFile": "/home/arn/.config/prism/live.env",
   "strict": true,
   "dryRun": false,
-  "filter": "providers/openai-codex",
+  "filter": "providers/commandcode",
   "totals": {
     "ran": 1,
     "skipped": 0,
@@ -13,25 +13,35 @@
   },
   "coverage": {
     "ok": true,
-    "total": 80,
-    "covered": 76,
+    "total": 81,
+    "covered": 77,
     "pending": 4,
     "mode": "baseline"
   },
   "results": [
     {
-      "id": "providers/openai-codex",
-      "package": "@arnilo/prism-provider-openai-codex",
+      "id": "providers/commandcode",
+      "package": "@arnilo/prism-provider-commandcode",
       "status": "ran",
       "reason": null,
       "exitCode": 0,
-      "durationMs": 27183,
-      "command": "bun test --timeout=0 src/__tests__/live.test.ts",
-      "cwd": "packages/providers/openai-codex",
+      "durationMs": 35424,
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts src/__tests__/live-agent.test.ts",
+      "cwd": "packages/providers/commandcode",
       "models": [
         {
-          "env": "PRISM_LIVE_OPENAI_CODEX_MODEL",
-          "value": "gpt-6.1-sol",
+          "env": "PRISM_LIVE_COMMANDCODE_CHAT_MODEL",
+          "value": "minimax/minimax-m3.1-flash",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_COMMANDCODE_RESPONSES_MODEL",
+          "value": "gpt-5.6-luna",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_COMMANDCODE_MESSAGES_MODEL",
+          "value": "claude-haiku-5-5",
           "wired": true
         }
       ],

@@ -1,0 +1,1233 @@
+{
+  "schemaVersion": 1,
+  "kind": "202-baseline-summary",
+  "status": "executed",
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "reports": 7,
+  "cells": [
+    {
+      "suite": "beam-100k",
+      "model": "opencode-go/beam-free",
+      "arm": "fabric-x",
+      "inputTokens": 280278,
+      "cacheReadTokens": 6272,
+      "cacheWriteTokens": 3284,
+      "outputTokens": 148234,
+      "costUsd": 0,
+      "latencyMs": 119976.4,
+      "latencyP95Ms": 307021.2,
+      "attemptId": "202-baseline.beam-100k.passive-only.opencode-go.beam-free@2",
+      "staged": true,
+      "n": 40,
+      "correct": 9,
+      "accuracy": 0.225,
+      "ci95": [
+        0.1111111111111111,
+        0.3611111111111111
+      ],
+      "stages": {
+        "abstention_error": 3,
+        "gold_unknown": 25,
+        "candidate_gap": 2,
+        "answer_gap": 1
+      },
+      "failuresByAbility": {
+        "abstention": 3,
+        "contradiction_resolution": 4,
+        "event_ordering": 4,
+        "information_extraction": 2,
+        "instruction_following": 2,
+        "knowledge_update": 4,
+        "multi_session_reasoning": 4,
+        "preference_following": 2,
+        "summarization": 4,
+        "temporal_reasoning": 2
+      },
+      "byAbility": {
+        "abstention": {
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        "contradiction_resolution": {
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        "event_ordering": {
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        "information_extraction": {
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        "instruction_following": {
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        "knowledge_update": {
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        "multi_session_reasoning": {
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        "preference_following": {
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        "summarization": {
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        "temporal_reasoning": {
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        }
+      },
+      "abilityRows": [
+        {
+          "ability": "abstention",
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        {
+          "ability": "contradiction_resolution",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "event_ordering",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "information_extraction",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        {
+          "ability": "instruction_following",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        {
+          "ability": "knowledge_update",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "multi_session_reasoning",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "preference_following",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        {
+          "ability": "summarization",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "temporal_reasoning",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        }
+      ],
+      "failures": 31
+    },
+    {
+      "suite": "beam-100k",
+      "model": "opencode-go/beam-free",
+      "arm": "fabric-x-tools",
+      "inputTokens": 3405257,
+      "cacheReadTokens": 422621,
+      "cacheWriteTokens": 11186,
+      "outputTokens": 278431,
+      "costUsd": 0,
+      "latencyMs": 279697.5,
+      "latencyP95Ms": 587498.4,
+      "attemptId": "202-baseline.beam-100k.preset-r1.opencode-go.beam-free@1",
+      "staged": true,
+      "n": 40,
+      "correct": 14,
+      "accuracy": 0.35,
+      "ci95": [
+        0.21736192714453587,
+        0.5
+      ],
+      "stages": {
+        "abstention_error": 3,
+        "gold_unknown": 22,
+        "answer_gap": 1
+      },
+      "failuresByAbility": {
+        "abstention": 3,
+        "contradiction_resolution": 3,
+        "event_ordering": 4,
+        "information_extraction": 1,
+        "instruction_following": 3,
+        "knowledge_update": 2,
+        "multi_session_reasoning": 3,
+        "preference_following": 2,
+        "summarization": 4,
+        "temporal_reasoning": 1
+      },
+      "byAbility": {
+        "abstention": {
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        "contradiction_resolution": {
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        "event_ordering": {
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        "information_extraction": {
+          "n": 4,
+          "correct": 3,
+          "accuracy": 0.75
+        },
+        "instruction_following": {
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        "knowledge_update": {
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        "multi_session_reasoning": {
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        "preference_following": {
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        "summarization": {
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        "temporal_reasoning": {
+          "n": 4,
+          "correct": 3,
+          "accuracy": 0.75
+        }
+      },
+      "abilityRows": [
+        {
+          "ability": "abstention",
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        {
+          "ability": "contradiction_resolution",
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        {
+          "ability": "event_ordering",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "information_extraction",
+          "n": 4,
+          "correct": 3,
+          "accuracy": 0.75
+        },
+        {
+          "ability": "instruction_following",
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        {
+          "ability": "knowledge_update",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        {
+          "ability": "multi_session_reasoning",
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        {
+          "ability": "preference_following",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        {
+          "ability": "summarization",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "temporal_reasoning",
+          "n": 4,
+          "correct": 3,
+          "accuracy": 0.75
+        }
+      ],
+      "failures": 26
+    },
+    {
+      "suite": "beam-100k",
+      "model": "opencode-go/beam-free",
+      "arm": "full",
+      "inputTokens": 4604607,
+      "cacheReadTokens": 1673344,
+      "cacheWriteTokens": 8801,
+      "outputTokens": 67461,
+      "costUsd": 0,
+      "latencyMs": 52054.5,
+      "latencyP95Ms": 88612.9,
+      "attemptId": "202-baseline.beam-100k.full.opencode-go.beam-free@1",
+      "staged": true,
+      "n": 40,
+      "correct": 14,
+      "accuracy": 0.35,
+      "ci95": [
+        0.21736192714453587,
+        0.5135135135135135
+      ],
+      "stages": {
+        "gold_unknown": 26
+      },
+      "failuresByAbility": {
+        "contradiction_resolution": 3,
+        "event_ordering": 4,
+        "information_extraction": 3,
+        "instruction_following": 3,
+        "knowledge_update": 1,
+        "multi_session_reasoning": 4,
+        "preference_following": 2,
+        "summarization": 4,
+        "temporal_reasoning": 2
+      },
+      "byAbility": {
+        "abstention": {
+          "n": 4,
+          "correct": 4,
+          "accuracy": 1
+        },
+        "contradiction_resolution": {
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        "event_ordering": {
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        "information_extraction": {
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        "instruction_following": {
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        "knowledge_update": {
+          "n": 4,
+          "correct": 3,
+          "accuracy": 0.75
+        },
+        "multi_session_reasoning": {
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        "preference_following": {
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        "summarization": {
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        "temporal_reasoning": {
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        }
+      },
+      "abilityRows": [
+        {
+          "ability": "abstention",
+          "n": 4,
+          "correct": 4,
+          "accuracy": 1
+        },
+        {
+          "ability": "contradiction_resolution",
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        {
+          "ability": "event_ordering",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "information_extraction",
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        {
+          "ability": "instruction_following",
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        {
+          "ability": "knowledge_update",
+          "n": 4,
+          "correct": 3,
+          "accuracy": 0.75
+        },
+        {
+          "ability": "multi_session_reasoning",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "preference_following",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        {
+          "ability": "summarization",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "temporal_reasoning",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        }
+      ],
+      "failures": 26
+    },
+    {
+      "suite": "beam-100k",
+      "model": "opencode-go/beam-free",
+      "arm": "full-truncated",
+      "inputTokens": 4606324,
+      "cacheReadTokens": 4562304,
+      "cacheWriteTokens": 11271,
+      "outputTokens": 67276,
+      "costUsd": 0,
+      "latencyMs": 47110,
+      "latencyP95Ms": 68323.1,
+      "attemptId": "202-baseline.beam-100k.full-truncated.opencode-go.beam-free@1",
+      "staged": true,
+      "n": 40,
+      "correct": 17,
+      "accuracy": 0.425,
+      "ci95": [
+        0.2619047619047619,
+        0.6060606060606061
+      ],
+      "stages": {
+        "abstention_error": 1,
+        "gold_unknown": 22
+      },
+      "failuresByAbility": {
+        "abstention": 1,
+        "contradiction_resolution": 2,
+        "event_ordering": 4,
+        "information_extraction": 2,
+        "instruction_following": 3,
+        "multi_session_reasoning": 4,
+        "preference_following": 2,
+        "summarization": 3,
+        "temporal_reasoning": 2
+      },
+      "byAbility": {
+        "abstention": {
+          "n": 4,
+          "correct": 3,
+          "accuracy": 0.75
+        },
+        "contradiction_resolution": {
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        "event_ordering": {
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        "information_extraction": {
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        "instruction_following": {
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        "knowledge_update": {
+          "n": 4,
+          "correct": 4,
+          "accuracy": 1
+        },
+        "multi_session_reasoning": {
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        "preference_following": {
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        "summarization": {
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        "temporal_reasoning": {
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        }
+      },
+      "abilityRows": [
+        {
+          "ability": "abstention",
+          "n": 4,
+          "correct": 3,
+          "accuracy": 0.75
+        },
+        {
+          "ability": "contradiction_resolution",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        {
+          "ability": "event_ordering",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "information_extraction",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        {
+          "ability": "instruction_following",
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        {
+          "ability": "knowledge_update",
+          "n": 4,
+          "correct": 4,
+          "accuracy": 1
+        },
+        {
+          "ability": "multi_session_reasoning",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "preference_following",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        {
+          "ability": "summarization",
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        {
+          "ability": "temporal_reasoning",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        }
+      ],
+      "failures": 23
+    },
+    {
+      "suite": "beam-100k",
+      "model": "opencode-go/beam-free",
+      "arm": "lexical-topk",
+      "inputTokens": 189461,
+      "cacheReadTokens": 2624,
+      "cacheWriteTokens": 2148,
+      "outputTokens": 47083,
+      "costUsd": 0,
+      "latencyMs": 47096.6,
+      "latencyP95Ms": 65923.7,
+      "attemptId": "202-baseline.beam-100k.lexical-topk.opencode-go.beam-free@1",
+      "staged": true,
+      "n": 40,
+      "correct": 13,
+      "accuracy": 0.325,
+      "ci95": [
+        0.2127659574468085,
+        0.46153846153846156
+      ],
+      "stages": {
+        "gold_unknown": 25,
+        "candidate_gap": 2
+      },
+      "failuresByAbility": {
+        "contradiction_resolution": 3,
+        "event_ordering": 4,
+        "information_extraction": 2,
+        "instruction_following": 3,
+        "knowledge_update": 3,
+        "multi_session_reasoning": 4,
+        "preference_following": 2,
+        "summarization": 4,
+        "temporal_reasoning": 2
+      },
+      "byAbility": {
+        "abstention": {
+          "n": 4,
+          "correct": 4,
+          "accuracy": 1
+        },
+        "contradiction_resolution": {
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        "event_ordering": {
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        "information_extraction": {
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        "instruction_following": {
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        "knowledge_update": {
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        "multi_session_reasoning": {
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        "preference_following": {
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        "summarization": {
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        "temporal_reasoning": {
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        }
+      },
+      "abilityRows": [
+        {
+          "ability": "abstention",
+          "n": 4,
+          "correct": 4,
+          "accuracy": 1
+        },
+        {
+          "ability": "contradiction_resolution",
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        {
+          "ability": "event_ordering",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "information_extraction",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        {
+          "ability": "instruction_following",
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        {
+          "ability": "knowledge_update",
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        {
+          "ability": "multi_session_reasoning",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "preference_following",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        {
+          "ability": "summarization",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "temporal_reasoning",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        }
+      ],
+      "failures": 27
+    },
+    {
+      "suite": "beam-100k",
+      "model": "opencode-go/minimax-m3",
+      "arm": "fabric-x",
+      "inputTokens": 270634,
+      "cacheReadTokens": 11935,
+      "cacheWriteTokens": 12321,
+      "outputTokens": 118905,
+      "costUsd": 0,
+      "latencyMs": 209292.3,
+      "latencyP95Ms": 253405.1,
+      "attemptId": "202-baseline.beam-100k.passive-only.opencode-go.minimax-m3@1",
+      "staged": true,
+      "n": 40,
+      "correct": 14,
+      "accuracy": 0.35,
+      "ci95": [
+        0.2222222222222222,
+        0.4883720930232558
+      ],
+      "stages": {
+        "abstention_error": 1,
+        "gold_unknown": 23,
+        "candidate_gap": 2
+      },
+      "failuresByAbility": {
+        "abstention": 1,
+        "contradiction_resolution": 4,
+        "event_ordering": 4,
+        "information_extraction": 1,
+        "instruction_following": 1,
+        "knowledge_update": 3,
+        "multi_session_reasoning": 4,
+        "preference_following": 2,
+        "summarization": 4,
+        "temporal_reasoning": 2
+      },
+      "byAbility": {
+        "abstention": {
+          "n": 4,
+          "correct": 3,
+          "accuracy": 0.75
+        },
+        "contradiction_resolution": {
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        "event_ordering": {
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        "information_extraction": {
+          "n": 4,
+          "correct": 3,
+          "accuracy": 0.75
+        },
+        "instruction_following": {
+          "n": 4,
+          "correct": 3,
+          "accuracy": 0.75
+        },
+        "knowledge_update": {
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        "multi_session_reasoning": {
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        "preference_following": {
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        "summarization": {
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        "temporal_reasoning": {
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        }
+      },
+      "abilityRows": [
+        {
+          "ability": "abstention",
+          "n": 4,
+          "correct": 3,
+          "accuracy": 0.75
+        },
+        {
+          "ability": "contradiction_resolution",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "event_ordering",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "information_extraction",
+          "n": 4,
+          "correct": 3,
+          "accuracy": 0.75
+        },
+        {
+          "ability": "instruction_following",
+          "n": 4,
+          "correct": 3,
+          "accuracy": 0.75
+        },
+        {
+          "ability": "knowledge_update",
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        {
+          "ability": "multi_session_reasoning",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "preference_following",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        {
+          "ability": "summarization",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "temporal_reasoning",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        }
+      ],
+      "failures": 26
+    },
+    {
+      "suite": "beam-100k",
+      "model": "opencode-go/minimax-m3",
+      "arm": "fabric-x-tools",
+      "inputTokens": 1855245,
+      "cacheReadTokens": 379883,
+      "cacheWriteTokens": 80820,
+      "outputTokens": 239759,
+      "costUsd": 0,
+      "latencyMs": 392438.6,
+      "latencyP95Ms": 642630.8,
+      "attemptId": "202-baseline.beam-100k.preset-r1.opencode-go.minimax-m3@1",
+      "staged": true,
+      "n": 40,
+      "correct": 17,
+      "accuracy": 0.425,
+      "ci95": [
+        0.2894736842105263,
+        0.5757575757575758
+      ],
+      "stages": {
+        "abstention_error": 2,
+        "gold_unknown": 19,
+        "candidate_gap": 2
+      },
+      "failuresByAbility": {
+        "abstention": 2,
+        "contradiction_resolution": 4,
+        "event_ordering": 4,
+        "instruction_following": 1,
+        "knowledge_update": 3,
+        "multi_session_reasoning": 2,
+        "preference_following": 2,
+        "summarization": 4,
+        "temporal_reasoning": 1
+      },
+      "byAbility": {
+        "abstention": {
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        "contradiction_resolution": {
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        "event_ordering": {
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        "information_extraction": {
+          "n": 4,
+          "correct": 4,
+          "accuracy": 1
+        },
+        "instruction_following": {
+          "n": 4,
+          "correct": 3,
+          "accuracy": 0.75
+        },
+        "knowledge_update": {
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        "multi_session_reasoning": {
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        "preference_following": {
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        "summarization": {
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        "temporal_reasoning": {
+          "n": 4,
+          "correct": 3,
+          "accuracy": 0.75
+        }
+      },
+      "abilityRows": [
+        {
+          "ability": "abstention",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        {
+          "ability": "contradiction_resolution",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "event_ordering",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "information_extraction",
+          "n": 4,
+          "correct": 4,
+          "accuracy": 1
+        },
+        {
+          "ability": "instruction_following",
+          "n": 4,
+          "correct": 3,
+          "accuracy": 0.75
+        },
+        {
+          "ability": "knowledge_update",
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        {
+          "ability": "multi_session_reasoning",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        {
+          "ability": "preference_following",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        {
+          "ability": "summarization",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "temporal_reasoning",
+          "n": 4,
+          "correct": 3,
+          "accuracy": 0.75
+        }
+      ],
+      "failures": 23
+    }
+  ],
+  "gaps": [
+    {
+      "suite": "beam-100k",
+      "model": "opencode-go/beam-free",
+      "arm": "fabric-x-tools",
+      "comparator": "full",
+      "armAccuracy": 0.35,
+      "comparatorAccuracy": 0.35,
+      "gap": 0
+    },
+    {
+      "suite": "beam-100k",
+      "model": "opencode-go/beam-free",
+      "arm": "fabric-x-tools",
+      "comparator": "full-truncated",
+      "armAccuracy": 0.35,
+      "comparatorAccuracy": 0.425,
+      "gap": -0.07500000000000001
+    },
+    {
+      "suite": "beam-100k",
+      "model": "opencode-go/beam-free",
+      "arm": "fabric-x-tools",
+      "comparator": "lexical-topk",
+      "armAccuracy": 0.35,
+      "comparatorAccuracy": 0.325,
+      "gap": 0.024999999999999967
+    },
+    {
+      "suite": "beam-100k",
+      "model": "opencode-go/beam-free",
+      "arm": "fabric-x",
+      "comparator": "full",
+      "armAccuracy": 0.225,
+      "comparatorAccuracy": 0.35,
+      "gap": -0.12499999999999997
+    },
+    {
+      "suite": "beam-100k",
+      "model": "opencode-go/beam-free",
+      "arm": "fabric-x",
+      "comparator": "full-truncated",
+      "armAccuracy": 0.225,
+      "comparatorAccuracy": 0.425,
+      "gap": -0.19999999999999998
+    },
+    {
+      "suite": "beam-100k",
+      "model": "opencode-go/beam-free",
+      "arm": "fabric-x",
+      "comparator": "lexical-topk",
+      "armAccuracy": 0.225,
+      "comparatorAccuracy": 0.325,
+      "gap": -0.1
+    }
+  ],
+  "levers": [
+    {
+      "task": 9,
+      "stages": [
+        "answer_gap",
+        "abstention_error"
+      ],
+      "recoverable": 12,
+      "bestShare": 0.15384615384615385,
+      "bestCell": "beam-100k opencode-go/beam-free",
+      "status": "needed",
+      "needed": true
+    },
+    {
+      "task": 5,
+      "stages": [
+        "candidate_gap"
+      ],
+      "recoverable": 8,
+      "bestShare": 0.08695652173913043,
+      "bestCell": "beam-100k opencode-go/minimax-m3",
+      "status": "needed",
+      "needed": true
+    },
+    {
+      "task": 6,
+      "stages": [
+        "temporal_gap"
+      ],
+      "recoverable": 0,
+      "bestShare": 0,
+      "bestCell": null,
+      "status": "unmeasurable",
+      "needed": false
+    },
+    {
+      "task": 7,
+      "stages": [
+        "supersession_gap"
+      ],
+      "recoverable": 0,
+      "bestShare": 0,
+      "bestCell": null,
+      "status": "unmeasurable",
+      "needed": false
+    },
+    {
+      "task": 8,
+      "stages": [
+        "partial_evidence"
+      ],
+      "recoverable": 0,
+      "bestShare": 0,
+      "bestCell": null,
+      "status": "not needed",
+      "needed": false
+    },
+    {
+      "task": 10,
+      "stages": [
+        "tool_protocol_gap"
+      ],
+      "recoverable": 0,
+      "bestShare": 0,
+      "bestCell": null,
+      "status": "unmeasurable",
+      "needed": false
+    },
+    {
+      "task": 13,
+      "stages": [
+        "fine_selection_gap"
+      ],
+      "recoverable": 0,
+      "bestShare": 0,
+      "bestCell": null,
+      "status": "not needed",
+      "needed": false
+    },
+    {
+      "task": 16,
+      "stages": [
+        "capacity_gap"
+      ],
+      "recoverable": 0,
+      "bestShare": 0,
+      "bestCell": null,
+      "status": "unmeasurable",
+      "needed": false
+    },
+    {
+      "task": 17,
+      "stages": [
+        "extraction_gap"
+      ],
+      "recoverable": 0,
+      "bestShare": 0,
+      "bestCell": null,
+      "status": "unmeasurable",
+      "needed": false
+    }
+  ],
+  "attemptsSeen": 9,
+  "attemptsIgnored": 2
+}

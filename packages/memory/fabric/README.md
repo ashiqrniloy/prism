@@ -45,19 +45,24 @@ The fabric is on for every session by default (`enabled: true`); `installing` th
 opt-in. Run the `memory` command to toggle it per session. Its tools are hidden from and
 uncallable by a session where it is off.
 
+## Private recall diagnostics
+
+Direct SDK callers may pass `onRecall(event)` to `createMemoryFabric`. The callback receives the query/options, ranked valid candidate ids/scores before top-k and budget selection, and returned ids. It does not receive note bodies or change ranking. Observer exceptions are ignored. It is absent by default and adds no model or embedding call; enabling it adds callback and trace-storage overhead.
+
+For the package, a host package may provide the optional `memory-fabric.diagnostics` service with the same callback before loading memory fabric. Queries can contain private user text: retain observations privately, never in public status logs. This observer measures retrieval candidates; inspect the actual model request to distinguish tool/passive rendering and truncation from candidate availability.
+
 ## Cost, security, and failure behavior
 
 - Working memory makes no model call and no embedding call. It stores labeled blocks in the
-  working-memory value and injects them as one `fabric-working` prefix block.
+  working-memory value and re-reads them on every request as the first block of the tail, after the transcript.
 - Retrieval is **lexical by default** (`retrieval: "lexical"`): notes are searched with the store's
   lexical leg (in-memory term coverage, SQLite FTS5/BM25, Postgres full-text). No embeddings
   package is needed, and the default makes **no embedding call**.
 - `retrieval: "hybrid"` adds the vector leg through the `embeddings` service: **one embedding call
   per write and per recall**. Without a service the fabric notes the fallback and stays lexical.
-- The memory directory (below) makes no model or embedding call: one aggregate query per write
-  batch, at most 500 tokens in the prefix (200 by default).
+- The memory directory (below) makes no model or embedding call: one aggregate query per session epoch, at most 500 tokens in the prefix (200 by default).
 - The pinned core (below) makes no model or embedding call either: one metadata `scanMetadata` page
-  per scope when a write, pin, or maintenance pass changes what it shows, at most `core.maxTokens`
+  per scope at session start, compaction, retraction or explicit refresh, at most `core.maxTokens`
   in the prefix (600 by default, hard 1000). Turns between rebuilds reuse the cached block, so a
   stable session sends byte-identical bytes.
 - Path cues (above) make no model or embedding call: after a new touched path, one metadata scan
@@ -186,10 +191,10 @@ with its own secrets.
 is the second step of a pass and the only one that calls a model: **one call for a valid answer, or
 two only after one bounded repair**, made through the shared worker loop with a single schema-declared
 tool, `record_notes`. The schema in `consolidation/prompts.ts` is the one source for the tool
-definition and for parsing, so an answer can only cite the candidates (`c1`, `c2`, ...) and
-existing-note ids it was shown. When no task segment is shown, `episode` is absent from the offered
-kind enum; a `path` note is offered only with `applies_to`. The runtime parser enforces both rules
-regardless of how much conditional JSON Schema the provider honours.
+definition and for parsing. The schema's id fields and kind choices stay constant across sessions;
+the runtime parser checks that evidence (`c1`, `c2`, ...), contradiction and episode segment ids
+were shown in this pass. An episode without a shown segment is rejected; a `path` note requires
+`applies_to`, regardless of how much conditional JSON Schema the provider honours.
 
 The prompt carries the candidates, up to 12 active notes per scope from `recallExisting` (lexical,
 over the candidate text), and the session's task segments. It asks for one atomic, self-contained,
@@ -252,6 +257,15 @@ exchange share entirely. The pass report counts the actual
 `reasonCode`) and `outputLimited` (calls that stopped on the output limit), which `memory:status`
 reads back. The client is resolved by the caller only when a pass runs, so loading the package
 resolves none.
+
+Extractor calls share the provider cache key `prism-fabric-extract:default` (domain-neutral) or
+`prism-fabric-extract:project` (repository rules), while retaining `sessionId` for attribution.
+Only the constant system prompt and tool schema form the shared prefix; candidates, existing
+notes and segments stay in the per-session user message. Savings are bounded by that prefix
+(roughly 800 system tokens plus the schema, about 1,300 tokens combined with GPT-4.1's tokenizer),
+at the route's cache-read discount. They are not a percentage of session cost. Cache eligibility
+and hits depend on the route's minimum prefix, routing and retention; this adds no model call.
+Different configured note caps can produce different schemas.
 
 Two host knobs tune that one call:
 
@@ -511,15 +525,14 @@ always-present tier stays small:
 
 | Tier | Block | Where | Changes when | Cost per turn |
 | --- | --- | --- | --- | --- |
-| Pinned core | `fabric-core` | prompt prefix | a write, pin, forget, or maintenance pass changes a note it shows | zero after the first cached turn |
+| Pinned core | `fabric-core` | prompt prefix | session start, compaction, retraction, refresh | zero after the first cached turn |
 | Path cues | `fabric-semantic` tail | tail | a file tool touches a path for the first time in the session | tokens only on the turn a new path matches; none otherwise |
 | Directory | `fabric-directory` | prompt prefix | the same as the core | one aggregate query per rebuild |
 | On demand | — | `memory.recall` | — | normal recall plus one local lexical discovery query per active scope only when default kinds return zero hits |
 
 Two properties hold the cost down, and `packages/memory/fabric/src/__tests__/prefix-stability.test.ts`
 pins the first one: a quiet turn sends byte-identical prefix blocks (the directory and the core), so a
-provider's prompt cache hits instead of re-ingesting them; and a turn that touches no new path adds no
-tail block at all.
+provider's prompt cache hits instead of re-ingesting them; and path cues add no lines on a turn that touches no new path.
 
 The team store (below) is a scope, not a tier: it joins recall and injection like `project` and
 `agent`, and adds no block of its own.
@@ -536,7 +549,7 @@ Core memory (project prism): [9c1e…] Run memory suites with --timeout=0. …
 
 Only `preference`, `fact`, and `procedure` notes enter, and only when they are **verified**, not
 archived, not flagged, and still readable — a revoked or forgotten note never appears. The block
-sits after the working-memory and directory blocks, stays inside the untrusted envelope, and its
+sits after the directory block, stays inside the untrusted envelope, and its
 text passes the redactor.
 
 `core: false` turns it off; `{ maxTokens, scopes }` configures it (default 600, hard 1000; scopes
@@ -544,12 +557,24 @@ text passes the redactor.
 unused budget flows to the other scope. Ties break by note id, so the selection and its order are
 deterministic.
 
-**Cache stability.** The block is cached per memory instance and keyed by the same write counter as
-the directory. It is rebuilt only when a write, pin, unpin, forget, or a maintenance/consolidation
-pass changes a note it could show; a turn with no such change sends byte-identical bytes (plan
-184's cache parity). It carries no timestamp and makes no model call: one metadata `scanMetadata`
-page per scope, plus one bounded read for the text of the notes that fit. Without `scanMetadata`
-on the store, setup says so once and the core stays off.
+**Cache stability.** Directory and core blocks are pinned per session epoch and reused byte for
+byte across additive writes, including exchange archiving, inserts and lifecycle evidence updates.
+An epoch starts at the first context build (including restore), compaction, a retraction, or an
+explicit import/export/reindex refresh. Each start re-reads the stores and invalidates the directory,
+core and cue-index caches, so external additions appear at the next epoch boundary. Retractions
+through this memory instance (forget, revoke, correct, invalidation, retention, or metadata that
+retires/quarantines a note) rebuild on the next request. Retractions made by another process over
+the same store do the same: each build re-reads only the core notes the pinned prefix shows with one
+bounded `memory.get` per scope, so another process's additions never break the cache, while a
+forgotten, revoked or retired note leaves the next request. If that read fails, the core block is
+left out of that request rather than resent stale, and returns once the store answers. Notes written mid-session remain reachable
+through recall, passive tail injection and path cues until the next epoch. Working memory is read
+on every request and delivered at the head of the tail after the transcript, so its updates are
+visible on the next tool follow-up without changing the prefix.
+
+The core carries no timestamp and makes no model call: one metadata `scanMetadata` page per scope,
+plus bounded reads for the text of the notes that fit. Without `scanMetadata` on the store, setup
+says so once and the core stays off. Session snapshots are removed on close.
 
 **`core.md`.** With the markdown store, each scope's slice is also written to `<scope>/core.md` under
 the notes tree — the same text the model sees, so a person can read exactly what the agent always
@@ -822,14 +847,11 @@ Three disclosure levels keep the prefix small:
 `memory.view { path }` still lists a directory under the root. Without a directory (`directory:
 false`, or a fabric built without one) a path-less `memory.view` lists the root as before.
 
-**Cache stability.** The block is recomputed only after a write that changes it (`remember`,
-`correct`, `forget`, consent changes, retention, working-block edits, the startup file reconcile).
-The result is cached per memory instance and keyed by a write counter, so a turn with no write
-sends byte-identical text: the sort is stable and nothing carries a timestamp. Consequences: a note
-whose `validTo` passes between writes stays counted until the next write; writes from another
-process reach this one on its next restart; and a host-supplied `Memory` that is not the one the
-package creates must call `directory.invalidate()` itself. The block is dropped silently when the
-fabric holds nothing, or when the store cannot aggregate (`countByKind` / `topTags`).
+**Cache stability.** The prompt's directory is pinned with the core for the session epoch described
+above; `memory.view` can still read a fresh, write-keyed directory. Counts and labels in the prefix
+stay fixed until session start, compaction, retraction or explicit refresh. A note whose `validTo`
+passes between boundaries stays counted until the next epoch. The block is dropped silently when
+the fabric holds nothing, or when the store cannot aggregate (`countByKind` / `topTags`).
 
 Cost: no model or embedding call; one `GROUP BY` per aggregate per recompute (a scan in the
 in-memory store), plus one bounded directory walk when `tools.root` is set. The block is at most
@@ -1148,11 +1170,27 @@ the row.
 These six names and their effects are **stable at API level 1**: a host may reference them in approval and policy
 rules. Their descriptions may change in a minor version; the names and effects do not (see `## Compatibility`).
 
-`memory.read` accepts exactly one of `path`, `id`, or `ids` (1–8). A note read returns each note in
+`memory.read` accepts exactly one of `path`, `id`, `ids` (1–8), `around`, or `session`. A note read returns each note in
 full with its header — id, scope, kind, date, and the note's path — through the same scope, consent,
 invalidation and redaction filters as recall; an unknown, foreign-scope, or revoked id is
 `not_found` for that id alone, and the call reads at most 8 notes. A file read stays jailed and
 byte-capped.
+
+`memory.read({ around: "<exchange-id>" })` opens that exchange and up to two readable
+neighbours on each side in the same archive session. `memory.read({ session: "<session-id>",
+page: 0 })` reads eight exchanges at a time in reference-time order; pages start at zero.
+Read and recall results expose the archive session id. Navigation uses the SQLite session/time
+index (also used by the markdown store); custom stores without `listBySession` use a metadata
+scan and emit a status warning. Stores without either capability return `not_found`.
+Older notes without archive `session` metadata remain recallable and readable by id;
+navigation covers newly archived notes. No existing archive is rewritten.
+
+Exchange archive keywords are enriched deterministically with normalized entities,
+numeric dates and units, and category terms (for example, flights add `travel`).
+This adds no model or embedding calls. `memory.recall` returns `unmatchedTerms`
+for terms absent from the returned notes and their indexed keys; these are not
+proof that a term is absent from the whole archive. For aggregation questions,
+use two or three differently worded queries.
 
 `memory.insert` accepts exactly one of `block`, `path`, or `kind: "fact" | "preference" | "procedure"`.
 Typed notes accept `supersedes`, `tRef`, `validFrom`, `validTo`, `tags`, `keywords`, `scope`,
@@ -1176,7 +1214,7 @@ inserts/replacements/forgets remain available and indexed operations fail closed
 Passive semantic injection is **off by default** (`inject: false`). Idle/model turns make no
 semantic embedding or vector/lexical query; `memory.recall` retrieves detail when the agent asks.
 This default has no measured benchmark gain yet: Task 14 must supply paired benchmark evidence
-before changing it. Working memory stays in the prefix and changes on writes.
+before changing it. Working memory is re-read on every build and leads the tail after the transcript.
 
 Opt in with `inject: { query: "task" }`; the defaults are `minSimilarity: 0.2`, `topK: 12` and
 `budgetTokens: 4000`, so an opted-in turn adds **about 4,000 tokens** of memory at most (measured
@@ -1207,7 +1245,7 @@ leaves no room. The cue is the reason the block can be trusted as complete-or-la
 that sees it searches instead of concluding that memory holds no more.
 
 Every injected block — the
-working prefix, the directory, and the semantic tail — is marked
+working tail, the directory, and the semantic tail — is marked
 `untrusted`, `inert`, and `injectionCapable`, so remembered text is never treated as host
 instructions.
 The `minSimilarity` floor (default `0.2`) is applied to the active mode's similarity: query-term
@@ -1257,8 +1295,7 @@ counts distinct sessions (`session.id`).
 
 The package declares the `background` capability for citation touches; without injection, it schedules no citation work.
 
-The semantic block is placed immediately before the latest user message through
-`withTailContext`, with `fabric-semantic` source and item-id accounting metadata. It leaves the
+The semantic block follows working memory in the tail after the complete transcript, with `fabric-semantic` source and item-id accounting metadata. It leaves the
 prefix stable. Opt-in injection adds one embedding, one vector query and one lexical query per
 user turn, plus at most one link lookup, with no added model call.
 

@@ -100,12 +100,14 @@ test("counts match manifests at the truth graph", () => {
     // Plan 203 Task 4 restores OpenRouter as a lockstep provider package.
     // Plan 204 Task 5 adds the @arnilo/prism-provider-openai-codex provider package, so publishable
     // is 47, workspace 46, provider 7, capability 38, and codeWithPeer 46.
-    assert.equal(t.counts.publishable, 47);
-    assert.equal(t.counts.workspace, 46);
-    assert.equal(t.counts.provider, 7);
+    // Plan 205 Task 2 adds the @arnilo/prism-provider-commandcode provider package, so publishable is
+    // 48, workspace 47, provider 8, and codeWithPeer 47.
+    assert.equal(t.counts.publishable, 48);
+    assert.equal(t.counts.workspace, 47);
+    assert.equal(t.counts.provider, 8);
     assert.equal(t.counts.prismFamily, 1);
     assert.equal(t.counts.capability, 38);
-    assert.equal(t.counts.codeWithPeer, 46);
+    assert.equal(t.counts.codeWithPeer, 47);
     assert.equal(t.counts.pureManifest, 0);
   } else if (hasCodingToolsPackage) {
     assert.equal(t.counts.publishable, 17);

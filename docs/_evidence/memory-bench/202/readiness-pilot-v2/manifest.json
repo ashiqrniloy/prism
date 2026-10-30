@@ -1,0 +1,473 @@
+{
+  "kind": "202-readiness-pilot-v2",
+  "supersedes": "readiness-pilot v1 aborted on Beam imported-history 400; full allocation retained; no answers or scores reused",
+  "priorUsage": {
+    "wireAttempts": 0,
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "wallMs": 0
+  },
+  "totalLimits": {
+    "wireAttempts": 300,
+    "inputTokens": 50000000,
+    "outputTokens": 1000000,
+    "wallMs": 14400000,
+    "retries429": 4
+  },
+  "repair": "Fresh 52-cell pilot with per-wire-attempt context/output bounds, complete Responses usage parsing and free-only admission. Historical debt is not refunded.",
+  "task": "4.8",
+  "subset": "dev",
+  "answerModel": "commandcode/stealth/glyph-cluster:free",
+  "judges": [
+    "openrouter/dots-studio/dots-3-note-preview:free",
+    "openrouter/cohere/north-mini-code:free"
+  ],
+  "limits": {
+    "wireAttempts": 300,
+    "inputTokens": 50000000,
+    "outputTokens": 1000000,
+    "wallMs": 14400000,
+    "retries429": 4
+  },
+  "concurrency": 1,
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 8192,
+    "reasoning": "provider default; no override",
+    "maxTurns": 8
+  },
+  "configurationLabel": "frozen baseline model configuration, 8192 output cap, eight-turn stop, provider-default reasoning; no acceptance claim",
+  "annotationPolicy": "binary plus graded rubric evaluation only; no injection-utility annotation calls; source labels/rubrics excluded from normal answer prompts",
+  "selectionPolicy": "one id per ability, preferring five historical run-limit ids; completion-enriched descriptive screen, not an accuracy estimate of the full dev draw",
+  "fullTruncated": "equivalent policy when history fits; no duplicate request; ineligible full cells retain a distinct bounded comparator disposition",
+  "oracle": "two rubric ceiling cells, diagnostic-only; excluded from all paired comparisons and lever rankings",
+  "calibration": "owner-waived; model-assisted, not human calibrated; free panel development-only",
+  "billing": "Explicitly free Command Code answer route and OpenRouter free judges only; no fallback",
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "productHash": "57aa47d94eb3cad629e232372f220296131583ea7ac06189d6f589b39c825799",
+  "harnessHash": "d70585c908bc1a50e0dd390ad86dc098af5430ad17bb16ce2d5de0d6805aa5df",
+  "judgeTemplateVersion": "e3883a2aa5910f76c3f6b377f1758fd4a57ca6dda1449cd86291abd0eea5f306",
+  "gradedTemplateVersion": "f7ff5f9c24afd87f0a5e00bd168103019f6e7140d64031f3e5bec264043c24cb",
+  "provider": "commandcode",
+  "model": "stealth/glyph-cluster:free",
+  "ceiling": 50500000,
+  "jobs": [
+    {
+      "id": "full.5:abstention:1",
+      "questionId": "5:abstention:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "abstention",
+      "config": "full"
+    },
+    {
+      "id": "lexical-topk.5:abstention:1",
+      "questionId": "5:abstention:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "abstention",
+      "config": "lexical-topk"
+    },
+    {
+      "id": "fabric-x.5:abstention:1",
+      "questionId": "5:abstention:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "abstention",
+      "config": "fabric-x"
+    },
+    {
+      "id": "fabric-x-tools.5:abstention:1",
+      "questionId": "5:abstention:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "abstention",
+      "config": "fabric-x-tools"
+    },
+    {
+      "id": "full-truncated.5:abstention:1",
+      "questionId": "5:abstention:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "abstention",
+      "config": "full-truncated"
+    },
+    {
+      "id": "full.3:contradiction_resolution:1",
+      "questionId": "3:contradiction_resolution:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "contradiction_resolution",
+      "config": "full"
+    },
+    {
+      "id": "lexical-topk.3:contradiction_resolution:1",
+      "questionId": "3:contradiction_resolution:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "contradiction_resolution",
+      "config": "lexical-topk"
+    },
+    {
+      "id": "fabric-x.3:contradiction_resolution:1",
+      "questionId": "3:contradiction_resolution:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "contradiction_resolution",
+      "config": "fabric-x"
+    },
+    {
+      "id": "fabric-x-tools.3:contradiction_resolution:1",
+      "questionId": "3:contradiction_resolution:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "contradiction_resolution",
+      "config": "fabric-x-tools"
+    },
+    {
+      "id": "full-truncated.3:contradiction_resolution:1",
+      "questionId": "3:contradiction_resolution:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "contradiction_resolution",
+      "config": "full-truncated"
+    },
+    {
+      "id": "full.5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "full"
+    },
+    {
+      "id": "lexical-topk.5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "lexical-topk"
+    },
+    {
+      "id": "fabric-x.5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "fabric-x"
+    },
+    {
+      "id": "fabric-x-tools.5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "fabric-x-tools"
+    },
+    {
+      "id": "full-truncated.5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "full-truncated"
+    },
+    {
+      "id": "oracle.5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "oracle"
+    },
+    {
+      "id": "full.16:information_extraction:0",
+      "questionId": "16:information_extraction:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "information_extraction",
+      "config": "full"
+    },
+    {
+      "id": "lexical-topk.16:information_extraction:0",
+      "questionId": "16:information_extraction:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "information_extraction",
+      "config": "lexical-topk"
+    },
+    {
+      "id": "fabric-x.16:information_extraction:0",
+      "questionId": "16:information_extraction:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "information_extraction",
+      "config": "fabric-x"
+    },
+    {
+      "id": "fabric-x-tools.16:information_extraction:0",
+      "questionId": "16:information_extraction:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "information_extraction",
+      "config": "fabric-x-tools"
+    },
+    {
+      "id": "full-truncated.16:information_extraction:0",
+      "questionId": "16:information_extraction:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "information_extraction",
+      "config": "full-truncated"
+    },
+    {
+      "id": "full.13:instruction_following:1",
+      "questionId": "13:instruction_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "instruction_following",
+      "config": "full"
+    },
+    {
+      "id": "lexical-topk.13:instruction_following:1",
+      "questionId": "13:instruction_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "instruction_following",
+      "config": "lexical-topk"
+    },
+    {
+      "id": "fabric-x.13:instruction_following:1",
+      "questionId": "13:instruction_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "instruction_following",
+      "config": "fabric-x"
+    },
+    {
+      "id": "fabric-x-tools.13:instruction_following:1",
+      "questionId": "13:instruction_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "instruction_following",
+      "config": "fabric-x-tools"
+    },
+    {
+      "id": "full-truncated.13:instruction_following:1",
+      "questionId": "13:instruction_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "instruction_following",
+      "config": "full-truncated"
+    },
+    {
+      "id": "full.17:knowledge_update:1",
+      "questionId": "17:knowledge_update:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "knowledge_update",
+      "config": "full"
+    },
+    {
+      "id": "lexical-topk.17:knowledge_update:1",
+      "questionId": "17:knowledge_update:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "knowledge_update",
+      "config": "lexical-topk"
+    },
+    {
+      "id": "fabric-x.17:knowledge_update:1",
+      "questionId": "17:knowledge_update:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "knowledge_update",
+      "config": "fabric-x"
+    },
+    {
+      "id": "fabric-x-tools.17:knowledge_update:1",
+      "questionId": "17:knowledge_update:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "knowledge_update",
+      "config": "fabric-x-tools"
+    },
+    {
+      "id": "full-truncated.17:knowledge_update:1",
+      "questionId": "17:knowledge_update:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "knowledge_update",
+      "config": "full-truncated"
+    },
+    {
+      "id": "full.13:multi_session_reasoning:1",
+      "questionId": "13:multi_session_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "multi_session_reasoning",
+      "config": "full"
+    },
+    {
+      "id": "lexical-topk.13:multi_session_reasoning:1",
+      "questionId": "13:multi_session_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "multi_session_reasoning",
+      "config": "lexical-topk"
+    },
+    {
+      "id": "fabric-x.13:multi_session_reasoning:1",
+      "questionId": "13:multi_session_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "multi_session_reasoning",
+      "config": "fabric-x"
+    },
+    {
+      "id": "fabric-x-tools.13:multi_session_reasoning:1",
+      "questionId": "13:multi_session_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "multi_session_reasoning",
+      "config": "fabric-x-tools"
+    },
+    {
+      "id": "full-truncated.13:multi_session_reasoning:1",
+      "questionId": "13:multi_session_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "multi_session_reasoning",
+      "config": "full-truncated"
+    },
+    {
+      "id": "full.10:preference_following:1",
+      "questionId": "10:preference_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "preference_following",
+      "config": "full"
+    },
+    {
+      "id": "lexical-topk.10:preference_following:1",
+      "questionId": "10:preference_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "preference_following",
+      "config": "lexical-topk"
+    },
+    {
+      "id": "fabric-x.10:preference_following:1",
+      "questionId": "10:preference_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "preference_following",
+      "config": "fabric-x"
+    },
+    {
+      "id": "fabric-x-tools.10:preference_following:1",
+      "questionId": "10:preference_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "preference_following",
+      "config": "fabric-x-tools"
+    },
+    {
+      "id": "full-truncated.10:preference_following:1",
+      "questionId": "10:preference_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "preference_following",
+      "config": "full-truncated"
+    },
+    {
+      "id": "full.10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "full"
+    },
+    {
+      "id": "lexical-topk.10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "lexical-topk"
+    },
+    {
+      "id": "fabric-x.10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "fabric-x"
+    },
+    {
+      "id": "fabric-x-tools.10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "fabric-x-tools"
+    },
+    {
+      "id": "full-truncated.10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "full-truncated"
+    },
+    {
+      "id": "oracle.10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "oracle"
+    },
+    {
+      "id": "full.19:temporal_reasoning:1",
+      "questionId": "19:temporal_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "temporal_reasoning",
+      "config": "full"
+    },
+    {
+      "id": "lexical-topk.19:temporal_reasoning:1",
+      "questionId": "19:temporal_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "temporal_reasoning",
+      "config": "lexical-topk"
+    },
+    {
+      "id": "fabric-x.19:temporal_reasoning:1",
+      "questionId": "19:temporal_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "temporal_reasoning",
+      "config": "fabric-x"
+    },
+    {
+      "id": "fabric-x-tools.19:temporal_reasoning:1",
+      "questionId": "19:temporal_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "temporal_reasoning",
+      "config": "fabric-x-tools"
+    },
+    {
+      "id": "full-truncated.19:temporal_reasoning:1",
+      "questionId": "19:temporal_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "temporal_reasoning",
+      "config": "full-truncated"
+    }
+  ],
+  "sdkHash": "2bc1b8c228b1c08df23a746565b4d218bdc66da319a3fe946c3f05fa012e2afb"
+}

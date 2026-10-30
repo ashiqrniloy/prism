@@ -268,7 +268,11 @@ export interface VectorStore {
   upsert(records: readonly MemoryVectorRecord[], options?: { readonly signal?: AbortSignal }): Promise<void>;
   query(query: VectorQuery): Promise<readonly MemoryVectorHit[]>;
   delete(filter: VectorDeleteFilter, options?: { readonly signal?: AbortSignal }): Promise<number>;
-  getByIds?(scope: Required<MemoryScope>, ids: readonly string[], options?: { readonly signal?: AbortSignal }): Promise<readonly MemoryVectorRecord[]>;
+  getByIds?(
+    scope: Required<MemoryScope>,
+    ids: readonly string[],
+    options?: { readonly signal?: AbortSignal },
+  ): Promise<readonly MemoryVectorRecord[]>;
   getByThread?(scope: Required<MemoryScope>): Promise<readonly MemoryVectorRecord[]>;
   listByThread?(query: MemoryVectorListQuery): Promise<MemoryVectorPage>;
   countByThread?(scope: Required<MemoryScope>, options?: { readonly signal?: AbortSignal }): Promise<number>;
@@ -276,6 +280,12 @@ export interface VectorStore {
   countByKind?(scope: Required<MemoryScope>, query?: MemoryDirectoryQuery): Promise<Readonly<Record<string, number>>>;
   /** Most-used `metadata.fabric` tags and keywords over the same active notes; count desc, then tag ascending. */
   topTags?(scope: Required<MemoryScope>, query?: MemoryTopTagsQuery): Promise<readonly MemoryTagCount[]>;
+  /** Exchange metadata in one exact scope/session, ordered by reference time and id. */
+  listBySession?(
+    scope: Required<MemoryScope>,
+    session: string,
+    options?: { readonly signal?: AbortSignal },
+  ): Promise<readonly MemoryVectorMetadataRow[]>;
   /** Metadata-only pages over every thread of one resource, ordered by `(threadId, id)`; no text, no embedding. */
   scanMetadata?(query: VectorScanMetadataQuery): Promise<MemoryVectorMetadataPage>;
   /** Distinct resource ids of one tenant, optional literal prefix; no rows or text. */

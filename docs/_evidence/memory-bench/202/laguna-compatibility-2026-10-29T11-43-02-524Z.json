@@ -1,0 +1,78 @@
+{
+  "kind": "202-laguna-compatibility-probe",
+  "ref": "commandcode/poolside/laguna-s-2.1-free",
+  "limits": {
+    "wireAttempts": 12,
+    "inputTokens": 4000000,
+    "outputTokens": 50000,
+    "wallMs": 600000,
+    "retries429": 0
+  },
+  "startedAt": "2026-10-29T11:43:02.525Z",
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 2048,
+    "reasoning": "provider default",
+    "maxTurns": 8
+  },
+  "cases": [
+    "imported-assistant-history",
+    "one-frozen-development-complete-history",
+    "tool-call-and-result",
+    "follow-up-and-stop"
+  ],
+  "routeOverride": "openai",
+  "benchmarkScoring": false,
+  "scope": "diagnostic only; no held-out request, judge call, campaign model change or baseline resumption",
+  "tests": [
+    {
+      "name": "imported-assistant-history",
+      "status": "completed",
+      "passed": true,
+      "wallMs": 1638,
+      "nonempty": true,
+      "errorCode": null,
+      "errorMessage": null
+    }
+  ],
+  "status": "failed",
+  "model": {
+    "limits": {
+      "contextWindow": 256000
+    },
+    "compat": {
+      "thinkingFamily": "openai_reasoning",
+      "preserveThinking": true,
+      "route": "openai",
+      "pricing_source": "https://commandcode.ai/docs/resources/pricing-limits"
+    },
+    "inputCap": 254976,
+    "freeRoute": true
+  },
+  "failure": {
+    "name": "MemoryBenchDatasetError",
+    "code": "Parquetdecodingrequiresbenchmark-onlypyarrow23.0.1seeREADMEandPRISM_MEMORY_BENCH_PYTHON"
+  },
+  "usage": {
+    "inputTokens": 0,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0,
+    "outputTokens": 0,
+    "accountedInputTokens": 0,
+    "accountedOutputTokens": 0,
+    "usageMissingExchanges": 0,
+    "usageComplete": true,
+    "wireAttempts": 1
+  },
+  "allocations": [
+    {
+      "provider": "commandcode",
+      "exchange": 1,
+      "inputBound": 256000,
+      "outputBound": 2048
+    }
+  ],
+  "protectedArtifactsUnchanged": true,
+  "finishedAt": "2026-10-29T11:43:04.271Z",
+  "wallMs": 1746
+}

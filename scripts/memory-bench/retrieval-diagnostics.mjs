@@ -23,7 +23,7 @@ import {
 
 const PROTOCOL = "delivery-stage-v2";
 const CEILING_PROTOCOL = "ceiling-v2";
-const RESTAGE_PROTOCOL = "stage-correction-v1";
+const RESTAGE_PROTOCOL = "stage-correction-v2";
 const MULTI_SESSION_PROTOCOL = "multi-session-recall-v1";
 /** Ranks at which a multi-session diagnostic reports "all needed rounds inside the top k". */
 export const MULTI_SESSION_TOP_K = Object.freeze([10, 20]);
@@ -249,7 +249,7 @@ async function openProductStore(questionId, storeFrom, root, options) {
 
 export async function diagnoseRetrieval(options) {
   // A diagnostic reads gold evidence, so it can never run against the live held-out draw.
-  if (options.subset === "heldout-v3")
+  if (options.subset?.startsWith("heldout"))
     throw new MemoryBenchDatasetError("diagnostics read gold evidence, so they refuse the held-out v3 draw");
   const answers = options.failedReport ? JSON.parse(await readFile(options.failedReport, "utf8")).results : null;
   const answersById = new Map((answers ?? []).map((row) => [row.id, row]));
@@ -332,7 +332,12 @@ export async function diagnoseRetrieval(options) {
       rows.push({
         id: question.id,
         ability: question.ability,
+        candidateGapMeasure: "needed-rounds-never-returned-by-any-tool",
+        toolSurfacing: answersById.get(question.id)?.evidenceCounts?.toolSurfacing ?? null,
         answerCorrect: correct,
+        outcome: answersById.get(question.id)?.outcome,
+        labelSource: evidence.labelSource,
+        unknownSourceReferences: evidence.unknownSourceReferences.length,
         ...delivery,
         questionOnlyAllNeededAt: clean.allNeededAt,
         questionOnlyRankAllNeededAt: rankOnly.allNeededAt,
@@ -348,6 +353,9 @@ export async function diagnoseRetrieval(options) {
         selectedRounds: selected.ids.length,
         selectedTokens: selected.tokens,
         stage: retrievalStage({
+          outcome: answersById.get(question.id)?.outcome,
+          ability: question.ability,
+          unknownSourceReferences: evidence.unknownSourceReferences.length,
           goldRounds: gold,
           candidateRounds: candidateIds,
           selectedRounds: selected.ids,
@@ -372,6 +380,9 @@ export async function diagnoseRetrieval(options) {
         id: question.id,
         ability: question.ability,
         answerCorrect: correct,
+        outcome: answersById.get(question.id)?.outcome,
+        labelSource: evidence.labelSource,
+        unknownSourceReferences: evidence.unknownSourceReferences.length,
         ...empty,
         questionOnlyAllNeededAt: empty.allNeededAt,
         questionOnlyRankAllNeededAt: empty.allNeededAt,
@@ -389,7 +400,7 @@ export async function diagnoseRetrieval(options) {
         storeError: String(error.name ?? "Error")
           .replace(/[^A-Za-z0-9_:-]/g, "")
           .slice(0, 60),
-        stage: "store_error",
+        stage: answersById.get(question.id)?.outcome === "run_limit" ? "run_limit" : "store_error",
       });
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -403,6 +414,12 @@ export async function diagnoseRetrieval(options) {
   return {
     schemaVersion: 2,
     protocol: PROTOCOL,
+    candidateGapMeasure: "needed-rounds-never-returned-by-any-tool",
+    toolSurfacingSummary: {
+      observedQuestions: rows.filter((row) => row.toolSurfacing != null).length,
+      questionsWithCandidateGap: rows.filter((row) => row.toolSurfacing?.candidateGap === true).length,
+      neverSurfacedRounds: rows.reduce((total, row) => total + (row.toolSurfacing?.neverSurfaced ?? 0), 0),
+    },
     protocolVersion: BENCH_PROTOCOL_VERSION,
     suite: options.suite,
     subset: options.subset,
@@ -433,7 +450,7 @@ export async function diagnoseRetrieval(options) {
  * and booleans only: no question, gold, note or round text can leave here.
  */
 export async function multiSessionDiagnostic(options) {
-  if (options.subset === "heldout-v3")
+  if (options.subset?.startsWith("heldout"))
     throw new MemoryBenchDatasetError("diagnostics read gold evidence, so they refuse the held-out v3 draw");
   if (options.storeFrom === undefined)
     throw new MemoryBenchDatasetError("--multi-session needs --store-from <snapshot dir>: the indicted store is the product one");
@@ -637,10 +654,14 @@ function histogram(rows, pick) {
  * are written: no question, answer, note or gold text can reach the correction.
  */
 export function restageReport(sourceReport, { sourceSha256 = null } = {}) {
+  if (sourceReport.subset?.startsWith("heldout")) throw new MemoryBenchDatasetError("stage correction refuses held-out evidence");
   const rows = sourceReport.rows.map((row) => ({
     id: row.id,
     ability: row.ability,
-    correct: row.answerCorrect === true,
+    correct: row.answerCorrect,
+    outcome: row.outcome,
+    labelSource: row.labelSource ?? "historical_heuristic",
+    unknownSourceReferences: row.unknownSourceReferences ?? null,
     allNeededVisible: row.allNeededVisible === true,
     answerMessageVisible: row.answerMessageVisible === true,
     goldRounds: row.goldRounds,
@@ -652,15 +673,18 @@ export function restageReport(sourceReport, { sourceSha256 = null } = {}) {
     stageBefore: row.stage,
     // A stored round the product could not store is not a retrieval stage; keep it as recorded.
     stage:
-      row.stage === "store_error"
+      row.stage === "store_error" && !row.outcome
         ? "store_error"
         : stageFromCounts({
+            outcome: row.outcome,
+            ability: row.ability,
+            unknownSourceReferences: row.unknownSourceReferences,
             goldRounds: row.goldRounds,
             candidateGold: row.candidateGold,
             selectedGold: row.selectedGold,
             fineRounds: row.fineRounds,
             fineSelected: row.selectedFine,
-            correct: row.answerCorrect === true,
+            correct: row.answerCorrect,
           }),
   }));
   return {

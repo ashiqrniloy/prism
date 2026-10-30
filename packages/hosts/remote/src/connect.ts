@@ -168,6 +168,9 @@ export async function connectAgent(endpoint: ConnectEndpoint, options: ConnectAg
         throw unsupported("models.resolve()");
       },
     },
+    async reload() {
+      throw unsupported("reload()");
+    },
     async session(sessionOptions = {}) {
       const opened = (await dispatcher.request("sessions.open", {
         ...(sessionOptions.id !== undefined ? { id: sessionOptions.id } : {}),

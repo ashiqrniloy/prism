@@ -1,0 +1,254 @@
+{
+  "provider": "commandcode",
+  "wire": "messages",
+  "model": "claude-haiku-5-5",
+  "sessionId": "cache-parity-fixture-205",
+  "source": "offline recording of pi-commandcode-provider 0.7.10 (pi-ai 1.4.0 codecs) against a fake fetch; no upstream, no key",
+  "requests": [
+    {
+      "method": "POST",
+      "path": "/provider/v1/messages?beta=true",
+      "headers": {
+        "anthropic-beta": "fine-grained-tool-streaming-2025-05-14",
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json"
+      },
+      "body": {
+        "model": "claude-haiku-5-5",
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Inspect fixture.js.",
+                "cache_control": {
+                  "type": "ephemeral"
+                }
+              }
+            ]
+          }
+        ],
+        "max_tokens": 65536,
+        "stream": true,
+        "system": [
+          {
+            "type": "text",
+            "text": "You are reviewing a tiny coding fixture. Keep tools and prior history unchanged. Reply OK; do not call tools.",
+            "cache_control": {
+              "type": "ephemeral"
+            }
+          }
+        ],
+        "tools": [
+          {
+            "name": "read",
+            "description": "Read a fixture file",
+            "input_schema": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            }
+          },
+          {
+            "name": "test",
+            "description": "Check fixture tests",
+            "input_schema": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            }
+          }
+        ],
+        "thinking": {
+          "type": "adaptive",
+          "display": "summarized"
+        },
+        "output_config": {
+          "effort": "high"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/provider/v1/messages?beta=true",
+      "headers": {
+        "anthropic-beta": "fine-grained-tool-streaming-2025-05-14",
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json"
+      },
+      "body": {
+        "model": "claude-haiku-5-5",
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Inspect fixture.js."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool_use",
+                "id": "call_read",
+                "name": "read",
+                "input": {}
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "call_read",
+                "content": "export const answer = 42;",
+                "is_error": false,
+                "cache_control": {
+                  "type": "ephemeral"
+                }
+              }
+            ]
+          }
+        ],
+        "max_tokens": 65536,
+        "stream": true,
+        "system": [
+          {
+            "type": "text",
+            "text": "You are reviewing a tiny coding fixture. Keep tools and prior history unchanged. Reply OK; do not call tools.",
+            "cache_control": {
+              "type": "ephemeral"
+            }
+          }
+        ],
+        "tools": [
+          {
+            "name": "read",
+            "description": "Read a fixture file",
+            "input_schema": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            }
+          },
+          {
+            "name": "test",
+            "description": "Check fixture tests",
+            "input_schema": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            }
+          }
+        ],
+        "thinking": {
+          "type": "adaptive",
+          "display": "summarized"
+        },
+        "output_config": {
+          "effort": "high"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/provider/v1/messages?beta=true",
+      "headers": {
+        "anthropic-beta": "fine-grained-tool-streaming-2025-05-14",
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json"
+      },
+      "body": {
+        "model": "claude-haiku-5-5",
+        "messages": [
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Inspect fixture.js."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool_use",
+                "id": "call_read",
+                "name": "read",
+                "input": {}
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "call_read",
+                "content": "export const answer = 42;",
+                "is_error": false
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Confirm the fixture. Reply OK.",
+                "cache_control": {
+                  "type": "ephemeral"
+                }
+              }
+            ]
+          }
+        ],
+        "max_tokens": 65536,
+        "stream": true,
+        "system": [
+          {
+            "type": "text",
+            "text": "You are reviewing a tiny coding fixture. Keep tools and prior history unchanged. Reply OK; do not call tools.",
+            "cache_control": {
+              "type": "ephemeral"
+            }
+          }
+        ],
+        "tools": [
+          {
+            "name": "read",
+            "description": "Read a fixture file",
+            "input_schema": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            }
+          },
+          {
+            "name": "test",
+            "description": "Check fixture tests",
+            "input_schema": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            }
+          }
+        ],
+        "thinking": {
+          "type": "adaptive",
+          "display": "summarized"
+        },
+        "output_config": {
+          "effort": "high"
+        }
+      }
+    }
+  ]
+}

@@ -35,7 +35,7 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Implications: Consumers installing `@arnilo/prism-agent-sdk` must satisfy or accept npm/bun peer dependency warnings unless all three are provided or ignored.
 
 ## Hot-reload / dynamic update of skills and hooks in live agent session
-- Review (plan 174 Task 1, 2026-10-14): post-0.13. Additive feature or a break that waits for 0.14. Not a public 0.13 contract change small enough for plan 174 Tasks 2–11.
+- Closed (2026-10-29): resolved. `agent.reload()` re-reads `skills.dirs`, re-runs every package `setup` (so package-discovered `.agents/skills` refresh), and re-compiles `AgentConfig.hooks`/package hooks on a fresh bus and slot registry, swapping in place with atomic failure. Open sessions keep their conversation and see the new skills/hooks next run; docs/agent.md has the contract and `src/__tests__/agent-reload.test.ts` covers success, failure rollback, concurrency, dispose, open-session continuity, and hook recompilation.
 - Section: Further Actions
 - Priority: P2
 - Source: plans/134-Prism-Agent-SDK.md
@@ -225,7 +225,7 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Implications: A reader arriving at a released docs page finds 0.12 API that no longer exists, with nothing on the page saying so. The released-doc pins that would flag the drift were removed rather than repointed.
 
 ## Promote the hook harness into `@arnilo/prism/testing`
-- Review (plan 174 Task 1, 2026-10-14): post-0.13. `src/__tests__/helpers/hook-harness.ts` is not in the tree. Reconstructing it is a new testing export, not required to freeze the reviewed surface.
+- Closed (2026-10-29): resolved by plan 147 Task 2 before this entry was actioned. The harness shipped as `loopConformance` on the public `./testing` subpath (`src/testing/loop-conformance.ts`, exported from `src/testing/index.ts`), not under the old test-helper path. It takes a `LoopStrategy` (or full options), drives `createAgent`/`session.run` with a scripted provider, registers a firing probe for every `HOOK_CATALOG` entry unless `probe: false`, and returns `{ result?, error?, events, fired, agent, session }`. `docs/testing.md` documents the options and result; `hook-catalog-coverage.test.ts` proves every named and observe hook fires from both the default loop and a custom planning loop; `package-conformance.test.ts` covers the bare-`LoopStrategy` form; `packages/integrations/workflows` and `packages/tools/coding` consume it through `@arnilo/prism/testing`. No separate `hookHarness` alias is exported.
 - Section: Further Actions
 - Priority: P1
 - Source: plans/145-Phase-1-Part-B-Retire-0-12-Interception-Mechanisms.md

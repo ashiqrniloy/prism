@@ -1,0 +1,113 @@
+{
+  "seed": "prism-202-memory-bench-dreambench-swe",
+  "draw": "SHA-256(\"prism-202-memory-bench-dreambench-swe:\" + id), ascending inside each ability and partition",
+  "source": "https://raw.githubusercontent.com/iroiro147/dreambench-swe/d340bb2eaf3a81691820ef0683cd652753a9fa5a/experiments/env/sequences_confirmatory_v2.jsonl",
+  "datasetSha256": "d6573c46aa6a75cee7a8193034b0bf86a1d63422dc7deef8a03e2b81bbcf4d73",
+  "strata": {
+    "C2": [
+      2,
+      1,
+      1
+    ],
+    "C3": [
+      2,
+      1,
+      1
+    ],
+    "C5": [
+      2,
+      1,
+      1
+    ],
+    "C6": [
+      1,
+      1,
+      1
+    ],
+    "C7": [
+      1,
+      1,
+      1
+    ],
+    "C9": [
+      1,
+      1,
+      1
+    ]
+  },
+  "part": "dev | heldout-a | heldout-b; heldout-b is reserved for the single remediation round",
+  "residualPool": {
+    "C2": 2,
+    "C3": 1,
+    "C5": 2,
+    "C6": 1,
+    "C7": 0,
+    "C9": 1
+  },
+  "idsHash": "ed61ff98d52d9891f95a47a1cb925f3fa24da5da4e48b05b31000f3a92bf89b7",
+  "abilities": {
+    "dev": {
+      "C2": [
+        "v2-c2-config-retrieval-interference-csv-prefix-01",
+        "v2-c2-expr-retrieval-interference-help-footer-02"
+      ],
+      "C3": [
+        "v2-c3-config-supersede-error-suffix-02",
+        "v2-c3-expr-supersede-family-token-02"
+      ],
+      "C5": [
+        "v2-c5-expr-scope-bitwise-vs-arithmetic-02",
+        "v2-c5-expr-scope-generated-help-vs-evaluator-01"
+      ],
+      "C6": [
+        "v2-c6-todo-authority-conventions-vs-reviewer-01"
+      ],
+      "C7": [
+        "v2-c7-expr-compose-mask-window-01"
+      ],
+      "C9": [
+        "v2-c9-expr-spurious-float-divide-01"
+      ]
+    },
+    "heldout-a": {
+      "C2": [
+        "v2-c2-todo-retrieval-interference-review-lane-01"
+      ],
+      "C3": [
+        "v2-c3-todo-supersede-channel-anti-recency-01"
+      ],
+      "C5": [
+        "v2-c5-config-scope-schema-vs-runtime-02"
+      ],
+      "C6": [
+        "v2-c6-config-authority-doc-vs-reviewer-01"
+      ],
+      "C7": [
+        "v2-c7-config-compose-provenance-code-01"
+      ],
+      "C9": [
+        "v2-c9-todo-spurious-due-parser-01"
+      ]
+    },
+    "heldout-b": {
+      "C2": [
+        "v2-c2-config-retrieval-interference-schema-marker-02"
+      ],
+      "C3": [
+        "v2-c3-expr-supersede-epoch-anti-recency-01"
+      ],
+      "C5": [
+        "v2-c5-config-scope-csv-vs-ini-01"
+      ],
+      "C6": [
+        "v2-c6-expr-authority-two-reviewers-02"
+      ],
+      "C7": [
+        "v2-c7-todo-compose-priority-lane-01"
+      ],
+      "C9": [
+        "v2-c9-todo-spurious-archive-order-02"
+      ]
+    }
+  }
+}

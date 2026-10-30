@@ -1,0 +1,115 @@
+{
+  "kind": "202-baseline-run",
+  "journal": {
+    "campaignId": "campaign-9abe08731595",
+    "status": "quota-unavailable",
+    "ceiling": 2000000000,
+    "spend": 398818335,
+    "attempts": [
+      {
+        "attemptId": "202-baseline.beam-100k.preset-r1.openrouter.nvidia/nemotron-3.5-lightning:free@1",
+        "jobId": "202-baseline.beam-100k.preset-r1.openrouter.nvidia/nemotron-3.5-lightning:free",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 10500000,
+        "confirmedInputTokens": 1369671
+      },
+      {
+        "attemptId": "202-baseline.beam-100k.passive-only.openrouter.nvidia/nemotron-3.5-lightning:free@1",
+        "jobId": "202-baseline.beam-100k.passive-only.openrouter.nvidia/nemotron-3.5-lightning:free",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 10500000,
+        "confirmedInputTokens": 187967
+      },
+      {
+        "attemptId": "202-baseline.beam-100k.full.openrouter.nvidia/nemotron-3.5-lightning:free@1",
+        "jobId": "202-baseline.beam-100k.full.openrouter.nvidia/nemotron-3.5-lightning:free",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 40500000,
+        "confirmedInputTokens": 5655195
+      },
+      {
+        "attemptId": "202-baseline.beam-100k.full-truncated.openrouter.nvidia/nemotron-3.5-lightning:free@1",
+        "jobId": "202-baseline.beam-100k.full-truncated.openrouter.nvidia/nemotron-3.5-lightning:free",
+        "status": "completed",
+        "usageComplete": false,
+        "reservedInputTokens": 40500000,
+        "confirmedInputTokens": 5651031
+      },
+      {
+        "attemptId": "202-baseline.beam-100k.lexical-topk.openrouter.nvidia/nemotron-3.5-lightning:free@1",
+        "jobId": "202-baseline.beam-100k.lexical-topk.openrouter.nvidia/nemotron-3.5-lightning:free",
+        "status": "abandoned",
+        "usageComplete": true,
+        "reservedInputTokens": 10500000,
+        "confirmedInputTokens": 118451
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "202-baseline.beam-100k.preset-r1.openrouter.nvidia/nemotron-3.5-lightning:free",
+      "attemptId": "202-baseline.beam-100k.preset-r1.openrouter.nvidia/nemotron-3.5-lightning:free@1",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 1369671
+    },
+    {
+      "id": "202-baseline.beam-100k.passive-only.openrouter.nvidia/nemotron-3.5-lightning:free",
+      "attemptId": "202-baseline.beam-100k.passive-only.openrouter.nvidia/nemotron-3.5-lightning:free@1",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 187967
+    },
+    {
+      "id": "202-baseline.beam-100k.full.openrouter.nvidia/nemotron-3.5-lightning:free",
+      "attemptId": "202-baseline.beam-100k.full.openrouter.nvidia/nemotron-3.5-lightning:free@1",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 5655195
+    },
+    {
+      "id": "202-baseline.beam-100k.full-truncated.openrouter.nvidia/nemotron-3.5-lightning:free",
+      "attemptId": "202-baseline.beam-100k.full-truncated.openrouter.nvidia/nemotron-3.5-lightning:free@1",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": false,
+      "charged": 40500000
+    },
+    {
+      "id": "202-baseline.beam-100k.lexical-topk.openrouter.nvidia/nemotron-3.5-lightning:free",
+      "attemptId": "202-baseline.beam-100k.lexical-topk.openrouter.nvidia/nemotron-3.5-lightning:free@1",
+      "status": "quota-pause",
+      "cause": "quota-window",
+      "usageComplete": true,
+      "charged": 118451
+    }
+  ],
+  "baselineComplete": false,
+  "coverage": {
+    "completedCells": 4,
+    "requiredCells": 75,
+    "interruptedCells": 1,
+    "notStartedCells": 70
+  },
+  "partialAttempt": {
+    "jobId": "202-baseline.beam-100k.lexical-topk.openrouter.nvidia/nemotron-3.5-lightning:free",
+    "status": "quota-pause",
+    "checkpointedQuestions": 25,
+    "eligibleForAggregate": false
+  },
+  "usageLimitations": [
+    {
+      "jobId": "202-baseline.beam-100k.full-truncated.openrouter.nvidia/nemotron-3.5-lightning:free",
+      "retainedReservation": 40500000,
+      "reportedInputTokens": 5651031,
+      "reportedOutputTokens": 243160,
+      "reason": "incomplete usage after judge retry; no refund"
+    }
+  ]
+}

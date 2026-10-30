@@ -1,0 +1,28 @@
+{
+  "kind": "202-memory-efficacy-diagnosis-validation",
+  "generatedAt": "2026-10-30T01:05:21.207280+00:00",
+  "status": "passed",
+  "liveRequests": 0,
+  "sourceReportsVerified": 23,
+  "acceptedArtifactHashesVerified": 5,
+  "ownerClosurePreserved": true,
+  "artifacts": {
+    "audit.mjs": "24725bfb578b8075b56744756ca050035ccd8050563490460563afe0e433face",
+    "audit.json": "4835f0354818b8d7888353534898f43709fa276e3155e6aa3c2fbce608d61e0a"
+  },
+  "checks": [
+    {
+      "command": "PRISM_MEMORY_BENCH_PYTHON=.cache/memory-bench/python/bin/python3 timeout 180 bun docs/_evidence/memory-bench/202/diagnosis-2026-10-30/audit.mjs",
+      "result": "pass: report hashes, matching ids/delta, empty archive reproduction, LoCoMo id mismatch, closure unchanged"
+    },
+    {
+      "command": "timeout 90 bun test packages/memory/fabric/src/__tests__/exchanges.test.ts scripts/memory-bench/audit/zero-score.test.mjs",
+      "result": "26 pass / 0 fail"
+    },
+    {
+      "command": "timeout 30 bunx biome format --write --no-errors-on-unmatched docs/_evidence/memory-bench/202/diagnosis-2026-10-30/audit.mjs",
+      "result": "pass"
+    }
+  ],
+  "scope": "Offline diagnosis and advisory plan update only; no product or benchmark source changes, no held-out evaluation"
+}

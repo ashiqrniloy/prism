@@ -1,0 +1,559 @@
+{
+  "kind": "202-readiness-pilot-v6",
+  "supersedes": "Owner replaced only the evaluation panel; reuse all 42 v5 answers without regeneration or score reuse",
+  "priorUsage": {
+    "wireAttempts": 0,
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "wallMs": 0
+  },
+  "totalLimits": {
+    "wireAttempts": 300,
+    "inputTokens": 50000000,
+    "outputTokens": 1000000,
+    "wallMs": 86400000,
+    "activeWallMs": 14400000,
+    "retries429": 4
+  },
+  "repair": "Fresh 52-cell pilot with per-wire-attempt context/output bounds and complete Responses usage parsing. The selected model and billing are frozen; historical debt is not refunded.",
+  "task": "4.8",
+  "subset": "dev",
+  "answerModel": "commandcode/meta/muse-spark-1.3-contributor",
+  "judges": [
+    "commandcode/minimax/minimax-m3.1-flash",
+    "commandcode/z-ai/glm-5.3-flash"
+  ],
+  "limits": {
+    "wireAttempts": 300,
+    "inputTokens": 50000000,
+    "outputTokens": 1000000,
+    "wallMs": 86400000,
+    "activeWallMs": 14400000,
+    "retries429": 4
+  },
+  "concurrency": 1,
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 8192,
+    "reasoning": "provider default; no override",
+    "maxTurns": 8
+  },
+  "configurationLabel": "frozen baseline model configuration, 8192 output cap, eight-turn stop, provider-default reasoning; no acceptance claim",
+  "annotationPolicy": "binary plus graded rubric evaluation only; no injection-utility annotation calls; source labels/rubrics excluded from normal answer prompts",
+  "selectionPolicy": "one id per ability, preferring five historical run-limit ids; completion-enriched descriptive screen, not an accuracy estimate of the full dev draw",
+  "fullTruncated": "equivalent policy when history fits; no duplicate request; ineligible full cells retain a distinct bounded comparator disposition",
+  "oracle": "two rubric ceiling cells, diagnostic-only; excluded from all paired comparisons and lever rankings",
+  "calibration": "owner-waived; model-assisted, not human calibrated; two distinct model families, development-only",
+  "billing": "Owner authorized MiniMax M3.1 Flash (free first; free window ended HTTP 403, paid selected) and GLM 5.3 Flash from Command Code as judges. Muse answers already paid and preserved. No other paid route.",
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "productHash": "57aa47d94eb3cad629e232372f220296131583ea7ac06189d6f589b39c825799",
+  "harnessHash": "eae71a54e01f401944024483e61307b56e5cfdd61667534721c64f31f3de1494",
+  "judgeTemplateVersion": "e3883a2aa5910f76c3f6b377f1758fd4a57ca6dda1449cd86291abd0eea5f306",
+  "gradedTemplateVersion": "f7ff5f9c24afd87f0a5e00bd168103019f6e7140d64031f3e5bec264043c24cb",
+  "provider": "commandcode",
+  "model": "meta/muse-spark-1.3-contributor",
+  "ceiling": 50500000,
+  "jobs": [
+    {
+      "id": "full.5:abstention:1",
+      "questionId": "5:abstention:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "abstention",
+      "config": "full"
+    },
+    {
+      "id": "lexical-topk.5:abstention:1",
+      "questionId": "5:abstention:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "abstention",
+      "config": "lexical-topk"
+    },
+    {
+      "id": "fabric-x.5:abstention:1",
+      "questionId": "5:abstention:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "abstention",
+      "config": "fabric-x"
+    },
+    {
+      "id": "fabric-x-tools.5:abstention:1",
+      "questionId": "5:abstention:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "abstention",
+      "config": "fabric-x-tools"
+    },
+    {
+      "id": "full-truncated.5:abstention:1",
+      "questionId": "5:abstention:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "abstention",
+      "config": "full-truncated"
+    },
+    {
+      "id": "full.3:contradiction_resolution:1",
+      "questionId": "3:contradiction_resolution:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "contradiction_resolution",
+      "config": "full"
+    },
+    {
+      "id": "lexical-topk.3:contradiction_resolution:1",
+      "questionId": "3:contradiction_resolution:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "contradiction_resolution",
+      "config": "lexical-topk"
+    },
+    {
+      "id": "fabric-x.3:contradiction_resolution:1",
+      "questionId": "3:contradiction_resolution:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "contradiction_resolution",
+      "config": "fabric-x"
+    },
+    {
+      "id": "fabric-x-tools.3:contradiction_resolution:1",
+      "questionId": "3:contradiction_resolution:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "contradiction_resolution",
+      "config": "fabric-x-tools"
+    },
+    {
+      "id": "full-truncated.3:contradiction_resolution:1",
+      "questionId": "3:contradiction_resolution:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "contradiction_resolution",
+      "config": "full-truncated"
+    },
+    {
+      "id": "full.5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "full"
+    },
+    {
+      "id": "lexical-topk.5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "lexical-topk"
+    },
+    {
+      "id": "fabric-x.5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "fabric-x"
+    },
+    {
+      "id": "fabric-x-tools.5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "fabric-x-tools"
+    },
+    {
+      "id": "full-truncated.5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "full-truncated"
+    },
+    {
+      "id": "oracle.5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "oracle"
+    },
+    {
+      "id": "full.16:information_extraction:0",
+      "questionId": "16:information_extraction:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "information_extraction",
+      "config": "full"
+    },
+    {
+      "id": "lexical-topk.16:information_extraction:0",
+      "questionId": "16:information_extraction:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "information_extraction",
+      "config": "lexical-topk"
+    },
+    {
+      "id": "fabric-x.16:information_extraction:0",
+      "questionId": "16:information_extraction:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "information_extraction",
+      "config": "fabric-x"
+    },
+    {
+      "id": "fabric-x-tools.16:information_extraction:0",
+      "questionId": "16:information_extraction:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "information_extraction",
+      "config": "fabric-x-tools"
+    },
+    {
+      "id": "full-truncated.16:information_extraction:0",
+      "questionId": "16:information_extraction:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "information_extraction",
+      "config": "full-truncated"
+    },
+    {
+      "id": "full.13:instruction_following:1",
+      "questionId": "13:instruction_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "instruction_following",
+      "config": "full"
+    },
+    {
+      "id": "lexical-topk.13:instruction_following:1",
+      "questionId": "13:instruction_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "instruction_following",
+      "config": "lexical-topk"
+    },
+    {
+      "id": "fabric-x.13:instruction_following:1",
+      "questionId": "13:instruction_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "instruction_following",
+      "config": "fabric-x"
+    },
+    {
+      "id": "fabric-x-tools.13:instruction_following:1",
+      "questionId": "13:instruction_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "instruction_following",
+      "config": "fabric-x-tools"
+    },
+    {
+      "id": "full-truncated.13:instruction_following:1",
+      "questionId": "13:instruction_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "instruction_following",
+      "config": "full-truncated"
+    },
+    {
+      "id": "full.17:knowledge_update:1",
+      "questionId": "17:knowledge_update:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "knowledge_update",
+      "config": "full"
+    },
+    {
+      "id": "lexical-topk.17:knowledge_update:1",
+      "questionId": "17:knowledge_update:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "knowledge_update",
+      "config": "lexical-topk"
+    },
+    {
+      "id": "fabric-x.17:knowledge_update:1",
+      "questionId": "17:knowledge_update:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "knowledge_update",
+      "config": "fabric-x"
+    },
+    {
+      "id": "fabric-x-tools.17:knowledge_update:1",
+      "questionId": "17:knowledge_update:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "knowledge_update",
+      "config": "fabric-x-tools"
+    },
+    {
+      "id": "full-truncated.17:knowledge_update:1",
+      "questionId": "17:knowledge_update:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "knowledge_update",
+      "config": "full-truncated"
+    },
+    {
+      "id": "full.13:multi_session_reasoning:1",
+      "questionId": "13:multi_session_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "multi_session_reasoning",
+      "config": "full"
+    },
+    {
+      "id": "lexical-topk.13:multi_session_reasoning:1",
+      "questionId": "13:multi_session_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "multi_session_reasoning",
+      "config": "lexical-topk"
+    },
+    {
+      "id": "fabric-x.13:multi_session_reasoning:1",
+      "questionId": "13:multi_session_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "multi_session_reasoning",
+      "config": "fabric-x"
+    },
+    {
+      "id": "fabric-x-tools.13:multi_session_reasoning:1",
+      "questionId": "13:multi_session_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "multi_session_reasoning",
+      "config": "fabric-x-tools"
+    },
+    {
+      "id": "full-truncated.13:multi_session_reasoning:1",
+      "questionId": "13:multi_session_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "multi_session_reasoning",
+      "config": "full-truncated"
+    },
+    {
+      "id": "full.10:preference_following:1",
+      "questionId": "10:preference_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "preference_following",
+      "config": "full"
+    },
+    {
+      "id": "lexical-topk.10:preference_following:1",
+      "questionId": "10:preference_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "preference_following",
+      "config": "lexical-topk"
+    },
+    {
+      "id": "fabric-x.10:preference_following:1",
+      "questionId": "10:preference_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "preference_following",
+      "config": "fabric-x"
+    },
+    {
+      "id": "fabric-x-tools.10:preference_following:1",
+      "questionId": "10:preference_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "preference_following",
+      "config": "fabric-x-tools"
+    },
+    {
+      "id": "full-truncated.10:preference_following:1",
+      "questionId": "10:preference_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "preference_following",
+      "config": "full-truncated"
+    },
+    {
+      "id": "full.10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "full"
+    },
+    {
+      "id": "lexical-topk.10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "lexical-topk"
+    },
+    {
+      "id": "fabric-x.10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "fabric-x"
+    },
+    {
+      "id": "fabric-x-tools.10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "fabric-x-tools"
+    },
+    {
+      "id": "full-truncated.10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "full-truncated"
+    },
+    {
+      "id": "oracle.10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "oracle"
+    },
+    {
+      "id": "full.19:temporal_reasoning:1",
+      "questionId": "19:temporal_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "temporal_reasoning",
+      "config": "full"
+    },
+    {
+      "id": "lexical-topk.19:temporal_reasoning:1",
+      "questionId": "19:temporal_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "temporal_reasoning",
+      "config": "lexical-topk"
+    },
+    {
+      "id": "fabric-x.19:temporal_reasoning:1",
+      "questionId": "19:temporal_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "temporal_reasoning",
+      "config": "fabric-x"
+    },
+    {
+      "id": "fabric-x-tools.19:temporal_reasoning:1",
+      "questionId": "19:temporal_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "temporal_reasoning",
+      "config": "fabric-x-tools"
+    },
+    {
+      "id": "full-truncated.19:temporal_reasoning:1",
+      "questionId": "19:temporal_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "temporal_reasoning",
+      "config": "full-truncated"
+    }
+  ],
+  "wallPolicy": "24 hours overall to cover the observed OpenRouter daily reset; four active execution hours; one shared reservation across answers and scoring.",
+  "sdkHash": "2bc1b8c228b1c08df23a746565b4d218bdc66da319a3fe946c3f05fa012e2afb",
+  "executionPhases": {
+    "answers": "42 frozen checkpoints, no judge calls",
+    "judging": "42 immutable v5 answers only; separate scoring journal charges new evaluation usage, original v5 reservation retained; no answer calls"
+  },
+  "paidAuthorization": {
+    "text": "go forward with this model. And then continue with the task 4 WIP",
+    "model": "commandcode/meta/muse-spark-1.3-contributor",
+    "rates": {
+      "input": 0.1,
+      "output": 0.2,
+      "cacheRead": 0.002,
+      "cacheWrite": null
+    },
+    "pricingSource": "https://commandcode.ai/docs/resources/pricing-limits",
+    "conservativeInputOutputCostUsd": 5.2
+  },
+  "answerSource": {
+    "manifestHash": "7b6591bc34b16b832d61f8b425ae084c76f8cc9e423ae57974d9dc63b379d347",
+    "resultsHash": "fe4eda8ad1db7e7c90996c57f02acf8bd85b074c205ebffdabc0f277da50e515",
+    "checkpoints": {
+      "5581679e682c7002611b55fa9216dd8a4ca262be7498ff7a29a912991a4c0f5b": "4c8f81907a27e07ce804e8a57f7384b8306365aa7a7f66fe85085f6084393ddb",
+      "f42e94e001aa08b8c9c347bba8ce03310842b4c5e5e4f824465dc9f28c50d992": "4b0a9679e130784f43a04764540ec27b7f4bcab37a50a55ab28a937888d04c8a",
+      "8f6fcfaf5038a3ce9c61f75f91d61bf392abd6b188da685b6b34e8c63e7aca6f": "d1cc4872ef21da886a36ea4673387df1b70d2e2bb69d1db73f6061270e124575",
+      "455d3ac49905f792115adf90c3417442c08c8eed7cc45ceaa57acc3e10d7289b": "a55606244bceb84d62e7d07b4857aab94cdbfd11ad06b1ff07281c7927f31d9d",
+      "ced73f00ad03450ecdbbd2f45d1ddae7df00994450fedecf239376b2db124868": "bc7cf8f71b30c0f4e3be0a62e2399f7e5e2ab01ff01344362ef387c039faa62c",
+      "a3accf2aa1e2cdd28b73244d719af6ad2ca38f5f5a58e3486c30f201b0a9439c": "a72b06a40325571522e2864563fb1f655f0cbc0a701b35db0fd810520ebd6802",
+      "713592d424a6fbb98e356f4acd6cca26d688ad4cdf41e8d03261fbbaf1edf3a0": "9f3b3f5b427371f21f00d8ee477b355db9c0498dada566f71d98afe26f9a5f9d",
+      "436b33a2188bdbb5570a927abe67282f0e3ea6454ae98ecafe514a09f65ccb27": "a03682fb879af294106cca9866bf3a7c44391c33dfeda498da24056f8bffb40b",
+      "85343bfb9b17b05bf9261e27591ad2f476c9516487311028ad1091671e320a14": "f095363ef8a468a85b255cdff6f255ce79c2b46931c201c58a5f08449927d8b3",
+      "334e7ded9ee136b865bbba56a4018fd6366729834155cd6bc92753fb363ebf23": "cded87ebac86aeb3277b599d09465d689ee9b049062d3c1cb8fc073856bc1083",
+      "9f7b761ad4495712b70880ad390c3863c5a81e2ccdb3bc8b72365e32a03f63b6": "dba56920e433b098dc159bfd60d15e0567731ef8727e8a0d56efd829faf9673e",
+      "e4da251919317fd25f08bb64082ef1ba9bcf7fe02d22f50a0df062776e7d82a7": "b703c4c49112ed28a4fd019100a7f560370b4129f45e3f356f1893b6e3735e9b",
+      "91e22feca8b77237b9e36ff2b837735001dbde4e310bafc82a0c45639f76e857": "4cbd680064682a972a6fa4cca8a08884f68f3eac1e5c3d1b6db720eacfca565d",
+      "2c76a44c6868299be4243756858da6c243ac2cc8fcc18d7bffdb85d01ec9a47a": "c4f15a34c4ca6b84cc49fb1ef898f3a9a9080330ccfd971adf8390cedd48d0ac",
+      "bb36928cdbbd9e9fbd707b2ed2fc9a520c396bf60a82a27c7cfb99b9e2ec3bd4": "990bb4bd58943156c8a5ee2dab3ba2de35a5d259f6607f621b75a64a70c2d241",
+      "f938d0eb3a88c9380ef31e0d72a3f6e83c289b285ba648b0301184d47c897bc9": "cb531e70fb6b53d843b3c44681c32c24e7999389b064236dd97953b10fbc949b",
+      "0d21c59b042dfae42e1d19d024036789866f73d5ec83ec41351a7042bf2dbe04": "82f61e02caea71ca8d36d04b575d3afdaed4ad492f605a302559ea32227e3059",
+      "03057e7896c9da192ef3abcfc8a5364f53171278a610c7e4e5aef1d79b132940": "07349db1adc16b7dc692550b6d7c8fea13e37152725a764ea7925f6bb8ffebc6",
+      "9ce6e49d6146527e6500f79d110b093ea8572a56392e8d3df4dfb847254c8339": "6838767f5e6ec5a960a9237dca03a13b357893a3263cd8fe1804fa2bf88c0108",
+      "e27bbd1dddafd5c93755feeebdeac093de2d456608d33bcca8970b45b8c0e103": "148b889a3dab90c23b89a1efa222da5b5e751ecab0b44bfbc8a6a9f11858c659",
+      "ea6b04a52081d31933479d5ab4c08fec87d498f14ed152cbd2a0a57033ba8b9b": "6433fc6a0740b15f332fac9d17c16654bc0898928f9e831ab304fe44878c2477",
+      "cffab99ec6e1b8e921e250a79511507d115595baaf6f85acee55660ebdf90935": "6d25a505a5651757801b76394261c6babf885579b35a0e5b399eef85526408f0",
+      "f80ae2fed1b566d8ca3e54b0ee2c9a6cb85ecd08f4fcdbf44062a762472dd30c": "3717225baa9ce04725bc4903cbaaeb1594dda70b176e523c9aad506bd58bb1b3",
+      "dcdeda56410e0bcb603c21a8a4375dac16f6a2d15322f9b5da27be85010a074a": "02e0cdcea871e6ebbd3134a39091489d5d1c6e4944dbef429d472411b312e3c2",
+      "19bce736e9f4b1d830121454e0981179e92bf0bfec93e091e8a98a7133cb4968": "8ed12fa601faf058fbb0024c5cd59d49ccc4d7e97fcfabd69b0386806bd8d110",
+      "cafce7baaa5b45728390ff292cea88be13328a6a1c8741b4399977fb991f43e7": "39be3ef25116471f202856a89c54f12070e60fe554dfefdeb2642b4c744bd620",
+      "ed973d08590f878dd743145d510ba846f1898c3b9a431c596208c11f0ee4ee58": "a8a0d0ddb07874c193a6eda35f23be900bb4d10dfdc5914e7a08f31a85af45ac",
+      "875fa7485ea816e5affe7c14d0e158addaffeab92da6579c0156a44b9ddbb9f7": "607140fd8b2de4370b07d3ecc9aab5038aed1c6df859d44bd0a7b8b1f38fece7",
+      "6f1ff176607a219166563cbce99a6af7ea481a8019e665f51a496fdb6f1fd533": "dee978d2e127630ce10fd5b4480441a9dc1fe6df5c076f96dc2891a1141b41c3",
+      "244659103abf140dfdffb04dfc0782b5cdcf17af76510f31a5874d35e5826ae9": "6af26af5f83fa48fbb48245d134d49a5345f345db5a02c27c17e2b3010b4ad4a",
+      "a84a3ba99ae091d8523e2895ee222882cc3d0baf7bfe525d87a4a2ad0dd9f785": "e9386dea23d486280d57503a409a38b1fca1ae1762636d557693bb6da06a43d3",
+      "a9592bc68e18e97708db0be4319d9950dd8195cb5c7b167fc9adb3feefc45d5f": "5a86810f4e58c45aa62ad0531205a287ebdefa765ac01ce38a378eacc750aba4",
+      "4f9e5a69a57cc7cc688a5f4fc05f781938d6ee4f1962a185273c2790324cd4dd": "a15b79fae69c00c645a1c4c4031289f9d7a91e834dad97824646f3b3adb79ade",
+      "5574e56d1894d92b4e754e8833a286c387541c69fee814b5c827d84a136d2767": "b03e5c742405c82716666441e41a4f92895156a76c4feec1cf7b6241d890eec7",
+      "0be8ec1f3116eb931e0ad38c2466738c364cebce11967e48282fe4dbfc4259f1": "50fd1c660d53e7f3e0e3ce92ae101fc037f7aae15fc17ee4d0b693d284ad3e3c",
+      "b58874d43258a42b80e2e559503b5203a537e97666a86c73167dc70b967c32fa": "6c110aaec7447b383921154f7fedaa437609176b99ce4d7742377e9f919b35b9",
+      "ec9595274c4d5f9f58a34c7a66a1cfbda689fd0ebc4b05134a89d6837ceab9aa": "4b78bded8516c4a116178437098d31b82c1f172ec76183b2a99024249271b29a",
+      "dac97b513d78b1a46fe1346699e30fb01becab51e33eabecb07e69142346c435": "732e06dee617a399a5b676026203b1f94ded23ff5535d969933b32abe4bcc0b4",
+      "ac7d437b1948b9d13f871f7d2bdf3fc26e4e686f4ef99763706b376e7c451e2b": "d96202769e714e3c21f53be440678ea6deb9a5a03d7338a3df26f11f3631edf8",
+      "008e998e6ef9dfa1105e267cbdab7eb3b9479603d3305489a4b99d4f010d43e2": "b2e7ae5725c34cbcb8c2c6b76e5b56e3526635051edb94d5efdb1bd3623b8117",
+      "ca22032b84e018ca1208f917e2c9c59b0dfa9279a8f851aaaf1c18d18fbfc3a1": "bb326ae91b5144c553624026332bf2423ccc75a275bff35fc7801c312ab0b721",
+      "adaf15ef3f0dee10e22e85be724d83e977796a4609a2f85e72b6bfac6c6102ff": "2784a427a5ad9114b0e8c3bb3fb8ed0b46ab3a6a35a5ff8214722482057a0621"
+    }
+  },
+  "judgeAuthorization": {
+    "minimax": "Use Minimax m3.1 flash as the judge from command code. Try the free route first. If that is not available, go with the paid route",
+    "glm": "Use GLM 5.3 flash from command code as the other judge"
+  },
+  "judgeRates": {
+    "commandcode/minimax/minimax-m3.1-flash": {
+      "input": 0.15,
+      "output": 0.6,
+      "cacheRead": 0.015,
+      "cacheWrite": null
+    },
+    "commandcode/z-ai/glm-5.3-flash": {
+      "input": 0.15,
+      "output": 0.5,
+      "cacheRead": 0.03,
+      "cacheWrite": null
+    }
+  },
+  "reservationPolicy": "Original v5 50.5M reservation retained without refund. New scoring attempt charges only newly measured evaluation input, or retains its full reservation if usage incomplete."
+}

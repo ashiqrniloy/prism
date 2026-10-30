@@ -1,0 +1,2238 @@
+{
+  "kind": "202-commandcode-panel-controls",
+  "diagnosticOnly": true,
+  "answerModel": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+  "judges": [
+    "commandcode/minimax/minimax-m3.1-flash",
+    "commandcode/z-ai/glm-5.3-flash"
+  ],
+  "gradedTemplateVersion": "f7ff5f9c24afd87f0a5e00bd168103019f6e7140d64031f3e5bec264043c24cb",
+  "binaryTemplateVersion": "e3883a2aa5910f76c3f6b377f1758fd4a57ca6dda1449cd86291abd0eea5f306",
+  "limits": {
+    "wireAttempts": 400,
+    "inputTokens": 8000000,
+    "outputTokens": 700000,
+    "wallMs": 7200000,
+    "retries429": 4
+  },
+  "calibration": "owner-waived; model-assisted audit, not human calibration",
+  "controls": [
+    {
+      "id": "13:event_ordering:0",
+      "ability": "event_ordering",
+      "variant": "gold",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 1,
+        "commandcode/z-ai/glm-5.3-flash": 1
+      },
+      "ordering": {
+        "commandcode/minimax/minimax-m3.1-flash": {
+          "tauNorm": 1,
+          "f1": 1,
+          "matched": 5
+        },
+        "commandcode/z-ai/glm-5.3-flash": {
+          "tauNorm": 1,
+          "f1": 1,
+          "matched": 5
+        }
+      },
+      "graded": 1,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "13:event_ordering:0",
+      "ability": "event_ordering",
+      "variant": "minusOne",
+      "expected": {
+        "binary": "no",
+        "graded": 0.7111111111111112
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 0.7111111111111112,
+        "commandcode/z-ai/glm-5.3-flash": 0.7111111111111112
+      },
+      "ordering": {
+        "commandcode/minimax/minimax-m3.1-flash": {
+          "tauNorm": 0.8,
+          "f1": 0.888888888888889,
+          "matched": 4
+        },
+        "commandcode/z-ai/glm-5.3-flash": {
+          "tauNorm": 0.8,
+          "f1": 0.888888888888889,
+          "matched": 4
+        }
+      },
+      "graded": 0.7111111111111112,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "13:event_ordering:0",
+      "ability": "event_ordering",
+      "variant": "swap",
+      "expected": {
+        "binary": "no",
+        "graded": 0.9
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 0.9,
+        "commandcode/z-ai/glm-5.3-flash": 0.9
+      },
+      "ordering": {
+        "commandcode/minimax/minimax-m3.1-flash": {
+          "tauNorm": 0.9,
+          "f1": 1,
+          "matched": 5
+        },
+        "commandcode/z-ai/glm-5.3-flash": {
+          "tauNorm": 0.9,
+          "f1": 1,
+          "matched": 5
+        }
+      },
+      "graded": 0.9,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "13:event_ordering:0",
+      "ability": "event_ordering",
+      "variant": "reversed",
+      "expected": {
+        "binary": "no",
+        "graded": 0
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 0,
+        "commandcode/z-ai/glm-5.3-flash": 0
+      },
+      "ordering": {
+        "commandcode/minimax/minimax-m3.1-flash": {
+          "tauNorm": 0,
+          "f1": 1,
+          "matched": 5
+        },
+        "commandcode/z-ai/glm-5.3-flash": {
+          "tauNorm": 0,
+          "f1": 1,
+          "matched": 5
+        }
+      },
+      "graded": 0,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "13:event_ordering:0",
+      "ability": "event_ordering",
+      "variant": "paraphrase",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 1,
+        "commandcode/z-ai/glm-5.3-flash": 1
+      },
+      "ordering": {
+        "commandcode/minimax/minimax-m3.1-flash": {
+          "tauNorm": 1,
+          "f1": 1,
+          "matched": 5
+        },
+        "commandcode/z-ai/glm-5.3-flash": {
+          "tauNorm": 1,
+          "f1": 1,
+          "matched": 5
+        }
+      },
+      "graded": 1,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "13:event_ordering:0",
+      "ability": "event_ordering",
+      "variant": "wrong",
+      "expected": {
+        "binary": "no",
+        "graded": 0
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 0,
+        "commandcode/z-ai/glm-5.3-flash": 0
+      },
+      "ordering": {
+        "commandcode/minimax/minimax-m3.1-flash": {
+          "tauNorm": 0,
+          "f1": 0,
+          "matched": 0
+        },
+        "commandcode/z-ai/glm-5.3-flash": {
+          "tauNorm": 0,
+          "f1": 0,
+          "matched": 0
+        }
+      },
+      "graded": 0,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "5:event_ordering:0",
+      "ability": "event_ordering",
+      "variant": "gold",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 1,
+        "commandcode/z-ai/glm-5.3-flash": 1
+      },
+      "ordering": {
+        "commandcode/minimax/minimax-m3.1-flash": {
+          "tauNorm": 1,
+          "f1": 1,
+          "matched": 6
+        },
+        "commandcode/z-ai/glm-5.3-flash": {
+          "tauNorm": 1,
+          "f1": 1,
+          "matched": 6
+        }
+      },
+      "graded": 1,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "5:event_ordering:0",
+      "ability": "event_ordering",
+      "variant": "minusOne",
+      "expected": {
+        "binary": "no",
+        "graded": 0.7878787878787878
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 0.7878787878787878,
+        "commandcode/z-ai/glm-5.3-flash": 0.7878787878787878
+      },
+      "ordering": {
+        "commandcode/minimax/minimax-m3.1-flash": {
+          "tauNorm": 0.8666666666666667,
+          "f1": 0.9090909090909091,
+          "matched": 5
+        },
+        "commandcode/z-ai/glm-5.3-flash": {
+          "tauNorm": 0.8666666666666667,
+          "f1": 0.9090909090909091,
+          "matched": 5
+        }
+      },
+      "graded": 0.7878787878787878,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "5:event_ordering:0",
+      "ability": "event_ordering",
+      "variant": "swap",
+      "expected": {
+        "binary": "no",
+        "graded": 0.9333333333333333
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 0.9333333333333333,
+        "commandcode/z-ai/glm-5.3-flash": 0.9333333333333333
+      },
+      "ordering": {
+        "commandcode/minimax/minimax-m3.1-flash": {
+          "tauNorm": 0.9333333333333333,
+          "f1": 1,
+          "matched": 6
+        },
+        "commandcode/z-ai/glm-5.3-flash": {
+          "tauNorm": 0.9333333333333333,
+          "f1": 1,
+          "matched": 6
+        }
+      },
+      "graded": 0.9333333333333333,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "5:event_ordering:0",
+      "ability": "event_ordering",
+      "variant": "reversed",
+      "expected": {
+        "binary": "no",
+        "graded": 0
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 0,
+        "commandcode/z-ai/glm-5.3-flash": 0
+      },
+      "ordering": {
+        "commandcode/minimax/minimax-m3.1-flash": {
+          "tauNorm": 0,
+          "f1": 1,
+          "matched": 6
+        },
+        "commandcode/z-ai/glm-5.3-flash": {
+          "tauNorm": 0,
+          "f1": 1,
+          "matched": 6
+        }
+      },
+      "graded": 0,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "5:event_ordering:0",
+      "ability": "event_ordering",
+      "variant": "paraphrase",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 1,
+        "commandcode/z-ai/glm-5.3-flash": 1
+      },
+      "ordering": {
+        "commandcode/minimax/minimax-m3.1-flash": {
+          "tauNorm": 1,
+          "f1": 1,
+          "matched": 6
+        },
+        "commandcode/z-ai/glm-5.3-flash": {
+          "tauNorm": 1,
+          "f1": 1,
+          "matched": 6
+        }
+      },
+      "graded": 1,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "5:event_ordering:0",
+      "ability": "event_ordering",
+      "variant": "wrong",
+      "expected": {
+        "binary": "no",
+        "graded": 0
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 0,
+        "commandcode/z-ai/glm-5.3-flash": 0
+      },
+      "ordering": {
+        "commandcode/minimax/minimax-m3.1-flash": {
+          "tauNorm": 0,
+          "f1": 0,
+          "matched": 0
+        },
+        "commandcode/z-ai/glm-5.3-flash": {
+          "tauNorm": 0,
+          "f1": 0,
+          "matched": 0
+        }
+      },
+      "graded": 0,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "1:event_ordering:1",
+      "ability": "event_ordering",
+      "variant": "gold",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 1,
+        "commandcode/z-ai/glm-5.3-flash": 1
+      },
+      "ordering": {
+        "commandcode/minimax/minimax-m3.1-flash": {
+          "tauNorm": 1,
+          "f1": 1,
+          "matched": 5
+        },
+        "commandcode/z-ai/glm-5.3-flash": {
+          "tauNorm": 1,
+          "f1": 1,
+          "matched": 5
+        }
+      },
+      "graded": 1,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "1:event_ordering:1",
+      "ability": "event_ordering",
+      "variant": "minusOne",
+      "expected": {
+        "binary": "no",
+        "graded": 0.7111111111111112
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 0.7111111111111112,
+        "commandcode/z-ai/glm-5.3-flash": 0.7111111111111112
+      },
+      "ordering": {
+        "commandcode/minimax/minimax-m3.1-flash": {
+          "tauNorm": 0.8,
+          "f1": 0.888888888888889,
+          "matched": 4
+        },
+        "commandcode/z-ai/glm-5.3-flash": {
+          "tauNorm": 0.8,
+          "f1": 0.888888888888889,
+          "matched": 4
+        }
+      },
+      "graded": 0.7111111111111112,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "1:event_ordering:1",
+      "ability": "event_ordering",
+      "variant": "swap",
+      "expected": {
+        "binary": "no",
+        "graded": 0.9
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 0.9,
+        "commandcode/z-ai/glm-5.3-flash": 0.9
+      },
+      "ordering": {
+        "commandcode/minimax/minimax-m3.1-flash": {
+          "tauNorm": 0.9,
+          "f1": 1,
+          "matched": 5
+        },
+        "commandcode/z-ai/glm-5.3-flash": {
+          "tauNorm": 0.9,
+          "f1": 1,
+          "matched": 5
+        }
+      },
+      "graded": 0.9,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "1:event_ordering:1",
+      "ability": "event_ordering",
+      "variant": "reversed",
+      "expected": {
+        "binary": "no",
+        "graded": 0
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 0,
+        "commandcode/z-ai/glm-5.3-flash": 0
+      },
+      "ordering": {
+        "commandcode/minimax/minimax-m3.1-flash": {
+          "tauNorm": 0,
+          "f1": 1,
+          "matched": 5
+        },
+        "commandcode/z-ai/glm-5.3-flash": {
+          "tauNorm": 0,
+          "f1": 1,
+          "matched": 5
+        }
+      },
+      "graded": 0,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "1:event_ordering:1",
+      "ability": "event_ordering",
+      "variant": "paraphrase",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 1,
+        "commandcode/z-ai/glm-5.3-flash": 1
+      },
+      "ordering": {
+        "commandcode/minimax/minimax-m3.1-flash": {
+          "tauNorm": 1,
+          "f1": 1,
+          "matched": 5
+        },
+        "commandcode/z-ai/glm-5.3-flash": {
+          "tauNorm": 1,
+          "f1": 1,
+          "matched": 5
+        }
+      },
+      "graded": 1,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "1:event_ordering:1",
+      "ability": "event_ordering",
+      "variant": "wrong",
+      "expected": {
+        "binary": "no",
+        "graded": 0
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 0,
+        "commandcode/z-ai/glm-5.3-flash": 0
+      },
+      "ordering": {
+        "commandcode/minimax/minimax-m3.1-flash": {
+          "tauNorm": 0,
+          "f1": 0,
+          "matched": 0
+        },
+        "commandcode/z-ai/glm-5.3-flash": {
+          "tauNorm": 0,
+          "f1": 0,
+          "matched": 0
+        }
+      },
+      "graded": 0,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "1:event_ordering:0",
+      "ability": "event_ordering",
+      "variant": "gold",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 1,
+        "commandcode/z-ai/glm-5.3-flash": 1
+      },
+      "ordering": {
+        "commandcode/minimax/minimax-m3.1-flash": {
+          "tauNorm": 1,
+          "f1": 1,
+          "matched": 3
+        },
+        "commandcode/z-ai/glm-5.3-flash": {
+          "tauNorm": 1,
+          "f1": 1,
+          "matched": 3
+        }
+      },
+      "graded": 1,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "1:event_ordering:0",
+      "ability": "event_ordering",
+      "variant": "minusOne",
+      "expected": {
+        "binary": "no",
+        "graded": 0.5333333333333333
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 0.5333333333333333,
+        "commandcode/z-ai/glm-5.3-flash": 0.5333333333333333
+      },
+      "ordering": {
+        "commandcode/minimax/minimax-m3.1-flash": {
+          "tauNorm": 0.6666666666666666,
+          "f1": 0.8,
+          "matched": 2
+        },
+        "commandcode/z-ai/glm-5.3-flash": {
+          "tauNorm": 0.6666666666666666,
+          "f1": 0.8,
+          "matched": 2
+        }
+      },
+      "graded": 0.5333333333333333,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "1:event_ordering:0",
+      "ability": "event_ordering",
+      "variant": "swap",
+      "expected": {
+        "binary": "no",
+        "graded": 0.6666666666666666
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 0.6666666666666666,
+        "commandcode/z-ai/glm-5.3-flash": 0.6666666666666666
+      },
+      "ordering": {
+        "commandcode/minimax/minimax-m3.1-flash": {
+          "tauNorm": 0.6666666666666666,
+          "f1": 1,
+          "matched": 3
+        },
+        "commandcode/z-ai/glm-5.3-flash": {
+          "tauNorm": 0.6666666666666666,
+          "f1": 1,
+          "matched": 3
+        }
+      },
+      "graded": 0.6666666666666666,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "1:event_ordering:0",
+      "ability": "event_ordering",
+      "variant": "reversed",
+      "expected": {
+        "binary": "no",
+        "graded": 0
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 0,
+        "commandcode/z-ai/glm-5.3-flash": 0
+      },
+      "ordering": {
+        "commandcode/minimax/minimax-m3.1-flash": {
+          "tauNorm": 0,
+          "f1": 1,
+          "matched": 3
+        },
+        "commandcode/z-ai/glm-5.3-flash": {
+          "tauNorm": 0,
+          "f1": 1,
+          "matched": 3
+        }
+      },
+      "graded": 0,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "1:event_ordering:0",
+      "ability": "event_ordering",
+      "variant": "paraphrase",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 1,
+        "commandcode/z-ai/glm-5.3-flash": 1
+      },
+      "ordering": {
+        "commandcode/minimax/minimax-m3.1-flash": {
+          "tauNorm": 1,
+          "f1": 1,
+          "matched": 3
+        },
+        "commandcode/z-ai/glm-5.3-flash": {
+          "tauNorm": 1,
+          "f1": 1,
+          "matched": 3
+        }
+      },
+      "graded": 1,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "1:event_ordering:0",
+      "ability": "event_ordering",
+      "variant": "wrong",
+      "expected": {
+        "binary": "no",
+        "graded": 0
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 0,
+        "commandcode/z-ai/glm-5.3-flash": 0
+      },
+      "ordering": {
+        "commandcode/minimax/minimax-m3.1-flash": {
+          "tauNorm": 0,
+          "f1": 0,
+          "matched": 0
+        },
+        "commandcode/z-ai/glm-5.3-flash": {
+          "tauNorm": 0,
+          "f1": 0,
+          "matched": 0
+        }
+      },
+      "graded": 0,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "10:summarization:0",
+      "ability": "summarization",
+      "variant": "gold",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 1,
+        "commandcode/z-ai/glm-5.3-flash": 1
+      },
+      "graded": 1,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "10:summarization:0",
+      "ability": "summarization",
+      "variant": "minusOne",
+      "expected": {
+        "binary": "no",
+        "graded": 0.8
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 0.8,
+        "commandcode/z-ai/glm-5.3-flash": 0.8
+      },
+      "graded": 0.8,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "10:summarization:0",
+      "ability": "summarization",
+      "variant": "extra",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 1,
+        "commandcode/z-ai/glm-5.3-flash": 1
+      },
+      "graded": 1,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "10:summarization:0",
+      "ability": "summarization",
+      "variant": "paraphrase",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 1,
+        "commandcode/z-ai/glm-5.3-flash": 1
+      },
+      "graded": 1,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "10:summarization:0",
+      "ability": "summarization",
+      "variant": "wrong",
+      "expected": {
+        "binary": "no",
+        "graded": 0
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 0,
+        "commandcode/z-ai/glm-5.3-flash": 0
+      },
+      "graded": 0,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "17:summarization:0",
+      "ability": "summarization",
+      "variant": "gold",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 1,
+        "commandcode/z-ai/glm-5.3-flash": 1
+      },
+      "graded": 1,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "17:summarization:0",
+      "ability": "summarization",
+      "variant": "minusOne",
+      "expected": {
+        "binary": "no",
+        "graded": 0.8
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 0.8,
+        "commandcode/z-ai/glm-5.3-flash": 0.8
+      },
+      "graded": 0.8,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "17:summarization:0",
+      "ability": "summarization",
+      "variant": "extra",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 1,
+        "commandcode/z-ai/glm-5.3-flash": 1
+      },
+      "graded": 1,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "17:summarization:0",
+      "ability": "summarization",
+      "variant": "paraphrase",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 1,
+        "commandcode/z-ai/glm-5.3-flash": 1
+      },
+      "graded": 1,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "17:summarization:0",
+      "ability": "summarization",
+      "variant": "wrong",
+      "expected": {
+        "binary": "no",
+        "graded": 0
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 0,
+        "commandcode/z-ai/glm-5.3-flash": 0
+      },
+      "graded": 0,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "1:summarization:1",
+      "ability": "summarization",
+      "variant": "gold",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 1,
+        "commandcode/z-ai/glm-5.3-flash": 1
+      },
+      "graded": 1,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "1:summarization:1",
+      "ability": "summarization",
+      "variant": "minusOne",
+      "expected": {
+        "binary": "no",
+        "graded": 0.8
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 0.8,
+        "commandcode/z-ai/glm-5.3-flash": 0.8
+      },
+      "graded": 0.8,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "1:summarization:1",
+      "ability": "summarization",
+      "variant": "extra",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 1,
+        "commandcode/z-ai/glm-5.3-flash": 1
+      },
+      "graded": 1,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "1:summarization:1",
+      "ability": "summarization",
+      "variant": "paraphrase",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 1,
+        "commandcode/z-ai/glm-5.3-flash": 1
+      },
+      "graded": 1,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "1:summarization:1",
+      "ability": "summarization",
+      "variant": "wrong",
+      "expected": {
+        "binary": "no",
+        "graded": 0
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 0,
+        "commandcode/z-ai/glm-5.3-flash": 0
+      },
+      "graded": 0,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "8:summarization:1",
+      "ability": "summarization",
+      "variant": "gold",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 1,
+        "commandcode/z-ai/glm-5.3-flash": 1
+      },
+      "graded": 1,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "8:summarization:1",
+      "ability": "summarization",
+      "variant": "minusOne",
+      "expected": {
+        "binary": "no",
+        "graded": 0.8
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 0.8,
+        "commandcode/z-ai/glm-5.3-flash": 0.8
+      },
+      "graded": 0.8,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "8:summarization:1",
+      "ability": "summarization",
+      "variant": "extra",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 1,
+        "commandcode/z-ai/glm-5.3-flash": 1
+      },
+      "graded": 1,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "8:summarization:1",
+      "ability": "summarization",
+      "variant": "paraphrase",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 1,
+        "commandcode/z-ai/glm-5.3-flash": 1
+      },
+      "graded": 1,
+      "spread": 0,
+      "disagreement": false
+    },
+    {
+      "id": "8:summarization:1",
+      "ability": "summarization",
+      "variant": "wrong",
+      "expected": {
+        "binary": "no",
+        "graded": 0
+      },
+      "binary": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "judgeGraded": {
+        "commandcode/minimax/minimax-m3.1-flash": 0,
+        "commandcode/z-ai/glm-5.3-flash": 0
+      },
+      "graded": 0,
+      "spread": 0,
+      "disagreement": false
+    }
+  ],
+  "rejudge": [],
+  "reanswer": "not-executed",
+  "status": "completed",
+  "usage": {
+    "inputTokens": 97795,
+    "cacheReadTokens": 18633,
+    "cacheWriteTokens": 0,
+    "outputTokens": 6776,
+    "accountedInputTokens": 97795,
+    "accountedOutputTokens": 6776,
+    "usageMissingExchanges": 0,
+    "usageComplete": true,
+    "wireAttempts": 172
+  },
+  "allocations": [
+    {
+      "provider": "commandcode",
+      "exchange": 1,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 2,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 3,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 4,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 5,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 6,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 7,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 8,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 9,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 10,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 11,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 12,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 13,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 14,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 15,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 16,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 17,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 18,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 19,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 20,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 21,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 22,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 23,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 24,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 25,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 26,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 27,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 28,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 29,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 30,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 31,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 32,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 33,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 34,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 35,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 36,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 37,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 38,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 39,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 40,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 41,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 42,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 43,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 44,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 45,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 46,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 47,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 48,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 49,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 50,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 51,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 52,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 53,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 54,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 55,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 56,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 57,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 58,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 59,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 60,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 61,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 62,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 63,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 64,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 65,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 66,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 67,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 68,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 69,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 70,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 71,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 72,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 73,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 74,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 75,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 76,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 77,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 78,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 79,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 80,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 81,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 82,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 83,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 84,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 85,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 86,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 87,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 88,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 89,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 90,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 91,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 92,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 93,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 94,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 95,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 96,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 97,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 98,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 99,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 100,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 101,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 102,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 103,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 104,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 105,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 106,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 107,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 108,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 109,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 110,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 111,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 112,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 113,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 114,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 115,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 116,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 117,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 118,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 119,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 120,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 121,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 122,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 123,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 124,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 125,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 126,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 127,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 128,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 129,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 130,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 131,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 132,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 133,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 134,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 135,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 136,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 137,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 138,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 139,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 140,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 141,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 142,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 143,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 144,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 145,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 146,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 147,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 148,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 149,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 150,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 151,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 152,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 153,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 154,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 155,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 156,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 157,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 158,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 159,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 160,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 161,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 162,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 163,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 164,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 165,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 166,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 167,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 168,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 169,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 170,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 171,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 172,
+      "inputBound": 1048576,
+      "outputBound": 8192
+    }
+  ],
+  "controlMismatches": []
+}

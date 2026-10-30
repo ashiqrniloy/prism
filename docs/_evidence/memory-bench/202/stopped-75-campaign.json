@@ -1,0 +1,21 @@
+{
+  "kind": "202-stopped-75-campaign",
+  "generatedAt": "2026-10-29T15:12:42.457Z",
+  "status": "stopped-by-owner",
+  "authorization": "Let's do the 25 cell pass with Muse 1.3. Stop the current run",
+  "journal": ".cache/memory-bench/202-commandcode-panel-baseline/journal.json",
+  "completedCells": 3,
+  "lastCell": {
+    "jobId": "202-baseline.beam-100k.full-truncated.commandcode.meta/muse-spark-1.2-contributor",
+    "status": "abandoned",
+    "scored": 38,
+    "total": 40,
+    "reportedInputTokens": 5059727,
+    "fullReservationRetained": 42500000
+  },
+  "priorReservation": 449371971,
+  "retainedCharge": 499135964,
+  "chargeBeforeStop": 499135964,
+  "refunded": 0,
+  "policy": "Interrupted attempt may have unreported in-flight usage; retain full allocation, never refund from last partial report. New Muse 1.3 pass has separate identity/journal."
+}

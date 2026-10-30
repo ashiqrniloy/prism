@@ -1,0 +1,24 @@
+{
+  "kind": "real-mab-ingestion-repair",
+  "selection": "Fewest source lines in frozen development draw; labels and outcomes not used",
+  "id": "0:24",
+  "status": "completed",
+  "ingestion": "product-source-facts-v1",
+  "results": [
+    {
+      "id": "0:24",
+      "outcome": "ingested",
+      "ingest": {
+        "policy": "product-source-facts-v1",
+        "sessions": 456,
+        "sourceMessages": 456,
+        "coveredSourceMessages": 456,
+        "imported": 456,
+        "refused": 0,
+        "uncoveredSourceMessages": 0
+      }
+    }
+  ],
+  "errors": [],
+  "liveRequests": 0
+}

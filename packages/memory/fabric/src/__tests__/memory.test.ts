@@ -1,12 +1,15 @@
-import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
 import { createSecretRedactor } from "@arnilo/prism";
-import { MemoryConflictError, MemoryLimitError, MemoryValidationError } from "@arnilo/prism-memory-core";
+import type { MemoryVectorRecord } from "@arnilo/prism-memory-core";
 import {
   assertFiniteVector,
   createHashEmbedder,
   createMemoryVectorStore,
   HARD_TOP_K_CAP,
+  MemoryConflictError,
+  MemoryLimitError,
+  MemoryValidationError,
   resolveMemoryLimits,
   resolveRecallScoring,
   validateAgainstJsonSchema,
@@ -14,7 +17,6 @@ import {
 import { createPostgresMemoryStores } from "@arnilo/prism-memory-core/postgres";
 import { validateIdentifier } from "../../../core/src/postgres/postgres-identifiers.js";
 import { createMemory, createMemoryWorkingStore, packageName, runMemoryConformance } from "../index.js";
-import type { MemoryVectorRecord } from "@arnilo/prism-memory-core";
 
 describe("@arnilo/prism-memory-fabric", () => {
   it("returns tokenized-overlap fts hits scoped to the thread", async () => {
@@ -351,9 +353,10 @@ describe("@arnilo/prism-memory-fabric", () => {
       { sessionId: "s", runId: "r", emit: () => undefined, reject: () => ({ __prismHookRejection: "x" }) },
       { includeWorking: true, includeSemantic: true },
     );
-    const blocks = draft?.context ?? [];
-    assert.ok(blocks.some((block) => String(block.content).includes("Ada")));
-    assert.ok(blocks.some((block) => String(block.content).toLowerCase().includes("concise")));
+    const tail = draft?.messages.at(-1);
+    assert.match(JSON.stringify(tail), /Ada/);
+    assert.match(JSON.stringify(tail), /concise/);
+    assert.match(JSON.stringify(tail?.metadata), /fabric-working/);
   });
 
   it("runs an opt-in working-memory processor from host extract callback", async () => {

@@ -19,8 +19,7 @@ import { createHashEmbedder, type Embedder } from "@arnilo/prism-memory-core";
 import { contextEngineering } from "../../../../context/engineering/src/index.js";
 
 import memoryFabric, { type MemoryFabricConfig } from "../index.js";
-import { projectResourceId, resolveProjectIdentity } from "../scope/identity.js";
-import { parseProjectFile } from "../scope/identity.js";
+import { parseProjectFile, projectResourceId, resolveProjectIdentity } from "../scope/identity.js";
 
 /** The default project resource: the test process cwd is inside the repo, so identity is stable. */
 const PROJECT_RESOURCE = projectResourceId(resolveProjectIdentity(process.cwd()));
@@ -164,7 +163,10 @@ describe("@arnilo/prism-memory-fabric package (plan 158 Task 4)", () => {
       assert.equal(embeddings, 7);
       const tails = requests.slice(2).map((request) => request.messages.find((message) => message.metadata?.contextBlocks));
       assert.ok(tails[0]);
-      assert.deepEqual(tails[0], tails[1]);
+      const semantic = (tail: (typeof tails)[number]) => tail?.content.at(-1);
+      assert.deepEqual(semantic(tails[0]), semantic(tails[1]));
+      assert.match(JSON.stringify(tails[1]), /fabric-working/);
+      assert.doesNotMatch(JSON.stringify(requests[3]?.context ?? []), /fabric-working/);
       assert.match(JSON.stringify(tails[0]), /fabric-semantic/);
       assert.equal(agent.inspect().statusNotes.filter((note) => /provisional cosine floor/.test(note.message)).length, 1);
       await session.close();
@@ -223,7 +225,7 @@ describe("@arnilo/prism-memory-fabric package (plan 158 Task 4)", () => {
     }
   });
 
-  it("directory_block_enters_the_prefix_after_a_write_and_stays_identical_without_one", async () => {
+  it("directory_prefix_stays_identical_across_working_writes", async () => {
     const root = join(await tempRoot(), "directory-root");
     await mkdir(root, { recursive: true });
     await writeFile(join(root, "plan.md"), "plan");
@@ -239,12 +241,10 @@ describe("@arnilo/prism-memory-fabric package (plan 158 Task 4)", () => {
       const rendered = requests.map((request) => JSON.stringify(request));
       assert.ok(rendered[0]!.includes("Long-term memory"), "files alone populate the directory");
       assert.ok(!rendered[0]!.includes("Blocks:"));
-      assert.ok(rendered[1]!.includes("Blocks: core"), "the write bumps the version");
-      const directory = (text: string) => /Files: [^"]*plan\.md[^"]*Blocks: core/.exec(text)?.[0];
-      assert.ok(directory(rendered[2]!));
-      assert.equal(directory(rendered[2]!), directory(rendered[3]!), "no write between turns: identical bytes");
+      const prefixes = requests.map((request) => JSON.stringify(request.context));
+      assert.equal(new Set(prefixes).size, 1, "working writes leave the epoch prefix unchanged");
+      assert.match(JSON.stringify(requests[1]?.messages.at(-1)), /fabric-working/);
       assert.ok(!rendered.some((text) => text.includes("prism-memory.sqlite")), "the store file is never listed");
-      assert.match(rendered[1]!, /Files: [^"]*notes\/index\.md[^"]*plan\.md/, "the directory names the markdown index");
       await session.close();
     } finally {
       await agent.dispose();
@@ -264,8 +264,10 @@ describe("@arnilo/prism-memory-fabric package (plan 158 Task 4)", () => {
       ],
     });
     try {
-      const session = await agent.session({ id: "core-prefix", create: true });
+      let session = await agent.session({ id: "core-seed", create: true });
       await session.run("remember deploys");
+      await session.close();
+      session = await agent.session({ id: "core-prefix", create: true });
       await session.run("next");
       await session.run("last");
       const rendered = requests.map((request) => JSON.stringify(request));

@@ -1,0 +1,8 @@
+{
+  "kind": "202-free-quota-refusal",
+  "provider": "selected-free-routes",
+  "remaining": 0,
+  "observedAt": "2026-10-29T23:41:40.473Z",
+  "sourceAttempt": "202-baseline.beam-1m.full-truncated.commandcode.meta/muse-spark-1.3-contributor@1",
+  "policy": "Fresh successful free admission is required; no reset assumed"
+}

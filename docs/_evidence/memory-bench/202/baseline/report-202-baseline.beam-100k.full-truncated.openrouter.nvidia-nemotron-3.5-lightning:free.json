@@ -1,0 +1,3312 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 2,
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "usageSource": "wire-proxy",
+  "phase": "all",
+  "labelInjections": "off",
+  "concurrency": 1,
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 8192
+  },
+  "freeOnly": true,
+  "writeGeneration": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "generatedAt": "2026-10-29T09:38:03.932Z",
+  "suite": "beam-100k",
+  "subset": "dev",
+  "ability": null,
+  "seed": null,
+  "config": "full-truncated",
+  "comparatorPolicyVersion": 1,
+  "ingestion": "none",
+  "embeddings": null,
+  "provider": "openrouter",
+  "model": "nvidia/nemotron-3.5-lightning:free",
+  "judge": "openrouter/dots-studio/dots-3-note-preview:free",
+  "judgePanel": [
+    "openrouter/dots-studio/dots-3-note-preview:free",
+    "openrouter/cohere/north-mini-code:free"
+  ],
+  "judgeCalibration": null,
+  "repeats": 1,
+  "judgeProtocol": "plain-text-v1",
+  "dataset": {
+    "file": "beam-100k.parquet",
+    "format": "parquet",
+    "parquetLiterals": [
+      "probing_questions"
+    ],
+    "bytes": 5429768,
+    "sha256": "c0519be25907005ba873c927c50877471d550873039d96c041554d0075a78ace",
+    "license": "CC BY-SA 4.0",
+    "url": "https://huggingface.co/datasets/Mohammadta/BEAM/resolve/3205395e897e7318c7b094ef4e6047b9b82dbb03/data/100K-00000-of-00001.parquet",
+    "licenseUrl": "https://huggingface.co/datasets/Mohammadta/BEAM/blob/3205395e897e7318c7b094ef4e6047b9b82dbb03/README.md"
+  },
+  "normalization": {
+    "version": "beam-source-annotations-v1",
+    "sourceHash": "034978f56e5f10463a4923debcb85c6e354aa1e3397b5faf584397e029090985"
+  },
+  "maxInputTokens": 40000000,
+  "ablations": [],
+  "sourceVariants": [],
+  "sourceRevision": "5c2570df52a084b43120ee4e77921746a029480e",
+  "protocol": {
+    "answerAttempts": 3,
+    "answerBackoffMs": [
+      2000,
+      10000
+    ],
+    "judgeAttempts": 8,
+    "judgeBackoffMs": [
+      1000,
+      2000
+    ],
+    "maxTurns": 8
+  },
+  "memoryConfig": {
+    "observational": null,
+    "fabric": null
+  },
+  "inputTokens": 5651031,
+  "cacheReadTokens": 1152800,
+  "cacheWriteTokens": 0,
+  "outputTokens": 243160,
+  "calls": {
+    "observer": 0,
+    "reflector": 0,
+    "dropper": 0,
+    "embedding": 0,
+    "decider": 0,
+    "consolidate": 0,
+    "judge": 44,
+    "judgeAttempts": 45,
+    "gatewayRetries": 0,
+    "judgeCacheHits": 52,
+    "judgeCacheMisses": 44,
+    "concurrencyHalvings": 0,
+    "overloads": 0
+  },
+  "turns": 40,
+  "injectedContextTokens": 0,
+  "injections": [],
+  "attemptId": "202-baseline.beam-100k.full-truncated.openrouter.nvidia/nemotron-3.5-lightning:free@1",
+  "measurementVersion": "product-phases-attribution-v2",
+  "analysisVersion": "202-paired-cluster-v1",
+  "judgeTemplateVersion": "e3883a2aa5910f76c3f6b377f1758fd4a57ca6dda1449cd86291abd0eea5f306",
+  "gradedTemplateVersion": "f7ff5f9c24afd87f0a5e00bd168103019f6e7140d64031f3e5bec264043c24cb",
+  "protocolHash": "109bcc244f844026d4db6257c3671d5b2d4461d5eb663d91209edca4a985df9d",
+  "resumedResults": 0,
+  "results": [
+    {
+      "id": "5:abstention:1",
+      "ability": "abstention",
+      "cluster": "beam-5",
+      "phaseTiming": {
+        "ingestion": 6.2,
+        "answer": 19578.5,
+        "evaluation": 22765.2
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 238,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "8bb07ee6b953adcb14158d9fd8a80c76fa14bd7d55975382b78a603051412d72"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 0,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "correct"
+    },
+    {
+      "id": "9:abstention:1",
+      "ability": "abstention",
+      "cluster": "beam-9",
+      "phaseTiming": {
+        "ingestion": 5.6,
+        "answer": 18120.2,
+        "evaluation": 12768.8
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 270,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "d4281e0bd9cdd17064a608476a0f982851d9b13b821f9fc26387866bc89b16b1"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 0,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "abstention_error"
+    },
+    {
+      "id": "10:abstention:0",
+      "ability": "abstention",
+      "cluster": "beam-10",
+      "phaseTiming": {
+        "ingestion": 6.2,
+        "answer": 182209.8,
+        "evaluation": 0.4
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 344,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "426c509ec157cf99139d99de85e1d8a356473de28c092b38c5e53def5ede7940"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 0,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "abstention_error"
+    },
+    {
+      "id": "20:abstention:1",
+      "ability": "abstention",
+      "cluster": "beam-20",
+      "phaseTiming": {
+        "ingestion": 9.8,
+        "answer": 34954.6,
+        "evaluation": 0.3
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 372,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "0df27397a2336b6a7ca0610f06bc1b28f7ad4949c441e3d5fcc32fe7f0e738f4"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 0,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "abstention_error"
+    },
+    {
+      "id": "8:contradiction_resolution:1",
+      "ability": "contradiction_resolution",
+      "cluster": "beam-8",
+      "phaseTiming": {
+        "ingestion": 5,
+        "answer": 93803.4,
+        "evaluation": 0.2
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 268,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "2c6f0e80bfa7ff13ebeb0139d359f7b595afa24de02f88947ccc796ea9c67af2"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "3:contradiction_resolution:1",
+      "ability": "contradiction_resolution",
+      "cluster": "beam-3",
+      "phaseTiming": {
+        "ingestion": 3.8,
+        "answer": 25440.2,
+        "evaluation": 18457.5
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 194,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "3fadb9a39cf69186dd740e17419c8410fbfc39b12687f2f0fbfa7ba1447164ad"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "7:contradiction_resolution:0",
+      "ability": "contradiction_resolution",
+      "cluster": "beam-7",
+      "phaseTiming": {
+        "ingestion": 5.2,
+        "answer": 100849.3,
+        "evaluation": 8928.8
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 260,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "b33f1dc8b91e6676147cca2aebd0a0a2d9529dd7fd575f01969bc12c27ef8bc0"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "9:contradiction_resolution:0",
+      "ability": "contradiction_resolution",
+      "cluster": "beam-9",
+      "phaseTiming": {
+        "ingestion": 7.1,
+        "answer": 10316.9,
+        "evaluation": 12720.5
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 270,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "1fe42d8715a5ac12c6e29dc388398672fc0b0b24c38e33175cb04c3c688bb5d4"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "13:event_ordering:0",
+      "ability": "event_ordering",
+      "cluster": "beam-13",
+      "phaseTiming": {
+        "ingestion": 7.3,
+        "answer": 161233,
+        "evaluation": 1.2
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "graded": 0,
+      "gradedSpread": 0,
+      "gradedDisagreement": false,
+      "gradedJudges": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0,
+        "openrouter/cohere/north-mini-code:free": 0
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 310,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "54e77f41b22795ade75dced28d96c830cf27551e42845d18b49a53347b6faa60"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 5,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 5,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "5:event_ordering:0",
+      "ability": "event_ordering",
+      "cluster": "beam-5",
+      "phaseTiming": {
+        "ingestion": 6.5,
+        "answer": 125360.9,
+        "evaluation": 0.5
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "graded": 0,
+      "gradedSpread": 0,
+      "gradedDisagreement": false,
+      "gradedJudges": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0,
+        "openrouter/cohere/north-mini-code:free": 0
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 238,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "c9d4133e2c738d59c8d2dcc4d72afc167ece5fc2e3bdc8ed4717358e48a4b210"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 12,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 12,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "1:event_ordering:1",
+      "ability": "event_ordering",
+      "cluster": "beam-1",
+      "phaseTiming": {
+        "ingestion": 6,
+        "answer": 120117.2,
+        "evaluation": 1
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "graded": 0,
+      "gradedSpread": 0,
+      "gradedDisagreement": false,
+      "gradedJudges": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0,
+        "openrouter/cohere/north-mini-code:free": 0
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 188,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "41fdb6a7ccecf634a132bb44ca834a626233587078c6ba83f5e90ecd0e162922"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 4,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 4,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "1:event_ordering:0",
+      "ability": "event_ordering",
+      "cluster": "beam-1",
+      "phaseTiming": {
+        "ingestion": 8.7,
+        "answer": 103887.3,
+        "evaluation": 1.2
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "graded": 0,
+      "gradedSpread": 0,
+      "gradedDisagreement": false,
+      "gradedJudges": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0,
+        "openrouter/cohere/north-mini-code:free": 0
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 188,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "45b7dc1109b46e9177f0c07dbb21d43579e800dc4e41c0c07cece66eb91ce1fc"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 3,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 3,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "16:information_extraction:0",
+      "ability": "information_extraction",
+      "cluster": "beam-16",
+      "phaseTiming": {
+        "ingestion": 13.4,
+        "answer": 309136.4,
+        "evaluation": 12662.1
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 322,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "3c946aa712a5c64402b3e411e093c97e340ddded4b4680c26b2c63e4bc7fbd09"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "16:information_extraction:1",
+      "ability": "information_extraction",
+      "cluster": "beam-16",
+      "phaseTiming": {
+        "ingestion": 7.3,
+        "answer": 116534.7,
+        "evaluation": 8.8
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 322,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "8a10d39f9ec58ef8d4d02dbca4b095f3852d305468988ccec77342658e92ddbe"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "9:information_extraction:0",
+      "ability": "information_extraction",
+      "cluster": "beam-9",
+      "phaseTiming": {
+        "ingestion": 6.6,
+        "answer": 97780.6,
+        "evaluation": 0.2
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 270,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "cb2e2e8ba1adca4cabf19e53607d2fa39131e19334ec1d6d285bdc8c106e51dd"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "19:information_extraction:0",
+      "ability": "information_extraction",
+      "cluster": "beam-19",
+      "phaseTiming": {
+        "ingestion": 6.9,
+        "answer": 11465.4,
+        "evaluation": 16084.3
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 328,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "bde8847f6f811d2db0fc995737fcf89f7ddb4ef86b138487dfdc2d2405241604"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "correct"
+    },
+    {
+      "id": "18:instruction_following:0",
+      "ability": "instruction_following",
+      "cluster": "beam-18",
+      "phaseTiming": {
+        "ingestion": 6.9,
+        "answer": 24492.7,
+        "evaluation": 12180.3
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 362,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "b2931f7787f7b4aecf21394eb6781377f7b3c1d6705d42afe77f2f07e961a6fd"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "9:instruction_following:1",
+      "ability": "instruction_following",
+      "cluster": "beam-9",
+      "phaseTiming": {
+        "ingestion": 5.5,
+        "answer": 93947.9,
+        "evaluation": 0.4
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 270,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "29ca1a1516b8dd22f5aeb64c16a32b4c7bdbfb9c7b31febe187372bf00f83a46"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "13:instruction_following:1",
+      "ability": "instruction_following",
+      "cluster": "beam-13",
+      "phaseTiming": {
+        "ingestion": 8,
+        "answer": 16889.8,
+        "evaluation": 24768.6
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 310,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "def7999301c4c882af1bcd2b1f228a38e5ce506576e50f2bab10c5a40af46304"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "correct"
+    },
+    {
+      "id": "8:instruction_following:1",
+      "ability": "instruction_following",
+      "cluster": "beam-8",
+      "phaseTiming": {
+        "ingestion": 6.3,
+        "answer": 229069.2,
+        "evaluation": 7197.4
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 268,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "4c6b2b62e861da5c8c99552c251291f43a28a1c53ab5223cc3e78364a7946e14"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "4:knowledge_update:0",
+      "ability": "knowledge_update",
+      "cluster": "beam-4",
+      "phaseTiming": {
+        "ingestion": 5.2,
+        "answer": 42319,
+        "evaluation": 9591.8
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 212,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "714f63b11e1f7f192a048e69dfe7c31c5fd70339db5b105ff82bc4df6ed9a0fb"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "7:knowledge_update:1",
+      "ability": "knowledge_update",
+      "cluster": "beam-7",
+      "phaseTiming": {
+        "ingestion": 7.3,
+        "answer": 137470.3,
+        "evaluation": 0.2
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 260,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "85b105cf90996d2d7ff7e660598282a1df6d7772012ad89f86a79a13f16a0f72"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "2:knowledge_update:0",
+      "ability": "knowledge_update",
+      "cluster": "beam-2",
+      "phaseTiming": {
+        "ingestion": 4.2,
+        "answer": 21061.2,
+        "evaluation": 17581.9
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 200,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "addd4585646a64ae66c941235f561a175b0638e05021b67dc4369116fbd32c9d"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "17:knowledge_update:1",
+      "ability": "knowledge_update",
+      "cluster": "beam-17",
+      "phaseTiming": {
+        "ingestion": 6.1,
+        "answer": 139884.3,
+        "evaluation": 0.2
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 286,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "7185d84f9b0d35f233dda232046ada7a399c41172680ac049d137700182731e5"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "6:multi_session_reasoning:1",
+      "ability": "multi_session_reasoning",
+      "cluster": "beam-6",
+      "phaseTiming": {
+        "ingestion": 5.7,
+        "answer": 25853.8,
+        "evaluation": 61338.4
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 258,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "63a29d411aa0b69a71fff35c331eb7e3cb3484a3889be65fad089c433abd3bd6"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 3,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 3,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "2:multi_session_reasoning:0",
+      "ability": "multi_session_reasoning",
+      "cluster": "beam-2",
+      "phaseTiming": {
+        "ingestion": 4.5,
+        "answer": 162383.6,
+        "evaluation": 0.3
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 200,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "ca7902f765ee789ce213a3df137952fcbbcb802a686fc2207028871f480c1dd8"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 5,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 5,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "9:multi_session_reasoning:1",
+      "ability": "multi_session_reasoning",
+      "cluster": "beam-9",
+      "phaseTiming": {
+        "ingestion": 5.3,
+        "answer": 31223.6,
+        "evaluation": 23348.1
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 270,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "6eb5511f3205008bff6caa00f608902d38917388860796b0c6781ec75df873d6"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "13:multi_session_reasoning:1",
+      "ability": "multi_session_reasoning",
+      "cluster": "beam-13",
+      "phaseTiming": {
+        "ingestion": 5.7,
+        "answer": 126659.8,
+        "evaluation": 0.3
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 310,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "65670e923da0cb95ebb6364d7d325c129175cac8bc30b09ccfdf87b52b133103"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 5,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 5,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "10:preference_following:1",
+      "ability": "preference_following",
+      "cluster": "beam-10",
+      "phaseTiming": {
+        "ingestion": 7.7,
+        "answer": 42843.8,
+        "evaluation": 17509.1
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 344,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "28045f1ec9ded2d6080df66b7c464db2cfc62db5d7e19316d83f0304ec18d247"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 3,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 3,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "11:preference_following:0",
+      "ability": "preference_following",
+      "cluster": "beam-11",
+      "phaseTiming": {
+        "ingestion": 9,
+        "answer": 47908.7,
+        "evaluation": 18315.6
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 388,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "8aa2a27ffe4b325fe73c5bbea6fc91121ea02a0706c368bf9016f7970bef7287"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "correct"
+    },
+    {
+      "id": "18:preference_following:1",
+      "ability": "preference_following",
+      "cluster": "beam-18",
+      "phaseTiming": {
+        "ingestion": 7.3,
+        "answer": 22903.9,
+        "evaluation": 32807.8
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 362,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "c3dc816ee04608e60e94b7dd070ec13277ea0a3df183eaf7c49d009e654cfcc9"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "correct"
+    },
+    {
+      "id": "14:preference_following:0",
+      "ability": "preference_following",
+      "cluster": "beam-14",
+      "phaseTiming": {
+        "ingestion": 6.2,
+        "answer": 281318.1,
+        "evaluation": 0.4
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 268,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "31c2dc2fdb89210a98cda5bf9865812b69fa31823b7a0643336385d671eac6ba"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "10:summarization:0",
+      "ability": "summarization",
+      "cluster": "beam-10",
+      "phaseTiming": {
+        "ingestion": 9.2,
+        "answer": 117761.9,
+        "evaluation": 0.5
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "graded": 0,
+      "gradedSpread": 0,
+      "gradedDisagreement": false,
+      "gradedJudges": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0,
+        "openrouter/cohere/north-mini-code:free": 0
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 344,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "10a5437eeeaf88c808580fe1edf982c034c1bcedef612179a8e8624d205c7e12"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 6,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 6,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "17:summarization:0",
+      "ability": "summarization",
+      "cluster": "beam-17",
+      "phaseTiming": {
+        "ingestion": 6.8,
+        "answer": 97286.6,
+        "evaluation": 0.7
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "graded": 0,
+      "gradedSpread": 0,
+      "gradedDisagreement": false,
+      "gradedJudges": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0,
+        "openrouter/cohere/north-mini-code:free": 0
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 286,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "55090a88df5825f373de503d36462a19afcdcf7e95ba950c88058d4462f2bcd5"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 4,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 4,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "1:summarization:1",
+      "ability": "summarization",
+      "cluster": "beam-1",
+      "phaseTiming": {
+        "ingestion": 5.3,
+        "answer": 29556.6,
+        "evaluation": 109876.2
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "graded": 0.15000000000000002,
+      "gradedSpread": 0.1,
+      "gradedDisagreement": false,
+      "gradedJudges": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0.1,
+        "openrouter/cohere/north-mini-code:free": 0.2
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 188,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "144ca261f257f2b4d8fe1fb6e25f7f53fac2657d26c3e4cc8ad95bd4ab1a381c"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 6,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 6,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "8:summarization:1",
+      "ability": "summarization",
+      "cluster": "beam-8",
+      "phaseTiming": {
+        "ingestion": 6.2,
+        "answer": 99907.8,
+        "evaluation": 67957.4
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "graded": 0.05,
+      "gradedSpread": 0.1,
+      "gradedDisagreement": false,
+      "gradedJudges": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0.1,
+        "openrouter/cohere/north-mini-code:free": 0
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 268,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "a18236f309d526bc2c10a51301db312fd3499111a996ac5f3fd0250fe8a8afdf"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 5,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 5,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "18:temporal_reasoning:0",
+      "ability": "temporal_reasoning",
+      "cluster": "beam-18",
+      "phaseTiming": {
+        "ingestion": 7,
+        "answer": 124367.7,
+        "evaluation": 0.3
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 362,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "2a94f520035d429da49f64885680e5a56c188f86ab71887e0272dc0be5604adb"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "19:temporal_reasoning:1",
+      "ability": "temporal_reasoning",
+      "cluster": "beam-19",
+      "phaseTiming": {
+        "ingestion": 7.9,
+        "answer": 22584.7,
+        "evaluation": 12726.3
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 328,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "aeb2dfa7d7a48196f21350e468f59c5825d7b5593fb3b8a44bd6aca441724b6b"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "14:temporal_reasoning:1",
+      "ability": "temporal_reasoning",
+      "cluster": "beam-14",
+      "phaseTiming": {
+        "ingestion": 5.7,
+        "answer": 168789.3,
+        "evaluation": 0.3
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 268,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "951b1648e45129ffe478fd785cce763c11f0ad751fc9c9b00f9c2ccda6c33241"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "17:temporal_reasoning:0",
+      "ability": "temporal_reasoning",
+      "cluster": "beam-17",
+      "phaseTiming": {
+        "ingestion": 6.5,
+        "answer": 189383.9,
+        "evaluation": 0.5
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "oldest-complete-turns",
+        "messageCap": 932415,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 286,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "2923fb705bb3d7a2fe5c7812e48ff680972b9bb6f9c01af5858de76f109922de"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    }
+  ],
+  "status": "completed",
+  "limitations": [
+    "Block-level injection accounting until item metadata lands in Tasks 4, 9, 11 and 12.",
+    "Injection token allocations are character estimates, not billing usage.",
+    "OpenCode Go and Hyper judges differ from the papers; scores are not directly comparable."
+  ],
+  "ratesAsOf": "2026-10-28",
+  "ratesStatus": "provider-catalog",
+  "inputCap": 933440,
+  "comparatorContext": {
+    "version": 1,
+    "policy": "oldest-complete-turns",
+    "effectiveInputCap": 933440,
+    "requestHeadroomTokens": 1024,
+    "modelConfig": {
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3.5-lightning:free",
+      "limits": {
+        "contextWindow": 1000000,
+        "maxOutputTokens": 65536
+      },
+      "parameters": {
+        "maxTokens": 8192,
+        "temperature": 0
+      }
+    },
+    "tokenMeasure": "estimated-json-chars-div-4"
+  },
+  "selectedQuestionIds": [
+    "5:abstention:1",
+    "9:abstention:1",
+    "10:abstention:0",
+    "20:abstention:1",
+    "8:contradiction_resolution:1",
+    "3:contradiction_resolution:1",
+    "7:contradiction_resolution:0",
+    "9:contradiction_resolution:0",
+    "13:event_ordering:0",
+    "5:event_ordering:0",
+    "1:event_ordering:1",
+    "1:event_ordering:0",
+    "16:information_extraction:0",
+    "16:information_extraction:1",
+    "9:information_extraction:0",
+    "19:information_extraction:0",
+    "18:instruction_following:0",
+    "9:instruction_following:1",
+    "13:instruction_following:1",
+    "8:instruction_following:1",
+    "4:knowledge_update:0",
+    "7:knowledge_update:1",
+    "2:knowledge_update:0",
+    "17:knowledge_update:1",
+    "6:multi_session_reasoning:1",
+    "2:multi_session_reasoning:0",
+    "9:multi_session_reasoning:1",
+    "13:multi_session_reasoning:1",
+    "10:preference_following:1",
+    "11:preference_following:0",
+    "18:preference_following:1",
+    "14:preference_following:0",
+    "10:summarization:0",
+    "17:summarization:0",
+    "1:summarization:1",
+    "8:summarization:1",
+    "18:temporal_reasoning:0",
+    "19:temporal_reasoning:1",
+    "14:temporal_reasoning:1",
+    "17:temporal_reasoning:0"
+  ],
+  "runPathFingerprint": "ab53895842c569deab2548d0aa0471648d6ec5800c7e8db5bb0d861c3a255dde",
+  "measurementPolicy": {
+    "version": "product-phases-v1",
+    "judgeCallsPerHour": 450,
+    "injectionAnnotation": false,
+    "retriesAndBackoffIncluded": true,
+    "queueWaitIncluded": false,
+    "seedSnapshot": false
+  },
+  "roleUsage": {
+    "product": {
+      "inputTokens": 5616260,
+      "cacheReadTokens": 1152800,
+      "cacheWriteTokens": 0,
+      "outputTokens": 205562,
+      "exchanges": 40,
+      "complete": true,
+      "measured": 0,
+      "cold": 0,
+      "warm": 0,
+      "inputWarm": 0,
+      "inputCold": 0
+    },
+    "evaluation": {
+      "inputTokens": 34771,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 37598,
+      "exchanges": 45,
+      "complete": false,
+      "measured": null,
+      "cold": null,
+      "warm": null,
+      "inputWarm": null,
+      "inputCold": null
+    },
+    "unknown": {
+      "inputTokens": 0,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 0,
+      "exchanges": 0,
+      "complete": true,
+      "measured": 0,
+      "cold": 0,
+      "warm": 0,
+      "inputWarm": 0,
+      "inputCold": 0
+    },
+    "total": {
+      "inputTokens": 5651031,
+      "cacheReadTokens": 1152800,
+      "cacheWriteTokens": 0,
+      "outputTokens": 243160,
+      "exchanges": 85,
+      "measured": null
+    }
+  },
+  "accountedInputTokens": 6163031,
+  "usageComplete": false,
+  "usageMissingExchanges": 1,
+  "wireExchanges": 85,
+  "timing": {
+    "wallMs": 4348566.5,
+    "concurrency": {
+      "initial": 1,
+      "active": 1,
+      "floor": 1
+    },
+    "questions": {
+      "n": 40,
+      "wallMs": {
+        "p50": 97789.6,
+        "p95": 236275.3,
+        "mean": 108666.1
+      }
+    },
+    "phases": {
+      "ingestion": {
+        "n": 40,
+        "wallMs": {
+          "p50": 6.3,
+          "p95": 9.2,
+          "mean": 6.7
+        }
+      },
+      "restore": {
+        "n": 0,
+        "wallMs": {
+          "p50": null,
+          "p95": null,
+          "mean": null
+        }
+      },
+      "answer": {
+        "n": 40,
+        "wallMs": {
+          "p50": 97286.6,
+          "p95": 229069.2,
+          "mean": 95666.4
+        }
+      },
+      "evaluation": {
+        "n": 40,
+        "wallMs": {
+          "p50": 8.8,
+          "p95": 61338.4,
+          "mean": 12990.1
+        }
+      }
+    },
+    "policy": {
+      "answer": "after ingestion, before grading, annotation, final background settlement and disposal",
+      "queueWaitIncluded": false,
+      "retriesAndBackoffIncluded": true
+    },
+    "roles": {
+      "judge": {
+        "calls": 45,
+        "firstByteMs": {
+          "p50": 8515,
+          "p95": 39863.6,
+          "mean": 11518.9
+        },
+        "totalMs": {
+          "p50": 8515,
+          "p95": 39863.6,
+          "mean": 11518.9
+        }
+      },
+      "solver": {
+        "calls": 40,
+        "firstByteMs": {
+          "p50": 93895.7,
+          "p95": 229048.8,
+          "mean": 92018.4
+        },
+        "totalMs": {
+          "p50": 97265.6,
+          "p95": 229050.1,
+          "mean": 95646.3
+        }
+      }
+    },
+    "calls": 85
+  },
+  "metricVersion": 2,
+  "comparatorEligibility": {
+    "completeHistoryQuestions": 40,
+    "ineligibleQuestions": 0,
+    "truncatedQuestions": 0,
+    "unprovenQuestions": 0
+  },
+  "abilities": {
+    "abstention": {
+      "n": 4,
+      "correct": 1,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.25,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "contradiction_resolution": {
+      "n": 4,
+      "correct": 0,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "contradiction_resolution",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "event_ordering": {
+      "n": 4,
+      "correct": 0,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": 0,
+      "gradedDisagreementRate": 0,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "event_ordering",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "information_extraction": {
+      "n": 4,
+      "correct": 1,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.25,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "information_extraction",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "instruction_following": {
+      "n": 4,
+      "correct": 1,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.25,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "instruction_following",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "knowledge_update": {
+      "n": 4,
+      "correct": 0,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "knowledge_update",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "multi_session_reasoning": {
+      "n": 4,
+      "correct": 0,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "multi_session_reasoning",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "preference_following": {
+      "n": 4,
+      "correct": 2,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.5,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "preference_following",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "summarization": {
+      "n": 4,
+      "correct": 0,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": 0.05,
+      "gradedDisagreementRate": 0,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "summarization",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "temporal_reasoning": {
+      "n": 4,
+      "correct": 0,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "temporal_reasoning",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    }
+  },
+  "abilityGroups": {
+    "abstention": {
+      "n": 4,
+      "correct": 1,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.25,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "contradiction_resolution": {
+      "n": 4,
+      "correct": 0,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "contradiction_resolution",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "event_ordering": {
+      "n": 4,
+      "correct": 0,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": 0,
+      "gradedDisagreementRate": 0,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "event_ordering",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "information_extraction": {
+      "n": 4,
+      "correct": 1,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.25,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "information_extraction",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "instruction_following": {
+      "n": 4,
+      "correct": 1,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.25,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "instruction_following",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "knowledge_update": {
+      "n": 4,
+      "correct": 0,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "knowledge_update",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "multi_session_reasoning": {
+      "n": 4,
+      "correct": 0,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "multi_session_reasoning",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "preference_following": {
+      "n": 4,
+      "correct": 2,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.5,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "preference_following",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "summarization": {
+      "n": 4,
+      "correct": 0,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": 0.05,
+      "gradedDisagreementRate": 0,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "summarization",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "temporal_reasoning": {
+      "n": 4,
+      "correct": 0,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "temporal_reasoning",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    }
+  },
+  "metricDefinitions": {
+    "abstention": {
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "contradiction_resolution": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "event_ordering": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "information_extraction": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "instruction_following": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "knowledge_update": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "multi_session_reasoning": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "preference_following": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "summarization": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "temporal_reasoning": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    }
+  },
+  "runLimitRate": 0,
+  "errorRate": 0,
+  "cacheReadRatio": 0.2039981730767359,
+  "cacheWriteRatio": 0,
+  "cost": {
+    "currency": "USD",
+    "unit": "per_million_tokens",
+    "rates": null,
+    "pricingStatus": "unpriced",
+    "measured": null,
+    "cachedPrefixSimulation": null,
+    "simulationAssumption": "product warm: full input is a cached prefix; other arms use reported cache tokens; cold reprices input uncached",
+    "ratesAsOf": "2026-10-28",
+    "ratesStatus": "provider-catalog",
+    "scope": "campaign: product plus evaluation plus unknown historical usage",
+    "product": {
+      "inputTokens": 5616260,
+      "cacheReadTokens": 1152800,
+      "cacheWriteTokens": 0,
+      "outputTokens": 205562,
+      "exchanges": 40,
+      "complete": true,
+      "measured": 0,
+      "cold": 0,
+      "warm": 0,
+      "inputWarm": 0,
+      "inputCold": 0
+    },
+    "evaluation": {
+      "inputTokens": 34771,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 37598,
+      "exchanges": 45,
+      "complete": false,
+      "measured": null,
+      "cold": null,
+      "warm": null,
+      "inputWarm": null,
+      "inputCold": null
+    }
+  },
+  "judgeAgreement": {
+    "n": 40,
+    "judges": {
+      "openrouter/dots-studio/dots-3-note-preview:free": {
+        "scored": 40,
+        "agreementWithPanel": 1
+      },
+      "openrouter/cohere/north-mini-code:free": {
+        "scored": 40,
+        "agreementWithPanel": 1
+      }
+    },
+    "pairs": [
+      {
+        "a": "openrouter/dots-studio/dots-3-note-preview:free",
+        "b": "openrouter/cohere/north-mini-code:free",
+        "n": 40,
+        "agreement": 1,
+        "kappa": 1
+      }
+    ],
+    "fleissKappa": null
+  },
+  "injectionPrecision": null,
+  "injectionPrecisionReason": "not-labelled",
+  "toolCalls": 0,
+  "toolCallsPerQuestion": 0,
+  "recallCalls": 0,
+  "retrievedSnippetTokens": 0,
+  "answerSessionHitAtK": null,
+  "evidenceRoundCoverage": null,
+  "evidenceAllRequired": null,
+  "fineEvidenceRecall": null,
+  "fineEvidencePrecision": null,
+  "legacyRetrievalRecallAtK": null,
+  "retrievalRecallAtK": null,
+  "stages": {
+    "correct": 5,
+    "abstention_error": 3,
+    "candidate_gap": 32
+  }
+}

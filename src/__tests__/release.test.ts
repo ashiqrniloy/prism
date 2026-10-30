@@ -69,8 +69,8 @@ test("0.3.0 release graph is independent, publishable, and documented", () => {
   // 46 workspaces at HEAD while this line still said 43, so one earlier addition had gone uncounted.
   // Plan 204 Task 8 re-anchors the check to the loaded graph (47 = root + 46 workspaces) instead of
   // guessing which plan owned that one; from here it catches any further drift.
-  assert.equal(release.packages.length, 47);
-  assert.equal(new Set(release.packages.map((pkg: { manifest: { name: string } }) => pkg.manifest.name)).size, 47);
+  assert.equal(release.packages.length, 48); // plan 205 Task 2 adds @arnilo/prism-provider-commandcode
+  assert.equal(new Set(release.packages.map((pkg: { manifest: { name: string } }) => pkg.manifest.name)).size, 48);
   assert.doesNotThrow(() =>
     validateReleaseIndependent(release, {
       baseline: "HEAD",

@@ -196,6 +196,7 @@ export interface ExtractConsolidationNotesInput {
 }
 
 const RECALL_QUERY_CHARS = 2_000;
+const EXTRACT_CACHE_KEY = "prism-fabric-extract";
 const NOTE_SCOPES: readonly MemoryNoteScope[] = ["user", "project", "agent", "path"];
 
 /**
@@ -219,12 +220,7 @@ export async function extractConsolidationNotes(input: ExtractConsolidationNotes
     segmentIds: new Set(segments.map((segment) => segment.id)),
     maxNotes,
   };
-  const parameters = consolidationExtractSchema({
-    candidateIds: shown,
-    existingIds: existing.map((note) => note.id),
-    segmentIds: segments.map((segment) => segment.id),
-    maxNotes,
-  });
+  const parameters = consolidationExtractSchema({ maxNotes });
 
   let calls = 0;
   let correctionCalls = 0;
@@ -281,6 +277,7 @@ export async function extractConsolidationNotes(input: ExtractConsolidationNotes
         system: input.repositoryRules === true ? CONSOLIDATION_EXTRACT_SYSTEM_PROJECT : CONSOLIDATION_EXTRACT_SYSTEM,
         prompt: JSON.stringify(prompt),
         tools: [tool],
+        providerOptions: { cacheKey: `${EXTRACT_CACHE_KEY}:${input.repositoryRules === true ? "project" : "default"}` },
         ...(input.thinkingLevel === undefined ? {} : { thinkingLevel: input.thinkingLevel }),
         ...(input.secrets === undefined ? {} : { secrets: input.secrets }),
         ...(input.sessionId === undefined ? {} : { sessionId: input.sessionId }),

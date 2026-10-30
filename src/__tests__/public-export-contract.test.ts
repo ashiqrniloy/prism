@@ -704,6 +704,7 @@ const FROZEN_PROVIDER_KIT_EXPORTS: readonly string[] = [
   "createBoundedUploadCache",
   "createOpenAICompatibleProvider",
   "createRoutedProvider",
+  "createToolNameMap",
   "createSystemOneDecisionProvider",
   "defaultProviderFilename",
   "defineProviderPackage",
@@ -741,6 +742,7 @@ const FROZEN_PROVIDER_KIT_EXPORTS: readonly string[] = [
   "plaintextRemoteOrigin",
   "postSystemOne",
   "preserveThinking",
+  "productToolName",
   "providerConformance",
   "providerHttpError",
   "providerPackage",
@@ -787,6 +789,7 @@ const FROZEN_PROVIDER_KIT_EXPORTS: readonly string[] = [
   "tryParseJsonObjectArguments",
   "validateStructuredOutputOptions",
   "warnIfPlaintextRemote",
+  "wireToolName",
   "withoutStructuredOutput",
 ];
 

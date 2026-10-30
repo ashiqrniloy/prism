@@ -1,0 +1,52 @@
+{
+  "kind": "202-north-mini-code-free-admission-probe",
+  "ref": "openrouter/cohere/north-mini-code:free",
+  "limits": {
+    "wireAttempts": 1,
+    "inputTokens": 4000000,
+    "outputTokens": 12000,
+    "wallMs": 180000,
+    "retries429": 0
+  },
+  "startedAt": "2026-10-29T12:20:05.835Z",
+  "campaignChanged": false,
+  "status": "blocked-daily-quota",
+  "toolCalls": 0,
+  "result": {
+    "status": "failed",
+    "nonempty": false,
+    "error": {
+      "name": "Error",
+      "message": "ZeroScoreQuotaUnavailable",
+      "failureClass": "quota"
+    }
+  },
+  "usage": {
+    "inputTokens": 0,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0,
+    "outputTokens": 0,
+    "accountedInputTokens": 0,
+    "accountedOutputTokens": 0,
+    "usageMissingExchanges": 0,
+    "usageComplete": true,
+    "wireAttempts": 1
+  },
+  "allocations": [
+    {
+      "provider": "openrouter",
+      "exchange": 1,
+      "inputBound": 256000,
+      "outputBound": 2048
+    }
+  ],
+  "protectedArtifactsUnchanged": true,
+  "finishedAt": "2026-10-29T12:20:07.118Z",
+  "gateway": {
+    "httpStatus": 429,
+    "message": "Rate limit exceeded: free-models-per-day-high-balance. ",
+    "limit": "1000",
+    "remaining": "0",
+    "reset": "1793318400000"
+  }
+}

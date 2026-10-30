@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "kind": "202-task5-owner-gate",
+  "plan": 202,
+  "task": 5,
+  "subtask": 5.3,
+  "gate": 5,
+  "approved": true,
+  "approvedAt": "2026-10-30",
+  "approvedBy": "owner",
+  "text": "Complete - [ ] Task 5.3: Record the paid-development owner gate against the frozen proposal and update the plan once done. Only use free model from openrouter for paid runs",
+  "proposal": {
+    "path": "docs/_evidence/memory-bench/202/task5/development-comparison-manifest.json",
+    "manifestHash": "3b870e8c6d5540ab1b856fcad1f58a36f5dc4d131ad4534b78004b6365c91361"
+  },
+  "journal": {
+    "path": ".cache/memory-bench/task5/journal.json",
+    "fingerprint": "e3d8ac7d031aa5dcfad250b7dd7e84472fb517d8268eeafd2236b87dcf21ab32"
+  },
+  "scope": {
+    "cells": 10,
+    "pairs": 5,
+    "questions": 210,
+    "suites": [
+      "beam-100k",
+      "locomo",
+      "memoryagentbench-cr",
+      "longmemeval-m",
+      "beam-1m"
+    ],
+    "roles": [
+      "control",
+      "candidate"
+    ],
+    "arm": {
+      "id": "preset-r1",
+      "config": "fabric-x-tools"
+    },
+    "answers": [
+      "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free"
+    ],
+    "judges": [
+      "openrouter/dots-studio/dots-3-note-preview:free",
+      "openrouter/cohere/north-mini-code:free"
+    ]
+  },
+  "billing": {
+    "mode": "free-openrouter",
+    "provider": "openrouter",
+    "freeProductsOnly": true,
+    "paidFallbacks": [],
+    "productUsd": 0,
+    "judgeUsd": 0,
+    "totalUsd": 0
+  },
+  "caps": {
+    "reservedInputTokens": 69000000,
+    "ceiling": 100000000,
+    "maxPhysicalCalls": 16800,
+    "concurrency": 1,
+    "wallTimeCapHours": 416
+  },
+  "preservation": {
+    "closedScreen": "closed-by-owner",
+    "priorCharges": "preserved",
+    "historicalControlsReused": 0,
+    "heldOutAccess": false,
+    "credentialValues": false
+  }
+}

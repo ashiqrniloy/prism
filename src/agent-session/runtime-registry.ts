@@ -3,7 +3,7 @@
  * `agent-run-state.ts` can read an agent's hook registrations for the durable fingerprint
  * without forming a cycle through `create-agent.ts` → `session.ts`.
  */
-import type { Agent, AgentEvent, Skill, ToolDefinition } from "../contracts.js";
+import type { Agent, AgentConfig, AgentEvent, Skill, ToolDefinition } from "../contracts.js";
 import type { HookBus } from "../hooks/index.js";
 import type { LoopStrategy } from "../loop/types.js";
 import { PackageLoadError } from "../packages/errors.js";
@@ -12,10 +12,13 @@ import type { SlotRegistry } from "../slots/index.js";
 
 /** Per-agent kernel runtime: the host hook bus and the slot registry. Never public. */
 export interface AgentRuntime {
-  readonly hooks: HookBus;
-  readonly slots: SlotRegistry;
+  /** Swapped atomically by `agent.reload()`; sessions re-bind on their next use. */
+  hooks: HookBus;
+  slots: SlotRegistry;
   /** Loaded packages, their declared capabilities, and status notes. */
-  readonly packages: LoadedPackages;
+  packages: LoadedPackages;
+  /** Set for the duration of `agent.reload()`: a run that starts now would see a half-swapped runtime. */
+  reloading?: boolean;
   /**
    * Plan 177 Task 5: sessions open on this agent, added when a session opens and dropped by its
    * `close()`. `dispose()` aborts and closes each one. Structural type keeps this leaf session-free.
@@ -96,8 +99,12 @@ export function packagesAffectTools(agent: Agent): boolean {
  * through here (plan 146 Task 1 A2). The host's own list is returned untouched when nothing merges.
  */
 export function agentToolList(agent: Agent): readonly ToolDefinition[] {
-  const host = agent.config.tools?.add ?? [];
-  const packages = tryAgentRuntime(agent)?.packages;
+  return toolListFor(agent.config, tryAgentRuntime(agent)?.packages);
+}
+
+/** The same merge for a config/package pair that is not the agent's committed runtime (reload assembly). */
+export function toolListFor(config: AgentConfig, packages: LoadedPackages | undefined): readonly ToolDefinition[] {
+  const host = config.tools?.add ?? [];
   const added = packages?.tools() ?? [];
   const disabled = packages?.disabled.tools;
   if (added.length === 0 && !disabled?.size) return host;
@@ -118,8 +125,12 @@ export function agentToolList(agent: Agent): readonly ToolDefinition[] {
  * registry stays a registry (skills activate on demand) and an array stays an array.
  */
 export function agentSkillSource(agent: Agent): readonly Skill[] {
-  const host = agent.config.skills?.add ?? [];
-  const packages = tryAgentRuntime(agent)?.packages;
+  return skillSourceFor(agent.config, tryAgentRuntime(agent)?.packages);
+}
+
+/** The same merge for a config/package pair that is not the agent's committed runtime (reload assembly). */
+export function skillSourceFor(config: AgentConfig, packages: LoadedPackages | undefined): readonly Skill[] {
+  const host = config.skills?.add ?? [];
   const added = packages?.skills() ?? [];
   const disabled = packages?.disabled.skills;
   if (added.length === 0 && !disabled?.size) return host;

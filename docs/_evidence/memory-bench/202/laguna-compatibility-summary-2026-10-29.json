@@ -1,0 +1,211 @@
+{
+  "kind": "202-laguna-compatibility-summary",
+  "model": "commandcode/poolside/laguna-s-2.1-free",
+  "status": "partial-pass-not-ready",
+  "benchmarkScoring": false,
+  "campaignChanged": false,
+  "baselineArtifactsUnchanged": true,
+  "sources": [
+    {
+      "path": "laguna-compatibility-2026-10-29T11-41-37-207Z.json",
+      "sha256": "92b62d35fbe66ddf7b436ec3bf5c8d58440bcea67b4acb5e262c6b97acc0414c"
+    },
+    {
+      "path": "laguna-compatibility-2026-10-29T11-42-41-094Z.json",
+      "sha256": "37e84e0ee7e4238172aca61fb3b0623bd4d330086c3e459115c51de44ecf8ba9"
+    },
+    {
+      "path": "laguna-compatibility-2026-10-29T11-43-02-524Z.json",
+      "sha256": "6585c2713425ad5bd19b216f38333df6c26c2ec0ee39fccf7ceacf7f5f9df6e4"
+    },
+    {
+      "path": "laguna-compatibility-2026-10-29T11-43-13-275Z.json",
+      "sha256": "9a62bad5232c7da29dcfe4b63b57062c8bf5fe4378a1e89cc46f925e1ef8eb36"
+    },
+    {
+      "path": "laguna-compatibility-2026-10-29T11-43-48-581Z.json",
+      "sha256": "2e56879aa98f84d2390fdf60a83cb03e0f8bd61e385be87cf7886f1d3b33e443"
+    },
+    {
+      "path": "laguna-compatibility-2026-10-29T11-47-40-060Z.json",
+      "sha256": "784034998f84862e1b9454e7e4814358fc4f82ea39f0f87f3ac702e7f1c70cbc"
+    }
+  ],
+  "results": [
+    {
+      "check": "short imported assistant history over Chat",
+      "status": "passed",
+      "source": "laguna-compatibility-2026-10-29T11-43-02-524Z.json"
+    },
+    {
+      "check": "complete development history over Chat",
+      "status": "passed",
+      "source": "laguna-compatibility-2026-10-29T11-47-40-060Z.json",
+      "messages": 238,
+      "assistantMessages": 119,
+      "removedSourceMessages": 0,
+      "inputTokens": 153772
+    },
+    {
+      "check": "tool call and tool-result handling",
+      "status": "blocked-upstream-unavailable",
+      "executedTools": 0
+    },
+    {
+      "check": "stopping after tool and follow-up recall",
+      "status": "unverified",
+      "reason": "tool request never generated output"
+    },
+    {
+      "check": "short imported assistant history over Responses",
+      "status": "failed-recall",
+      "source": "laguna-compatibility-2026-10-29T11-42-41-094Z.json",
+      "reason": "request completed but did not recover the supplied token; cause undiagnosed"
+    }
+  ],
+  "availability": {
+    "wireAttempts": 11,
+    "successfulGenerations": 3,
+    "http429": 8,
+    "message": "Upstream model provider is temporarily unavailable. Please try again in a moment.",
+    "automatic429Retries": 0
+  },
+  "accounting": {
+    "reportedRawUsage": {
+      "inputTokens": 153940,
+      "outputTokens": 41,
+      "cacheReadTokens": 64
+    },
+    "rawRecords": [
+      {
+        "source": "laguna-compatibility-2026-10-29T11-41-37-207Z.json",
+        "route": "/responses",
+        "httpStatus": 429,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "cacheReadTokens": 0,
+        "normalizedInputTokens": 0,
+        "normalizedOutputTokens": 0,
+        "rawUsagePresent": false
+      },
+      {
+        "source": "laguna-compatibility-2026-10-29T11-42-41-094Z.json",
+        "route": "/responses",
+        "httpStatus": 200,
+        "inputTokens": 84,
+        "outputTokens": 28,
+        "cacheReadTokens": 0,
+        "normalizedInputTokens": 84,
+        "normalizedOutputTokens": 28,
+        "rawUsagePresent": true
+      },
+      {
+        "source": "laguna-compatibility-2026-10-29T11-43-02-524Z.json",
+        "route": "/chat/completions",
+        "httpStatus": 200,
+        "inputTokens": 84,
+        "outputTokens": 8,
+        "cacheReadTokens": 32,
+        "normalizedInputTokens": 0,
+        "normalizedOutputTokens": 0,
+        "rawUsagePresent": true
+      },
+      {
+        "source": "laguna-compatibility-2026-10-29T11-43-13-275Z.json",
+        "route": "/chat/completions",
+        "httpStatus": 429,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "cacheReadTokens": 0,
+        "normalizedInputTokens": 0,
+        "normalizedOutputTokens": 0,
+        "rawUsagePresent": false
+      },
+      {
+        "source": "laguna-compatibility-2026-10-29T11-43-48-581Z.json",
+        "route": "/chat/completions",
+        "httpStatus": 429,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "cacheReadTokens": 0,
+        "normalizedInputTokens": 0,
+        "normalizedOutputTokens": 0,
+        "rawUsagePresent": false
+      },
+      {
+        "source": "laguna-compatibility-2026-10-29T11-43-48-581Z.json",
+        "route": "/chat/completions",
+        "httpStatus": 429,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "cacheReadTokens": 0,
+        "normalizedInputTokens": 0,
+        "normalizedOutputTokens": 0,
+        "rawUsagePresent": false
+      },
+      {
+        "source": "laguna-compatibility-2026-10-29T11-43-48-581Z.json",
+        "route": "/chat/completions",
+        "httpStatus": 429,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "cacheReadTokens": 0,
+        "normalizedInputTokens": 0,
+        "normalizedOutputTokens": 0,
+        "rawUsagePresent": false
+      },
+      {
+        "source": "laguna-compatibility-2026-10-29T11-43-48-581Z.json",
+        "route": "/chat/completions",
+        "httpStatus": 429,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "cacheReadTokens": 0,
+        "normalizedInputTokens": 0,
+        "normalizedOutputTokens": 0,
+        "rawUsagePresent": false
+      },
+      {
+        "source": "laguna-compatibility-2026-10-29T11-47-40-060Z.json",
+        "route": "/chat/completions",
+        "httpStatus": 200,
+        "inputTokens": 153772,
+        "outputTokens": 5,
+        "cacheReadTokens": 32,
+        "normalizedInputTokens": 0,
+        "normalizedOutputTokens": 0,
+        "rawUsagePresent": true
+      },
+      {
+        "source": "laguna-compatibility-2026-10-29T11-47-40-060Z.json",
+        "route": "/chat/completions",
+        "httpStatus": 429,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "cacheReadTokens": 0,
+        "normalizedInputTokens": 0,
+        "normalizedOutputTokens": 0,
+        "rawUsagePresent": false
+      },
+      {
+        "source": "laguna-compatibility-2026-10-29T11-47-40-060Z.json",
+        "route": "/chat/completions",
+        "httpStatus": 429,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "cacheReadTokens": 0,
+        "normalizedInputTokens": 0,
+        "normalizedOutputTokens": 0,
+        "rawUsagePresent": false
+      }
+    ],
+    "normalizedCounterMismatch": true,
+    "normalizationIssue": "Successful Chat responses carry prompt_tokens/completion_tokens in rawUsage while normalized counters are zero. Do not use normalized probe totals as measured consumption.",
+    "retainedDiagnosticInputBound": 2816000,
+    "retainedDiagnosticOutputBound": 22528,
+    "refund": 0,
+    "unknownFutureAllowance": true
+  },
+  "localHarnessCorrection": "One preliminary large-history attempt hit default kernel cumulative maxInputTokens; final diagnostic disables cumulative kernel token limits like the benchmark, retaining model context, per-wire admission, output, turn and wall bounds. No repository implementation changed.",
+  "next": "Do not replace Glyph yet. Retry bounded Chat tool/follow-up checks when capacity returns; reconcile usage normalization before readiness. Baseline judge quota remains a separate blocker."
+}

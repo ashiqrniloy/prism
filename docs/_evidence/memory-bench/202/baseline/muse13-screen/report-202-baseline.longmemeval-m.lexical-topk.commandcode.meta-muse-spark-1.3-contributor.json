@@ -1,0 +1,3055 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 2,
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "usageSource": "wire-proxy",
+  "phase": "all",
+  "labelInjections": "off",
+  "concurrency": 1,
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 8192
+  },
+  "freeOnly": false,
+  "boundedWire": true,
+  "writeGeneration": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "generatedAt": "2026-10-29T20:38:00.299Z",
+  "suite": "longmemeval-m",
+  "subset": "dev",
+  "ability": null,
+  "seed": null,
+  "config": "lexical-topk",
+  "ingestion": "none",
+  "embeddings": null,
+  "provider": "commandcode",
+  "model": "meta/muse-spark-1.3-contributor",
+  "judge": "commandcode/minimax/minimax-m3.1-flash",
+  "judgePanel": [
+    "commandcode/minimax/minimax-m3.1-flash",
+    "commandcode/z-ai/glm-5.3-flash"
+  ],
+  "judgeCalibration": null,
+  "repeats": 1,
+  "judgeProtocol": "plain-text-v1",
+  "dataset": {
+    "file": "longmemeval-m.json",
+    "format": "json-array-stream",
+    "bytes": 2737100077,
+    "sha256": "9d79e5524794a2e6900a3aa9cb7d9152c5a3e8319c9a87c25494ba1eacee495f",
+    "license": "MIT",
+    "url": "https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/resolve/98d7416c24c778c2fee6e6f3006e7a073259d48f/longmemeval_m_cleaned.json",
+    "licenseUrl": "https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/blob/98d7416c24c778c2fee6e6f3006e7a073259d48f/README.md"
+  },
+  "maxInputTokens": 10000000,
+  "ablations": [],
+  "sourceVariants": [],
+  "sourceRevision": "5c2570df52a084b43120ee4e77921746a029480e",
+  "protocol": {
+    "answerAttempts": 3,
+    "answerBackoffMs": [
+      2000,
+      10000
+    ],
+    "judgeAttempts": 8,
+    "judgeBackoffMs": [
+      1000,
+      2000
+    ],
+    "maxTurns": 8
+  },
+  "memoryConfig": {
+    "observational": null,
+    "fabric": null
+  },
+  "inputTokens": 168987,
+  "cacheReadTokens": 8952,
+  "cacheWriteTokens": 0,
+  "outputTokens": 43750,
+  "calls": {
+    "observer": 0,
+    "reflector": 0,
+    "dropper": 0,
+    "embedding": 0,
+    "decider": 0,
+    "consolidate": 0,
+    "judge": 88,
+    "judgeAttempts": 88,
+    "gatewayRetries": 0,
+    "judgeCacheHits": 12,
+    "judgeCacheMisses": 88,
+    "concurrencyHalvings": 0,
+    "overloads": 0
+  },
+  "turns": 50,
+  "injectedContextTokens": 0,
+  "injections": [],
+  "attemptId": "202-baseline.longmemeval-m.lexical-topk.commandcode.meta/muse-spark-1.3-contributor@1",
+  "measurementVersion": "product-phases-attribution-v2",
+  "analysisVersion": "202-paired-cluster-v1",
+  "judgeTemplateVersion": "e3883a2aa5910f76c3f6b377f1758fd4a57ca6dda1449cd86291abd0eea5f306",
+  "gradedTemplateVersion": "f7ff5f9c24afd87f0a5e00bd168103019f6e7140d64031f3e5bec264043c24cb",
+  "protocolHash": "8cccd506a7375692ad97c369548f5be4a5631af92dfd27a282555716ca7011dd",
+  "resumedResults": 0,
+  "results": [
+    {
+      "id": "9aaed6a3",
+      "ability": "multi-session",
+      "cluster": "lme-5d95a068d0e8",
+      "phaseTiming": {
+        "ingestion": 507.7,
+        "answer": 11834.3,
+        "evaluation": 4767.8
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 12,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "gpt4_15e38248",
+      "ability": "multi-session",
+      "cluster": "lme-c40ffc9dd119",
+      "phaseTiming": {
+        "ingestion": 353.9,
+        "answer": 10580.4,
+        "evaluation": 2585.3
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1863,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "gpt4_5501fe77",
+      "ability": "multi-session",
+      "cluster": "lme-b7e21e6190b8",
+      "phaseTiming": {
+        "ingestion": 357.1,
+        "answer": 8969.3,
+        "evaluation": 3847.9
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 23,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "e831120c",
+      "ability": "multi-session",
+      "cluster": "lme-6de251254b6b",
+      "phaseTiming": {
+        "ingestion": 353.3,
+        "answer": 7563.5,
+        "evaluation": 5832.6
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 12,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "6456829e",
+      "ability": "multi-session",
+      "cluster": "lme-2d0700f89843",
+      "phaseTiming": {
+        "ingestion": 360.9,
+        "answer": 5982.1,
+        "evaluation": 6086.9
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 958,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "bb7c3b45",
+      "ability": "multi-session",
+      "cluster": "lme-5db4a1cfc303",
+      "phaseTiming": {
+        "ingestion": 374.1,
+        "answer": 4440.7,
+        "evaluation": 7956.8
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 23,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "2311e44b",
+      "ability": "multi-session",
+      "cluster": "lme-99287d1f0b0a",
+      "phaseTiming": {
+        "ingestion": 382.2,
+        "answer": 8379.1,
+        "evaluation": 2578.4
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 19,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "d851d5ba",
+      "ability": "multi-session",
+      "cluster": "lme-90b232d849a1",
+      "phaseTiming": {
+        "ingestion": 380.4,
+        "answer": 5528.3,
+        "evaluation": 2998.8
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 22,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "7024f17c",
+      "ability": "multi-session",
+      "cluster": "lme-02a7c8fe7c5a",
+      "phaseTiming": {
+        "ingestion": 354.6,
+        "answer": 12411.9,
+        "evaluation": 2598.5
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 18,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "88432d0a",
+      "ability": "multi-session",
+      "cluster": "lme-f24ee78563dc",
+      "phaseTiming": {
+        "ingestion": 354.7,
+        "answer": 4598.8,
+        "evaluation": 8.7
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1799,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "eeda8a6d",
+      "ability": "multi-session",
+      "cluster": "lme-0952e6fda2d5",
+      "phaseTiming": {
+        "ingestion": 363.7,
+        "answer": 13775.9,
+        "evaluation": 2760.5
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 241,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "ef66a6e5",
+      "ability": "multi-session",
+      "cluster": "lme-f988e8fbf9c8",
+      "phaseTiming": {
+        "ingestion": 374.7,
+        "answer": 8624.6,
+        "evaluation": 2725.3
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 321,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "6071bd76",
+      "ability": "knowledge-update",
+      "cluster": "lme-a63429d2e44c",
+      "phaseTiming": {
+        "ingestion": 361.6,
+        "answer": 5832.5,
+        "evaluation": 2112.9
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 12,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "618f13b2",
+      "ability": "knowledge-update",
+      "cluster": "lme-c9237bbca798",
+      "phaseTiming": {
+        "ingestion": 366.1,
+        "answer": 4274.9,
+        "evaluation": 4169.9
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 23,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "c6853660",
+      "ability": "knowledge-update",
+      "cluster": "lme-d2c42ffe66b1",
+      "phaseTiming": {
+        "ingestion": 338.7,
+        "answer": 6703.9,
+        "evaluation": 2571.3
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 10,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "9bbe84a2",
+      "ability": "knowledge-update",
+      "cluster": "lme-87881e726b4e",
+      "phaseTiming": {
+        "ingestion": 344.9,
+        "answer": 4057.8,
+        "evaluation": 4366.2
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 11,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "89941a94",
+      "ability": "knowledge-update",
+      "cluster": "lme-3e65bfe33b4b",
+      "phaseTiming": {
+        "ingestion": 366.7,
+        "answer": 11763.4,
+        "evaluation": 2730.1
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 12,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "6aeb4375",
+      "ability": "knowledge-update",
+      "cluster": "lme-c5337e79e1e7",
+      "phaseTiming": {
+        "ingestion": 374.6,
+        "answer": 5863.2,
+        "evaluation": 2719
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 58,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "22d2cb42",
+      "ability": "knowledge-update",
+      "cluster": "lme-915a13776179",
+      "phaseTiming": {
+        "ingestion": 347.8,
+        "answer": 16439.7,
+        "evaluation": 2578.6
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 12,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "ba61f0b9",
+      "ability": "knowledge-update",
+      "cluster": "lme-ff4a804f9c43",
+      "phaseTiming": {
+        "ingestion": 353.5,
+        "answer": 17736.3,
+        "evaluation": 1884.8
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1279,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "gpt4_fa19884d",
+      "ability": "temporal-reasoning",
+      "cluster": "lme-e628bbacf5e4",
+      "phaseTiming": {
+        "ingestion": 363.5,
+        "answer": 9787.8,
+        "evaluation": 0.2
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 12,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "gpt4_1e4a8aeb",
+      "ability": "temporal-reasoning",
+      "cluster": "lme-e1d75c9a7f66",
+      "phaseTiming": {
+        "ingestion": 349.3,
+        "answer": 16273.1,
+        "evaluation": 0.2
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 11,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "gpt4_78cf46a3",
+      "ability": "temporal-reasoning",
+      "cluster": "lme-3292a59ce2f4",
+      "phaseTiming": {
+        "ingestion": 190.9,
+        "answer": 12397.4,
+        "evaluation": 2341.6
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 10,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "gpt4_21adecb5",
+      "ability": "temporal-reasoning",
+      "cluster": "lme-e444c4657e7a",
+      "phaseTiming": {
+        "ingestion": 370,
+        "answer": 4393.5,
+        "evaluation": 4116
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 26,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "gpt4_85da3956",
+      "ability": "temporal-reasoning",
+      "cluster": "lme-ce307cd37622",
+      "phaseTiming": {
+        "ingestion": 371.8,
+        "answer": 6564.8,
+        "evaluation": 2572.2
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 7,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "gpt4_45189cb4",
+      "ability": "temporal-reasoning",
+      "cluster": "lme-dcf1e31f0a87",
+      "phaseTiming": {
+        "ingestion": 361.6,
+        "answer": 6207.2,
+        "evaluation": 2881.6
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 16,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "gpt4_93159ced",
+      "ability": "temporal-reasoning",
+      "cluster": "lme-1883a0e96607",
+      "phaseTiming": {
+        "ingestion": 225.3,
+        "answer": 6083.9,
+        "evaluation": 2183.2
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 6,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "gpt4_7ca326fa",
+      "ability": "temporal-reasoning",
+      "cluster": "lme-049318781167",
+      "phaseTiming": {
+        "ingestion": 377.7,
+        "answer": 8738.8,
+        "evaluation": 4390.5
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 17,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "6b168ec8",
+      "ability": "single-session-user",
+      "cluster": "lme-91f8f9c25a8d",
+      "phaseTiming": {
+        "ingestion": 354.4,
+        "answer": 7211.4,
+        "evaluation": 2262.3
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 97,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "b320f3f8",
+      "ability": "single-session-user",
+      "cluster": "lme-8be9b25994a2",
+      "phaseTiming": {
+        "ingestion": 368.4,
+        "answer": 7783.1,
+        "evaluation": 0.1
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 6,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "1e043500",
+      "ability": "single-session-user",
+      "cluster": "lme-6326b043f4dd",
+      "phaseTiming": {
+        "ingestion": 361.6,
+        "answer": 4552.5,
+        "evaluation": 2209.3
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 6,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "36580ce8",
+      "ability": "single-session-user",
+      "cluster": "lme-1cff8e2f6bfb",
+      "phaseTiming": {
+        "ingestion": 357.5,
+        "answer": 4702.9,
+        "evaluation": 2917.1
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 6,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "faba32e5",
+      "ability": "single-session-user",
+      "cluster": "lme-56e7a48b8ecd",
+      "phaseTiming": {
+        "ingestion": 363.9,
+        "answer": 4607.5,
+        "evaluation": 3373.3
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 11,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "e01b8e2f",
+      "ability": "single-session-user",
+      "cluster": "lme-b9ca4357fec1",
+      "phaseTiming": {
+        "ingestion": 369.2,
+        "answer": 9131.9,
+        "evaluation": 2117.9
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 15,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "8464fc84",
+      "ability": "single-session-assistant",
+      "cluster": "lme-81d89595fc29",
+      "phaseTiming": {
+        "ingestion": 359.3,
+        "answer": 6448.7,
+        "evaluation": 1821.8
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 9,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "fea54f57",
+      "ability": "single-session-assistant",
+      "cluster": "lme-50e05720a506",
+      "phaseTiming": {
+        "ingestion": 360.4,
+        "answer": 9350.1,
+        "evaluation": 1993.9
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 46,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "1de5cff2",
+      "ability": "single-session-assistant",
+      "cluster": "lme-4d97b65c47e5",
+      "phaseTiming": {
+        "ingestion": 355.9,
+        "answer": 8051.9,
+        "evaluation": 2386.5
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 6,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "1568498a",
+      "ability": "single-session-assistant",
+      "cluster": "lme-0881569b9e2c",
+      "phaseTiming": {
+        "ingestion": 359.2,
+        "answer": 8604.7,
+        "evaluation": 1810
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 12,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "b6025781",
+      "ability": "single-session-preference",
+      "cluster": "lme-e24992a98cc0",
+      "phaseTiming": {
+        "ingestion": 353.9,
+        "answer": 10993.4,
+        "evaluation": 7525.1
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 6,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "d24813b1",
+      "ability": "single-session-preference",
+      "cluster": "lme-cdd3b8e161ce",
+      "phaseTiming": {
+        "ingestion": 357.8,
+        "answer": 11284.3,
+        "evaluation": 8440.4
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 7,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "1da05512",
+      "ability": "single-session-preference",
+      "cluster": "lme-c6e7e0128abc",
+      "phaseTiming": {
+        "ingestion": 359.3,
+        "answer": 9962,
+        "evaluation": 3053.4
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 6,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "32260d93",
+      "ability": "single-session-preference",
+      "cluster": "lme-8fe991a201d8",
+      "phaseTiming": {
+        "ingestion": 366.8,
+        "answer": 16976,
+        "evaluation": 3195.9
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 6,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "2698e78f_abs",
+      "ability": "abstention",
+      "cluster": "lme-8b9388ab8701",
+      "phaseTiming": {
+        "ingestion": 359.5,
+        "answer": 7139.8,
+        "evaluation": 1942.5
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 12,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "80ec1f4f_abs",
+      "ability": "abstention",
+      "cluster": "lme-d0a63c69cfdf",
+      "phaseTiming": {
+        "ingestion": 360.5,
+        "answer": 8499.6,
+        "evaluation": 3525.3
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 18,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "19b5f2b3_abs",
+      "ability": "abstention",
+      "cluster": "lme-fb74e311f0a1",
+      "phaseTiming": {
+        "ingestion": 354.3,
+        "answer": 5023.8,
+        "evaluation": 2132.2
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 6,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "982b5123_abs",
+      "ability": "abstention",
+      "cluster": "lme-fc6403477061",
+      "phaseTiming": {
+        "ingestion": 249.4,
+        "answer": 5723.7,
+        "evaluation": 8.5
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 12,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "a96c20ee_abs",
+      "ability": "abstention",
+      "cluster": "lme-6c65b15e0f3c",
+      "phaseTiming": {
+        "ingestion": 362.6,
+        "answer": 4885.3,
+        "evaluation": 0.3
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 11,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "gpt4_70e84552_abs",
+      "ability": "abstention",
+      "cluster": "lme-fa1a7796189f",
+      "phaseTiming": {
+        "ingestion": 59.3,
+        "answer": 5762.6,
+        "evaluation": 3323.6
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 0,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "ba358f49_abs",
+      "ability": "abstention",
+      "cluster": "lme-f7a330395ddc",
+      "phaseTiming": {
+        "ingestion": 385.5,
+        "answer": 8981.2,
+        "evaluation": 2554.3
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 12,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "2133c1b5_abs",
+      "ability": "abstention",
+      "cluster": "lme-432d5eaeb6d0",
+      "phaseTiming": {
+        "ingestion": 296.9,
+        "answer": 9219.6,
+        "evaluation": 3236.9
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 12,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    }
+  ],
+  "status": "completed",
+  "limitations": [
+    "Block-level injection accounting until item metadata lands in Tasks 4, 9, 11 and 12.",
+    "Injection token allocations are character estimates, not billing usage.",
+    "OpenCode Go and Hyper judges differ from the papers; scores are not directly comparable."
+  ],
+  "ratesAsOf": "2026-10-29",
+  "ratesStatus": "provider-catalog",
+  "inputCap": 1047552,
+  "selectedQuestionIds": [
+    "9aaed6a3",
+    "gpt4_15e38248",
+    "gpt4_5501fe77",
+    "e831120c",
+    "6456829e",
+    "bb7c3b45",
+    "2311e44b",
+    "d851d5ba",
+    "7024f17c",
+    "88432d0a",
+    "eeda8a6d",
+    "ef66a6e5",
+    "6071bd76",
+    "618f13b2",
+    "c6853660",
+    "9bbe84a2",
+    "89941a94",
+    "6aeb4375",
+    "22d2cb42",
+    "ba61f0b9",
+    "gpt4_fa19884d",
+    "gpt4_1e4a8aeb",
+    "gpt4_78cf46a3",
+    "gpt4_21adecb5",
+    "gpt4_85da3956",
+    "gpt4_45189cb4",
+    "gpt4_93159ced",
+    "gpt4_7ca326fa",
+    "6b168ec8",
+    "b320f3f8",
+    "1e043500",
+    "36580ce8",
+    "faba32e5",
+    "e01b8e2f",
+    "8464fc84",
+    "fea54f57",
+    "1de5cff2",
+    "1568498a",
+    "b6025781",
+    "d24813b1",
+    "1da05512",
+    "32260d93",
+    "2698e78f_abs",
+    "80ec1f4f_abs",
+    "19b5f2b3_abs",
+    "982b5123_abs",
+    "a96c20ee_abs",
+    "gpt4_70e84552_abs",
+    "ba358f49_abs",
+    "2133c1b5_abs"
+  ],
+  "runPathFingerprint": "20682dc4afd49f276e9db7778570a4f1138088ecee467f6cde2704ddf62f95cf",
+  "measurementPolicy": {
+    "version": "product-phases-v1",
+    "judgeCallsPerHour": 450,
+    "injectionAnnotation": false,
+    "retriesAndBackoffIncluded": true,
+    "queueWaitIncluded": false,
+    "seedSnapshot": false
+  },
+  "roleUsage": {
+    "product": {
+      "inputTokens": 145573,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 41189,
+      "exchanges": 50,
+      "complete": true,
+      "measured": 0.022796,
+      "cold": 0.022796,
+      "warm": 0.022796,
+      "inputWarm": 0.01456,
+      "inputCold": 0.01456
+    },
+    "evaluation": {
+      "inputTokens": 23414,
+      "cacheReadTokens": 8952,
+      "cacheWriteTokens": 0,
+      "outputTokens": 2561,
+      "exchanges": 88,
+      "complete": true,
+      "measured": 0.003763,
+      "cold": 0.004976,
+      "warm": 0.003763,
+      "inputWarm": 0.002301,
+      "inputCold": 0.003516
+    },
+    "unknown": {
+      "inputTokens": 0,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 0,
+      "exchanges": 0,
+      "complete": true,
+      "measured": 0,
+      "cold": 0,
+      "warm": 0,
+      "inputWarm": 0,
+      "inputCold": 0
+    },
+    "total": {
+      "inputTokens": 168987,
+      "cacheReadTokens": 8952,
+      "cacheWriteTokens": 0,
+      "outputTokens": 43750,
+      "exchanges": 138,
+      "measured": 0.026559
+    }
+  },
+  "accountedInputTokens": 168987,
+  "usageComplete": true,
+  "usageMissingExchanges": 0,
+  "wireExchanges": 138,
+  "timing": {
+    "wallMs": 633291.3,
+    "concurrency": {
+      "initial": 1,
+      "active": 1,
+      "floor": 1
+    },
+    "questions": {
+      "n": 50,
+      "wallMs": {
+        "p50": 10796,
+        "p95": 19976.3,
+        "mean": 11691.5
+      }
+    },
+    "phases": {
+      "ingestion": {
+        "n": 50,
+        "wallMs": {
+          "p50": 359.5,
+          "p95": 382.2,
+          "mean": 349.1
+        }
+      },
+      "restore": {
+        "n": 0,
+        "wallMs": {
+          "p50": null,
+          "p95": null,
+          "mean": null
+        }
+      },
+      "answer": {
+        "n": 50,
+        "wallMs": {
+          "p50": 7783.1,
+          "p95": 16439.7,
+          "mean": 8414.1
+        }
+      },
+      "evaluation": {
+        "n": 50,
+        "wallMs": {
+          "p50": 2585.3,
+          "p95": 7525.1,
+          "mean": 2923.9
+        }
+      }
+    },
+    "policy": {
+      "answer": "after ingestion, before grading, annotation, final background settlement and disposal",
+      "queueWaitIncluded": false,
+      "retriesAndBackoffIncluded": true
+    },
+    "roles": {
+      "judge": {
+        "calls": 88,
+        "firstByteMs": {
+          "p50": 1339.2,
+          "p95": 3359.1,
+          "mean": 1599.1
+        },
+        "totalMs": {
+          "p50": 1339.2,
+          "p95": 3359.1,
+          "mean": 1599.1
+        }
+      },
+      "solver": {
+        "calls": 50,
+        "firstByteMs": {
+          "p50": 7716.6,
+          "p95": 16435.4,
+          "mean": 8266.3
+        },
+        "totalMs": {
+          "p50": 7777.1,
+          "p95": 16437.6,
+          "mean": 8410.5
+        }
+      }
+    },
+    "calls": 138
+  },
+  "metricVersion": 2,
+  "abilities": {
+    "multi-session": {
+      "n": 12,
+      "correct": 4,
+      "scored": 12,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.3333333333333333,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "multi-session",
+      "definition": "fraction of multi-session answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "knowledge-update": {
+      "n": 8,
+      "correct": 6,
+      "scored": 8,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.75,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "knowledge-update",
+      "definition": "fraction of knowledge-update answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "temporal-reasoning": {
+      "n": 8,
+      "correct": 2,
+      "scored": 8,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.25,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "temporal-reasoning",
+      "definition": "fraction of temporal-reasoning answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-user": {
+      "n": 6,
+      "correct": 4,
+      "scored": 6,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.6666666666666666,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "single-session-user",
+      "definition": "fraction of single-session-user answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-assistant": {
+      "n": 4,
+      "correct": 4,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "single-session-assistant",
+      "definition": "fraction of single-session-assistant answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-preference": {
+      "n": 4,
+      "correct": 1,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.25,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "single-session-preference",
+      "definition": "fraction of single-session-preference answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "abstention": {
+      "n": 8,
+      "correct": 8,
+      "scored": 8,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    }
+  },
+  "abilityGroups": {
+    "multi-session": {
+      "n": 12,
+      "correct": 4,
+      "scored": 12,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.3333333333333333,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "multi-session",
+      "definition": "fraction of multi-session answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "knowledge-update": {
+      "n": 8,
+      "correct": 6,
+      "scored": 8,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.75,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "knowledge-update",
+      "definition": "fraction of knowledge-update answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "temporal-reasoning": {
+      "n": 8,
+      "correct": 2,
+      "scored": 8,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.25,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "temporal-reasoning",
+      "definition": "fraction of temporal-reasoning answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "information-extraction": {
+      "n": 14,
+      "correct": 9,
+      "scored": 14,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.6428571428571429,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "information-extraction",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "abstention": {
+      "n": 8,
+      "correct": 8,
+      "scored": 8,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    }
+  },
+  "metricDefinitions": {
+    "multi-session": {
+      "definition": "fraction of multi-session answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "knowledge-update": {
+      "definition": "fraction of knowledge-update answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "temporal-reasoning": {
+      "definition": "fraction of temporal-reasoning answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-user": {
+      "definition": "fraction of single-session-user answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-assistant": {
+      "definition": "fraction of single-session-assistant answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-preference": {
+      "definition": "fraction of single-session-preference answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "abstention": {
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    }
+  },
+  "runLimitRate": 0,
+  "errorRate": 0,
+  "cacheReadRatio": 0.05297448916188819,
+  "cacheWriteRatio": 0,
+  "cost": {
+    "currency": "USD",
+    "unit": "per_million_tokens",
+    "rates": null,
+    "pricingStatus": "priced",
+    "measured": 0.026559,
+    "cachedPrefixSimulation": null,
+    "simulationAssumption": "product warm: full input is a cached prefix; other arms use reported cache tokens; cold reprices input uncached",
+    "ratesAsOf": "2026-10-29",
+    "ratesStatus": "provider-catalog",
+    "scope": "campaign: product plus evaluation plus unknown historical usage",
+    "product": {
+      "inputTokens": 145573,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 41189,
+      "exchanges": 50,
+      "complete": true,
+      "measured": 0.022796,
+      "cold": 0.022796,
+      "warm": 0.022796,
+      "inputWarm": 0.01456,
+      "inputCold": 0.01456
+    },
+    "evaluation": {
+      "inputTokens": 23414,
+      "cacheReadTokens": 8952,
+      "cacheWriteTokens": 0,
+      "outputTokens": 2561,
+      "exchanges": 88,
+      "complete": true,
+      "measured": 0.003763,
+      "cold": 0.004976,
+      "warm": 0.003763,
+      "inputWarm": 0.002301,
+      "inputCold": 0.003516
+    }
+  },
+  "judgeAgreement": {
+    "n": 50,
+    "judges": {
+      "commandcode/minimax/minimax-m3.1-flash": {
+        "scored": 50,
+        "agreementWithPanel": 0.96
+      },
+      "commandcode/z-ai/glm-5.3-flash": {
+        "scored": 50,
+        "agreementWithPanel": 1
+      }
+    },
+    "pairs": [
+      {
+        "a": "commandcode/minimax/minimax-m3.1-flash",
+        "b": "commandcode/z-ai/glm-5.3-flash",
+        "n": 50,
+        "agreement": 0.96,
+        "kappa": 0.9168053244592346
+      }
+    ],
+    "fleissKappa": null
+  },
+  "injectionPrecision": null,
+  "injectionPrecisionReason": "not-labelled",
+  "toolCalls": 0,
+  "toolCallsPerQuestion": 0,
+  "recallCalls": 0,
+  "retrievedSnippetTokens": 0,
+  "answerSessionHitAtK": null,
+  "evidenceRoundCoverage": null,
+  "evidenceAllRequired": null,
+  "fineEvidenceRecall": null,
+  "fineEvidencePrecision": null,
+  "legacyRetrievalRecallAtK": null,
+  "retrievalRecallAtK": null,
+  "stages": {
+    "correct": 29,
+    "candidate_gap": 21
+  }
+}

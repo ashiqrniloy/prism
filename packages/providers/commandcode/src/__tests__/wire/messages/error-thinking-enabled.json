@@ -1,0 +1,26 @@
+{
+  "method": "POST",
+  "path": "/provider/v1/messages",
+  "requestBody": {
+    "model": "claude-haiku-5-5",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "hi"
+          }
+        ]
+      }
+    ],
+    "stream": true,
+    "max_tokens": 128000,
+    "thinking": {
+      "type": "adaptive"
+    }
+  },
+  "status": 400,
+  "contentType": "application/json",
+  "responseBody": "{\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"{\\\"type\\\":\\\"error\\\",\\\"error\\\":{\\\"type\\\":\\\"invalid_request_error\\\",\\\"message\\\":\\\"\\\\\\\"thinking.type.enabled\\\\\\\" is not supported for this model. Use \\\\\\\"thinking.type.adaptive\\\\\\\" and \\\\\\\"output_config.effort\\\\\\\" to control thinking behavior.\\\"},\\\"request_id\\\":\\\"req_011CgTGiQcefudvgvMv4Cip5\\\"}\"}}"
+}

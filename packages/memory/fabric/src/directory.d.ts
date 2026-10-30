@@ -30,6 +30,9 @@ export declare function resolveFabricDirectoryOptions(input: boolean | MemoryFab
 export declare function noteMemoryWrite(memory: object): void;
 /** The write counter behind {@link noteMemoryWrite}; the pinned core reuses it as its cache key. */
 export declare function memoryWriteVersion(memory: object): number;
+/** End pinned session epochs when previously delivered memory may no longer be shown. */
+export declare function noteMemoryRetraction(memory: object): void;
+export declare function memoryRetractionVersion(memory: object): number;
 export interface FabricDirectoryScopeSnapshot {
     readonly level: string;
     readonly counts: Readonly<Partial<Record<MemoryNoteKind, number>>>;

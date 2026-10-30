@@ -1,0 +1,25 @@
+{
+  "kind": "202-commandcode-controls-manifest",
+  "generatedAt": "2026-10-29T13:57:03.661Z",
+  "judges": [
+    "commandcode/minimax/minimax-m3.1-flash",
+    "commandcode/z-ai/glm-5.3-flash"
+  ],
+  "limits": {
+    "wireAttempts": 400,
+    "inputTokens": 8000000,
+    "outputTokens": 700000,
+    "wallMs": 7200000,
+    "retries429": 4
+  },
+  "harnessHash": "039d2e0ff04da5aa753b81c484020423b44238ecd450902546843dc0ac2077d9",
+  "subset": "dev",
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 8192
+  },
+  "expectedRows": 44,
+  "sourcePolicy": "Original eight development rubrics and saved paraphrases; no new answer/paraphrase generation",
+  "billing": "Named paid judges only; held within existing conservative preflight allowance",
+  "pricingSource": "https://commandcode.ai/docs/resources/pricing-limits"
+}

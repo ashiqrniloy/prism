@@ -1,0 +1,54 @@
+{
+  "kind": "202-xing4-free-free-admission-probe",
+  "ref": "openrouter/xingchen-agi/xing4.0-29b-a4b:free",
+  "limits": {
+    "wireAttempts": 1,
+    "inputTokens": 4000000,
+    "outputTokens": 12000,
+    "wallMs": 180000,
+    "retries429": 0
+  },
+  "startedAt": "2026-10-29T12:22:28.802Z",
+  "campaignChanged": false,
+  "status": "blocked-rate-limit",
+  "toolCalls": 0,
+  "result": {
+    "status": "failed",
+    "nonempty": false,
+    "error": {
+      "name": "Error",
+      "message": "ZeroScoreRateLimited",
+      "failureClass": "unknown"
+    }
+  },
+  "usage": {
+    "inputTokens": 0,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0,
+    "outputTokens": 0,
+    "accountedInputTokens": 0,
+    "accountedOutputTokens": 0,
+    "usageMissingExchanges": 0,
+    "usageComplete": true,
+    "wireAttempts": 1
+  },
+  "allocations": [
+    {
+      "provider": "openrouter",
+      "exchange": 1,
+      "inputBound": 262144,
+      "outputBound": 2048
+    }
+  ],
+  "protectedArtifactsUnchanged": true,
+  "finishedAt": "2026-10-29T12:22:31.694Z",
+  "gateway": {
+    "httpStatus": 429,
+    "message": "Provider returned error",
+    "limit": null,
+    "remaining": null,
+    "reset": null,
+    "provider": "Phala",
+    "upstreamMessage": "xingchen-agi/xing4.0-29b-a4b:free is temporarily rate-limited upstream. Please retry shortly, or add your own key to accumulate your rate limits: https://openrouter.ai/settings/integrations"
+  }
+}

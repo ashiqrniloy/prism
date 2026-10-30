@@ -1,20 +1,27 @@
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
+import type { JsonObject } from "@arnilo/prism";
 import {
-  embedBatched,
   type Embedder,
+  embedBatched,
   type Memory,
   type MemoryInvalidationRecord,
-  MemoryScopeError,
   type MemoryScope,
+  MemoryScopeError,
   MemoryValidationError,
   type MemoryVectorRecord,
   type VectorStore,
   type WorkingMemoryStore,
 } from "@arnilo/prism-memory-core";
+import { noteMemoryRetraction } from "./directory.js";
 import { scanScopedMemoryContent } from "./scoped/trust.js";
-import { encodeMemoryNoteMetadata, MEMORY_NOTE_METADATA_KEY, parseMemoryNoteMetadata, stampProvenance, unreadableNoteReason } from "./types.js";
-import type { JsonObject } from "@arnilo/prism";
+import {
+  encodeMemoryNoteMetadata,
+  MEMORY_NOTE_METADATA_KEY,
+  parseMemoryNoteMetadata,
+  stampProvenance,
+  unreadableNoteReason,
+} from "./types.js";
 
 /**
  * OKF export and import for any store (plan 188.1 Task 7). The bundle is the Task 4 markdown layout, written by the
@@ -66,7 +73,8 @@ const INVALIDATION_BATCH = 64;
 
 function fullScope(memory: Memory): Required<MemoryScope> {
   const { tenantId, resourceId, threadId } = memory.scope;
-  if (!tenantId || !resourceId || !threadId) throw new MemoryScopeError("OKF export and import need a memory with tenant, resource, and thread");
+  if (!tenantId || !resourceId || !threadId)
+    throw new MemoryScopeError("OKF export and import need a memory with tenant, resource, and thread");
   return { tenantId, resourceId, threadId };
 }
 
@@ -79,7 +87,12 @@ function requireListing(store: VectorStore): NonNullable<VectorStore["listByThre
   return store.listByThread.bind(store);
 }
 
-async function* pages(store: VectorStore, scope: Required<MemoryScope>, batch: number, signal?: AbortSignal): AsyncGenerator<readonly MemoryVectorRecord[]> {
+async function* pages(
+  store: VectorStore,
+  scope: Required<MemoryScope>,
+  batch: number,
+  signal?: AbortSignal,
+): AsyncGenerator<readonly MemoryVectorRecord[]> {
   const list = requireListing(store);
   let cursor: string | undefined;
   do {
@@ -139,7 +152,9 @@ function stampImported(record: MemoryVectorRecord, at: string): { readonly recor
     ...(record.metadata ?? {}),
     generated,
     status: "candidate",
-    ...(note ? { [MEMORY_NOTE_METADATA_KEY]: encodeMemoryNoteMetadata({ ...note, flags: [...new Set([...(note.flags ?? []), scan.class])] }) } : {}),
+    ...(note
+      ? { [MEMORY_NOTE_METADATA_KEY]: encodeMemoryNoteMetadata({ ...note, flags: [...new Set([...(note.flags ?? []), scan.class])] }) }
+      : {}),
   };
   return { record: { ...record, metadata }, flagged: true };
 }
@@ -155,7 +170,9 @@ export async function importMemoryOkf(memory: Memory, options: ImportMemoryOkfOp
   const at = new Date().toISOString();
   // A target hold survives everything: held ids are never overwritten or removed.
   const held = new Set(
-    ((await vectorStore.listInvalidated?.(scope, { signal: options.signal })) ?? []).filter((e) => e.hold === true || e.reason === "legal_hold").map((e) => e.id),
+    ((await vectorStore.listInvalidated?.(scope, { signal: options.signal })) ?? [])
+      .filter((e) => e.hold === true || e.reason === "legal_hold")
+      .map((e) => e.id),
   );
   const keep = new Set<string>();
   let imported = 0;
@@ -163,6 +180,7 @@ export async function importMemoryOkf(memory: Memory, options: ImportMemoryOkfOp
   let skippedHeld = 0;
   let removed = 0;
   let invalidations = 0;
+  noteMemoryRetraction(memory);
   try {
     for await (const records of pages(bundle.vectorStore, scope, memory.limits.rebuildBatchSize, options.signal)) {
       const batch: MemoryVectorRecord[] = [];
@@ -184,10 +202,15 @@ export async function importMemoryOkf(memory: Memory, options: ImportMemoryOkfOp
       const embedder = options.embedder;
       const embedded =
         embedder && batch.length > 0
-          ? await embedBatched(embedder, batch.map((r) => r.text), memory.limits.embedBatchSize, {
-              signal: options.signal,
-              maxDimensions: memory.limits.maxVectorDimensions,
-            })
+          ? await embedBatched(
+              embedder,
+              batch.map((r) => r.text),
+              memory.limits.embedBatchSize,
+              {
+                signal: options.signal,
+                maxDimensions: memory.limits.maxVectorDimensions,
+              },
+            )
           : undefined;
       const ready = batch.map((record, index) =>
         embedder && embedded ? { ...record, embedding: embedded[index]!, embedderId: embedder.id } : record,
@@ -204,7 +227,10 @@ export async function importMemoryOkf(memory: Memory, options: ImportMemoryOkfOp
         }
       }
       for (let offset = 0; offset < doomed.length; offset += memory.limits.rebuildBatchSize) {
-        removed += await vectorStore.delete({ ...scope, ids: doomed.slice(offset, offset + memory.limits.rebuildBatchSize) }, { signal: options.signal });
+        removed += await vectorStore.delete(
+          { ...scope, ids: doomed.slice(offset, offset + memory.limits.rebuildBatchSize) },
+          { signal: options.signal },
+        );
       }
     }
     // Tombstones and holds are added, never cleared; an imported hold becomes a target hold.
@@ -222,6 +248,7 @@ export async function importMemoryOkf(memory: Memory, options: ImportMemoryOkfOp
       }
     }
   } finally {
+    noteMemoryRetraction(memory);
     await bundle.close();
   }
   return { imported, flagged, removed, held: skippedHeld, invalidations };

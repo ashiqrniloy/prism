@@ -1,0 +1,1560 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 2,
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "usageSource": "wire-proxy",
+  "phase": "all",
+  "labelInjections": "off",
+  "concurrency": 1,
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 8192
+  },
+  "freeOnly": false,
+  "boundedWire": true,
+  "writeGeneration": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "generatedAt": "2026-10-29T18:40:11.666Z",
+  "suite": "memoryagentbench-cr",
+  "subset": "dev",
+  "ability": null,
+  "seed": null,
+  "config": "full",
+  "comparatorPolicyVersion": 1,
+  "ingestion": "none",
+  "embeddings": null,
+  "provider": "commandcode",
+  "model": "meta/muse-spark-1.3-contributor",
+  "judge": "commandcode/minimax/minimax-m3.1-flash",
+  "judgePanel": [
+    "commandcode/minimax/minimax-m3.1-flash",
+    "commandcode/z-ai/glm-5.3-flash"
+  ],
+  "judgeCalibration": null,
+  "repeats": 1,
+  "judgeProtocol": "plain-text-v1",
+  "dataset": {
+    "file": "memoryagentbench-cr.parquet",
+    "format": "parquet",
+    "bytes": 1491588,
+    "sha256": "24d5c3f09ce0ce15625cb9f8a98f44f0d864ca6c94d7b4ad04eb697ca3a5ff45",
+    "license": "MIT",
+    "url": "https://huggingface.co/datasets/ai-hyz/MemoryAgentBench/resolve/7ea066982b140a19337e17e60d45d4076e042faf/data/Conflict_Resolution-00000-of-00001.parquet",
+    "licenseUrl": "https://huggingface.co/datasets/ai-hyz/MemoryAgentBench/blob/7ea066982b140a19337e17e60d45d4076e042faf/README.md"
+  },
+  "maxInputTokens": 21000000,
+  "ablations": [],
+  "sourceVariants": [],
+  "sourceRevision": "5c2570df52a084b43120ee4e77921746a029480e",
+  "protocol": {
+    "answerAttempts": 3,
+    "answerBackoffMs": [
+      2000,
+      10000
+    ],
+    "judgeAttempts": 8,
+    "judgeBackoffMs": [
+      1000,
+      2000
+    ],
+    "maxTurns": 8
+  },
+  "memoryConfig": {
+    "observational": null,
+    "fabric": null
+  },
+  "inputTokens": 4336646,
+  "cacheReadTokens": 0,
+  "cacheWriteTokens": 0,
+  "outputTokens": 17970,
+  "calls": {
+    "observer": 0,
+    "reflector": 0,
+    "dropper": 0,
+    "embedding": 0,
+    "decider": 0,
+    "consolidate": 0,
+    "judge": 0,
+    "judgeAttempts": 0,
+    "gatewayRetries": 0,
+    "judgeCacheHits": 0,
+    "judgeCacheMisses": 0,
+    "concurrencyHalvings": 0,
+    "overloads": 0
+  },
+  "turns": 20,
+  "injectedContextTokens": 0,
+  "injections": [],
+  "attemptId": "202-baseline.memoryagentbench-cr.full.commandcode.meta/muse-spark-1.3-contributor@1",
+  "measurementVersion": "product-phases-attribution-v2",
+  "analysisVersion": "202-paired-cluster-v1",
+  "judgeTemplateVersion": "e3883a2aa5910f76c3f6b377f1758fd4a57ca6dda1449cd86291abd0eea5f306",
+  "gradedTemplateVersion": "f7ff5f9c24afd87f0a5e00bd168103019f6e7140d64031f3e5bec264043c24cb",
+  "protocolHash": "82e93b6e41f65a800d5f44bf9bb3b4f8bb665228fa4a61dfe66c086e85e2f7a9",
+  "resumedResults": 0,
+  "results": [
+    {
+      "id": "5:69",
+      "ability": "conflict-resolution-single-hop",
+      "cluster": "mab-5",
+      "phaseTiming": {
+        "ingestion": 35.9,
+        "answer": 10122.9,
+        "evaluation": 0.3
+      },
+      "correct": false,
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 2311,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "22f5bfc0d6dda7631b1b44ec754136362d45c857f23c924fc6e9f5e5b8d02d11"
+      },
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 3,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "5:25",
+      "ability": "conflict-resolution-single-hop",
+      "cluster": "mab-5",
+      "phaseTiming": {
+        "ingestion": 28.3,
+        "answer": 4075.8,
+        "evaluation": 0
+      },
+      "correct": true,
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 2311,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "7c9537707e0c8e93697dec6c9e08613a98724ab91c4a53bd0207b5bee2146efc"
+      },
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 127,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "6:44",
+      "ability": "conflict-resolution-single-hop",
+      "cluster": "mab-6",
+      "phaseTiming": {
+        "ingestion": 56,
+        "answer": 7156.3,
+        "evaluation": 0
+      },
+      "correct": true,
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 4581,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "e17b00abe5265ce958161e59302f407d3738b52134bffed081ddfe79199bc717"
+      },
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 16,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "6:99",
+      "ability": "conflict-resolution-single-hop",
+      "cluster": "mab-6",
+      "phaseTiming": {
+        "ingestion": 60.1,
+        "answer": 6139,
+        "evaluation": 0
+      },
+      "correct": true,
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 4581,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "235c110a95c5ecaac6a06992aac8435adb515d2b405c53d5776570694a9c4d3b"
+      },
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 295,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "6:84",
+      "ability": "conflict-resolution-single-hop",
+      "cluster": "mab-6",
+      "phaseTiming": {
+        "ingestion": 59.7,
+        "answer": 22253.1,
+        "evaluation": 0
+      },
+      "correct": false,
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 4581,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "f80e96e1f2574f453634fd4b682dace1990cb8fb541f4221c30a91f3e623d797"
+      },
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 44,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "6:68",
+      "ability": "conflict-resolution-single-hop",
+      "cluster": "mab-6",
+      "phaseTiming": {
+        "ingestion": 60.9,
+        "answer": 5807.9,
+        "evaluation": 0
+      },
+      "correct": false,
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 4581,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "08f8c7d9ffb2c56fbf011f534d1441c7a0ff948665e7b04e6ada097a0e3c4c34"
+      },
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 14,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "5:67",
+      "ability": "conflict-resolution-single-hop",
+      "cluster": "mab-5",
+      "phaseTiming": {
+        "ingestion": 28.5,
+        "answer": 13230.2,
+        "evaluation": 0
+      },
+      "correct": false,
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 2311,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "aeb53c132040a8288fbfc09ca119ce59ef61e9edaa17d23b2969e2c8d18d2b95"
+      },
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 3,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "5:72",
+      "ability": "conflict-resolution-single-hop",
+      "cluster": "mab-5",
+      "phaseTiming": {
+        "ingestion": 30.2,
+        "answer": 9593.1,
+        "evaluation": 0
+      },
+      "correct": false,
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 2311,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "55b5adbcc2df00fa1a8ee975d90035bc1bfc699e8e778e1cdfde501b7184ed67"
+      },
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 25,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "7:47",
+      "ability": "conflict-resolution-single-hop",
+      "cluster": "mab-7",
+      "phaseTiming": {
+        "ingestion": 238.4,
+        "answer": 20495.6,
+        "evaluation": 0
+      },
+      "correct": true,
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 18333,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "479de39d5065d3b8fed9388f0b8961d53d8ab1f700a3efe8104cf2d8fe4870f6"
+      },
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 244,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "7:97",
+      "ability": "conflict-resolution-single-hop",
+      "cluster": "mab-7",
+      "phaseTiming": {
+        "ingestion": 238.9,
+        "answer": 24701.5,
+        "evaluation": 0
+      },
+      "correct": false,
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 18333,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "bfc4b2a88c8447c43b44e4edae05402434271d6c42da8bbc6ed215207f3f49f0"
+      },
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 73,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "3:49",
+      "ability": "conflict-resolution-multi-hop",
+      "cluster": "mab-3",
+      "phaseTiming": {
+        "ingestion": 277.5,
+        "answer": 24684,
+        "evaluation": 0
+      },
+      "correct": false,
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 18333,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "6a4e41ef453ae63e819331eb83c3f732d9466558e802bd882dd3f598f01700a7"
+      },
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "0:24",
+      "ability": "conflict-resolution-multi-hop",
+      "cluster": "mab-0",
+      "phaseTiming": {
+        "ingestion": 6.4,
+        "answer": 8464.9,
+        "evaluation": 0
+      },
+      "correct": false,
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 456,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "6aa3a9bc6a247c0e732a2ed3a6e5ff1f0ab2e498bad5d9ca68c71ca975764594"
+      },
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "2:20",
+      "ability": "conflict-resolution-multi-hop",
+      "cluster": "mab-2",
+      "phaseTiming": {
+        "ingestion": 71.4,
+        "answer": 22816.4,
+        "evaluation": 0
+      },
+      "correct": false,
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 4581,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "ea7cb3d3e66f2092538890dfa7ab16f79b86e3672735339a9872fab69675300e"
+      },
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 67,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "0:30",
+      "ability": "conflict-resolution-multi-hop",
+      "cluster": "mab-0",
+      "phaseTiming": {
+        "ingestion": 5.7,
+        "answer": 7525.9,
+        "evaluation": 0
+      },
+      "correct": false,
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 456,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "9be70e37d1768bc6b9fa822c5df4da39bd10f3d9df341cc7d137c4133a88c92a"
+      },
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 3,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "1:42",
+      "ability": "conflict-resolution-multi-hop",
+      "cluster": "mab-1",
+      "phaseTiming": {
+        "ingestion": 33.4,
+        "answer": 9352.4,
+        "evaluation": 0
+      },
+      "correct": false,
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 2311,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "50ac6a510604d246371217428b710bcfda37dc73a9fcbc2a7a517a3465b0e05e"
+      },
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 8,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "0:99",
+      "ability": "conflict-resolution-multi-hop",
+      "cluster": "mab-0",
+      "phaseTiming": {
+        "ingestion": 6.3,
+        "answer": 6312.4,
+        "evaluation": 0
+      },
+      "correct": false,
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 456,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "51284d3ea861c87cbdee875e3d785f2339f42fac8b3aafb1fe27cd2b3848e8b1"
+      },
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "0:90",
+      "ability": "conflict-resolution-multi-hop",
+      "cluster": "mab-0",
+      "phaseTiming": {
+        "ingestion": 6,
+        "answer": 7875.9,
+        "evaluation": 0
+      },
+      "correct": false,
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 456,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "0f15fe52ac315989d20be27741c89295ef2fd52f3144a5e387a9f58aa19ef17c"
+      },
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "2:66",
+      "ability": "conflict-resolution-multi-hop",
+      "cluster": "mab-2",
+      "phaseTiming": {
+        "ingestion": 64,
+        "answer": 31466.9,
+        "evaluation": 0
+      },
+      "correct": false,
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 4581,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "4cd39f0c8ac1942c9b5c665870ac91c56e37be5d7222fb7640f5153d1d07425d"
+      },
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 28,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "3:46",
+      "ability": "conflict-resolution-multi-hop",
+      "cluster": "mab-3",
+      "phaseTiming": {
+        "ingestion": 236.5,
+        "answer": 9924.3,
+        "evaluation": 0
+      },
+      "correct": false,
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 18333,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "7f17dd4f32e0a33e14e659ce7f9ca7fd0a9771b524f74f9e3d8a878ba62258c3"
+      },
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "2:86",
+      "ability": "conflict-resolution-multi-hop",
+      "cluster": "mab-2",
+      "phaseTiming": {
+        "ingestion": 64.3,
+        "answer": 20828.4,
+        "evaluation": 0
+      },
+      "correct": false,
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 4581,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "855f0bd75aaa07be9e9f85a670c3b557c56559762d3c930902984922dda9e307"
+      },
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "candidate_gap"
+    }
+  ],
+  "status": "completed",
+  "limitations": [
+    "Block-level injection accounting until item metadata lands in Tasks 4, 9, 11 and 12.",
+    "Injection token allocations are character estimates, not billing usage.",
+    "OpenCode Go and Hyper judges differ from the papers; scores are not directly comparable."
+  ],
+  "ratesAsOf": "2026-10-29",
+  "ratesStatus": "provider-catalog",
+  "inputCap": 1047552,
+  "comparatorContext": {
+    "version": 1,
+    "policy": "complete-history",
+    "effectiveInputCap": 1047552,
+    "requestHeadroomTokens": 1024,
+    "modelConfig": {
+      "provider": "commandcode",
+      "model": "meta/muse-spark-1.3-contributor",
+      "limits": {
+        "contextWindow": 1048576
+      },
+      "parameters": {
+        "maxTokens": 8192,
+        "temperature": 0
+      }
+    },
+    "tokenMeasure": "estimated-json-chars-div-4"
+  },
+  "selectedQuestionIds": [
+    "5:69",
+    "5:25",
+    "6:44",
+    "6:99",
+    "6:84",
+    "6:68",
+    "5:67",
+    "5:72",
+    "7:47",
+    "7:97",
+    "3:49",
+    "0:24",
+    "2:20",
+    "0:30",
+    "1:42",
+    "0:99",
+    "0:90",
+    "2:66",
+    "3:46",
+    "2:86"
+  ],
+  "runPathFingerprint": "d85e8d2cacb314332b5d2334a5b456ce12158e9d05745feb799eb9fa02c5eb48",
+  "measurementPolicy": {
+    "version": "product-phases-v1",
+    "judgeCallsPerHour": 450,
+    "injectionAnnotation": false,
+    "retriesAndBackoffIncluded": true,
+    "queueWaitIncluded": false,
+    "seedSnapshot": false
+  },
+  "roleUsage": {
+    "product": {
+      "inputTokens": 4336646,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 17970,
+      "exchanges": 20,
+      "complete": true,
+      "measured": 0.437259,
+      "cold": 0.437259,
+      "warm": 0.012267,
+      "inputWarm": 0.00867,
+      "inputCold": 0.433663
+    },
+    "evaluation": {
+      "inputTokens": 0,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 0,
+      "exchanges": 0,
+      "complete": true,
+      "measured": 0,
+      "cold": 0,
+      "warm": 0,
+      "inputWarm": 0,
+      "inputCold": 0
+    },
+    "unknown": {
+      "inputTokens": 0,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 0,
+      "exchanges": 0,
+      "complete": true,
+      "measured": 0,
+      "cold": 0,
+      "warm": 0,
+      "inputWarm": 0,
+      "inputCold": 0
+    },
+    "total": {
+      "inputTokens": 4336646,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 17970,
+      "exchanges": 20,
+      "measured": 0.437259
+    }
+  },
+  "accountedInputTokens": 4336646,
+  "usageComplete": true,
+  "usageMissingExchanges": 0,
+  "wireExchanges": 20,
+  "timing": {
+    "wallMs": 274739.4,
+    "concurrency": {
+      "initial": 1,
+      "active": 1,
+      "floor": 1
+    },
+    "questions": {
+      "n": 20,
+      "wallMs": {
+        "p50": 9625,
+        "p95": 24963,
+        "mean": 13723.7
+      }
+    },
+    "phases": {
+      "ingestion": {
+        "n": 20,
+        "wallMs": {
+          "p50": 56,
+          "p95": 238.9,
+          "mean": 80.4
+        }
+      },
+      "restore": {
+        "n": 0,
+        "wallMs": {
+          "p50": null,
+          "p95": null,
+          "mean": null
+        }
+      },
+      "answer": {
+        "n": 20,
+        "wallMs": {
+          "p50": 9593.1,
+          "p95": 24701.5,
+          "mean": 13641.3
+        }
+      },
+      "evaluation": {
+        "n": 20,
+        "wallMs": {
+          "p50": 0,
+          "p95": 0,
+          "mean": 0
+        }
+      }
+    },
+    "policy": {
+      "answer": "after ingestion, before grading, annotation, final background settlement and disposal",
+      "queueWaitIncluded": false,
+      "retriesAndBackoffIncluded": true
+    },
+    "roles": {
+      "solver": {
+        "calls": 20,
+        "firstByteMs": {
+          "p50": 9218.8,
+          "p95": 24188.1,
+          "mean": 13397.2
+        },
+        "totalMs": {
+          "p50": 9539.3,
+          "p95": 24347.5,
+          "mean": 13521.8
+        }
+      }
+    },
+    "calls": 20
+  },
+  "metricVersion": 2,
+  "comparatorEligibility": {
+    "completeHistoryQuestions": 20,
+    "ineligibleQuestions": 0,
+    "truncatedQuestions": 0,
+    "unprovenQuestions": 0
+  },
+  "abilities": {
+    "conflict-resolution-single-hop": {
+      "n": 10,
+      "correct": 4,
+      "scored": 10,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.4,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "conflict-resolution-single-hop",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "conflict-resolution-multi-hop": {
+      "n": 10,
+      "correct": 0,
+      "scored": 10,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "conflict-resolution-multi-hop",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    }
+  },
+  "abilityGroups": {
+    "conflict-resolution-single-hop": {
+      "n": 10,
+      "correct": 4,
+      "scored": 10,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.4,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "conflict-resolution-single-hop",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "conflict-resolution-multi-hop": {
+      "n": 10,
+      "correct": 0,
+      "scored": 10,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "conflict-resolution-multi-hop",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    }
+  },
+  "metricDefinitions": {
+    "conflict-resolution-single-hop": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "conflict-resolution-multi-hop": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    }
+  },
+  "runLimitRate": 0,
+  "errorRate": 0,
+  "cacheReadRatio": 0,
+  "cacheWriteRatio": 0,
+  "cost": {
+    "currency": "USD",
+    "unit": "per_million_tokens",
+    "rates": null,
+    "pricingStatus": "priced",
+    "measured": 0.437259,
+    "cachedPrefixSimulation": null,
+    "simulationAssumption": "product warm: full input is a cached prefix; other arms use reported cache tokens; cold reprices input uncached",
+    "ratesAsOf": "2026-10-29",
+    "ratesStatus": "provider-catalog",
+    "scope": "campaign: product plus evaluation plus unknown historical usage",
+    "product": {
+      "inputTokens": 4336646,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 17970,
+      "exchanges": 20,
+      "complete": true,
+      "measured": 0.437259,
+      "cold": 0.437259,
+      "warm": 0.012267,
+      "inputWarm": 0.00867,
+      "inputCold": 0.433663
+    },
+    "evaluation": {
+      "inputTokens": 0,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 0,
+      "exchanges": 0,
+      "complete": true,
+      "measured": 0,
+      "cold": 0,
+      "warm": 0,
+      "inputWarm": 0,
+      "inputCold": 0
+    }
+  },
+  "judgeAgreement": {
+    "n": 0,
+    "judges": {
+      "commandcode/minimax/minimax-m3.1-flash": {
+        "scored": 0,
+        "agreementWithPanel": null
+      },
+      "commandcode/z-ai/glm-5.3-flash": {
+        "scored": 0,
+        "agreementWithPanel": null
+      }
+    },
+    "pairs": [
+      {
+        "a": "commandcode/minimax/minimax-m3.1-flash",
+        "b": "commandcode/z-ai/glm-5.3-flash",
+        "n": 0,
+        "agreement": null,
+        "kappa": null
+      }
+    ],
+    "fleissKappa": null
+  },
+  "injectionPrecision": null,
+  "injectionPrecisionReason": "not-labelled",
+  "toolCalls": 0,
+  "toolCallsPerQuestion": 0,
+  "recallCalls": 0,
+  "retrievedSnippetTokens": 0,
+  "answerSessionHitAtK": null,
+  "evidenceRoundCoverage": null,
+  "evidenceAllRequired": null,
+  "fineEvidenceRecall": null,
+  "fineEvidencePrecision": null,
+  "legacyRetrievalRecallAtK": null,
+  "retrievalRecallAtK": null,
+  "stages": {
+    "candidate_gap": 16,
+    "correct": 4
+  }
+}

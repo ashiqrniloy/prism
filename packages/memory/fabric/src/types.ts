@@ -157,6 +157,8 @@ export interface MemoryNote {
   /** Write time of the backing record (vector `createdAt` / working `updatedAt` / observation timestamp). */
   readonly ingestedAt: string;
   readonly tokenCount: number;
+  /** Archive session identity, when recorded. */
+  readonly session?: string;
   /** Reference time the note talks about; informational, not a validity bound. */
   readonly tRef?: string;
   readonly validFrom?: string;
@@ -250,6 +252,7 @@ export interface MemoryFabricRememberInput {
   readonly path?: string;
   /** SHA-256 of the file contents read through the file jail. */
   readonly contentHash?: string;
+  readonly session?: string;
   readonly tRef?: string;
   readonly validFrom?: string;
   readonly validTo?: string;
@@ -360,6 +363,13 @@ export interface MemoryFabricScopeOpenInput {
 }
 
 export interface CreateMemoryFabricOptions {
+  /** Optional private diagnostic observer; never changes ranking or model-visible content. */
+  readonly onRecall?: (event: {
+    readonly query: string;
+    readonly options: MemoryFabricRecallOptions;
+    readonly candidates: readonly { readonly id: string; readonly score: number }[];
+    readonly returnedIds: readonly string[];
+  }) => void;
   readonly inject?: false | import("./config.js").MemoryFabricInjectConfig;
   readonly memory: Memory;
   /**
@@ -614,6 +624,7 @@ export interface MemoryFabricScopeBudget {
 export interface MemoryNoteMetadata {
   readonly v: 1;
   readonly kind: MemoryNoteKind;
+  readonly session?: string;
   readonly tRef?: string;
   readonly validFrom?: string;
   readonly validTo?: string;
@@ -688,6 +699,7 @@ export interface MemoryNoteMetadata {
 export const MEMORY_NOTE_FABRIC_KEYS: ReadonlySet<string> = new Set([
   "v",
   "kind",
+  "session",
   "tRef",
   "validFrom",
   "validTo",
@@ -801,6 +813,7 @@ export function parseMemoryNoteMetadata(metadata: JsonObject | undefined): Memor
   if (raw === undefined || raw === null || typeof raw !== "object" || Array.isArray(raw)) return undefined;
   const record = raw as Record<string, unknown>;
   if (record.v !== 1 || !isMemoryNoteKind(record.kind)) return undefined;
+  if (record.session !== undefined && (typeof record.session !== "string" || !record.session.trim())) return undefined;
   const promotion = record.promotion === undefined ? undefined : parsePromotionStamp(record.promotion);
   if (record.promotion !== undefined && promotion === undefined) return undefined;
   if (record.flags !== undefined && !isStringList(record.flags)) return undefined;
@@ -877,6 +890,7 @@ export function parseMemoryNoteMetadata(metadata: JsonObject | undefined): Memor
     v: 1,
     kind: record.kind,
     ...(Object.keys(unknown).length === 0 ? {} : { unknown }),
+    ...(record.session === undefined ? {} : { session: record.session as string }),
     ...(record.tRef === undefined ? {} : { tRef: record.tRef as string }),
     ...(record.validFrom === undefined ? {} : { validFrom: record.validFrom as string }),
     ...(record.validTo === undefined ? {} : { validTo: record.validTo as string }),

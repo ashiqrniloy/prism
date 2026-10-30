@@ -1,0 +1,1948 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 2,
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "usageSource": "wire-proxy",
+  "phase": "all",
+  "labelInjections": "on",
+  "concurrency": 4,
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "writeGeneration": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "generatedAt": "2026-10-27T18:59:32.938Z",
+  "suite": "beam-100k",
+  "subset": "dev",
+  "ability": null,
+  "seed": null,
+  "config": "fabric-x-tools",
+  "ingestion": "product-per-session",
+  "embeddings": null,
+  "provider": "openrouter",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "judge": "hyper/qwen3.8-flash",
+  "judgePanel": [
+    "hyper/qwen3.8-flash",
+    "hyper/glm-5.3-flash"
+  ],
+  "judgeCalibration": null,
+  "repeats": 1,
+  "judgeProtocol": "plain-text-v1",
+  "dataset": {
+    "file": "beam-100k.parquet",
+    "format": "parquet",
+    "parquetLiterals": [
+      "probing_questions"
+    ],
+    "bytes": 5429768,
+    "sha256": "c0519be25907005ba873c927c50877471d550873039d96c041554d0075a78ace",
+    "license": "CC BY-SA 4.0",
+    "url": "https://huggingface.co/datasets/Mohammadta/BEAM/resolve/3205395e897e7318c7b094ef4e6047b9b82dbb03/data/100K-00000-of-00001.parquet",
+    "licenseUrl": "https://huggingface.co/datasets/Mohammadta/BEAM/blob/3205395e897e7318c7b094ef4e6047b9b82dbb03/README.md"
+  },
+  "maxInputTokens": 7000000,
+  "ablations": [],
+  "sourceVariants": [],
+  "sourceRevision": "5c2570df52a084b43120ee4e77921746a029480e",
+  "protocol": {
+    "answerAttempts": 3,
+    "answerBackoffMs": [
+      2000,
+      10000
+    ],
+    "judgeAttempts": 8,
+    "judgeBackoffMs": [
+      1000,
+      2000
+    ],
+    "maxTurns": 8
+  },
+  "memoryConfig": {
+    "observational": null,
+    "fabric": {
+      "preset": {
+        "name": "conversational",
+        "revision": 1,
+        "overridden": []
+      },
+      "enabled": true,
+      "retrieval": "lexical",
+      "semantic": true,
+      "inject": {
+        "query": "task",
+        "kinds": [
+          "exchange"
+        ]
+      },
+      "directory": {
+        "maxTopics": 8,
+        "maxFiles": 10,
+        "maxTokens": 200
+      },
+      "core": {
+        "maxTokens": 600,
+        "scopes": [
+          "user",
+          "project"
+        ]
+      },
+      "cues": {
+        "budgetTokens": 300,
+        "maxPerTurn": 2
+      },
+      "team": false,
+      "scopes": {
+        "tenantId": "prism",
+        "threadId": "default",
+        "priors": {
+          "path": 0.15,
+          "project": 0.1,
+          "team": 0.075,
+          "agent": 0.05,
+          "user": 0
+        },
+        "active": [
+          {
+            "level": "project",
+            "resourceId": "projects/bench--00000000"
+          }
+        ],
+        "project": {
+          "resourceId": "projects/bench--00000000",
+          "source": "path"
+        }
+      },
+      "store": "memory",
+      "tools": {},
+      "exchanges": {
+        "enabled": true,
+        "scope": "project"
+      },
+      "lifecycle": {
+        "verifyAfterSessions": 2,
+        "decay": {
+          "working": 0.4,
+          "episode": 0.8,
+          "fact": 0.4,
+          "preference": 0.2,
+          "procedure": 0.4,
+          "file": 0.4,
+          "exchange": 0.5
+        },
+        "storageWeights": {
+          "explicit": 1,
+          "sessions": 0.5,
+          "helpful": 0.5,
+          "harmful": 1,
+          "outcome": 0.5
+        },
+        "recall": {
+          "retrieval": 0.05,
+          "storage": 0.05
+        },
+        "archive": {
+          "retrievalBelow": -2,
+          "storageBelow": 1,
+          "graceSessions": 10
+        },
+        "capacity": {
+          "user": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "agent": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "project": {
+            "notes": 500,
+            "tokens": 60000
+          }
+        },
+        "merge": {
+          "duplicateDice": 0.8
+        },
+        "widen": {
+          "minProjects": 2,
+          "minSiblings": 2,
+          "contradictionsToSupersede": 2
+        }
+      },
+      "promote": {
+        "enabled": false,
+        "minScore": 0.5,
+        "maxCandidates": 48,
+        "minTurnsBetween": 8,
+        "derivableFrom": [
+          "AGENTS.md",
+          "README.md",
+          "package.json",
+          "CLAUDE.md"
+        ]
+      }
+    }
+  },
+  "inputTokens": 508742,
+  "cacheReadTokens": 47520,
+  "cacheWriteTokens": 0,
+  "outputTokens": 8531,
+  "calls": {
+    "observer": 0,
+    "reflector": 0,
+    "dropper": 0,
+    "embedding": 0,
+    "decider": 0,
+    "consolidate": 0,
+    "judge": 4,
+    "judgeAttempts": 32,
+    "gatewayRetries": 64,
+    "judgeCacheHits": 0,
+    "judgeCacheMisses": 0,
+    "concurrencyHalvings": 2,
+    "overloads": 96
+  },
+  "turns": 10,
+  "injectedContextTokens": 39723,
+  "injections": [
+    {
+      "questionId": "5:abstention:1",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 1,
+      "id": "efe5eff5fa13",
+      "source": "fabric-semantic",
+      "tokens": 3479,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.8333333333333334,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 1,
+      "id": "95c023f1b75c",
+      "source": "fabric-semantic",
+      "tokens": 275,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 1,
+      "id": "5be0e4bc8a1c",
+      "source": "fabric-semantic",
+      "tokens": 220,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.25,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 1,
+      "id": "0ca9385dfeff",
+      "source": "fabric-semantic",
+      "tokens": 1131,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 1,
+      "id": "08729f9a23ab",
+      "source": "fabric-semantic",
+      "tokens": 1225,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7777777777777778,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 1,
+      "id": "3545a80ccc30",
+      "source": "fabric-semantic",
+      "tokens": 1331,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7777777777777778,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 177,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 1,
+      "id": "223c5a7dd7ac",
+      "source": "fabric-semantic",
+      "tokens": 1156,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7142857142857143,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 1,
+      "id": "a7b575ccdcb0",
+      "source": "fabric-semantic",
+      "tokens": 1050,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.5714285714285714,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 1,
+      "id": "4b318562c632",
+      "source": "fabric-semantic",
+      "tokens": 1484,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7142857142857143,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 1,
+      "id": "9d2e3c4dadcc",
+      "source": "fabric-semantic",
+      "tokens": 706,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 1,
+      "id": "571c15bfff07",
+      "source": "fabric-semantic",
+      "tokens": 1112,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 1,
+      "id": "219958a3316c",
+      "source": "fabric-semantic",
+      "tokens": 1112,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 1,
+      "id": "64790dfe48a3",
+      "source": "fabric-semantic",
+      "tokens": 1025,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.2857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 2,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 2,
+      "id": "efe5eff5fa13",
+      "source": "fabric-semantic",
+      "tokens": 3479,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.8333333333333334,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 2,
+      "id": "95c023f1b75c",
+      "source": "fabric-semantic",
+      "tokens": 275,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 2,
+      "id": "5be0e4bc8a1c",
+      "source": "fabric-semantic",
+      "tokens": 220,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.25,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 2,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 2,
+      "id": "0ca9385dfeff",
+      "source": "fabric-semantic",
+      "tokens": 1131,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 2,
+      "id": "08729f9a23ab",
+      "source": "fabric-semantic",
+      "tokens": 1225,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7777777777777778,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 2,
+      "id": "3545a80ccc30",
+      "source": "fabric-semantic",
+      "tokens": 1331,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7777777777777778,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 2,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 177,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 2,
+      "id": "223c5a7dd7ac",
+      "source": "fabric-semantic",
+      "tokens": 1156,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7142857142857143,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 2,
+      "id": "a7b575ccdcb0",
+      "source": "fabric-semantic",
+      "tokens": 1050,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.5714285714285714,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 2,
+      "id": "4b318562c632",
+      "source": "fabric-semantic",
+      "tokens": 1484,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7142857142857143,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 2,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 2,
+      "id": "9d2e3c4dadcc",
+      "source": "fabric-semantic",
+      "tokens": 706,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 2,
+      "id": "571c15bfff07",
+      "source": "fabric-semantic",
+      "tokens": 1112,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 2,
+      "id": "219958a3316c",
+      "source": "fabric-semantic",
+      "tokens": 1112,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 2,
+      "id": "64790dfe48a3",
+      "source": "fabric-semantic",
+      "tokens": 1025,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.2857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 3,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 188,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 3,
+      "id": "efe5eff5fa13",
+      "source": "fabric-semantic",
+      "tokens": 3479,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.8333333333333334,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 3,
+      "id": "95c023f1b75c",
+      "source": "fabric-semantic",
+      "tokens": 275,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 3,
+      "id": "5be0e4bc8a1c",
+      "source": "fabric-semantic",
+      "tokens": 220,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.25,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 3,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 188,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 3,
+      "id": "223c5a7dd7ac",
+      "source": "fabric-semantic",
+      "tokens": 1156,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7142857142857143,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 3,
+      "id": "a7b575ccdcb0",
+      "source": "fabric-semantic",
+      "tokens": 1050,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.5714285714285714,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 3,
+      "id": "4b318562c632",
+      "source": "fabric-semantic",
+      "tokens": 1484,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7142857142857143,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 4,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 177,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 4,
+      "id": "efe5eff5fa13",
+      "source": "fabric-semantic",
+      "tokens": 3479,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.8333333333333334,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 4,
+      "id": "95c023f1b75c",
+      "source": "fabric-semantic",
+      "tokens": 275,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 4,
+      "id": "5be0e4bc8a1c",
+      "source": "fabric-semantic",
+      "tokens": 220,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.25,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 5,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 177,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 5,
+      "id": "efe5eff5fa13",
+      "source": "fabric-semantic",
+      "tokens": 3479,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.8333333333333334,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 5,
+      "id": "95c023f1b75c",
+      "source": "fabric-semantic",
+      "tokens": 275,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 5,
+      "id": "5be0e4bc8a1c",
+      "source": "fabric-semantic",
+      "tokens": 220,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.25,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 6,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 6,
+      "id": "efe5eff5fa13",
+      "source": "fabric-semantic",
+      "tokens": 3479,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.8333333333333334,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 6,
+      "id": "95c023f1b75c",
+      "source": "fabric-semantic",
+      "tokens": 275,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 6,
+      "id": "5be0e4bc8a1c",
+      "source": "fabric-semantic",
+      "tokens": 220,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.25,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 7,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 177,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 7,
+      "id": "efe5eff5fa13",
+      "source": "fabric-semantic",
+      "tokens": 3479,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.8333333333333334,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 7,
+      "id": "95c023f1b75c",
+      "source": "fabric-semantic",
+      "tokens": 275,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 7,
+      "id": "5be0e4bc8a1c",
+      "source": "fabric-semantic",
+      "tokens": 220,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.25,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 8,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 8,
+      "id": "efe5eff5fa13",
+      "source": "fabric-semantic",
+      "tokens": 3479,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.8333333333333334,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 8,
+      "id": "95c023f1b75c",
+      "source": "fabric-semantic",
+      "tokens": 275,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 8,
+      "id": "5be0e4bc8a1c",
+      "source": "fabric-semantic",
+      "tokens": 220,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.25,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 1,
+      "id": "9315126c1e17",
+      "source": "fabric-semantic",
+      "tokens": 837,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 1,
+      "id": "1b431ec1dd46",
+      "source": "fabric-semantic",
+      "tokens": 625,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 1,
+      "id": "8666c4d9bed5",
+      "source": "fabric-semantic",
+      "tokens": 647,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 1,
+      "id": "d51aabc6e9f6",
+      "source": "fabric-semantic",
+      "tokens": 842,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 1,
+      "id": "6ab21a9e3747",
+      "source": "fabric-semantic",
+      "tokens": 978,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.8,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 1,
+      "id": "cd9dc8199339",
+      "source": "fabric-semantic",
+      "tokens": 1131,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 1,
+      "id": "2900ee76707e",
+      "source": "fabric-semantic",
+      "tokens": 1225,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7777777777777778,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 1,
+      "id": "b5e1bda98de4",
+      "source": "fabric-semantic",
+      "tokens": 1331,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7777777777777778,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 1,
+      "id": "dc0509b7c13a",
+      "source": "fabric-semantic",
+      "tokens": 837,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 1,
+      "id": "537c3ef2658f",
+      "source": "fabric-semantic",
+      "tokens": 625,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 1,
+      "id": "b802073891f0",
+      "source": "fabric-semantic",
+      "tokens": 647,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 1,
+      "id": "4eb39fd09a82",
+      "source": "fabric-semantic",
+      "tokens": 842,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 1,
+      "id": "6af68ddfa523",
+      "source": "fabric-semantic",
+      "tokens": 978,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.8,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 177,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 1,
+      "id": "bc8dae78982a",
+      "source": "fabric-semantic",
+      "tokens": 1156,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7142857142857143,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 1,
+      "id": "a1b837ffc32d",
+      "source": "fabric-semantic",
+      "tokens": 1050,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.5714285714285714,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 1,
+      "id": "c08e562d8aa1",
+      "source": "fabric-semantic",
+      "tokens": 1484,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7142857142857143,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 1,
+      "id": "6a642c949c26",
+      "source": "fabric-semantic",
+      "tokens": 706,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 1,
+      "id": "1a59e3e209a3",
+      "source": "fabric-semantic",
+      "tokens": 1112,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 1,
+      "id": "3ec28af7a1f6",
+      "source": "fabric-semantic",
+      "tokens": 1112,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 1,
+      "id": "f42ee54ff3a1",
+      "source": "fabric-semantic",
+      "tokens": 1025,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.2857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 2,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 177,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 2,
+      "id": "bc8dae78982a",
+      "source": "fabric-semantic",
+      "tokens": 1156,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7142857142857143,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 2,
+      "id": "a1b837ffc32d",
+      "source": "fabric-semantic",
+      "tokens": 1050,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.5714285714285714,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 2,
+      "id": "c08e562d8aa1",
+      "source": "fabric-semantic",
+      "tokens": 1484,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7142857142857143,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 2,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 2,
+      "id": "cd9dc8199339",
+      "source": "fabric-semantic",
+      "tokens": 1131,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 2,
+      "id": "2900ee76707e",
+      "source": "fabric-semantic",
+      "tokens": 1225,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7777777777777778,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 2,
+      "id": "b5e1bda98de4",
+      "source": "fabric-semantic",
+      "tokens": 1331,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7777777777777778,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 2,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 2,
+      "id": "6a642c949c26",
+      "source": "fabric-semantic",
+      "tokens": 706,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 2,
+      "id": "1a59e3e209a3",
+      "source": "fabric-semantic",
+      "tokens": 1112,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 2,
+      "id": "3ec28af7a1f6",
+      "source": "fabric-semantic",
+      "tokens": 1112,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 2,
+      "id": "f42ee54ff3a1",
+      "source": "fabric-semantic",
+      "tokens": 1025,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.2857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 3,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 188,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 3,
+      "id": "cd9dc8199339",
+      "source": "fabric-semantic",
+      "tokens": 1131,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 3,
+      "id": "2900ee76707e",
+      "source": "fabric-semantic",
+      "tokens": 1225,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7777777777777778,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 3,
+      "id": "b5e1bda98de4",
+      "source": "fabric-semantic",
+      "tokens": 1331,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7777777777777778,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 3,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 188,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 3,
+      "id": "bc8dae78982a",
+      "source": "fabric-semantic",
+      "tokens": 1156,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7142857142857143,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 3,
+      "id": "a1b837ffc32d",
+      "source": "fabric-semantic",
+      "tokens": 1050,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.5714285714285714,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 3,
+      "id": "c08e562d8aa1",
+      "source": "fabric-semantic",
+      "tokens": 1484,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7142857142857143,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 3,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 188,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 3,
+      "id": "6a642c949c26",
+      "source": "fabric-semantic",
+      "tokens": 706,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 3,
+      "id": "1a59e3e209a3",
+      "source": "fabric-semantic",
+      "tokens": 1112,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 3,
+      "id": "3ec28af7a1f6",
+      "source": "fabric-semantic",
+      "tokens": 1112,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 3,
+      "id": "f42ee54ff3a1",
+      "source": "fabric-semantic",
+      "tokens": 1025,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.2857142857142857,
+      "cited": false
+    }
+  ],
+  "attemptId": "202-baseline.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free@2",
+  "protocolHash": "93bd054903de30bc4439aac8f51ec878918af6e335343c952121b4726008a8da",
+  "resumedResults": 1,
+  "results": [
+    {
+      "id": "5:abstention:1",
+      "ability": "abstention",
+      "cluster": "beam-5",
+      "correct": false,
+      "outcome": "run_limit",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 8,
+      "recallCalls": 2,
+      "recalledIds": [
+        "5:s1-r20",
+        "5:s1-r8",
+        "5:s1-r22",
+        "5:s2-r24",
+        "5:s1-r20",
+        "5:s0-r26",
+        "5:s1-r33",
+        "5:s2-r15",
+        "5:s2-r24",
+        "5:s1-r20",
+        "5:s0-r26",
+        "5:s1-r33",
+        "5:s1-r0",
+        "5:s0-r0",
+        "5:s2-r24",
+        "5:s1-r20",
+        "5:s0-r26",
+        "5:s1-r33",
+        "5:s1-r25",
+        "5:s1-r26",
+        "5:s0-r26",
+        "5:s1-r20",
+        "5:s1-r33",
+        "5:s2-r24",
+        "5:s1-r0",
+        "5:s0-r0",
+        "5:s2-r24",
+        "5:s1-r20",
+        "5:s0-r26",
+        "5:s1-r33",
+        "5:s1-r25",
+        "5:s1-r26",
+        "5:s0-r26",
+        "5:s1-r20",
+        "5:s1-r33",
+        "5:s2-r24",
+        "5:s1-r0",
+        "5:s0-r0",
+        "5:s2-r24",
+        "5:s1-r20",
+        "5:s0-r26",
+        "5:s1-r33",
+        "5:s1-r25",
+        "5:s1-r26",
+        "5:s0-r26",
+        "5:s1-r20",
+        "5:s1-r33",
+        "5:s2-r24",
+        "5:s1-r0",
+        "5:s0-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 8,
+      "turnTrace": [
+        "memory.recall",
+        "memory.recall",
+        "memory.recall",
+        "memory.recall",
+        "memory.recall",
+        "memory.recall",
+        "memory.recall",
+        "memory.recall"
+      ],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 13178,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "stage": "abstention_error",
+      "resumed": true
+    }
+  ],
+  "status": "failed",
+  "limitations": [
+    "Block-level injection accounting until item metadata lands in Tasks 4, 9, 11 and 12.",
+    "Injection token allocations are character estimates, not billing usage.",
+    "OpenCode Go and Hyper judges differ from the papers; scores are not directly comparable."
+  ],
+  "ratesAsOf": "2026-10-27",
+  "ratesStatus": "provider-catalog",
+  "resumedFrom": {
+    "protocolHash": "93bd054903de30bc4439aac8f51ec878918af6e335343c952121b4726008a8da",
+    "results": 1,
+    "inputTokens": 402102
+  },
+  "inputCap": 933440,
+  "selectedQuestionIds": [
+    "5:abstention:1",
+    "9:abstention:1",
+    "10:abstention:0",
+    "20:abstention:1",
+    "8:contradiction_resolution:1",
+    "3:contradiction_resolution:1",
+    "7:contradiction_resolution:0",
+    "9:contradiction_resolution:0",
+    "13:event_ordering:0",
+    "5:event_ordering:0",
+    "1:event_ordering:1",
+    "1:event_ordering:0",
+    "16:information_extraction:0",
+    "16:information_extraction:1",
+    "9:information_extraction:0",
+    "19:information_extraction:0",
+    "18:instruction_following:0",
+    "9:instruction_following:1",
+    "13:instruction_following:1",
+    "8:instruction_following:1",
+    "4:knowledge_update:0",
+    "7:knowledge_update:1",
+    "2:knowledge_update:0",
+    "17:knowledge_update:1",
+    "6:multi_session_reasoning:1",
+    "2:multi_session_reasoning:0",
+    "9:multi_session_reasoning:1",
+    "13:multi_session_reasoning:1",
+    "10:preference_following:1",
+    "11:preference_following:0",
+    "18:preference_following:1",
+    "14:preference_following:0",
+    "10:summarization:0",
+    "17:summarization:0",
+    "1:summarization:1",
+    "8:summarization:1",
+    "18:temporal_reasoning:0",
+    "19:temporal_reasoning:1",
+    "14:temporal_reasoning:1",
+    "17:temporal_reasoning:0"
+  ],
+  "runPathFingerprint": "52d3ac2d0807bab823ec59d830a11dc1399c7232ad53a9698f6fb051080c9650",
+  "usageComplete": true,
+  "usageMissingExchanges": 0,
+  "wireExchanges": 218,
+  "errors": [
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "code": "MemoryBenchJudgeError:429",
+      "message": "MemoryBenchJudgeError:429",
+      "cause": {
+        "name": "Error",
+        "code": "429",
+        "message": "Hyper request failed: 429 retry_after_ms834000 error:message:You've hit your hourly rate limit. Please try again in 13m54s.,type:rate_limit_error,code:null",
+        "failureClass": "rate_limited"
+      }
+    },
+    {
+      "questionId": "20:abstention:1",
+      "code": "MemoryBenchJudgeError:429",
+      "message": "MemoryBenchJudgeError:429",
+      "cause": {
+        "name": "Error",
+        "code": "429",
+        "message": "Hyper request failed: 429 retry_after_ms834000 error:message:You've hit your hourly rate limit. Please try again in 13m54s.,type:rate_limit_error,code:null",
+        "failureClass": "rate_limited"
+      }
+    },
+    {
+      "questionId": "10:abstention:0",
+      "code": "MemoryBenchJudgeError:429",
+      "message": "MemoryBenchJudgeError:429",
+      "cause": {
+        "name": "Error",
+        "code": "429",
+        "message": "Hyper request failed: 429 retry_after_ms833000 error:message:You've hit your hourly rate limit. Please try again in 13m53s.,type:rate_limit_error,code:null",
+        "failureClass": "rate_limited"
+      }
+    },
+    {
+      "questionId": "9:abstention:1",
+      "code": "MemoryBenchJudgeError:429",
+      "message": "MemoryBenchJudgeError:429",
+      "cause": {
+        "name": "Error",
+        "code": "429",
+        "message": "Hyper request failed: 429 retry_after_ms831000 error:message:You've hit your hourly rate limit. Please try again in 13m51s.,type:rate_limit_error,code:null",
+        "failureClass": "rate_limited"
+      }
+    }
+  ],
+  "failure": {
+    "questionId": "9:abstention:1",
+    "code": "MemoryBenchJudgeError:429",
+    "message": "MemoryBenchJudgeError:429",
+    "cause": {
+      "name": "Error",
+      "code": "429",
+      "message": "Hyper request failed: 429 retry_after_ms831000 error:message:You've hit your hourly rate limit. Please try again in 13m51s.,type:rate_limit_error,code:null",
+      "failureClass": "rate_limited"
+    }
+  },
+  "timing": {
+    "wallMs": 95901.4,
+    "concurrency": {
+      "initial": 4,
+      "active": 1,
+      "floor": 1
+    },
+    "questions": {
+      "n": 5,
+      "wallMs": {
+        "p50": 91359.8,
+        "p95": 94253.3,
+        "mean": 73656.6
+      }
+    },
+    "roles": {
+      "judge": {
+        "calls": 32,
+        "firstByteMs": {
+          "p50": 1793.7,
+          "p95": 2983.5,
+          "mean": 3153.3
+        },
+        "totalMs": {
+          "p50": 1793.7,
+          "p95": 2983.5,
+          "mean": 3153.3
+        }
+      },
+      "solver": {
+        "calls": 10,
+        "firstByteMs": {
+          "p50": 9825.9,
+          "p95": 19436,
+          "mean": 10767.7
+        },
+        "totalMs": {
+          "p50": 9872,
+          "p95": 21690.8,
+          "mean": 13401.1
+        }
+      }
+    },
+    "calls": 42
+  },
+  "metricVersion": 2,
+  "abilities": {
+    "abstention": {
+      "n": 1,
+      "correct": 0,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 1,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    }
+  },
+  "abilityGroups": {
+    "abstention": {
+      "n": 1,
+      "correct": 0,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 1,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    }
+  },
+  "metricDefinitions": {
+    "abstention": {
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    }
+  },
+  "runLimitRate": 1,
+  "errorRate": 0,
+  "cacheReadRatio": 0.0934068742112898,
+  "cacheWriteRatio": 0,
+  "cost": {
+    "currency": "USD",
+    "unit": "per_million_tokens",
+    "rates": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0
+    },
+    "pricingStatus": "priced",
+    "measured": 0,
+    "cachedPrefixSimulation": null,
+    "simulationAssumption": null,
+    "ratesAsOf": "2026-10-27",
+    "ratesStatus": "provider-catalog"
+  },
+  "judgeAgreement": {
+    "n": 0,
+    "judges": {
+      "hyper/qwen3.8-flash": {
+        "scored": 0,
+        "agreementWithPanel": null
+      },
+      "hyper/glm-5.3-flash": {
+        "scored": 0,
+        "agreementWithPanel": null
+      }
+    },
+    "pairs": [
+      {
+        "a": "hyper/qwen3.8-flash",
+        "b": "hyper/glm-5.3-flash",
+        "n": 0,
+        "agreement": null,
+        "kappa": null
+      }
+    ],
+    "fleissKappa": null
+  },
+  "injectionPrecision": {
+    "granularity": "block",
+    "tokensPerTurn": 3972.3,
+    "irrelevantRate": null,
+    "citedIdRate": 0,
+    "tokenAccounting": "estimated ceil(characters/4); billing is wire usage"
+  },
+  "injectionPrecisionReason": null,
+  "toolCalls": 8,
+  "toolCallsPerQuestion": 8,
+  "recallCalls": 2,
+  "retrievedSnippetTokens": 13178,
+  "answerSessionHitAtK": null,
+  "evidenceRoundCoverage": null,
+  "evidenceAllRequired": null,
+  "fineEvidenceRecall": null,
+  "fineEvidencePrecision": null,
+  "legacyRetrievalRecallAtK": null,
+  "retrievalRecallAtK": null,
+  "stages": {
+    "abstention_error": 1
+  }
+}

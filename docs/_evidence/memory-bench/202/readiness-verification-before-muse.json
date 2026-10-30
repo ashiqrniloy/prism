@@ -1,0 +1,53 @@
+{
+  "kind": "202-readiness-workspace-verification",
+  "generatedAt": "2026-10-29T05:44:42.019Z",
+  "status": "passed",
+  "harnessHash": "b1eef0e716d990ba4b5bc90c1c45ae72f03daa7adb78b1aea03691aa718821e1",
+  "checks": [
+    {
+      "command": "timeout 180 bun run typecheck",
+      "result": "passed"
+    },
+    {
+      "command": "timeout 600 bun test scripts/memory-bench",
+      "result": "343 pass, 2 environment skips, 0 fail"
+    },
+    {
+      "command": "timeout 180 bun test --timeout=0 src/__tests__/docs.test.ts",
+      "result": "65 pass, 0 fail"
+    },
+    {
+      "command": "timeout 240 bun test packages/providers/commandcode/src/__tests__/commandcode.test.ts packages/providers/commandcode/src/__tests__/package.test.ts packages/providers/commandcode/src/__tests__/cache-levers.test.ts packages/hosts/remote/src/__tests__/connect.test.ts scripts/wire-proxy.test.mjs",
+      "result": "51 pass, 0 fail"
+    },
+    {
+      "command": "timeout 180 bun test packages/providers/hyper/src/__tests__/hyper.test.ts",
+      "result": "11 pass, 0 fail"
+    },
+    {
+      "command": "timeout 180 env PRISM_MEMORY_BENCH_PYTHON=.cache/memory-bench/python/bin/python bun test scripts/memory-bench/robustness.test.mjs -t beam_development_annotation_inventory_matches_the_pinned_source",
+      "result": "1 pass, 0 fail"
+    },
+    {
+      "command": "timeout 40 bunx biome check [23 affected files]",
+      "result": "passed; 22 supported files, 2 inherited warnings"
+    },
+    {
+      "command": "timeout 20 git diff --check",
+      "result": "passed"
+    },
+    {
+      "command": "timeout 180 bun test scripts/memory-bench/audit/readiness.test.mjs scripts/memory-bench/audit/pilot.test.mjs",
+      "result": "11 pass, 0 fail; V4 harness source"
+    }
+  ],
+  "scope": "Task 4.8 remediation and directly affected suites; no release gate or broad baseline",
+  "liveReadiness": "ready: V4 completed, zero blockers, full accounting",
+  "currentLogs": {
+    "typecheck": "/tmp/prism-ready-v4-final-types.log",
+    "benchmark": "/tmp/prism-ready-v4-bench.log",
+    "docs": "/tmp/prism-ready-v4-final-docs.log",
+    "focused": "/tmp/prism-ready-v4-focused.log"
+  },
+  "artifactReview": "Passed: 52 dispositions, 42 scores, 10 eligible full histories without source removal; role/wire sums; source hashes and live guard acceptance; no raw text/credential fields; broad Task 4 unchecked; no campaign launched."
+}

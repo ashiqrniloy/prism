@@ -1,0 +1,200 @@
+{
+  "seed": "prism-202-memory-bench-locomo",
+  "draw": "SHA-256(\"prism-202-memory-bench-locomo:\" + id), ascending inside each ability and partition",
+  "source": "https://raw.githubusercontent.com/snap-research/locomo/3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376/data/locomo10.json",
+  "datasetSha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+  "strata": {
+    "multi-hop": [
+      12,
+      6,
+      6
+    ],
+    "temporal": [
+      12,
+      6,
+      6
+    ],
+    "open-domain": [
+      12,
+      6,
+      6
+    ],
+    "single-hop": [
+      12,
+      6,
+      6
+    ],
+    "adversarial": [
+      12,
+      6,
+      6
+    ]
+  },
+  "part": "dev | heldout-a | heldout-b; heldout-b is reserved for the single remediation round",
+  "residualPool": {
+    "multi-hop": 258,
+    "temporal": 297,
+    "open-domain": 72,
+    "single-hop": 817,
+    "adversarial": 422
+  },
+  "idsHash": "f8462784b7acf89a4b82a40d68369c2abf35f3e69d69e39b4b2b118b4c714dbf",
+  "abilities": {
+    "dev": {
+      "multi-hop": [
+        "conv-41:21",
+        "conv-44:24",
+        "conv-49:21",
+        "conv-44:32",
+        "conv-49:78",
+        "conv-26:38",
+        "conv-42:34",
+        "conv-43:4",
+        "conv-43:48",
+        "conv-43:43",
+        "conv-47:9",
+        "conv-42:42"
+      ],
+      "temporal": [
+        "conv-48:81",
+        "conv-44:30",
+        "conv-42:29",
+        "conv-44:1",
+        "conv-49:52",
+        "conv-42:32",
+        "conv-42:21",
+        "conv-41:4",
+        "conv-26:57",
+        "conv-41:16",
+        "conv-50:65",
+        "conv-48:55"
+      ],
+      "open-domain": [
+        "conv-48:36",
+        "conv-26:50",
+        "conv-48:23",
+        "conv-43:5",
+        "conv-43:8",
+        "conv-26:81",
+        "conv-48:11",
+        "conv-26:14",
+        "conv-44:44",
+        "conv-47:44",
+        "conv-50:21",
+        "conv-42:0"
+      ],
+      "single-hop": [
+        "conv-26:82",
+        "conv-26:103",
+        "conv-49:111",
+        "conv-49:121",
+        "conv-47:128",
+        "conv-47:131",
+        "conv-43:123",
+        "conv-42:185",
+        "conv-42:175",
+        "conv-48:159",
+        "conv-47:98",
+        "conv-50:91"
+      ],
+      "adversarial": [
+        "conv-41:163",
+        "conv-43:183",
+        "conv-43:212",
+        "conv-44:154",
+        "conv-49:164",
+        "conv-49:185",
+        "conv-43:234",
+        "conv-50:180",
+        "conv-41:175",
+        "conv-43:214",
+        "conv-48:227",
+        "conv-43:224"
+      ]
+    },
+    "heldout-a": {
+      "multi-hop": [
+        "conv-49:82",
+        "conv-41:9",
+        "conv-48:82",
+        "conv-26:18",
+        "conv-42:19",
+        "conv-42:79"
+      ],
+      "temporal": [
+        "conv-50:25",
+        "conv-47:21",
+        "conv-42:38",
+        "conv-42:57",
+        "conv-47:66",
+        "conv-47:53"
+      ],
+      "open-domain": [
+        "conv-26:22",
+        "conv-47:12",
+        "conv-49:31",
+        "conv-50:42",
+        "conv-41:41",
+        "conv-47:30"
+      ],
+      "single-hop": [
+        "conv-49:151",
+        "conv-49:122",
+        "conv-44:108",
+        "conv-43:149",
+        "conv-50:128",
+        "conv-47:107"
+      ],
+      "adversarial": [
+        "conv-50:182",
+        "conv-41:165",
+        "conv-48:223",
+        "conv-48:199",
+        "conv-43:235",
+        "conv-26:163"
+      ]
+    },
+    "heldout-b": {
+      "multi-hop": [
+        "conv-44:21",
+        "conv-43:7",
+        "conv-42:69",
+        "conv-42:50",
+        "conv-42:46",
+        "conv-49:0"
+      ],
+      "temporal": [
+        "conv-41:51",
+        "conv-41:54",
+        "conv-50:8",
+        "conv-48:51",
+        "conv-43:47",
+        "conv-44:8"
+      ],
+      "open-domain": [
+        "conv-43:66",
+        "conv-50:13",
+        "conv-26:59",
+        "conv-47:6",
+        "conv-47:16",
+        "conv-50:39"
+      ],
+      "single-hop": [
+        "conv-48:107",
+        "conv-49:125",
+        "conv-44:79",
+        "conv-44:122",
+        "conv-49:139",
+        "conv-47:112"
+      ],
+      "adversarial": [
+        "conv-43:194",
+        "conv-42:245",
+        "conv-49:194",
+        "conv-43:193",
+        "conv-47:161",
+        "conv-26:174"
+      ]
+    }
+  }
+}

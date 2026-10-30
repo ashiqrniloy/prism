@@ -226,6 +226,7 @@ const definition = definePackage<MemoryFabricConfig>({
     // The scope ordinal this process ranks against; the tick below refreshes it once per session.
     let sessionClock = 0;
     const fabricOptions: CreateMemoryFabricOptions = {
+      onRecall: prism.services.consume<CreateMemoryFabricOptions["onRecall"]>("memory-fabric.diagnostics"),
       memory,
       scopes: memories,
       promote: config.promote,
@@ -513,6 +514,7 @@ const definition = definePackage<MemoryFabricConfig>({
       touchedPathsFor,
       core,
       cues,
+      memories.map(({ memory }) => memory),
     );
     let warnedFloor = false;
     prism.hooks.on(
@@ -577,7 +579,9 @@ const definition = definePackage<MemoryFabricConfig>({
         }
       });
     });
+    prism.hooks.on("compaction.completed", (_event, context) => projection.refresh(context.sessionId));
     prism.hooks.on("session.closed", (_event, context) => {
+      projection.forget(context.sessionId);
       touchedTrackers.delete(context.sessionId);
       turnsSincePass.delete(context.sessionId);
       evidenceCursor.delete(context.sessionId);
@@ -655,7 +659,18 @@ const definition = definePackage<MemoryFabricConfig>({
     );
     prism.commands.register(createMemoryArchiveCommand(exchangeArchive, exchangeState, (message) => prism.status.note("warn", message)));
     prism.commands.register(createMemoryMaintainCommand(fabric));
-    prism.commands.register(createMemoryReindexCommand(stores.reindex));
+    prism.commands.register(
+      createMemoryReindexCommand(
+        stores.reindex &&
+          (async (options) => {
+            try {
+              return await stores.reindex!(options);
+            } finally {
+              projection.refresh();
+            }
+          }),
+      ),
+    );
     const bundle = {
       memory,
       stores: { vectorStore, workingStore },
@@ -663,9 +678,7 @@ const definition = definePackage<MemoryFabricConfig>({
       root: config.tools.root,
       notesDir: notesRel === undefined ? undefined : resolve(config.tools.root!, notesRel),
       refresh: () => {
-        directory?.source.invalidate();
-        core?.invalidate();
-        cues?.invalidate();
+        projection.refresh();
       },
     };
     prism.commands.register(createMemoryExportCommand(bundle));

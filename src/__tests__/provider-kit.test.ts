@@ -156,6 +156,7 @@ describe("provider-kit", () => {
       "createBoundedUploadCache",
       "createOpenAICompatibleProvider",
       "createRoutedProvider",
+      "createToolNameMap",
       "createSystemOneDecisionProvider",
       "defaultProviderFilename",
       "defineProviderPackage",
@@ -193,6 +194,7 @@ describe("provider-kit", () => {
       "plaintextRemoteOrigin",
       "postSystemOne",
       "preserveThinking",
+      "productToolName",
       "providerConformance",
       "providerHttpError",
       "providerPackage",
@@ -239,6 +241,7 @@ describe("provider-kit", () => {
       "tryParseJsonObjectArguments",
       "validateStructuredOutputOptions",
       "warnIfPlaintextRemote",
+      "wireToolName",
       "withoutStructuredOutput",
     ];
     assert.deepEqual(Object.keys(kit).sort(), [...expected].sort());

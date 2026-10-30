@@ -1,0 +1,816 @@
+{
+  "kind": "202-zero-score-ability-audit",
+  "date": "2026-10-28",
+  "status": "completed",
+  "diagnosticOnly": true,
+  "subset": "dev",
+  "calibration": "Owner human-calibration waiver remains in force. Local review is model-assisted, never human calibration.",
+  "answerModel": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+  "judges": [
+    "openrouter/dots-studio/dots-3-note-preview:free",
+    "openrouter/cohere/north-mini-code:free"
+  ],
+  "judgeTemplateVersion": "e3883a2aa5910f76c3f6b377f1758fd4a57ca6dda1449cd86291abd0eea5f306",
+  "limits": {
+    "wireAttempts": 160,
+    "inputTokens": 5000000,
+    "outputTokens": 300000,
+    "wallMs": 3600000
+  },
+  "observed": {
+    "wireAttempts": 100,
+    "http429": 0,
+    "inputTokens": 1457267,
+    "cacheReadTokens": 393120,
+    "outputTokens": 107409,
+    "costUsd": 0,
+    "note": "Cumulative across three free-panel executions; one superseded by the answer-protocol change, one stopped by a judge transport failure, one completed. Four small ad-hoc provider probes (model availability, reasoning toggle) and the eight paraphrase-probe calls are outside the runner attempt count; the probe calls are reported with the grading controls."
+  },
+  "inventory": {
+    "uniqueQuestions": 8,
+    "independentConversationClusters": 6,
+    "references": 56,
+    "uniqueReferencesPerQuestion": 55,
+    "unresolvedReferences": 0
+  },
+  "historicalSavedAnswerAudit": {
+    "armOccurrences": 56,
+    "savedAnswers": 0
+  },
+  "localComparatorModelLimits": {
+    "contextWindow": 1000000,
+    "maxOutputTokens": 128000
+  },
+  "localComparatorInputCap": 932415,
+  "localComparatorCaveat": "All eight complete-history contexts were live-eligible in the completed execution: zero source messages removed, no truncation, context hashes recorded per question. This is live complete-history delivery for a development diagnostic, not product acceptance.",
+  "sourceHashes": {
+    "scripts/memory-bench/judge.mjs": "fbbaf7ea2ecb4769213cda03d252d779fc83dd112f0c9b4109cfcc0e0cefc534",
+    "scripts/memory-bench/judge-prompts.json": "54ea2fa5c8af2b36e132b5bf7695085eef89292a95caa1ce425ab61e1cbcaf32",
+    "scripts/memory-bench/baseline.mjs": "1c44d6f9ac3f284af5a220a9904736a76924755ad8118c92f99c1288ebd7ddd0",
+    "scripts/memory-bench/audit/zero-score.mjs": "93388a5e64b348da0aca21bf36bf19be8129a7bb979c5bad2b28a1707557b4ba",
+    "scripts/memory-bench/audit/zero-score.test.mjs": "1b968ff71edfd416a031d526a5d527872833e1b3a826e11d819adab83487d0f0"
+  },
+  "questions": [
+    {
+      "id": "1:event_ordering:0",
+      "ability": "event_ordering",
+      "cluster": "beam-1",
+      "references": 3,
+      "uniqueReferences": 3,
+      "unresolved": 0,
+      "sourceMessageIds": [
+        "1:s0:m4",
+        "1:s1:m0",
+        "1:s2:m0"
+      ],
+      "sourceRoles": {
+        "user": 3
+      },
+      "localContextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 869951,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 188,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "45b7dc1109b46e9177f0c07dbb21d43579e800dc4e41c0c07cece66eb91ce1fc"
+      },
+      "sourceReview": "model-assisted local source review; not human calibration",
+      "judgeControls": {
+        "openrouter/dots-studio/dots-3-note-preview:free": {
+          "positive": "yes",
+          "negative": "no",
+          "status": "completed"
+        },
+        "openrouter/cohere/north-mini-code:free": {
+          "positive": "yes",
+          "negative": "no",
+          "status": "completed"
+        }
+      },
+      "evidenceOnly": {
+        "status": "completed",
+        "answerKey": "1c8657b37770b04ad297e7c5eb4ad701c1b6d4f933fdeda462f5df9723ab02e5",
+        "verdicts": {
+          "openrouter/dots-studio/dots-3-note-preview:free": "no",
+          "openrouter/cohere/north-mini-code:free": "no"
+        },
+        "panelCorrect": false,
+        "eligible": null,
+        "completeHistory": null,
+        "sourceMessages": null,
+        "removedSourceMessages": null,
+        "truncated": false,
+        "diagnosticReading": "Three items in the labelled order; the third names a different topic from the final labelled one, so coverage is partial. Rejection strict but defensible."
+      },
+      "completeHistory": {
+        "status": "completed",
+        "answerKey": "46b6ba639d361342a22a7289ffa38a9fed06393851fe910b2450d510ea1855fc",
+        "verdicts": {
+          "openrouter/dots-studio/dots-3-note-preview:free": "no",
+          "openrouter/cohere/north-mini-code:free": "no"
+        },
+        "panelCorrect": false,
+        "eligible": true,
+        "completeHistory": true,
+        "sourceMessages": 188,
+        "removedSourceMessages": 0,
+        "truncated": false,
+        "diagnosticReading": "Items are planning, schema and auth rather than the labelled sequence; rejection consistent."
+      },
+      "findings": [
+        "Annotated source sequence supports the ordering rubric; no demonstrated mapping or label defect.",
+        "Live diagnostic completed 2026-10-28 on the OpenRouter free panel; see diagnosticReading."
+      ]
+    },
+    {
+      "id": "1:event_ordering:1",
+      "ability": "event_ordering",
+      "cluster": "beam-1",
+      "references": 5,
+      "uniqueReferences": 4,
+      "unresolved": 0,
+      "sourceMessageIds": [
+        "1:s0:m6",
+        "1:s1:m2",
+        "1:s2:m2",
+        "1:s2:m4"
+      ],
+      "sourceRoles": {
+        "user": 4
+      },
+      "localContextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 869951,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 188,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "41fdb6a7ccecf634a132bb44ca834a626233587078c6ba83f5e90ecd0e162922"
+      },
+      "sourceReview": "model-assisted local source review; not human calibration",
+      "judgeControls": {
+        "openrouter/dots-studio/dots-3-note-preview:free": {
+          "positive": "yes",
+          "negative": "no",
+          "status": "completed"
+        },
+        "openrouter/cohere/north-mini-code:free": {
+          "positive": "yes",
+          "negative": "no",
+          "status": "completed"
+        }
+      },
+      "evidenceOnly": {
+        "status": "completed",
+        "answerKey": "36c6fb20bff3ebaeac60c8a3030d6fa338a9024b896dc4773d8a21f301a394d0",
+        "verdicts": {
+          "openrouter/dots-studio/dots-3-note-preview:free": "no",
+          "openrouter/cohere/north-mini-code:free": "no"
+        },
+        "panelCorrect": false,
+        "eligible": null,
+        "completeHistory": null,
+        "sourceMessages": null,
+        "removedSourceMessages": null,
+        "truncated": false,
+        "diagnosticReading": "Five chronological items covering setup, transaction work, deployment and both test themes; the final item omits the deployment-review element. Rejection strict but defensible."
+      },
+      "completeHistory": {
+        "status": "completed",
+        "answerKey": "8b2893f01a1cd1a79f986e9cb5ae730af74c47da6f4d050b44d901d51ab45316",
+        "verdicts": {
+          "openrouter/dots-studio/dots-3-note-preview:free": "no",
+          "openrouter/cohere/north-mini-code:free": "no"
+        },
+        "panelCorrect": false,
+        "eligible": true,
+        "completeHistory": true,
+        "sourceMessages": 188,
+        "removedSourceMessages": 0,
+        "truncated": false,
+        "diagnosticReading": "Two items are not labelled topics, the item count is off and numbering repeats; rejection consistent."
+      },
+      "findings": [
+        "Repeated source reference is valid: one message covers two successive rubric points. No missing evidence was demonstrated.",
+        "Live diagnostic completed 2026-10-28 on the OpenRouter free panel; see diagnosticReading."
+      ]
+    },
+    {
+      "id": "1:summarization:1",
+      "ability": "summarization",
+      "cluster": "beam-1",
+      "references": 11,
+      "uniqueReferences": 11,
+      "unresolved": 0,
+      "sourceMessageIds": [
+        "1:s0:m16",
+        "1:s0:m17",
+        "1:s1:m4",
+        "1:s1:m5",
+        "1:s1:m28",
+        "1:s1:m29",
+        "1:s2:m22",
+        "1:s2:m23",
+        "1:s2:m25",
+        "1:s2:m34",
+        "1:s2:m35"
+      ],
+      "sourceRoles": {
+        "user": 5,
+        "assistant": 6
+      },
+      "localContextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 869951,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 188,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "144ca261f257f2b4d8fe1fb6e25f7f53fac2657d26c3e4cc8ad95bd4ab1a381c"
+      },
+      "sourceReview": "model-assisted local source review; not human calibration",
+      "judgeControls": {
+        "openrouter/dots-studio/dots-3-note-preview:free": {
+          "positive": "yes",
+          "negative": "no",
+          "status": "completed"
+        },
+        "openrouter/cohere/north-mini-code:free": {
+          "positive": "yes",
+          "negative": "no",
+          "status": "completed"
+        }
+      },
+      "evidenceOnly": {
+        "status": "completed",
+        "answerKey": "e619e908516f6dda4ff01df2abebd5171cf5971059eadb03971ff3d59781538f",
+        "verdicts": {
+          "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+          "openrouter/cohere/north-mini-code:free": "yes"
+        },
+        "panelCorrect": true,
+        "eligible": null,
+        "completeHistory": null,
+        "sourceMessages": null,
+        "removedSourceMessages": null,
+        "truncated": false,
+        "diagnosticReading": "Both judges accepted; the five labelled challenges appear in order."
+      },
+      "completeHistory": {
+        "status": "completed",
+        "answerKey": "4e365592a6e07fc074217be7ce59a0f916ad06cda2600c671564766b0d964b9e",
+        "verdicts": {
+          "openrouter/dots-studio/dots-3-note-preview:free": "no",
+          "openrouter/cohere/north-mini-code:free": "no"
+        },
+        "panelCorrect": false,
+        "eligible": true,
+        "completeHistory": true,
+        "sourceMessages": 188,
+        "removedSourceMessages": 0,
+        "truncated": false,
+        "diagnosticReading": "Summary narrates a different technology stack from the labelled evidence rather than the recorded challenges; rejection consistent."
+      },
+      "findings": [
+        "Annotated evidence includes assistant recommendations; completion/adoption language in gold is not independently established by those recommendations. Retained as a label-provenance limitation, not a corrected label.",
+        "Live diagnostic completed 2026-10-28 on the OpenRouter free panel; see diagnosticReading."
+      ]
+    },
+    {
+      "id": "5:event_ordering:0",
+      "ability": "event_ordering",
+      "cluster": "beam-5",
+      "references": 12,
+      "uniqueReferences": 12,
+      "unresolved": 0,
+      "sourceMessageIds": [
+        "5:s0:m6",
+        "5:s0:m10",
+        "5:s0:m14",
+        "5:s0:m34",
+        "5:s0:m16",
+        "5:s0:m18",
+        "5:s0:m30",
+        "5:s0:m20",
+        "5:s0:m24",
+        "5:s0:m50",
+        "5:s0:m56",
+        "5:s0:m58"
+      ],
+      "sourceRoles": {
+        "user": 12
+      },
+      "localContextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 869951,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 238,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "c9d4133e2c738d59c8d2dcc4d72afc167ece5fc2e3bdc8ed4717358e48a4b210"
+      },
+      "sourceReview": "model-assisted local source review; not human calibration",
+      "judgeControls": {
+        "openrouter/dots-studio/dots-3-note-preview:free": {
+          "positive": "yes",
+          "negative": "no",
+          "status": "completed"
+        },
+        "openrouter/cohere/north-mini-code:free": {
+          "positive": "yes",
+          "negative": "no",
+          "status": "completed"
+        }
+      },
+      "evidenceOnly": {
+        "status": "completed",
+        "answerKey": "9f0c8b6c2138d6f95c13fa94e06d0862a84ea462932f7c2420c0ecded6a2f2b4",
+        "verdicts": {
+          "openrouter/dots-studio/dots-3-note-preview:free": "no",
+          "openrouter/cohere/north-mini-code:free": "no"
+        },
+        "panelCorrect": false,
+        "eligible": null,
+        "completeHistory": null,
+        "sourceMessages": null,
+        "removedSourceMessages": null,
+        "truncated": false,
+        "diagnosticReading": "Six items, but two labelled topics are missing and one item is a rule outside the rubric; rejection consistent with the coverage requirement."
+      },
+      "completeHistory": {
+        "status": "completed",
+        "answerKey": "e7654b6912ee994480c399fc6cad045dbedd38410cb54d542d53528f3ee8bb71",
+        "verdicts": {
+          "openrouter/dots-studio/dots-3-note-preview:free": "no",
+          "openrouter/cohere/north-mini-code:free": "no"
+        },
+        "panelCorrect": false,
+        "eligible": true,
+        "completeHistory": true,
+        "sourceMessages": 238,
+        "removedSourceMessages": 0,
+        "truncated": false,
+        "diagnosticReading": "Concept list omits most labelled topics and adds unrelated ones; rejection consistent."
+      },
+      "findings": [
+        "Reference list order is not chronology; chronological source-message order supports the labelled sequence. No adapter ordering defect demonstrated.",
+        "Live diagnostic completed 2026-10-28 on the OpenRouter free panel; see diagnosticReading."
+      ]
+    },
+    {
+      "id": "8:summarization:1",
+      "ability": "summarization",
+      "cluster": "beam-8",
+      "references": 10,
+      "uniqueReferences": 10,
+      "unresolved": 0,
+      "sourceMessageIds": [
+        "8:s0:m6",
+        "8:s0:m7",
+        "8:s1:m26",
+        "8:s1:m27",
+        "8:s2:m8",
+        "8:s2:m9",
+        "8:s3:m8",
+        "8:s3:m9",
+        "8:s4:m4",
+        "8:s4:m5"
+      ],
+      "sourceRoles": {
+        "user": 5,
+        "assistant": 5
+      },
+      "localContextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 869951,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 268,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "a18236f309d526bc2c10a51301db312fd3499111a996ac5f3fd0250fe8a8afdf"
+      },
+      "sourceReview": "model-assisted local source review; not human calibration",
+      "judgeControls": {
+        "openrouter/dots-studio/dots-3-note-preview:free": {
+          "positive": "yes",
+          "negative": "no",
+          "status": "completed"
+        },
+        "openrouter/cohere/north-mini-code:free": {
+          "positive": "yes",
+          "negative": "no",
+          "status": "completed"
+        }
+      },
+      "evidenceOnly": {
+        "status": "completed",
+        "answerKey": "50d43343655923a179dbcaf5499b7f24bf64cc6f136e77f9bc26f1c497232ee6",
+        "verdicts": {
+          "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+          "openrouter/cohere/north-mini-code:free": "yes"
+        },
+        "panelCorrect": true,
+        "eligible": null,
+        "completeHistory": null,
+        "sourceMessages": null,
+        "removedSourceMessages": null,
+        "truncated": false,
+        "diagnosticReading": "Both judges accepted; the five labelled preparation stages appear in order."
+      },
+      "completeHistory": {
+        "status": "completed",
+        "answerKey": "d442adcd3551e8f76974d9cdeb79c4abf2a48bfe98cb67b693f3b1a94e6014b7",
+        "verdicts": {
+          "openrouter/dots-studio/dots-3-note-preview:free": "no",
+          "openrouter/cohere/north-mini-code:free": "no"
+        },
+        "panelCorrect": false,
+        "eligible": true,
+        "completeHistory": true,
+        "sourceMessages": 268,
+        "removedSourceMessages": 0,
+        "truncated": false,
+        "diagnosticReading": "Includes many unlabelled specifics that crowd out or contradict the labelled stages; rejection consistent."
+      },
+      "findings": [
+        "Annotated evidence includes assistant recommendations; completion/adoption language in gold is not independently established by those recommendations. Retained as a label-provenance limitation, not a corrected label.",
+        "Live diagnostic completed 2026-10-28 on the OpenRouter free panel; see diagnosticReading."
+      ]
+    },
+    {
+      "id": "10:summarization:0",
+      "ability": "summarization",
+      "cluster": "beam-10",
+      "references": 6,
+      "uniqueReferences": 6,
+      "unresolved": 0,
+      "sourceMessageIds": [
+        "10:s0:m1",
+        "10:s0:m3",
+        "10:s0:m7",
+        "10:s0:m9",
+        "10:s2:m7",
+        "10:s3:m13"
+      ],
+      "sourceRoles": {
+        "assistant": 6
+      },
+      "localContextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 869951,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 344,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "10a5437eeeaf88c808580fe1edf982c034c1bcedef612179a8e8624d205c7e12"
+      },
+      "sourceReview": "model-assisted local source review; not human calibration",
+      "judgeControls": {
+        "openrouter/dots-studio/dots-3-note-preview:free": {
+          "positive": "yes",
+          "negative": "no",
+          "status": "completed"
+        },
+        "openrouter/cohere/north-mini-code:free": {
+          "positive": "yes",
+          "negative": "no",
+          "status": "completed"
+        }
+      },
+      "evidenceOnly": {
+        "status": "completed",
+        "answerKey": "40365181eacbd92d0b4a525641bd0b83d522474a80447f100f9fd1595c66b9dd",
+        "verdicts": {
+          "openrouter/dots-studio/dots-3-note-preview:free": "no",
+          "openrouter/cohere/north-mini-code:free": "no"
+        },
+        "panelCorrect": false,
+        "eligible": null,
+        "completeHistory": null,
+        "sourceMessages": null,
+        "removedSourceMessages": null,
+        "truncated": false,
+        "diagnosticReading": "Covers the labelled practice and workshop themes and the goal-setting element, but omits the labelled origin and progress-tracking themes. Rejection strict but defensible."
+      },
+      "completeHistory": {
+        "status": "completed",
+        "answerKey": "62f325c4c9e2f7e6e8f098ac23978e74005ae2a9c8dfa75688ba257fde3992a0",
+        "verdicts": {
+          "openrouter/dots-studio/dots-3-note-preview:free": "no",
+          "openrouter/cohere/north-mini-code:free": "no"
+        },
+        "panelCorrect": false,
+        "eligible": true,
+        "completeHistory": true,
+        "sourceMessages": 344,
+        "removedSourceMessages": 0,
+        "truncated": false,
+        "diagnosticReading": "Adds many specifics absent from the labelled evidence and dilutes the rubric topics; rejection consistent."
+      },
+      "findings": [
+        "Annotated evidence includes assistant recommendations; completion/adoption language in gold is not independently established by those recommendations. Retained as a label-provenance limitation, not a corrected label.",
+        "Live diagnostic completed 2026-10-28 on the OpenRouter free panel; see diagnosticReading."
+      ]
+    },
+    {
+      "id": "13:event_ordering:0",
+      "ability": "event_ordering",
+      "cluster": "beam-13",
+      "references": 5,
+      "uniqueReferences": 5,
+      "unresolved": 0,
+      "sourceMessageIds": [
+        "13:s0:m16",
+        "13:s1:m16",
+        "13:s2:m22",
+        "13:s3:m12",
+        "13:s4:m10"
+      ],
+      "sourceRoles": {
+        "user": 5
+      },
+      "localContextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 869951,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 310,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "54e77f41b22795ade75dced28d96c830cf27551e42845d18b49a53347b6faa60"
+      },
+      "sourceReview": "model-assisted local source review; not human calibration",
+      "judgeControls": {
+        "openrouter/dots-studio/dots-3-note-preview:free": {
+          "positive": "yes",
+          "negative": "no",
+          "status": "completed"
+        },
+        "openrouter/cohere/north-mini-code:free": {
+          "positive": "yes",
+          "negative": "no",
+          "status": "completed"
+        }
+      },
+      "evidenceOnly": {
+        "status": "completed",
+        "answerKey": "2f2b4d6d43ea12c3b88f0843f66bc50d49265c6fe35032a4d7bf4d13523a1b5d",
+        "verdicts": {
+          "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+          "openrouter/cohere/north-mini-code:free": "no"
+        },
+        "panelCorrect": false,
+        "eligible": null,
+        "completeHistory": null,
+        "sourceMessages": null,
+        "removedSourceMessages": null,
+        "truncated": false,
+        "diagnosticReading": "Five items in the labelled chronological order covering all five rubric topics with paraphrase. Judge disagreement: one accepted, one rejected, so the majority rejected a substantially correct answer (adjudicated false negative)."
+      },
+      "completeHistory": {
+        "status": "completed",
+        "answerKey": "9f2eb012dbcee2da4557c9a8fdcaaa816374b138bcb444f40643d5581a3ced5f",
+        "verdicts": {
+          "openrouter/dots-studio/dots-3-note-preview:free": "no",
+          "openrouter/cohere/north-mini-code:free": "no"
+        },
+        "panelCorrect": false,
+        "eligible": true,
+        "completeHistory": true,
+        "sourceMessages": 310,
+        "removedSourceMessages": 0,
+        "truncated": false,
+        "diagnosticReading": "Item order is not the labelled order and two items are not labelled topics; rejection consistent with the rubric."
+      },
+      "findings": [
+        "Annotated source sequence supports the ordering rubric; no demonstrated mapping or label defect.",
+        "Live diagnostic completed 2026-10-28 on the OpenRouter free panel; see diagnosticReading."
+      ]
+    },
+    {
+      "id": "17:summarization:0",
+      "ability": "summarization",
+      "cluster": "beam-17",
+      "references": 4,
+      "uniqueReferences": 4,
+      "unresolved": 0,
+      "sourceMessageIds": [
+        "17:s0:m22",
+        "17:s0:m45",
+        "17:s1:m25",
+        "17:s4:m19"
+      ],
+      "sourceRoles": {
+        "user": 1,
+        "assistant": 3
+      },
+      "localContextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 869951,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 286,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "55090a88df5825f373de503d36462a19afcdcf7e95ba950c88058d4462f2bcd5"
+      },
+      "sourceReview": "model-assisted local source review; not human calibration",
+      "judgeControls": {
+        "openrouter/dots-studio/dots-3-note-preview:free": {
+          "positive": "yes",
+          "negative": "no",
+          "status": "completed"
+        },
+        "openrouter/cohere/north-mini-code:free": {
+          "positive": "yes",
+          "negative": "no",
+          "status": "completed"
+        }
+      },
+      "evidenceOnly": {
+        "status": "completed",
+        "answerKey": "35038cd4f0e35e5f1f4fc0a358f55d803790f4b79c8ed4818f2a38dff35480d0",
+        "verdicts": {
+          "openrouter/dots-studio/dots-3-note-preview:free": "no",
+          "openrouter/cohere/north-mini-code:free": "no"
+        },
+        "panelCorrect": false,
+        "eligible": null,
+        "completeHistory": null,
+        "sourceMessages": null,
+        "removedSourceMessages": null,
+        "truncated": false,
+        "diagnosticReading": "Covers the labelled time, stress and collaboration themes, but the labelled contingency-planning element is absent. Rejection strict but defensible."
+      },
+      "completeHistory": {
+        "status": "completed",
+        "answerKey": "12dab2a154377f9a2e221ec0e92b4e5fe06804bac9002ac0447fe74f6154eccb",
+        "verdicts": {
+          "openrouter/dots-studio/dots-3-note-preview:free": "no",
+          "openrouter/cohere/north-mini-code:free": "no"
+        },
+        "panelCorrect": false,
+        "eligible": true,
+        "completeHistory": true,
+        "sourceMessages": 286,
+        "removedSourceMessages": 0,
+        "truncated": false,
+        "diagnosticReading": "Bulk of the summary is unsupported operational detail outside the labelled evidence; rejection consistent."
+      },
+      "findings": [
+        "Annotated evidence includes assistant recommendations; completion/adoption language in gold is not independently established by those recommendations. Retained as a label-provenance limitation, not a corrected label.",
+        "Live diagnostic completed 2026-10-28 on the OpenRouter free panel; see diagnosticReading."
+      ]
+    }
+  ],
+  "protocol": {
+    "answerModel": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+    "answerReasoning": false,
+    "answerReasoningWhy": "The declared free answer model is a reasoning model: with thinking enabled every complete-history answer spent the 8192-token output budget on reasoning and returned no answer at all, which cannot be graded. The diagnostic runs it with reasoning disabled; this is a bench configuration, not a product claim.",
+    "judges": [
+      "openrouter/dots-studio/dots-3-note-preview:free",
+      "openrouter/cohere/north-mini-code:free"
+    ],
+    "judgeTemplateVersion": "e3883a2aa5910f76c3f6b377f1758fd4a57ca6dda1449cd86291abd0eea5f306",
+    "limits": {
+      "wireAttempts": 160,
+      "inputTokens": 5000000,
+      "outputTokens": 300000,
+      "wallMs": 3600000,
+      "retries429": 4
+    },
+    "amendment": "Ceiling unchanged (160 wire attempts / 5M input / 300k output / 60 minutes). HTTP 429 handling amended: transient free-pool upstream 429 is retried up to four times with backoff, the free-per-day cap still stops the run immediately.",
+    "executions": [
+      {
+        "run": "2026-10-28 openrouter-1 (partial, superseded)",
+        "wireAttempts": 45,
+        "inputTokens": 307530,
+        "outputTokens": 42479,
+        "status": "superseded-by-protocol-change"
+      },
+      {
+        "run": "2026-10-28 openrouter-2",
+        "wireAttempts": 32,
+        "inputTokens": 712018,
+        "cacheReadTokens": 393120,
+        "outputTokens": 33128,
+        "status": "incomplete-judge-transport-failure"
+      },
+      {
+        "run": "2026-10-28 openrouter-3",
+        "wireAttempts": 23,
+        "inputTokens": 437719,
+        "outputTokens": 31802,
+        "status": "completed"
+      }
+    ],
+    "cumulative": {
+      "wireAttempts": 100,
+      "inputTokens": 1457267,
+      "cacheReadTokens": 393120,
+      "outputTokens": 107409,
+      "costUsd": 0
+    }
+  },
+  "gradingControls": {
+    "goldPositive": {
+      "questions": 8,
+      "judges": 2,
+      "passed": 16,
+      "rejected": 0
+    },
+    "wrongNegative": {
+      "questions": 8,
+      "judges": 2,
+      "rejected": 16,
+      "accepted": 0
+    },
+    "paraphraseProbe": {
+      "why": "Content-held-constant check that the panel is not grading wording. A faithful paraphrase of the gold answer was judged with the rubric verbatim and with the \"LLM response should contain:\" boilerplate stripped.",
+      "questions": 2,
+      "judges": 2,
+      "variants": 2,
+      "calls": 8,
+      "accepted": 8,
+      "rejected": 0,
+      "reading": "The panel accepts a complete paraphrase under both rubric forms, so the zero oracle scores are content judgements, not a phrasing bar. The rubric boilerplate is not the cause."
+    },
+    "calibration": "Model-assisted audit under the owner waiver; never human calibration."
+  },
+  "aggregate": {
+    "diagnosticRows": 16,
+    "evidenceOnlyPanelCorrect": 2,
+    "evidenceOnlyPanelIncorrect": 6,
+    "completeHistoryPanelCorrect": 0,
+    "completeHistoryPanelIncorrect": 8,
+    "judgeDisagreements": 1,
+    "judgeDisagreementRows": [
+      {
+        "id": "13:event_ordering:0",
+        "config": "oracle",
+        "verdicts": {
+          "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+          "openrouter/cohere/north-mini-code:free": "no"
+        }
+      }
+    ],
+    "adjudicatedFalseNegatives": 1,
+    "adjudicatedFalseNegativeRows": [
+      {
+        "id": "13:event_ordering:0",
+        "config": "oracle",
+        "why": "answer reproduces the labelled five-item order and all five rubric topics; one judge accepted it, the other rejected it, so the two-judge majority rejected a substantially correct answer."
+      }
+    ],
+    "strictButDefensible": [
+      {
+        "id": "1:event_ordering:1",
+        "config": "oracle",
+        "why": "Five chronological items covering setup, transaction work, deployment and both test themes; the final item omits the deployment-review element. Rejection strict but defensible."
+      },
+      {
+        "id": "5:event_ordering:0",
+        "config": "oracle",
+        "why": "Six items, but two labelled topics are missing and one item is a rule outside the rubric; rejection consistent with the coverage requirement."
+      },
+      {
+        "id": "1:event_ordering:0",
+        "config": "oracle",
+        "why": "Three items in the labelled order; the third names a different topic from the final labelled one, so coverage is partial. Rejection strict but defensible."
+      },
+      {
+        "id": "10:summarization:0",
+        "config": "oracle",
+        "why": "Covers the labelled practice and workshop themes and the goal-setting element, but omits the labelled origin and progress-tracking themes. Rejection strict but defensible."
+      },
+      {
+        "id": "17:summarization:0",
+        "config": "oracle",
+        "why": "Covers the labelled time, stress and collaboration themes, but the labelled contingency-planning element is absent. Rejection strict but defensible."
+      }
+    ],
+    "modelFailures": {
+      "completeHistory": 8,
+      "why": "Every complete-history answer was rejected on content: unlabelled or contradicted specifics, diluted rubric topics, or an item order that is not the labelled order. This is answer-model behaviour on a long context, not a label, adapter or judge defect.",
+      "reasoningBudgetNote": "With thinking enabled (superseded execution) every complete-history answer was reasoning-only and ended mid-thought at the output cap; the protocol change gave them a new identity, so they are ignored rather than rejudged and are not evidence."
+    },
+    "abilitiesDropped": 0,
+    "labelsChanged": 0,
+    "heldoutTextInspected": false
+  }
+}

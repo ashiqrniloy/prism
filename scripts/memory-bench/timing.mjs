@@ -11,7 +11,7 @@ function percentile(values, fraction) {
 
 const round = (value) => Math.round(value * 10) / 10;
 const mean = (values) => (values.length ? round(values.reduce((sum, value) => sum + value, 0) / values.length) : null);
-const stats = (values) => ({ p50: percentile(values, 0.5), p95: percentile(values, 0.95), mean: mean(values) });
+export const timingStats = (values) => ({ p50: percentile(values, 0.5), p95: percentile(values, 0.95), mean: mean(values) });
 
 /**
  * `begin()`/`firstByte()`/`end()` measure one call. A non-streaming call leaves firstByte unset,
@@ -41,24 +41,44 @@ export function createTiming({ now = () => performance.now() } = {}) {
         this.end(handle, role);
       }
     },
+    startPhase(target, name) {
+      const startedAt = now();
+      let stopped = false;
+      return () => {
+        if (stopped) return;
+        stopped = true;
+        target[name] = round(now() - startedAt);
+      };
+    },
     startQuestion() {
       const startedAt = now();
       return () => questionTimes.push(round(now() - startedAt));
     },
-    summary({ wallMs, concurrency } = {}) {
+    summary({ wallMs, concurrency, results = [] } = {}) {
       const byRole = {};
       for (const name of [...new Set(calls.map((call) => call.role))].sort()) {
         const selected = calls.filter((call) => call.role === name);
         byRole[name] = {
           calls: selected.length,
-          firstByteMs: stats(selected.map((call) => call.firstByteMs)),
-          totalMs: stats(selected.map((call) => call.totalMs)),
+          firstByteMs: timingStats(selected.map((call) => call.firstByteMs)),
+          totalMs: timingStats(selected.map((call) => call.totalMs)),
         };
       }
       return {
         wallMs: wallMs === undefined ? null : round(wallMs),
         concurrency: concurrency ?? null,
-        questions: { n: questionTimes.length, wallMs: stats(questionTimes) },
+        questions: { n: questionTimes.length, wallMs: timingStats(questionTimes) },
+        phases: Object.fromEntries(
+          ["ingestion", "restore", "answer", "evaluation"].map((name) => {
+            const values = results.map((row) => row.phaseTiming?.[name]).filter(Number.isFinite);
+            return [name, { n: values.length, wallMs: timingStats(values) }];
+          }),
+        ),
+        policy: {
+          answer: "after ingestion, before grading, annotation, final background settlement and disposal",
+          queueWaitIncluded: false,
+          retriesAndBackoffIncluded: true,
+        },
         roles: byRole,
         calls: calls.length,
       };

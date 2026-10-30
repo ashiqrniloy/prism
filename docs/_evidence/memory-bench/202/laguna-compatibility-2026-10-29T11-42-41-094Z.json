@@ -1,0 +1,77 @@
+{
+  "kind": "202-laguna-compatibility-probe",
+  "ref": "commandcode/poolside/laguna-s-2.1-free",
+  "limits": {
+    "wireAttempts": 12,
+    "inputTokens": 4000000,
+    "outputTokens": 50000,
+    "wallMs": 600000,
+    "retries429": 0
+  },
+  "startedAt": "2026-10-29T11:42:41.095Z",
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 2048,
+    "reasoning": "provider default",
+    "maxTurns": 8
+  },
+  "cases": [
+    "imported-assistant-history",
+    "one-frozen-development-complete-history",
+    "tool-call-and-result",
+    "follow-up-and-stop"
+  ],
+  "benchmarkScoring": false,
+  "scope": "diagnostic only; no held-out request, judge call, campaign model change or baseline resumption",
+  "tests": [
+    {
+      "name": "imported-assistant-history",
+      "status": "completed",
+      "passed": false,
+      "wallMs": 2611,
+      "nonempty": true,
+      "errorCode": null,
+      "errorMessage": null
+    }
+  ],
+  "status": "failed",
+  "model": {
+    "limits": {
+      "contextWindow": 256000
+    },
+    "compat": {
+      "thinkingFamily": "openai_reasoning",
+      "preserveThinking": true,
+      "route": "responses",
+      "pricing_source": "https://commandcode.ai/docs/resources/pricing-limits"
+    },
+    "inputCap": 254976,
+    "freeRoute": true
+  },
+  "failure": {
+    "name": "Error",
+    "code": "LagunaCompatibilityCaseFailed:imported-assistant-history"
+  },
+  "usage": {
+    "inputTokens": 84,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0,
+    "outputTokens": 28,
+    "accountedInputTokens": 84,
+    "accountedOutputTokens": 28,
+    "usageMissingExchanges": 0,
+    "usageComplete": true,
+    "wireAttempts": 1
+  },
+  "allocations": [
+    {
+      "provider": "commandcode",
+      "exchange": 1,
+      "inputBound": 256000,
+      "outputBound": 2048
+    }
+  ],
+  "protectedArtifactsUnchanged": true,
+  "finishedAt": "2026-10-29T11:42:43.770Z",
+  "wallMs": 2675
+}

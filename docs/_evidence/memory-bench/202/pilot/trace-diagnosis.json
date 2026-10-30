@@ -1,0 +1,213 @@
+{
+  "kind": "202-bounded-tool-trace-diagnosis",
+  "rows": [
+    {
+      "kind": "primary",
+      "id": "5:abstention:1",
+      "model": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "outcome": "completed",
+      "answerCharacters": 1187,
+      "turns": 2,
+      "toolCalls": 1,
+      "recallCalls": 2,
+      "recordedCalls": [
+        {
+          "turn": 1,
+          "tool": "memory.recall",
+          "queries": 1,
+          "argumentHash": "4851e3645130b6fa506ea3db479111a97e6b89b1873eefc5d9c742f2349488ed"
+        }
+      ],
+      "uniqueArgumentSets": 1,
+      "deliveredValidationErrors": 0,
+      "recordedProviderStops": [
+        {
+          "turn": 1,
+          "reason": "tool_calls"
+        }
+      ],
+      "traceLimit": "16 turns, last 16 messages per request and 4096 characters per message/event; first 64 events per turn. Long token streams may omit terminal events or tool-call events; final replay outcome and metrics remain authoritative."
+    },
+    {
+      "kind": "primary",
+      "id": "3:contradiction_resolution:1",
+      "model": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "outcome": "completed",
+      "answerCharacters": 175,
+      "turns": 1,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recordedCalls": [],
+      "uniqueArgumentSets": 0,
+      "deliveredValidationErrors": 0,
+      "recordedProviderStops": [
+        {
+          "turn": 1,
+          "reason": "end_turn"
+        }
+      ],
+      "traceLimit": "16 turns, last 16 messages per request and 4096 characters per message/event; first 64 events per turn. Long token streams may omit terminal events or tool-call events; final replay outcome and metrics remain authoritative."
+    },
+    {
+      "kind": "primary",
+      "id": "5:event_ordering:0",
+      "model": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "outcome": "completed",
+      "answerCharacters": 648,
+      "turns": 4,
+      "toolCalls": 3,
+      "recallCalls": 4,
+      "recordedCalls": [
+        {
+          "turn": 1,
+          "tool": "memory.recall",
+          "queries": 5,
+          "argumentHash": "57d695385d9620a5da7506997d68a3365fdea7960cf0bffd6c4d88f675eb96c3",
+          "toolResultError": {
+            "code": "validation",
+            "queriesOverLimit": true,
+            "presentInModelRequest": true
+          }
+        },
+        {
+          "turn": 2,
+          "tool": "memory.recall",
+          "queries": 4,
+          "argumentHash": "835428d7bb4642f28674913e75e37301a137a08926aedd0464bbfe7ef7174c8f"
+        },
+        {
+          "turn": 3,
+          "tool": "memory.recall",
+          "queries": 2,
+          "argumentHash": "3bc5db692c703bcd65c4847c13ce2cd0e2a9a0fc18fb8223c27e45bb6e203a96"
+        }
+      ],
+      "uniqueArgumentSets": 3,
+      "deliveredValidationErrors": 1,
+      "recordedProviderStops": [
+        {
+          "turn": 1,
+          "reason": "tool_calls"
+        },
+        {
+          "turn": 2,
+          "reason": "tool_calls"
+        },
+        {
+          "turn": 3,
+          "reason": "tool_calls"
+        }
+      ],
+      "traceLimit": "16 turns, last 16 messages per request and 4096 characters per message/event; first 64 events per turn. Long token streams may omit terminal events or tool-call events; final replay outcome and metrics remain authoritative."
+    },
+    {
+      "kind": "primary",
+      "id": "16:information_extraction:0",
+      "model": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "outcome": "completed",
+      "answerCharacters": 124,
+      "turns": 2,
+      "toolCalls": 1,
+      "recallCalls": 2,
+      "recordedCalls": [
+        {
+          "turn": 1,
+          "tool": "memory.recall",
+          "queries": 1,
+          "argumentHash": "237bc8d30a79c860c9f411c89942e698fc7bc63e580f31813f631a479d7600d1"
+        }
+      ],
+      "uniqueArgumentSets": 1,
+      "deliveredValidationErrors": 0,
+      "recordedProviderStops": [
+        {
+          "turn": 1,
+          "reason": "tool_calls"
+        },
+        {
+          "turn": 2,
+          "reason": "end_turn"
+        }
+      ],
+      "traceLimit": "16 turns, last 16 messages per request and 4096 characters per message/event; first 64 events per turn. Long token streams may omit terminal events or tool-call events; final replay outcome and metrics remain authoritative."
+    },
+    {
+      "kind": "historical-model-probe",
+      "id": "19:temporal_reasoning:1",
+      "model": "opencode-go/beam-free",
+      "outcome": "run_limit",
+      "answerCharacters": 0,
+      "turns": 8,
+      "toolCalls": 8,
+      "recallCalls": 9,
+      "recordedCalls": [
+        {
+          "turn": 1,
+          "tool": "memory.recall",
+          "queries": 3,
+          "argumentHash": "26be3e2bc844cb58461dad357bb77024054753d306d0d9ff737facfea83d7920"
+        },
+        {
+          "turn": 4,
+          "tool": "memory.recall",
+          "queries": 3,
+          "argumentHash": "c357fa630567e15072575845c5241ddc6835315504c87192ca003c4bbd00c7aa"
+        },
+        {
+          "turn": 5,
+          "tool": "memory.recall",
+          "queries": 3,
+          "argumentHash": "c357fa630567e15072575845c5241ddc6835315504c87192ca003c4bbd00c7aa"
+        },
+        {
+          "turn": 6,
+          "tool": "memory.recall",
+          "queries": 3,
+          "argumentHash": "c357fa630567e15072575845c5241ddc6835315504c87192ca003c4bbd00c7aa"
+        },
+        {
+          "turn": 7,
+          "tool": "memory.recall",
+          "queries": 3,
+          "argumentHash": "c357fa630567e15072575845c5241ddc6835315504c87192ca003c4bbd00c7aa"
+        },
+        {
+          "turn": 8,
+          "tool": "memory.recall",
+          "queries": 3,
+          "argumentHash": "c357fa630567e15072575845c5241ddc6835315504c87192ca003c4bbd00c7aa"
+        }
+      ],
+      "uniqueArgumentSets": 2,
+      "deliveredValidationErrors": 0,
+      "recordedProviderStops": [
+        {
+          "turn": 1,
+          "reason": "tool_calls"
+        },
+        {
+          "turn": 4,
+          "reason": "tool_calls"
+        },
+        {
+          "turn": 5,
+          "reason": "tool_calls"
+        },
+        {
+          "turn": 6,
+          "reason": "tool_calls"
+        },
+        {
+          "turn": 7,
+          "reason": "tool_calls"
+        },
+        {
+          "turn": 8,
+          "reason": "tool_calls"
+        }
+      ],
+      "traceLimit": "16 turns, last 16 messages per request and 4096 characters per message/event; first 64 events per turn. Long token streams may omit terminal events or tool-call events; final replay outcome and metrics remain authoritative."
+    }
+  ],
+  "limits": "Argument hashes/counts and validation classifications only; no query, answer or source text."
+}

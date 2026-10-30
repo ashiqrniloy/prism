@@ -2,7 +2,7 @@
 import { createHash } from "node:crypto";
 import { closeSync, existsSync, openSync } from "node:fs";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { historicalVariants } from "./ablations.mjs";
 import {
   ACCEPTANCE_1888_EVIDENCE,
@@ -75,11 +75,21 @@ import {
   writeSideCacheDir,
 } from "./acceptance.mjs";
 import {
+  assertBaselineContinuation,
+  assertBaselineReadiness,
+  assertCacheStabilityPin,
+  recordBaselineQuota,
+  writeReadiness,
+} from "./audit/readiness.mjs";
+import { rateLimitDisposition } from "./audit/zero-score.mjs";
+import { BASELINE_EVIDENCE, BASELINE_JOURNAL, BASELINE_LOGS, BASELINE_SUMMARY } from "./baseline.mjs";
+import {
   abandonUnfinished,
   acquireCampaignLock,
   attemptCharge,
   availableTokens,
   campaignLockPath,
+  journalSpend,
   latestAttempt,
   MAX_ATTEMPTS_PER_JOB,
   openJournal,
@@ -88,15 +98,137 @@ import {
   reserveAttempt,
   saveJournal,
 } from "./journal.mjs";
+import { robustnessCriteriaHash } from "./robustness.mjs";
 import subsets from "./subsets.json" with { type: "json" };
+import { TASK5_EVIDENCE, TASK5_JOURNAL, writeTask5ComparisonManifest } from "./task5-comparison.mjs";
+import { buildTask5CampaignManifest, postflightTask5, preflightTask5, TASK5_LOGS, TASK5_SUMMARY } from "./task5-execute.mjs";
 import { variantProvenance } from "./variants.mjs";
 
 const evidence = "docs/_evidence/memory-bench/task6";
 const logs = ".cache/memory-bench/task6-resume";
 const ACCEPTANCE_LOGS = ".cache/memory-bench/188.7";
 
+/**
+ * A closed subscription window is not an arm failure: the gateway says the plan is spent and will
+ * reopen. The campaign pauses and re-runs the cell afterwards, and the attempt does not count
+ * against the job's attempt budget.
+ */
+export function quotaWindowFailure(report) {
+  if (!report || report.status === "completed") return false;
+  const text = `${report.failure?.message ?? ""}\n${report.failure?.cause?.message ?? ""}\n${(report.errors ?? []).map((error) => error.message).join("\n")}`;
+  return /GoUsageLimit|usage limit|quota|402|payment required|credit balance|insufficient/i.test(text);
+}
+
+/** Every message a failed report carries, in the order a provider put it. */
+function failureText(report) {
+  return [
+    report?.failure?.message,
+    report?.failure?.cause?.message,
+    ...(report?.errors ?? []).map((error) => error?.cause?.message ?? error?.message),
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+/** The HTTP status a failed report carries; provider errors are wrapped with `...:<status>`. */
+export function failureHttpStatus(report) {
+  const text = String(report?.failure?.code ?? report?.failure?.cause?.code ?? "");
+  const match = text.match(/\b(4\d{2}|5\d{2})\b/);
+  return match ? Number(match[1]) : null;
+}
+
+/**
+ * Plan 202 Task 5.4.3: the free-model daily cap (`free-models-per-day*`) is an account budget that
+ * reopens, not an arm failure. It is classified with the same `rateLimitDisposition` the diagnostic
+ * harness uses, so there is one 429 classifier in the tree.
+ */
+export function dailyFreeQuotaFailure(report) {
+  if (!report || report.status === "completed" || report.status === "token-ceiling") return null;
+  const status = failureHttpStatus(report);
+  if (status === null) return null;
+  return rateLimitDisposition(status, failureText(report)) === "stop" ? { status, body: failureText(report) } : null;
+}
+
+/** When the daily free quota reopens: the next UTC midnight, or an owner-set reset hour. */
+export function nextDailyReset(now = new Date()) {
+  const hour = Number(process.env.PRISM_MEMORY_BENCH_DAILY_RESET_HOUR_UTC ?? "0");
+  const at = new Date(now);
+  at.setUTCHours(Number.isFinite(hour) ? hour : 0, 0, 0, 0);
+  if (at <= now) at.setUTCDate(at.getUTCDate() + 1);
+  return at;
+}
+
+/** Attempts that spent no arm budget: a spent quota window or a spent daily cap. */
+export function isBudgetQuotaCause(cause) {
+  return cause === "quota-window" || cause === "quota-daily";
+}
+
+/** A 4xx that names an input problem is deterministic: the same arm on the same question will be
+ * refused again, so the campaign records it once and stops. `429` and transport errors stay retryable.
+ */
+export function permanentFailure(report) {
+  if (!report || report.status === "completed" || report.status === "token-ceiling") return null;
+  const message = String(report.failure?.message ?? "");
+  if (/context (length|window)|too many tokens|maximum context/i.test(message)) return "context-exceeds-model";
+  if (/unsupported|invalid_request|not supported|does not support/i.test(message)) return "unsupported-by-provider";
+  if (/model_not_found|does not exist|unknown model/i.test(message)) return "model-unavailable";
+  return null;
+}
+
+/**
+ * Plan 202 Task 4.15: informational `cacheStability` rows. A live cache probe written as
+ * `cache-probe.<route>.json` beside a campaign's evidence is listed next to its verdict, never counted in it.
+ */
+export async function cacheProbeRows(evidence) {
+  const names = (await readdir(evidence).catch(() => [])).filter((name) => /^cache-probe\..+\.json$/.test(name)).sort();
+  return Promise.all(
+    names.map(async (file) => {
+      const probe = JSON.parse(await readFile(join(evidence, file), "utf8"));
+      return {
+        file,
+        route: probe.route,
+        status: probe.status,
+        requests: probe.requests,
+        requestsReadingCache: probe.requestsReadingCache,
+        expectedBreakRequest: probe.expectedBreakRequest,
+        breakReadsLess: probe.breakReadsLess,
+        unexpectedMisses: probe.unexpectedMisses,
+        informational: true,
+      };
+    }),
+  );
+}
+
+/** A resumed report includes prior usage already charged to a previous held attempt/campaign. */
+export function incrementalAttemptUsage(report, prior) {
+  const usageComplete = report.usageComplete === true && (!prior || prior.usageComplete === true);
+  const result = { usageComplete };
+  for (const key of ["inputTokens", "outputTokens", "cacheReadTokens"]) {
+    const value = report[key] ?? 0;
+    const previous = prior?.[key] ?? 0;
+    if (usageComplete && (!Number.isSafeInteger(value) || !Number.isSafeInteger(previous) || previous < 0 || value < previous))
+      throw new Error("Invalid cumulative usage in resumed report");
+    result[key] = usageComplete ? value - previous : value;
+  }
+  return result;
+}
+
 /** Per-mode evidence, journal, manifest and gate rules. 188.8 reuses 188.7's journal machinery. */
 function runSpec(mode) {
+  if (mode === "baseline202")
+    return {
+      evidence: `${BASELINE_EVIDENCE}/muse13-screen`,
+      logs: BASELINE_LOGS,
+      outputPrefix: "report",
+      summaryPath: BASELINE_SUMMARY,
+      journalPath: BASELINE_JOURNAL,
+      summaryKind: "202-baseline-run",
+      timeout: "518400s",
+      // One bounded infrastructure retry; quota exhaustion stops this free campaign.
+      maxAttempts: 2,
+      build: () => assertBaselineReadiness(),
+      write: async (manifest) => writeFile(`${BASELINE_EVIDENCE}/manifest.json`, `${JSON.stringify(manifest, null, 2)}\n`),
+    };
   if (mode === "probe1889")
     return {
       evidence: ACCEPTANCE_1889_SCREEN_EVIDENCE,
@@ -185,6 +317,21 @@ function runSpec(mode) {
       build: async () => assertAcceptanceManifest(buildAcceptanceManifest()),
       write: () => writeAcceptanceManifest(),
     };
+  if (mode === "task5")
+    return {
+      evidence: TASK5_EVIDENCE,
+      logs: TASK5_LOGS,
+      outputPrefix: "run",
+      summaryPath: TASK5_SUMMARY,
+      journalPath: TASK5_JOURNAL,
+      summaryKind: "202-task5-execution-run",
+      timeout: "518400s",
+      maxAttempts: 2,
+      build: () => buildTask5CampaignManifest(),
+      write: async () => {},
+      preflight: (manifest) => preflightTask5(manifest),
+      postflight: (manifest, journal) => postflightTask5(manifest, journal),
+    };
   return {
     evidence,
     logs,
@@ -260,6 +407,7 @@ export { reservation } from "./journal.mjs";
 
 export function buildManifest() {
   return {
+    criteriaHash: robustnessCriteriaHash(),
     ceiling: TOKEN_CEILING,
     priorReservation: PRIOR_RESERVATION,
     provider: "opencode-go",
@@ -575,19 +723,26 @@ function maxInputFor(job, available) {
 export async function runCampaign(mode = "task6", { parallelArms = 1, screen = false } = {}) {
   if (!Number.isSafeInteger(parallelArms) || parallelArms < 1 || parallelArms > 8)
     throw new Error("MemoryBenchArguments: --parallel-arms must be 1-8");
+  if (mode === "baseline202" && parallelArms !== 1) throw new Error("BaselineReadiness: serial arms required");
   const spec = runSpec(mode);
   await mkdir(spec.logs, { recursive: true });
   await mkdir(spec.evidence, { recursive: true });
   const manifest = await spec.build();
+  // Plan 202 Task 4.15: no paid campaign runs a product without a passing cache-stability record.
+  await assertCacheStabilityPin(manifest);
+  const frozenBaseline = mode === "baseline202" ? structuredClone(manifest) : undefined;
+  const jobLimit = Number(process.env.PRISM_MEMORY_BENCH_MAX_JOBS ?? 0);
+  if (Number.isSafeInteger(jobLimit) && jobLimit > 0) manifest.jobs = manifest.jobs.slice(0, jobLimit);
   manifest.results ??= [];
   if (spec.preflight) await spec.preflight(manifest);
   // Validate the screen profile and the declared dependencies before any evidence file is written.
   const profile = screen ? assertScreenProfile(mode, manifest) : null;
   assertJobDependencies(manifest.jobs);
-  await spec.write();
+  await spec.write(frozenBaseline);
   // Absolute: a worktree child inherits this and would otherwise resolve it against its own cwd.
-  const journalPath = resolve(process.env.PRISM_MEMORY_BENCH_JOURNAL ?? spec.journalPath);
+  const journalPath = resolve(process.env.PRISM_MEMORY_BENCH_JOURNAL ?? manifest.journalPath ?? spec.journalPath);
   const lockPath = campaignLockPath(journalPath);
+  await mkdir(dirname(journalPath), { recursive: true });
   await acquireCampaignLock(lockPath);
   const children = new Set();
   const stopChildren = () => {
@@ -628,7 +783,7 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
     const jobArgv = (job, attempt, maxInput) => {
       const argv = [
         "timeout",
-        spec.timeout,
+        job.wallTimeCapHours ? `${Math.ceil(job.wallTimeCapHours * 3600)}s` : spec.timeout,
         "bun",
         "--preload",
         "./scripts/memory-bench/variants.mjs",
@@ -638,16 +793,20 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
         "--config",
         job.config,
         "--provider",
-        "opencode-go",
+        job.provider ?? "opencode-go",
         "--model",
-        "mimo-v2.5",
-        "--judge",
-        "opencode-go/mimo-v2.5",
+        job.model ?? "mimo-v2.5",
+        "--judges",
+        job.judges ?? "opencode-go/mimo-v2.5,hyper/deepseek-v4-flash",
         "--max-input-tokens",
         String(maxInput),
         "--output",
         attempt.output,
       ];
+      // A paired comparison must never share answer/judge checkpoints between its arms.
+      if (job.answersDir) argv.push("--answers-dir", resolve(job.answersDir));
+      if (job.judgeCacheDir) argv.push("--judge-cache-dir", resolve(job.judgeCacheDir));
+      if (job.judgeText) argv.push("--judge-text");
       const writeOnly = producers.has(job.id);
       if (profile && !writeOnly) {
         argv.push(
@@ -667,6 +826,10 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
       // A `writeSide` producer builds the store and stops: its answers are never scored, and the
       // read arm that names it pays for the answers once (plan 188.9 Task 9).
       if (writeOnly) argv.push("--phase", "write");
+      if (job.freeOnly) argv.push("--free-only");
+      if (job.boundedWire) argv.push("--bounded-wire");
+      if (job.freeProductOnly) argv.push("--free-product-only");
+      if (job.maxOutputTokens) argv.push("--max-output-tokens", String(job.maxOutputTokens));
       if (job.maxQuestions) argv.push("--max-questions", String(job.maxQuestions));
       if (job.concurrency) argv.push("--concurrency", String(job.concurrency));
       if (job.ability) argv.push("--ability", job.ability);
@@ -681,6 +844,19 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
       return argv;
     };
     const runJob = async (job) => {
+      const retained = mode === "baseline202" ? await assertBaselineContinuation(job) : null;
+      if (job.retainedCompletion) {
+        pushResult({
+          id: job.id,
+          status: "completed",
+          reused: true,
+          source: job.retainedCompletion.path,
+          usageComplete: retained.usageComplete !== false,
+          charged: 0,
+          chargedInPriorCampaign: true,
+        });
+        return;
+      }
       const latest = latestAttempt(journal, job.id);
       if (latest && latest.status === "completed") {
         pushResult({
@@ -697,7 +873,13 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
         pushResult({ id: job.id, attemptId: latest.attemptId, status: "token-ceiling", reused: true });
         return;
       }
-      if (journal.attempts.filter((attempt) => attempt.jobId === job.id).length >= spec.maxAttempts) {
+      if (latest?.status === "failed-permanent") {
+        // The refusal is in the attempt's report; rerunning it would only spend quota again.
+        pushResult({ id: job.id, attemptId: latest.attemptId, status: "unsupported", cause: latest.cause ?? null, reused: true });
+        return;
+      }
+      // A spent quota window says nothing about the arm; those attempts are re-run, not counted.
+      if (journal.attempts.filter((attempt) => attempt.jobId === job.id && !isBudgetQuotaCause(attempt.cause)).length >= spec.maxAttempts) {
         pushResult({ id: job.id, status: "attempts-exhausted" });
         return;
       }
@@ -720,13 +902,21 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
         return { halt: true };
       }
       const previous = latest;
+      const resumeSource = previous?.output && existsSync(previous.output) ? previous.output : job.resumeCheckpoint?.path;
+      const resumeReport = resumeSource
+        ? resumeSource === job.resumeCheckpoint?.path
+          ? retained
+          : JSON.parse(await readFile(resumeSource, "utf8"))
+        : null;
       const attemptNumber = journal.attempts.filter((item) => item.jobId === job.id).length;
       const attempt = reserveAttempt(journal, {
         jobId: job.id,
         // Absolute, so a worktree child writes into this repo's evidence and the child's
         // --output matches the reservation byte for byte.
+        // A job id carries `provider/model`, so it must be flattened or the report lands in a
+        // directory the aggregator never reads.
         output: resolve(
-          `${spec.evidence}/${spec.outputPrefix ?? (mode === "task6" ? "v2" : "final")}-${job.id}${attemptNumber > 0 ? `-${attemptNumber + 1}` : ""}.json`,
+          `${spec.evidence}/${spec.outputPrefix ?? (mode === "task6" ? "v2" : "final")}-${job.id.replace(/[\\/]/g, "-")}${attemptNumber > 0 ? `-${attemptNumber + 1}` : ""}.json`,
         ),
         maxInputTokens: maxInput,
       });
@@ -737,14 +927,14 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
       await variantProvenance(variants);
       const argv = jobArgv(job, attempt, maxInput);
       // Continue only a same-protocol checkpoint; the child validates the hash and refuses mismatches.
-      if (previous?.output && existsSync(previous.output)) argv.push("--resume", previous.output);
+      if (resumeSource) argv.push("--resume", resumeSource);
       const log = openSync(`${spec.logs}/${attempt.attemptId.replace(/[^\w.-]/g, "_")}.log`, "w");
       const child = Bun.spawn(argv, {
         cwd: job.cwd ?? process.cwd(),
         env: {
           ...process.env,
           PRISM_MEMORY_BENCH_VARIANTS: JSON.stringify(variants),
-          PRISM_MEMORY_BENCH_PYTHON: process.env.PRISM_MEMORY_BENCH_PYTHON ?? ".cache/memory-bench/python/bin/python3",
+          PRISM_MEMORY_BENCH_PYTHON: resolve(process.env.PRISM_MEMORY_BENCH_PYTHON ?? ".cache/memory-bench/python/bin/python3"),
           PRISM_MEMORY_BENCH_JOURNAL: journalPath,
           PRISM_MEMORY_BENCH_ATTEMPT: attempt.attemptId,
         },
@@ -758,22 +948,39 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
       closeSync(log);
       if (existsSync(attempt.output)) {
         const report = JSON.parse(await readFile(attempt.output, "utf8"));
+        const permanent = permanentFailure(report);
+        const dailyQuota = dailyFreeQuotaFailure(report);
+        const quotaWindow =
+          !dailyQuota &&
+          (quotaWindowFailure(report) ||
+            (mode === "baseline202" && /429|402|quota|free.models.per.day/i.test(report.failure?.message ?? "")));
         reconcileAttempt(journal, attempt.attemptId, {
-          status:
-            report.status === "completed" || (mode === "probe1889" && report.status === "partial")
-              ? "completed"
-              : report.status === "token-ceiling"
-                ? "token-ceiling"
-                : "failed",
-          inputTokens: report.inputTokens,
-          usageComplete: report.usageComplete !== false,
-          cacheReadTokens: report.cacheReadTokens,
-          outputTokens: report.outputTokens,
+          status: dailyQuota
+            ? "quota-daily"
+            : quotaWindow
+              ? "abandoned"
+              : permanent
+                ? "failed-permanent"
+                : report.status === "completed" || (mode === "probe1889" && report.status === "partial")
+                  ? "completed"
+                  : report.status === "token-ceiling"
+                    ? "token-ceiling"
+                    : "failed",
+          cause: dailyQuota ? "quota-daily" : quotaWindow ? "quota-window" : (permanent ?? undefined),
+          ...(mode === "baseline202"
+            ? incrementalAttemptUsage(report, resumeReport)
+            : {
+                inputTokens: report.inputTokens,
+                usageComplete: report.usageComplete !== false,
+                cacheReadTokens: report.cacheReadTokens,
+                outputTokens: report.outputTokens,
+              }),
         });
         pushResult({
           id: job.id,
           attemptId: attempt.attemptId,
-          status: report.status,
+          status: dailyQuota ? "quota-daily" : quotaWindow ? "quota-pause" : permanent ? "unsupported" : report.status,
+          cause: dailyQuota ? "quota-daily" : quotaWindow ? "quota-window" : (permanent ?? report.failure?.message ?? null),
           usageComplete: report.usageComplete !== false,
           charged: attemptCharge(journal.attempts.at(-1)),
         });
@@ -792,6 +999,29 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
         await saveJournal(journalPath, journal);
         return { halt: true };
       }
+      if (journal.attempts.at(-1)?.cause === "quota-daily") {
+        // A daily cap reopens once: halt, keep the attempt out of the attempt budget, and let a
+        // rerun continue from the answers/judge checkpoints the finished questions already wrote.
+        journal.status = "quota-daily";
+        journal.resumeAfter = nextDailyReset().toISOString();
+        await saveJournal(journalPath, journal);
+        console.error(`halt ${attempt.attemptId}: daily free-model cap reached; resume after ${journal.resumeAfter}`);
+        return { halt: true };
+      }
+      if (journal.attempts.at(-1)?.cause === "quota-window") {
+        if (mode === "baseline202") {
+          journal.status = "quota-unavailable";
+          await recordBaselineQuota(attempt.attemptId);
+          await saveJournal(journalPath, journal);
+          return { halt: true };
+        }
+        const pauseMs = Number(process.env.PRISM_MEMORY_BENCH_QUOTA_PAUSE_MS ?? 900_000);
+        journal.status = "quota-pause";
+        await saveJournal(journalPath, journal);
+        console.error(`pause ${attempt.attemptId}: quota window closed; waiting ${Math.round(pauseMs / 60000)} min`);
+        await new Promise((resolve) => setTimeout(resolve, pauseMs));
+        return;
+      }
       console.log(`end ${attempt.attemptId}; charged=${attemptCharge(journal.attempts.at(-1))}; remaining=${availableTokens(journal)}`);
       await saveJournal(journalPath, journal);
     };
@@ -801,14 +1031,16 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
     if (mode === "screenA18810") await writeScreenAVerdict(journal, manifest);
     if (journal.status === "active") journal.status = "finished";
     await saveJournal(journalPath, journal);
+    if (spec.postflight) await spec.postflight(manifest, journal);
     if (spec.summaryKind) {
+      const cacheStability = await cacheProbeRows(spec.evidence);
       const summary = {
         kind: spec.summaryKind,
         journal: {
           campaignId: journal.campaignId,
           status: journal.status,
           ceiling: journal.ceiling,
-          spend: journal.attempts.reduce((sum, attempt) => sum + attemptCharge(attempt), 0),
+          spend: journalSpend(journal),
           attempts: journal.attempts.map(({ attemptId, jobId, status, usageComplete, reservedInputTokens, confirmedInputTokens }) => ({
             attemptId,
             jobId,
@@ -818,9 +1050,10 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
             confirmedInputTokens: confirmedInputTokens ?? null,
           })),
         },
+        ...(cacheStability.length ? { cacheStability } : {}),
         results: manifest.results,
       };
-      await writeFile(spec.summaryPath, `${JSON.stringify(summary, null, 2)}\n`);
+      await writeFile(manifest.summaryPath ?? spec.summaryPath, `${JSON.stringify(summary, null, 2)}\n`);
     }
   } finally {
     stopChildren();
@@ -831,29 +1064,41 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
 }
 
 if (import.meta.main) {
-  const mode = process.argv.includes("--acceptance-188.10-screen-a")
-    ? "screenA18810"
-    : process.argv.includes("--acceptance-188.10")
-      ? "acceptance18810"
-      : process.argv.includes("--acceptance-188.9-probe")
-        ? "probe1889"
-        : process.argv.includes("--acceptance-188.9-screen")
-          ? "screen1889"
-          : process.argv.includes("--acceptance-188.9")
-            ? "acceptance1889"
-            : process.argv.includes("--acceptance-188.8")
-              ? "acceptance1888"
-              : process.argv.includes("--acceptance")
-                ? "acceptance"
-                : "task6";
+  const mode = process.argv.includes("--baseline-202")
+    ? "baseline202"
+    : process.argv.includes("--task5")
+      ? "task5"
+      : process.argv.includes("--acceptance-188.10-screen-a")
+        ? "screenA18810"
+        : process.argv.includes("--acceptance-188.10")
+          ? "acceptance18810"
+          : process.argv.includes("--acceptance-188.9-probe")
+            ? "probe1889"
+            : process.argv.includes("--acceptance-188.9-screen")
+              ? "screen1889"
+              : process.argv.includes("--acceptance-188.9")
+                ? "acceptance1889"
+                : process.argv.includes("--acceptance-188.8")
+                  ? "acceptance1888"
+                  : process.argv.includes("--acceptance")
+                    ? "acceptance"
+                    : "task6";
+  if (process.argv.includes("--manifest") && process.argv.includes("--plan")) {
+    const plan = process.argv[process.argv.indexOf("--plan") + 1];
+    if (plan !== "202-baseline") throw new Error(`CampaignPlan: unsupported plan ${plan}`);
+    await writeReadiness();
+    process.exit(0);
+  }
   if (process.argv.includes("--manifest")) {
-    if (mode === "screenA18810") await writeScreenAManifest();
+    if (mode === "baseline202") await writeReadiness();
+    else if (mode === "screenA18810") await writeScreenAManifest();
     else if (mode === "acceptance18810") await writeAcceptance18810Manifest();
     else if (mode === "probe1889") await writeProbeManifest1889();
     else if (mode === "screen1889") await writeScreenManifest1889();
     else if (mode === "acceptance1889") await writeAcceptance1889Manifest();
     else if (mode === "acceptance1888") await writeAcceptance1888Manifest();
     else if (mode === "acceptance") await writeAcceptanceManifest();
+    else if (mode === "task5") await writeTask5ComparisonManifest();
     else await writeManifest();
     process.exit(0);
   }

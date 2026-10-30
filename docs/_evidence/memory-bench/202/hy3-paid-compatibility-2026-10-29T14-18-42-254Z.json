@@ -1,0 +1,134 @@
+{
+  "kind": "202-hy3-paid-compatibility-probe",
+  "ref": "commandcode/tencent/hy3-paid",
+  "limits": {
+    "wireAttempts": 12,
+    "inputTokens": 15000000,
+    "outputTokens": 150000,
+    "wallMs": 600000,
+    "retries429": 0
+  },
+  "startedAt": "2026-10-29T14:18:42.255Z",
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 8192,
+    "reasoning": "provider default",
+    "maxTurns": 8
+  },
+  "cases": [
+    "imported-assistant-history",
+    "one-frozen-development-complete-history",
+    "tool-call-and-result",
+    "follow-up-and-stop"
+  ],
+  "benchmarkScoring": false,
+  "scope": "diagnostic only; no held-out request, judge call, campaign model change or baseline resumption",
+  "tests": [
+    {
+      "name": "imported-assistant-history",
+      "status": "completed",
+      "passed": true,
+      "wallMs": 3705,
+      "nonempty": true,
+      "errorCode": null,
+      "errorMessage": null
+    },
+    {
+      "name": "development-complete-history",
+      "status": "completed",
+      "passed": true,
+      "wallMs": 24730,
+      "nonempty": true,
+      "errorCode": null,
+      "errorMessage": null
+    },
+    {
+      "name": "tool-call-and-result",
+      "status": "completed",
+      "passed": true,
+      "wallMs": 11275,
+      "nonempty": true,
+      "errorCode": null,
+      "errorMessage": null
+    },
+    {
+      "name": "follow-up-and-stop",
+      "status": "completed",
+      "passed": true,
+      "wallMs": 2551,
+      "nonempty": true,
+      "errorCode": null,
+      "errorMessage": null
+    }
+  ],
+  "status": "passed",
+  "model": {
+    "limits": {
+      "contextWindow": 262144
+    },
+    "compat": {
+      "thinkingFamily": "openai_reasoning",
+      "preserveThinking": true,
+      "route": "responses",
+      "pricing_source": "https://commandcode.ai/docs/resources/pricing-limits"
+    },
+    "inputCap": 261120,
+    "freeRoute": false
+  },
+  "history": {
+    "suite": "beam-100k",
+    "subset": "dev",
+    "id": "5:abstention:1",
+    "sourceMessages": 238,
+    "sourceAssistantMessages": 119,
+    "removedSourceMessages": 0,
+    "annotationsSent": false
+  },
+  "toolCalls": 1,
+  "usage": {
+    "inputTokens": 119918,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0,
+    "outputTokens": 224,
+    "accountedInputTokens": 119918,
+    "accountedOutputTokens": 224,
+    "usageMissingExchanges": 0,
+    "usageComplete": true,
+    "wireAttempts": 5
+  },
+  "allocations": [
+    {
+      "provider": "commandcode",
+      "exchange": 1,
+      "inputBound": 262144,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 2,
+      "inputBound": 262144,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 3,
+      "inputBound": 262144,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 4,
+      "inputBound": 262144,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 5,
+      "inputBound": 262144,
+      "outputBound": 8192
+    }
+  ],
+  "protectedArtifactsUnchanged": true,
+  "finishedAt": "2026-10-29T14:19:24.982Z",
+  "wallMs": 42727
+}

@@ -1,0 +1,1705 @@
+{
+  "schemaVersion": 1,
+  "kind": "202-baseline",
+  "plan": 202,
+  "task": 4,
+  "generatedAt": "2026-10-28T03:53:35.530Z",
+  "status": "gate-recorded",
+  "ownerGate": {
+    "gate": 1,
+    "approved": true,
+    "approvedAt": "2026-10-27",
+    "approvedBy": "owner",
+    "text": "Complete - [ ] Task 4: Baseline of preset revision 1 on every development partition (owner gate 1, paid)"
+  },
+  "billing": {
+    "mode": "subscription",
+    "provider": "opencode-go"
+  },
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "productHash": "57aa47d94eb3cad629e232372f220296131583ea7ac06189d6f589b39c825799",
+  "harnessHash": "b3e5fe48d3038d9e1e49a1894a1deaf2420fb01bd37640478b5442a22f43bda8",
+  "suites": [
+    "beam-100k",
+    "locomo",
+    "memoryagentbench-cr",
+    "longmemeval-m",
+    "beam-1m"
+  ],
+  "arms": [
+    {
+      "id": "preset-r1",
+      "config": "fabric-x-tools"
+    },
+    {
+      "id": "passive-only",
+      "config": "fabric-x"
+    },
+    {
+      "id": "full",
+      "config": "full"
+    },
+    {
+      "id": "full-truncated",
+      "config": "full-truncated"
+    },
+    {
+      "id": "lexical-topk",
+      "config": "lexical-topk"
+    }
+  ],
+  "models": [
+    {
+      "provider": "opencode-go",
+      "model": "beam-free"
+    },
+    {
+      "provider": "opencode-go",
+      "model": "minimax-m3"
+    },
+    {
+      "provider": "opencode-go",
+      "model": "mimo-v2.5"
+    }
+  ],
+  "judges": [
+    "opencode-go/qwen3.7-plus",
+    "opencode-go/kimi-k3"
+  ],
+  "judgeProtocol": "plain-text-v1",
+  "repeats": 1,
+  "ceiling": 2000000000,
+  "thresholds": {
+    "lever": 0.05
+  },
+  "assumptions": {
+    "source": "188.10 held-out v3 per-question usage, one model; Task 4 replaces it with measured usage",
+    "usagePerQuestion": {
+      "full": {
+        "inputTokens": 112955,
+        "cacheReadTokens": 3,
+        "outputTokens": 315
+      },
+      "full-truncated": {
+        "inputTokens": 112955,
+        "cacheReadTokens": 3,
+        "outputTokens": 315
+      },
+      "preset-r1": {
+        "inputTokens": 29668,
+        "cacheReadTokens": 9655,
+        "outputTokens": 1882
+      },
+      "passive-only": {
+        "inputTokens": 6378,
+        "cacheReadTokens": 81,
+        "outputTokens": 848
+      },
+      "lexical-topk": {
+        "inputTokens": 4000,
+        "cacheReadTokens": 0,
+        "outputTokens": 315
+      }
+    },
+    "judgeTokens": {
+      "inputTokens": 4000,
+      "outputTokens": 100
+    },
+    "writeWallTime": "Task 1: 90 ms per local note and ~500 sessions per LongMemEval-M question; write wall time is reported, never estimated as zero"
+  },
+  "compute": {
+    "mode": "subscription",
+    "provider": "opencode-go",
+    "usdEquivalent": 36.04,
+    "tokens": 195697530,
+    "ratesAsOf": "2026-10-28",
+    "ratesStatus": "provider-catalog",
+    "dominant": "full and full-truncated on longmemeval-m and beam-1m",
+    "wallTimeCapHoursBySuite": {
+      "beam-100k": 6,
+      "locomo": 4,
+      "memoryagentbench-cr": 6,
+      "longmemeval-m": 144,
+      "beam-1m": 48
+    },
+    "note": "Subscription usage: no per-token charge. USD is the list-price equivalent for comparison only. Token totals still size plan quotas and per-job reservations; wall time is measured by the first real write arm, never assumed zero."
+  },
+  "jobs": [
+    {
+      "id": "202-baseline.beam-100k.preset-r1.opencode-go.beam-free",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": null,
+      "arm": "preset-r1",
+      "config": "fabric-x-tools",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 7000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 1506720,
+        "outputTokens": 83280,
+        "usd": 0.1408
+      }
+    },
+    {
+      "id": "202-baseline.beam-100k.passive-only.opencode-go.beam-free",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": null,
+      "arm": "passive-only",
+      "config": "fabric-x",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 6000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 575120,
+        "outputTokens": 41920,
+        "usd": 0.1408
+      }
+    },
+    {
+      "id": "202-baseline.beam-100k.full.opencode-go.beam-free",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full",
+      "config": "full",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 10000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 4838200,
+        "outputTokens": 20600,
+        "usd": 0.1408
+      }
+    },
+    {
+      "id": "202-baseline.beam-100k.full-truncated.opencode-go.beam-free",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full-truncated",
+      "config": "full-truncated",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 10000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 4838200,
+        "outputTokens": 20600,
+        "usd": 0.1408
+      }
+    },
+    {
+      "id": "202-baseline.beam-100k.lexical-topk.opencode-go.beam-free",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": null,
+      "arm": "lexical-topk",
+      "config": "lexical-topk",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 5500000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 480000,
+        "outputTokens": 20600,
+        "usd": 0.1408
+      }
+    },
+    {
+      "id": "202-baseline.beam-100k.preset-r1.opencode-go.minimax-m3",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": null,
+      "arm": "preset-r1",
+      "config": "fabric-x-tools",
+      "provider": "opencode-go",
+      "model": "minimax-m3",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 7000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 1506720,
+        "outputTokens": 83280,
+        "usd": 0.49448
+      }
+    },
+    {
+      "id": "202-baseline.beam-100k.passive-only.opencode-go.minimax-m3",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": null,
+      "arm": "passive-only",
+      "config": "fabric-x",
+      "provider": "opencode-go",
+      "model": "minimax-m3",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 6000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 575120,
+        "outputTokens": 41920,
+        "usd": 0.25728
+      }
+    },
+    {
+      "id": "202-baseline.beam-100k.full.opencode-go.minimax-m3",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full",
+      "config": "full",
+      "provider": "opencode-go",
+      "model": "minimax-m3",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 10000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 4838200,
+        "outputTokens": 20600,
+        "usd": 1.5113600000000003
+      }
+    },
+    {
+      "id": "202-baseline.beam-100k.full-truncated.opencode-go.minimax-m3",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full-truncated",
+      "config": "full-truncated",
+      "provider": "opencode-go",
+      "model": "minimax-m3",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 10000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 4838200,
+        "outputTokens": 20600,
+        "usd": 1.5113600000000003
+      }
+    },
+    {
+      "id": "202-baseline.beam-100k.lexical-topk.opencode-go.minimax-m3",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": null,
+      "arm": "lexical-topk",
+      "config": "lexical-topk",
+      "provider": "opencode-go",
+      "model": "minimax-m3",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 5500000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 480000,
+        "outputTokens": 20600,
+        "usd": 0.20392
+      }
+    },
+    {
+      "id": "202-baseline.beam-100k.preset-r1.opencode-go.mimo-v2.5",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": null,
+      "arm": "preset-r1",
+      "config": "fabric-x-tools",
+      "provider": "opencode-go",
+      "model": "mimo-v2.5",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 7000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 1506720,
+        "outputTokens": 83280,
+        "usd": 0.27504
+      }
+    },
+    {
+      "id": "202-baseline.beam-100k.passive-only.opencode-go.mimo-v2.5",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": null,
+      "arm": "passive-only",
+      "config": "fabric-x",
+      "provider": "opencode-go",
+      "model": "mimo-v2.5",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 6000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 575120,
+        "outputTokens": 41920,
+        "usd": 0.18556
+      }
+    },
+    {
+      "id": "202-baseline.beam-100k.full.opencode-go.mimo-v2.5",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full",
+      "config": "full",
+      "provider": "opencode-go",
+      "model": "mimo-v2.5",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 10000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 4838200,
+        "outputTokens": 20600,
+        "usd": 0.7768399999999999
+      }
+    },
+    {
+      "id": "202-baseline.beam-100k.full-truncated.opencode-go.mimo-v2.5",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full-truncated",
+      "config": "full-truncated",
+      "provider": "opencode-go",
+      "model": "mimo-v2.5",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 10000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 4838200,
+        "outputTokens": 20600,
+        "usd": 0.7768399999999999
+      }
+    },
+    {
+      "id": "202-baseline.beam-100k.lexical-topk.opencode-go.mimo-v2.5",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": null,
+      "arm": "lexical-topk",
+      "config": "lexical-topk",
+      "provider": "opencode-go",
+      "model": "mimo-v2.5",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 5500000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 480000,
+        "outputTokens": 20600,
+        "usd": 0.16671999999999998
+      }
+    },
+    {
+      "id": "202-baseline.locomo.preset-r1.opencode-go.beam-free",
+      "suite": "locomo",
+      "subset": "dev",
+      "ability": null,
+      "arm": "preset-r1",
+      "config": "fabric-x-tools",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 60,
+      "wallTimeCapHours": 4,
+      "maxInputTokens": 7500000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 2260080,
+        "outputTokens": 124920,
+        "usd": 0.2112
+      }
+    },
+    {
+      "id": "202-baseline.locomo.passive-only.opencode-go.beam-free",
+      "suite": "locomo",
+      "subset": "dev",
+      "ability": null,
+      "arm": "passive-only",
+      "config": "fabric-x",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 60,
+      "wallTimeCapHours": 4,
+      "maxInputTokens": 6000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 862680,
+        "outputTokens": 62880,
+        "usd": 0.2112
+      }
+    },
+    {
+      "id": "202-baseline.locomo.full.opencode-go.beam-free",
+      "suite": "locomo",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full",
+      "config": "full",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 60,
+      "wallTimeCapHours": 4,
+      "maxInputTokens": 12500000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 7257300,
+        "outputTokens": 30900,
+        "usd": 0.2112
+      }
+    },
+    {
+      "id": "202-baseline.locomo.full-truncated.opencode-go.beam-free",
+      "suite": "locomo",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full-truncated",
+      "config": "full-truncated",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 60,
+      "wallTimeCapHours": 4,
+      "maxInputTokens": 10000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 7257300,
+        "outputTokens": 30900,
+        "usd": 0.2112
+      }
+    },
+    {
+      "id": "202-baseline.locomo.lexical-topk.opencode-go.beam-free",
+      "suite": "locomo",
+      "subset": "dev",
+      "ability": null,
+      "arm": "lexical-topk",
+      "config": "lexical-topk",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 60,
+      "wallTimeCapHours": 4,
+      "maxInputTokens": 6000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 720000,
+        "outputTokens": 30900,
+        "usd": 0.2112
+      }
+    },
+    {
+      "id": "202-baseline.locomo.preset-r1.opencode-go.minimax-m3",
+      "suite": "locomo",
+      "subset": "dev",
+      "ability": null,
+      "arm": "preset-r1",
+      "config": "fabric-x-tools",
+      "provider": "opencode-go",
+      "model": "minimax-m3",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 60,
+      "wallTimeCapHours": 4,
+      "maxInputTokens": 7500000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 2260080,
+        "outputTokens": 124920,
+        "usd": 0.7417199999999999
+      }
+    },
+    {
+      "id": "202-baseline.locomo.passive-only.opencode-go.minimax-m3",
+      "suite": "locomo",
+      "subset": "dev",
+      "ability": null,
+      "arm": "passive-only",
+      "config": "fabric-x",
+      "provider": "opencode-go",
+      "model": "minimax-m3",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 60,
+      "wallTimeCapHours": 4,
+      "maxInputTokens": 6000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 862680,
+        "outputTokens": 62880,
+        "usd": 0.38592000000000004
+      }
+    },
+    {
+      "id": "202-baseline.locomo.full.opencode-go.minimax-m3",
+      "suite": "locomo",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full",
+      "config": "full",
+      "provider": "opencode-go",
+      "model": "minimax-m3",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 60,
+      "wallTimeCapHours": 4,
+      "maxInputTokens": 12500000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 7257300,
+        "outputTokens": 30900,
+        "usd": 2.26704
+      }
+    },
+    {
+      "id": "202-baseline.locomo.full-truncated.opencode-go.minimax-m3",
+      "suite": "locomo",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full-truncated",
+      "config": "full-truncated",
+      "provider": "opencode-go",
+      "model": "minimax-m3",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 60,
+      "wallTimeCapHours": 4,
+      "maxInputTokens": 10000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 7257300,
+        "outputTokens": 30900,
+        "usd": 2.26704
+      }
+    },
+    {
+      "id": "202-baseline.locomo.lexical-topk.opencode-go.minimax-m3",
+      "suite": "locomo",
+      "subset": "dev",
+      "ability": null,
+      "arm": "lexical-topk",
+      "config": "lexical-topk",
+      "provider": "opencode-go",
+      "model": "minimax-m3",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 60,
+      "wallTimeCapHours": 4,
+      "maxInputTokens": 6000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 720000,
+        "outputTokens": 30900,
+        "usd": 0.30588
+      }
+    },
+    {
+      "id": "202-baseline.locomo.preset-r1.opencode-go.mimo-v2.5",
+      "suite": "locomo",
+      "subset": "dev",
+      "ability": null,
+      "arm": "preset-r1",
+      "config": "fabric-x-tools",
+      "provider": "opencode-go",
+      "model": "mimo-v2.5",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 60,
+      "wallTimeCapHours": 4,
+      "maxInputTokens": 7500000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 2260080,
+        "outputTokens": 124920,
+        "usd": 0.41256000000000004
+      }
+    },
+    {
+      "id": "202-baseline.locomo.passive-only.opencode-go.mimo-v2.5",
+      "suite": "locomo",
+      "subset": "dev",
+      "ability": null,
+      "arm": "passive-only",
+      "config": "fabric-x",
+      "provider": "opencode-go",
+      "model": "mimo-v2.5",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 60,
+      "wallTimeCapHours": 4,
+      "maxInputTokens": 6000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 862680,
+        "outputTokens": 62880,
+        "usd": 0.27834
+      }
+    },
+    {
+      "id": "202-baseline.locomo.full.opencode-go.mimo-v2.5",
+      "suite": "locomo",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full",
+      "config": "full",
+      "provider": "opencode-go",
+      "model": "mimo-v2.5",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 60,
+      "wallTimeCapHours": 4,
+      "maxInputTokens": 12500000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 7257300,
+        "outputTokens": 30900,
+        "usd": 1.1652599999999997
+      }
+    },
+    {
+      "id": "202-baseline.locomo.full-truncated.opencode-go.mimo-v2.5",
+      "suite": "locomo",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full-truncated",
+      "config": "full-truncated",
+      "provider": "opencode-go",
+      "model": "mimo-v2.5",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 60,
+      "wallTimeCapHours": 4,
+      "maxInputTokens": 10000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 7257300,
+        "outputTokens": 30900,
+        "usd": 1.1652599999999997
+      }
+    },
+    {
+      "id": "202-baseline.locomo.lexical-topk.opencode-go.mimo-v2.5",
+      "suite": "locomo",
+      "subset": "dev",
+      "ability": null,
+      "arm": "lexical-topk",
+      "config": "lexical-topk",
+      "provider": "opencode-go",
+      "model": "mimo-v2.5",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 60,
+      "wallTimeCapHours": 4,
+      "maxInputTokens": 6000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 720000,
+        "outputTokens": 30900,
+        "usd": 0.25007999999999997
+      }
+    },
+    {
+      "id": "202-baseline.memoryagentbench-cr.preset-r1.opencode-go.beam-free",
+      "suite": "memoryagentbench-cr",
+      "subset": "dev",
+      "ability": null,
+      "arm": "preset-r1",
+      "config": "fabric-x-tools",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 20,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 6000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 753360,
+        "outputTokens": 41640,
+        "usd": 0.0704
+      }
+    },
+    {
+      "id": "202-baseline.memoryagentbench-cr.passive-only.opencode-go.beam-free",
+      "suite": "memoryagentbench-cr",
+      "subset": "dev",
+      "ability": null,
+      "arm": "passive-only",
+      "config": "fabric-x",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 20,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 5500000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 287560,
+        "outputTokens": 20960,
+        "usd": 0.0704
+      }
+    },
+    {
+      "id": "202-baseline.memoryagentbench-cr.full.opencode-go.beam-free",
+      "suite": "memoryagentbench-cr",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full",
+      "config": "full",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 20,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 7500000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 2419100,
+        "outputTokens": 10300,
+        "usd": 0.0704
+      }
+    },
+    {
+      "id": "202-baseline.memoryagentbench-cr.full-truncated.opencode-go.beam-free",
+      "suite": "memoryagentbench-cr",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full-truncated",
+      "config": "full-truncated",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 20,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 7500000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 2419100,
+        "outputTokens": 10300,
+        "usd": 0.0704
+      }
+    },
+    {
+      "id": "202-baseline.memoryagentbench-cr.lexical-topk.opencode-go.beam-free",
+      "suite": "memoryagentbench-cr",
+      "subset": "dev",
+      "ability": null,
+      "arm": "lexical-topk",
+      "config": "lexical-topk",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 20,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 5500000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 240000,
+        "outputTokens": 10300,
+        "usd": 0.0704
+      }
+    },
+    {
+      "id": "202-baseline.memoryagentbench-cr.preset-r1.opencode-go.minimax-m3",
+      "suite": "memoryagentbench-cr",
+      "subset": "dev",
+      "ability": null,
+      "arm": "preset-r1",
+      "config": "fabric-x-tools",
+      "provider": "opencode-go",
+      "model": "minimax-m3",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 20,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 6000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 753360,
+        "outputTokens": 41640,
+        "usd": 0.24724
+      }
+    },
+    {
+      "id": "202-baseline.memoryagentbench-cr.passive-only.opencode-go.minimax-m3",
+      "suite": "memoryagentbench-cr",
+      "subset": "dev",
+      "ability": null,
+      "arm": "passive-only",
+      "config": "fabric-x",
+      "provider": "opencode-go",
+      "model": "minimax-m3",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 20,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 5500000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 287560,
+        "outputTokens": 20960,
+        "usd": 0.12864
+      }
+    },
+    {
+      "id": "202-baseline.memoryagentbench-cr.full.opencode-go.minimax-m3",
+      "suite": "memoryagentbench-cr",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full",
+      "config": "full",
+      "provider": "opencode-go",
+      "model": "minimax-m3",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 20,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 7500000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 2419100,
+        "outputTokens": 10300,
+        "usd": 0.7556800000000001
+      }
+    },
+    {
+      "id": "202-baseline.memoryagentbench-cr.full-truncated.opencode-go.minimax-m3",
+      "suite": "memoryagentbench-cr",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full-truncated",
+      "config": "full-truncated",
+      "provider": "opencode-go",
+      "model": "minimax-m3",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 20,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 7500000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 2419100,
+        "outputTokens": 10300,
+        "usd": 0.7556800000000001
+      }
+    },
+    {
+      "id": "202-baseline.memoryagentbench-cr.lexical-topk.opencode-go.minimax-m3",
+      "suite": "memoryagentbench-cr",
+      "subset": "dev",
+      "ability": null,
+      "arm": "lexical-topk",
+      "config": "lexical-topk",
+      "provider": "opencode-go",
+      "model": "minimax-m3",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 20,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 5500000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 240000,
+        "outputTokens": 10300,
+        "usd": 0.10196
+      }
+    },
+    {
+      "id": "202-baseline.memoryagentbench-cr.preset-r1.opencode-go.mimo-v2.5",
+      "suite": "memoryagentbench-cr",
+      "subset": "dev",
+      "ability": null,
+      "arm": "preset-r1",
+      "config": "fabric-x-tools",
+      "provider": "opencode-go",
+      "model": "mimo-v2.5",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 20,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 6000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 753360,
+        "outputTokens": 41640,
+        "usd": 0.13752
+      }
+    },
+    {
+      "id": "202-baseline.memoryagentbench-cr.passive-only.opencode-go.mimo-v2.5",
+      "suite": "memoryagentbench-cr",
+      "subset": "dev",
+      "ability": null,
+      "arm": "passive-only",
+      "config": "fabric-x",
+      "provider": "opencode-go",
+      "model": "mimo-v2.5",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 20,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 5500000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 287560,
+        "outputTokens": 20960,
+        "usd": 0.09278
+      }
+    },
+    {
+      "id": "202-baseline.memoryagentbench-cr.full.opencode-go.mimo-v2.5",
+      "suite": "memoryagentbench-cr",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full",
+      "config": "full",
+      "provider": "opencode-go",
+      "model": "mimo-v2.5",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 20,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 7500000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 2419100,
+        "outputTokens": 10300,
+        "usd": 0.38841999999999993
+      }
+    },
+    {
+      "id": "202-baseline.memoryagentbench-cr.full-truncated.opencode-go.mimo-v2.5",
+      "suite": "memoryagentbench-cr",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full-truncated",
+      "config": "full-truncated",
+      "provider": "opencode-go",
+      "model": "mimo-v2.5",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 20,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 7500000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 2419100,
+        "outputTokens": 10300,
+        "usd": 0.38841999999999993
+      }
+    },
+    {
+      "id": "202-baseline.memoryagentbench-cr.lexical-topk.opencode-go.mimo-v2.5",
+      "suite": "memoryagentbench-cr",
+      "subset": "dev",
+      "ability": null,
+      "arm": "lexical-topk",
+      "config": "lexical-topk",
+      "provider": "opencode-go",
+      "model": "mimo-v2.5",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 20,
+      "wallTimeCapHours": 6,
+      "maxInputTokens": 5500000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 240000,
+        "outputTokens": 10300,
+        "usd": 0.08335999999999999
+      }
+    },
+    {
+      "id": "202-baseline.longmemeval-m.preset-r1.opencode-go.beam-free",
+      "suite": "longmemeval-m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "preset-r1",
+      "config": "fabric-x-tools",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 50,
+      "wallTimeCapHours": 144,
+      "maxInputTokens": 7000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 1883400,
+        "outputTokens": 104100,
+        "usd": 0.17600000000000002
+      }
+    },
+    {
+      "id": "202-baseline.longmemeval-m.passive-only.opencode-go.beam-free",
+      "suite": "longmemeval-m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "passive-only",
+      "config": "fabric-x",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 50,
+      "wallTimeCapHours": 144,
+      "maxInputTokens": 6000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 718900,
+        "outputTokens": 52400,
+        "usd": 0.17600000000000002
+      }
+    },
+    {
+      "id": "202-baseline.longmemeval-m.full.opencode-go.beam-free",
+      "suite": "longmemeval-m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full",
+      "config": "full",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 50,
+      "wallTimeCapHours": 144,
+      "maxInputTokens": 11500000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 6047750,
+        "outputTokens": 25750,
+        "usd": 0.17600000000000002
+      }
+    },
+    {
+      "id": "202-baseline.longmemeval-m.full-truncated.opencode-go.beam-free",
+      "suite": "longmemeval-m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full-truncated",
+      "config": "full-truncated",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 50,
+      "wallTimeCapHours": 144,
+      "maxInputTokens": 10000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 6047750,
+        "outputTokens": 25750,
+        "usd": 0.17600000000000002
+      }
+    },
+    {
+      "id": "202-baseline.longmemeval-m.lexical-topk.opencode-go.beam-free",
+      "suite": "longmemeval-m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "lexical-topk",
+      "config": "lexical-topk",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 50,
+      "wallTimeCapHours": 144,
+      "maxInputTokens": 6000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 600000,
+        "outputTokens": 25750,
+        "usd": 0.17600000000000002
+      }
+    },
+    {
+      "id": "202-baseline.longmemeval-m.preset-r1.opencode-go.minimax-m3",
+      "suite": "longmemeval-m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "preset-r1",
+      "config": "fabric-x-tools",
+      "provider": "opencode-go",
+      "model": "minimax-m3",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 50,
+      "wallTimeCapHours": 144,
+      "maxInputTokens": 7000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 1883400,
+        "outputTokens": 104100,
+        "usd": 0.6181
+      }
+    },
+    {
+      "id": "202-baseline.longmemeval-m.passive-only.opencode-go.minimax-m3",
+      "suite": "longmemeval-m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "passive-only",
+      "config": "fabric-x",
+      "provider": "opencode-go",
+      "model": "minimax-m3",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 50,
+      "wallTimeCapHours": 144,
+      "maxInputTokens": 6000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 718900,
+        "outputTokens": 52400,
+        "usd": 0.3216
+      }
+    },
+    {
+      "id": "202-baseline.longmemeval-m.full.opencode-go.minimax-m3",
+      "suite": "longmemeval-m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full",
+      "config": "full",
+      "provider": "opencode-go",
+      "model": "minimax-m3",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 50,
+      "wallTimeCapHours": 144,
+      "maxInputTokens": 11500000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 6047750,
+        "outputTokens": 25750,
+        "usd": 1.8892000000000002
+      }
+    },
+    {
+      "id": "202-baseline.longmemeval-m.full-truncated.opencode-go.minimax-m3",
+      "suite": "longmemeval-m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full-truncated",
+      "config": "full-truncated",
+      "provider": "opencode-go",
+      "model": "minimax-m3",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 50,
+      "wallTimeCapHours": 144,
+      "maxInputTokens": 10000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 6047750,
+        "outputTokens": 25750,
+        "usd": 1.8892000000000002
+      }
+    },
+    {
+      "id": "202-baseline.longmemeval-m.lexical-topk.opencode-go.minimax-m3",
+      "suite": "longmemeval-m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "lexical-topk",
+      "config": "lexical-topk",
+      "provider": "opencode-go",
+      "model": "minimax-m3",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 50,
+      "wallTimeCapHours": 144,
+      "maxInputTokens": 6000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 600000,
+        "outputTokens": 25750,
+        "usd": 0.2549
+      }
+    },
+    {
+      "id": "202-baseline.longmemeval-m.preset-r1.opencode-go.mimo-v2.5",
+      "suite": "longmemeval-m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "preset-r1",
+      "config": "fabric-x-tools",
+      "provider": "opencode-go",
+      "model": "mimo-v2.5",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 50,
+      "wallTimeCapHours": 144,
+      "maxInputTokens": 7000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 1883400,
+        "outputTokens": 104100,
+        "usd": 0.3438
+      }
+    },
+    {
+      "id": "202-baseline.longmemeval-m.passive-only.opencode-go.mimo-v2.5",
+      "suite": "longmemeval-m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "passive-only",
+      "config": "fabric-x",
+      "provider": "opencode-go",
+      "model": "mimo-v2.5",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 50,
+      "wallTimeCapHours": 144,
+      "maxInputTokens": 6000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 718900,
+        "outputTokens": 52400,
+        "usd": 0.23195
+      }
+    },
+    {
+      "id": "202-baseline.longmemeval-m.full.opencode-go.mimo-v2.5",
+      "suite": "longmemeval-m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full",
+      "config": "full",
+      "provider": "opencode-go",
+      "model": "mimo-v2.5",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 50,
+      "wallTimeCapHours": 144,
+      "maxInputTokens": 11500000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 6047750,
+        "outputTokens": 25750,
+        "usd": 0.9710499999999999
+      }
+    },
+    {
+      "id": "202-baseline.longmemeval-m.full-truncated.opencode-go.mimo-v2.5",
+      "suite": "longmemeval-m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full-truncated",
+      "config": "full-truncated",
+      "provider": "opencode-go",
+      "model": "mimo-v2.5",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 50,
+      "wallTimeCapHours": 144,
+      "maxInputTokens": 10000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 6047750,
+        "outputTokens": 25750,
+        "usd": 0.9710499999999999
+      }
+    },
+    {
+      "id": "202-baseline.longmemeval-m.lexical-topk.opencode-go.mimo-v2.5",
+      "suite": "longmemeval-m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "lexical-topk",
+      "config": "lexical-topk",
+      "provider": "opencode-go",
+      "model": "mimo-v2.5",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 50,
+      "wallTimeCapHours": 144,
+      "maxInputTokens": 6000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 600000,
+        "outputTokens": 25750,
+        "usd": 0.2084
+      }
+    },
+    {
+      "id": "202-baseline.beam-1m.preset-r1.opencode-go.beam-free",
+      "suite": "beam-1m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "preset-r1",
+      "config": "fabric-x-tools",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 48,
+      "maxInputTokens": 7000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 1506720,
+        "outputTokens": 83280,
+        "usd": 0.1408
+      }
+    },
+    {
+      "id": "202-baseline.beam-1m.passive-only.opencode-go.beam-free",
+      "suite": "beam-1m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "passive-only",
+      "config": "fabric-x",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 48,
+      "maxInputTokens": 6000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 575120,
+        "outputTokens": 41920,
+        "usd": 0.1408
+      }
+    },
+    {
+      "id": "202-baseline.beam-1m.full.opencode-go.beam-free",
+      "suite": "beam-1m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full",
+      "config": "full",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 48,
+      "maxInputTokens": 10000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 4838200,
+        "outputTokens": 20600,
+        "usd": 0.1408
+      }
+    },
+    {
+      "id": "202-baseline.beam-1m.full-truncated.opencode-go.beam-free",
+      "suite": "beam-1m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full-truncated",
+      "config": "full-truncated",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 48,
+      "maxInputTokens": 10000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 4838200,
+        "outputTokens": 20600,
+        "usd": 0.1408
+      }
+    },
+    {
+      "id": "202-baseline.beam-1m.lexical-topk.opencode-go.beam-free",
+      "suite": "beam-1m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "lexical-topk",
+      "config": "lexical-topk",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 48,
+      "maxInputTokens": 5500000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 480000,
+        "outputTokens": 20600,
+        "usd": 0.1408
+      }
+    },
+    {
+      "id": "202-baseline.beam-1m.preset-r1.opencode-go.minimax-m3",
+      "suite": "beam-1m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "preset-r1",
+      "config": "fabric-x-tools",
+      "provider": "opencode-go",
+      "model": "minimax-m3",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 48,
+      "maxInputTokens": 7000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 1506720,
+        "outputTokens": 83280,
+        "usd": 0.49448
+      }
+    },
+    {
+      "id": "202-baseline.beam-1m.passive-only.opencode-go.minimax-m3",
+      "suite": "beam-1m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "passive-only",
+      "config": "fabric-x",
+      "provider": "opencode-go",
+      "model": "minimax-m3",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 48,
+      "maxInputTokens": 6000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 575120,
+        "outputTokens": 41920,
+        "usd": 0.25728
+      }
+    },
+    {
+      "id": "202-baseline.beam-1m.full.opencode-go.minimax-m3",
+      "suite": "beam-1m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full",
+      "config": "full",
+      "provider": "opencode-go",
+      "model": "minimax-m3",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 48,
+      "maxInputTokens": 10000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 4838200,
+        "outputTokens": 20600,
+        "usd": 1.5113600000000003
+      }
+    },
+    {
+      "id": "202-baseline.beam-1m.full-truncated.opencode-go.minimax-m3",
+      "suite": "beam-1m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full-truncated",
+      "config": "full-truncated",
+      "provider": "opencode-go",
+      "model": "minimax-m3",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 48,
+      "maxInputTokens": 10000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 4838200,
+        "outputTokens": 20600,
+        "usd": 1.5113600000000003
+      }
+    },
+    {
+      "id": "202-baseline.beam-1m.lexical-topk.opencode-go.minimax-m3",
+      "suite": "beam-1m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "lexical-topk",
+      "config": "lexical-topk",
+      "provider": "opencode-go",
+      "model": "minimax-m3",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 48,
+      "maxInputTokens": 5500000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 480000,
+        "outputTokens": 20600,
+        "usd": 0.20392
+      }
+    },
+    {
+      "id": "202-baseline.beam-1m.preset-r1.opencode-go.mimo-v2.5",
+      "suite": "beam-1m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "preset-r1",
+      "config": "fabric-x-tools",
+      "provider": "opencode-go",
+      "model": "mimo-v2.5",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 48,
+      "maxInputTokens": 7000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 1506720,
+        "outputTokens": 83280,
+        "usd": 0.27504
+      }
+    },
+    {
+      "id": "202-baseline.beam-1m.passive-only.opencode-go.mimo-v2.5",
+      "suite": "beam-1m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "passive-only",
+      "config": "fabric-x",
+      "provider": "opencode-go",
+      "model": "mimo-v2.5",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 48,
+      "maxInputTokens": 6000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 575120,
+        "outputTokens": 41920,
+        "usd": 0.18556
+      }
+    },
+    {
+      "id": "202-baseline.beam-1m.full.opencode-go.mimo-v2.5",
+      "suite": "beam-1m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full",
+      "config": "full",
+      "provider": "opencode-go",
+      "model": "mimo-v2.5",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 48,
+      "maxInputTokens": 10000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 4838200,
+        "outputTokens": 20600,
+        "usd": 0.7768399999999999
+      }
+    },
+    {
+      "id": "202-baseline.beam-1m.full-truncated.opencode-go.mimo-v2.5",
+      "suite": "beam-1m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "full-truncated",
+      "config": "full-truncated",
+      "provider": "opencode-go",
+      "model": "mimo-v2.5",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 48,
+      "maxInputTokens": 10000000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 4838200,
+        "outputTokens": 20600,
+        "usd": 0.7768399999999999
+      }
+    },
+    {
+      "id": "202-baseline.beam-1m.lexical-topk.opencode-go.mimo-v2.5",
+      "suite": "beam-1m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "lexical-topk",
+      "config": "lexical-topk",
+      "provider": "opencode-go",
+      "model": "mimo-v2.5",
+      "judges": "opencode-go/qwen3.7-plus,opencode-go/kimi-k3",
+      "judgeText": true,
+      "questions": 40,
+      "wallTimeCapHours": 48,
+      "maxInputTokens": 5500000,
+      "concurrency": 10,
+      "estimate": {
+        "inputTokens": 480000,
+        "outputTokens": 20600,
+        "usd": 0.16671999999999998
+      }
+    }
+  ],
+  "manifestHash": "358531ae3e2fee7132aee9f86398c5995a16b8848e922483e64c33389d4f2824"
+}

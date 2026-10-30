@@ -1,0 +1,100 @@
+{
+  "kind": "202-commandcode-answer-selection",
+  "generatedAt": "2026-10-29T14:20:29.477Z",
+  "authorization": "Let's replace those two models. We use Muse spark 1.2 contributor and Glyph cluster free from command code as the answer model. If glyph cluster 100 request is not enough use Tencent hy3",
+  "models": [
+    {
+      "ref": "commandcode/meta/muse-spark-1.2-contributor",
+      "file": "docs/_evidence/memory-bench/202/muse12-contributor-compatibility-2026-10-29T14-18-42-251Z.json",
+      "sha256": "971405a89114d6940f0bd8e9cef8555b9c0857864beab2c5451b6552926b9574",
+      "status": "passed",
+      "history": {
+        "suite": "beam-100k",
+        "subset": "dev",
+        "id": "5:abstention:1",
+        "sourceMessages": 238,
+        "sourceAssistantMessages": 119,
+        "removedSourceMessages": 0,
+        "annotationsSent": false
+      },
+      "usage": {
+        "inputTokens": 123110,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "outputTokens": 857,
+        "accountedInputTokens": 123110,
+        "accountedOutputTokens": 857,
+        "usageMissingExchanges": 0,
+        "usageComplete": true,
+        "wireAttempts": 5
+      },
+      "model": {
+        "limits": {
+          "contextWindow": 1048576
+        },
+        "compat": {
+          "thinkingFamily": "openai_reasoning",
+          "preserveThinking": true,
+          "route": "responses",
+          "pricing_source": "https://commandcode.ai/docs/resources/pricing-limits"
+        },
+        "inputCap": 1047552,
+        "freeRoute": false
+      }
+    },
+    {
+      "ref": "commandcode/tencent/hy3-paid",
+      "file": "docs/_evidence/memory-bench/202/hy3-paid-compatibility-2026-10-29T14-18-42-254Z.json",
+      "sha256": "f982bcd81a9fa2f822f051fb5b5c4c15d6015fe975299b4bec287e40635c00ce",
+      "status": "passed",
+      "history": {
+        "suite": "beam-100k",
+        "subset": "dev",
+        "id": "5:abstention:1",
+        "sourceMessages": 238,
+        "sourceAssistantMessages": 119,
+        "removedSourceMessages": 0,
+        "annotationsSent": false
+      },
+      "usage": {
+        "inputTokens": 119918,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "outputTokens": 224,
+        "accountedInputTokens": 119918,
+        "accountedOutputTokens": 224,
+        "usageMissingExchanges": 0,
+        "usageComplete": true,
+        "wireAttempts": 5
+      },
+      "model": {
+        "limits": {
+          "contextWindow": 262144
+        },
+        "compat": {
+          "thinkingFamily": "openai_reasoning",
+          "preserveThinking": true,
+          "route": "responses",
+          "pricing_source": "https://commandcode.ai/docs/resources/pricing-limits"
+        },
+        "inputCap": 261120,
+        "freeRoute": false
+      }
+    }
+  ],
+  "retainedAnswer": "commandcode/meta/muse-spark-1.3-contributor",
+  "glyph": {
+    "ref": "commandcode/stealth/glyph-cluster:free",
+    "dailyQuota": 100,
+    "questionArmSlotsPerModel": 1050,
+    "status": "excluded-before-execution-insufficient-quota",
+    "replacement": "commandcode/tencent/hy3-paid",
+    "source": "https://commandcode.ai/docs/resources/pricing-limits",
+    "policy": "One consistent model for all 25 cells; no quota-triggered mixture of answer models"
+  },
+  "limitations": [
+    "Hy3 context 262144: complete-history comparators outside that window are ineligible; bounded comparators stay distinct",
+    "All current models share one gateway; no cross-provider Robust claim",
+    "Pilot estimates extrapolate Muse 1.3 observations; hard per-attempt and aggregate bounds remain"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "kind": "202-muse13-screen-closure-proof",
+  "status": "passed",
+  "generatedAt": "2026-10-30T00:06:17.169Z",
+  "acceptedCells": 23,
+  "originallyPlannedCells": 25,
+  "questionDispositions": 970,
+  "scoredQuestions": 893,
+  "contextIneligibleQuestions": 77,
+  "excludedPartialQuestions": 15,
+  "completeReportHashesMatch": true,
+  "originalJournalIdentityMatches": true,
+  "registeredMetricsUnchanged": true,
+  "originalAttemptsUnchanged": true,
+  "retainedChargeUnchanged": 668089833,
+  "closedJournalSha256": "a09c4a49cb1602031d0009bd9119984cbdcbd4588485a97075f426dd8b8b3c21",
+  "screenComplete": true,
+  "baselineComplete": false,
+  "liveRequests": 0
+}

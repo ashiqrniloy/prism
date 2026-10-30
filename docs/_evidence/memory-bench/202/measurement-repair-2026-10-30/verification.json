@@ -1,0 +1,64 @@
+{
+  "kind": "202-measurement-repair-verification",
+  "generatedAt": "2026-10-30T02:43:06.115308+00:00",
+  "status": "passed-with-unrelated-suite-failure",
+  "measurementVersion": "product-phases-delivery-v3",
+  "liveModelRequests": 0,
+  "sourceHashes": {
+    "scripts/memory-bench/replay.mjs": "a21edcad2f0b41a089ad70f99a572e84b2b73e4ac33fb4be1700dd9f2f7afe31",
+    "scripts/memory-bench/run.mjs": "62117018ee37d0119d4607b4c64f1ebac79a800620a72de3814de23d63ab0b07",
+    "scripts/memory-bench/judge.mjs": "c6a5bd6412b347188441ffe152ba0c19247de17e2cdc22d3667ee41279b3017b",
+    "scripts/memory-bench/datasets.mjs": "2949eb1249af856f64afaf99bb72df09dc389659a827da96dd689743f8840a14",
+    "scripts/memory-bench/ablations.mjs": "3e9c97a688fdc667d2709c40e0820bce3daf3eb13bc2b10808279b89959e089d",
+    "scripts/memory-bench/measurement-repairs.test.mjs": "e19b2fd093fa2f272bc105639356d648aa1d741957cecd4341f43327b554cbe8",
+    "scripts/memory-bench/run.test.mjs": "a57022dcf642b133169404b72a11a5cd823bd5b700fdbdd482fc7dffae0af2ce",
+    "scripts/memory-bench/audit/readiness.test.mjs": "d4bc8f676f40984e06648447ba9a550cdd60db294b7943ded454e812fdeb308a",
+    "packages/memory/fabric/src/recall.ts": "982562592fafa24a483db5262ac4ffba1caeb748b93041d3ed897d2f5206deff",
+    "packages/memory/fabric/src/create.ts": "798cdf6ccb33dedf48a2de8326d2a323912d9e6f9b20c5b53084d9221c5dcd47",
+    "packages/memory/fabric/src/types.ts": "3824a74f3ae930fbec6b162c7083d29c6f27b93956e1805a5dd3eddc92250a28",
+    "packages/memory/fabric/src/index.ts": "3607da1dff7a28dacb2c855854194c3a1fa4babb640a3a5d241c8818908badb7"
+  },
+  "checks": [
+    {
+      "command": "PRISM_MEMORY_BENCH_PYTHON=.cache/memory-bench/python/bin/python3 timeout 850 bun test --timeout=0 scripts/memory-bench",
+      "result": "368 pass / one Vibe environment skip / zero failures",
+      "log": ".cache/memory-bench/repair-tests.log"
+    },
+    {
+      "command": "timeout 180 bun run typecheck",
+      "result": "pass",
+      "log": ".cache/memory-bench/repair-typecheck.log"
+    },
+    {
+      "command": "timeout 600 bun test --timeout=0 packages/memory/fabric/src",
+      "result": "503 pass / 23 PostgreSQL environment skips / one unrelated retirement-guard failure",
+      "unrelatedFailure": "packages/memory/fabric/src/__tests__/package.test.ts:696 sees pre-existing legacy packages/memory/src source tree; its four existing files were not changed",
+      "log": ".cache/memory-bench/repair-fabric-tests.log"
+    },
+    {
+      "command": "Biome affected files; git diff --check",
+      "result": "pass; one pre-existing unused parameter warning in run.test.mjs"
+    }
+  ],
+  "pinnedDevelopmentChecks": {
+    "locomo": "60 questions; every mapped fine gold id is a round id, zero unresolved references",
+    "mab": "20 questions / 118778 repeated source-message instances; all fact lists, maximum source line 122 characters",
+    "realImport": "one label-blind smallest-history development case: 456/456 source lines persisted, zero refusals, zero model requests"
+  },
+  "historicalPreservation": {
+    "sourceReportsVerified": 23,
+    "frozenFinalArtifactHashesVerified": 5,
+    "ownerClosure": "closed-by-owner",
+    "journal": "closed-by-owner",
+    "historicalScoresRewritten": false
+  },
+  "limitations": [
+    "No new live efficacy or held-out evaluation",
+    "MAB typed-fact input is an explicit corpus adapter override, not an unchanged exchange-only preset",
+    "Evidence metrics measure round presence, not complete sentence survival inside excerpts",
+    "Full 20-case physical MAB ingestion was not rerun; all source structures were checked and one real case was physically imported",
+    "Optional diagnostics add private disk usage; cache entries can retain full model contexts",
+    "The pre-fix diagnosis audit imports the former harness behavior and is historical; use current regression tests for this repair",
+    "Saved-answer evaluation resume applies to conversational benchmarks; coding retains its existing workspace-based grading path"
+  ]
+}

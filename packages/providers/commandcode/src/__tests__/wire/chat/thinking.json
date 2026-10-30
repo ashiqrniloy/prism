@@ -1,0 +1,21 @@
+{
+  "method": "POST",
+  "path": "/provider/v1/chat/completions",
+  "requestBody": {
+    "model": "minimax/minimax-m3.1-flash",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Think about why the sky is blue, briefly."
+      }
+    ],
+    "stream": true,
+    "stream_options": {
+      "include_usage": true
+    },
+    "reasoning_effort": "high"
+  },
+  "status": 200,
+  "contentType": "text/event-stream",
+  "responseBody": "data: {\"id\":\"gen_01M5ZCB75Y5QF12TRE6F0Z813T\",\"object\":\"chat.completion.chunk\",\"created\":1793128243,\"model\":\"reflection/beam\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\"},\"logprobs\":null,\"finish_reason\":null}],\"system_fingerprint\":\"fp_5y1ngcrq1n\"}\n\ndata: {\"id\":\"gen_01M5ZCB75Y5QF12TRE6F0Z813T\",\"object\":\"chat.completion.chunk\",\"created\":1793128243,\"model\":\"reflection/beam\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning\":\"The user wants me to reply\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\"The user wants me to reply\",\"format\":\"unknown\",\"index\":0}]},\"logprobs\":null,\"finish_reason\":null}],\"system_fingerprint\":\"fp_5y1ngcrq1n\"}\n\ndata: {\"id\":\"gen_01M5ZCB75Y5QF12TRE6F0Z813T\",\"object\":\"chat.completion.chunk\",\"created\":1793128243,\"model\":\"reflection/beam\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning\":\" with the single word \\\"ok\\\".\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\" with the single word \\\"ok\\\".\",\"format\":\"unknown\",\"index\":0}]},\"logprobs\":null,\"finish_reason\":null}],\"system_fingerprint\":\"fp_5y1ngcrq1n\"}\n\ndata: {\"id\":\"gen_01M5ZCB75Y5QF12TRE6F0Z813T\",\"object\":\"chat.completion.chunk\",\"created\":1793128243,\"model\":\"reflection/beam:free\",\"choices\":[{\"index\":0,\"delta\":{},\"logprobs\":null,\"finish_reason\":\"length\"}],\"usage\":{\"prompt_tokens\":53,\"completion_tokens\":16,\"total_tokens\":69,\"prompt_tokens_details\":{\"cached_tokens\":0,\"audio_tokens\":0,\"video_tokens\":0},\"completion_tokens_details\":{\"reasoning_tokens\":15,\"image_tokens\":0},\"cache_creation_input_tokens\":0},\"system_fingerprint\":\"fp_5y1ngcrq1n\"}\n\ndata: [DONE]\n\n"
+}

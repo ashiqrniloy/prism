@@ -1,9 +1,9 @@
+import type { HookRegistrar } from "@arnilo/prism";
+import type { Memory, MemoryContextProviderOptions } from "@arnilo/prism-memory-core";
+import type { MemoryFabricInjectConfig } from "./config.js";
 import { createFabricCitationTracker, createFabricContext, type FabricCitationTracker } from "./context.js";
 import { createMemoryFabric } from "./create.js";
 import type { MemoryFabric } from "./types.js";
-import type { MemoryFabricInjectConfig } from "./config.js";
-import type { HookRegistrar } from "@arnilo/prism";
-import type { Memory, MemoryContextProviderOptions } from "@arnilo/prism-memory-core";
 
 /** Registration id a host uses to tell this contribution apart from other memory handlers. */
 export const DEFAULT_MEMORY_FABRIC_PROVIDER_NAME = "memory-fabric";
@@ -30,6 +30,11 @@ export function registerMemoryFabricContext(
     touchedPaths,
   );
   hooks.on("context.build", projection.build, { id: options.name ?? DEFAULT_MEMORY_FABRIC_PROVIDER_NAME, priority: -1_100 });
+  hooks.on("compaction.completed", (_event, context) => projection.refresh(context.sessionId));
+  hooks.on("session.closed", (_event, context) => {
+    projection.forget(context.sessionId);
+    citationTracker.clear?.(context.sessionId);
+  });
   hooks.on("message.delta", (event, context) => projection.observe(event.content, context));
   hooks.on("turn.completed", (_event, context) => {
     const ids = projection.cited(context);

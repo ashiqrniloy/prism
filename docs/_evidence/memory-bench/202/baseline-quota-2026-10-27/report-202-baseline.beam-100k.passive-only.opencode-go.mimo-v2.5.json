@@ -1,0 +1,1915 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 2,
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "usageSource": "wire-proxy",
+  "phase": "all",
+  "labelInjections": "on",
+  "concurrency": 4,
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "writeGeneration": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "generatedAt": "2026-10-27T16:15:02.621Z",
+  "suite": "beam-100k",
+  "subset": "dev",
+  "ability": null,
+  "seed": null,
+  "config": "fabric-x",
+  "ingestion": "product-per-session",
+  "embeddings": null,
+  "provider": "opencode-go",
+  "model": "mimo-v2.5",
+  "judge": "opencode-go/deepseek-v4-pro",
+  "judgePanel": [
+    "opencode-go/deepseek-v4-pro",
+    "opencode-go/glm-5.2"
+  ],
+  "judgeCalibration": null,
+  "repeats": 1,
+  "judgeProtocol": "plain-text-v1",
+  "dataset": {
+    "file": "beam-100k.parquet",
+    "format": "parquet",
+    "parquetLiterals": [
+      "probing_questions"
+    ],
+    "bytes": 5429768,
+    "sha256": "c0519be25907005ba873c927c50877471d550873039d96c041554d0075a78ace",
+    "license": "CC BY-SA 4.0",
+    "url": "https://huggingface.co/datasets/Mohammadta/BEAM/resolve/3205395e897e7318c7b094ef4e6047b9b82dbb03/data/100K-00000-of-00001.parquet",
+    "licenseUrl": "https://huggingface.co/datasets/Mohammadta/BEAM/blob/3205395e897e7318c7b094ef4e6047b9b82dbb03/README.md"
+  },
+  "maxInputTokens": 6000000,
+  "ablations": [],
+  "sourceVariants": [],
+  "sourceRevision": "5c2570df52a084b43120ee4e77921746a029480e",
+  "protocol": {
+    "answerAttempts": 3,
+    "answerBackoffMs": [
+      2000,
+      10000
+    ],
+    "judgeAttempts": 3,
+    "judgeBackoffMs": [
+      1000,
+      2000
+    ],
+    "maxTurns": 8
+  },
+  "memoryConfig": {
+    "observational": null,
+    "fabric": {
+      "preset": {
+        "name": "conversational",
+        "revision": 1,
+        "overridden": []
+      },
+      "enabled": true,
+      "retrieval": "lexical",
+      "semantic": true,
+      "inject": {
+        "query": "task",
+        "kinds": [
+          "exchange"
+        ]
+      },
+      "directory": {
+        "maxTopics": 8,
+        "maxFiles": 10,
+        "maxTokens": 200
+      },
+      "core": {
+        "maxTokens": 600,
+        "scopes": [
+          "user",
+          "project"
+        ]
+      },
+      "cues": {
+        "budgetTokens": 300,
+        "maxPerTurn": 2
+      },
+      "team": false,
+      "scopes": {
+        "tenantId": "prism",
+        "threadId": "default",
+        "priors": {
+          "path": 0.15,
+          "project": 0.1,
+          "team": 0.075,
+          "agent": 0.05,
+          "user": 0
+        },
+        "active": [
+          {
+            "level": "project",
+            "resourceId": "projects/bench--00000000"
+          }
+        ],
+        "project": {
+          "resourceId": "projects/bench--00000000",
+          "source": "path"
+        }
+      },
+      "store": "memory",
+      "tools": {},
+      "exchanges": {
+        "enabled": true,
+        "scope": "project"
+      },
+      "lifecycle": {
+        "verifyAfterSessions": 2,
+        "decay": {
+          "working": 0.4,
+          "episode": 0.8,
+          "fact": 0.4,
+          "preference": 0.2,
+          "procedure": 0.4,
+          "file": 0.4,
+          "exchange": 0.5
+        },
+        "storageWeights": {
+          "explicit": 1,
+          "sessions": 0.5,
+          "helpful": 0.5,
+          "harmful": 1,
+          "outcome": 0.5
+        },
+        "recall": {
+          "retrieval": 0.05,
+          "storage": 0.05
+        },
+        "archive": {
+          "retrievalBelow": -2,
+          "storageBelow": 1,
+          "graceSessions": 10
+        },
+        "capacity": {
+          "user": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "agent": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "project": {
+            "notes": 500,
+            "tokens": 60000
+          }
+        },
+        "merge": {
+          "duplicateDice": 0.8
+        },
+        "widen": {
+          "minProjects": 2,
+          "minSiblings": 2,
+          "contradictionsToSupersede": 2
+        }
+      },
+      "promote": {
+        "enabled": false,
+        "minScore": 0.5,
+        "maxCandidates": 48,
+        "minTurnsBetween": 8,
+        "derivableFrom": [
+          "AGENTS.md",
+          "README.md",
+          "package.json",
+          "CLAUDE.md"
+        ]
+      }
+    }
+  },
+  "inputTokens": 80723,
+  "cacheReadTokens": 2137,
+  "cacheWriteTokens": 0,
+  "outputTokens": 58309,
+  "calls": {
+    "observer": 0,
+    "reflector": 0,
+    "dropper": 0,
+    "embedding": 0,
+    "decider": 0,
+    "consolidate": 0,
+    "judge": 81,
+    "judgeAttempts": 81,
+    "gatewayRetries": 10,
+    "judgeCacheHits": 0,
+    "judgeCacheMisses": 25,
+    "concurrencyHalvings": 2,
+    "overloads": 15
+  },
+  "turns": 15,
+  "injectedContextTokens": 57155,
+  "injections": [
+    {
+      "questionId": "5:abstention:1",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "irrelevant",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 1,
+      "id": "541b212457ce",
+      "source": "fabric-semantic",
+      "tokens": 3479,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.8333333333333334,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 1,
+      "id": "8c6677ae9b49",
+      "source": "fabric-semantic",
+      "tokens": 275,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 1,
+      "id": "93ae9af32135",
+      "source": "fabric-semantic",
+      "tokens": 220,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.25,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "irrelevant",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 1,
+      "id": "cca3165942b2",
+      "source": "fabric-semantic",
+      "tokens": 1131,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 1,
+      "id": "038bfff56a78",
+      "source": "fabric-semantic",
+      "tokens": 1225,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.7777777777777778,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 1,
+      "id": "416ce56b9a4d",
+      "source": "fabric-semantic",
+      "tokens": 1331,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.7777777777777778,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 177,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "irrelevant",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 1,
+      "id": "8d9d427cabb8",
+      "source": "fabric-semantic",
+      "tokens": 1156,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.7142857142857143,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 1,
+      "id": "185781bb1729",
+      "source": "fabric-semantic",
+      "tokens": 1050,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.5714285714285714,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 1,
+      "id": "c4b393a7e431",
+      "source": "fabric-semantic",
+      "tokens": 1484,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.7142857142857143,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "irrelevant",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 1,
+      "id": "95c3f9d2d4fd",
+      "source": "fabric-semantic",
+      "tokens": 706,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.7857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 1,
+      "id": "8c5cbb3e54f8",
+      "source": "fabric-semantic",
+      "tokens": 1112,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.7857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 1,
+      "id": "ac1a0d1b9d4d",
+      "source": "fabric-semantic",
+      "tokens": 1112,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.7857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 1,
+      "id": "f0a77b001bfc",
+      "source": "fabric-semantic",
+      "tokens": 1025,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.2857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "3:contradiction_resolution:1",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "irrelevant",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "3:contradiction_resolution:1",
+      "turn": 1,
+      "id": "382ec00acccc",
+      "source": "fabric-semantic",
+      "tokens": 644,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.875,
+      "cited": false
+    },
+    {
+      "questionId": "3:contradiction_resolution:1",
+      "turn": 1,
+      "id": "6be286d42d00",
+      "source": "fabric-semantic",
+      "tokens": 636,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.875,
+      "cited": false
+    },
+    {
+      "questionId": "3:contradiction_resolution:1",
+      "turn": 1,
+      "id": "eaa6c4511bb1",
+      "source": "fabric-semantic",
+      "tokens": 1989,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "7:contradiction_resolution:0",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 177,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "irrelevant",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "7:contradiction_resolution:0",
+      "turn": 1,
+      "id": "da37f383f0db",
+      "source": "fabric-semantic",
+      "tokens": 804,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.7,
+      "cited": false
+    },
+    {
+      "questionId": "7:contradiction_resolution:0",
+      "turn": 1,
+      "id": "332f3fea8a43",
+      "source": "fabric-semantic",
+      "tokens": 1050,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.4,
+      "cited": false
+    },
+    {
+      "questionId": "7:contradiction_resolution:0",
+      "turn": 1,
+      "id": "a3f706249ba7",
+      "source": "fabric-semantic",
+      "tokens": 925,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.6,
+      "cited": false
+    },
+    {
+      "questionId": "7:contradiction_resolution:0",
+      "turn": 1,
+      "id": "0a2305de1c7b",
+      "source": "fabric-semantic",
+      "tokens": 1010,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.5,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "irrelevant",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 1,
+      "id": "5fb2d166d900",
+      "source": "fabric-semantic",
+      "tokens": 837,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 1,
+      "id": "107324437314",
+      "source": "fabric-semantic",
+      "tokens": 625,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 1,
+      "id": "2e8bc51749ef",
+      "source": "fabric-semantic",
+      "tokens": 647,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 1,
+      "id": "c3e9150c2e27",
+      "source": "fabric-semantic",
+      "tokens": 842,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 1,
+      "id": "ba1c11cc4db4",
+      "source": "fabric-semantic",
+      "tokens": 978,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.8,
+      "cited": false
+    },
+    {
+      "questionId": "9:contradiction_resolution:0",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "irrelevant",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "9:contradiction_resolution:0",
+      "turn": 1,
+      "id": "b1a60d664f8f",
+      "source": "fabric-semantic",
+      "tokens": 778,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.8571428571428571,
+      "cited": false
+    },
+    {
+      "questionId": "9:contradiction_resolution:0",
+      "turn": 1,
+      "id": "687031bcd548",
+      "source": "fabric-semantic",
+      "tokens": 830,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.5714285714285714,
+      "cited": true
+    },
+    {
+      "questionId": "9:contradiction_resolution:0",
+      "turn": 1,
+      "id": "a6152748fc21",
+      "source": "fabric-semantic",
+      "tokens": 750,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.42857142857142855,
+      "cited": false
+    },
+    {
+      "questionId": "9:contradiction_resolution:0",
+      "turn": 1,
+      "id": "1b212780e232",
+      "source": "fabric-semantic",
+      "tokens": 943,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.5714285714285714,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "irrelevant",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 1,
+      "id": "732f30b28711",
+      "source": "fabric-semantic",
+      "tokens": 607,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.26666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 1,
+      "id": "b004bba866a7",
+      "source": "fabric-semantic",
+      "tokens": 607,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 1,
+      "id": "29b16c6fd7ad",
+      "source": "fabric-semantic",
+      "tokens": 914,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 1,
+      "id": "1c75dd616eba",
+      "source": "fabric-semantic",
+      "tokens": 747,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "1:event_ordering:1",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "irrelevant",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "1:event_ordering:1",
+      "turn": 1,
+      "id": "aac438a70e42",
+      "source": "fabric-semantic",
+      "tokens": 1476,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.25,
+      "cited": false
+    },
+    {
+      "questionId": "1:event_ordering:1",
+      "turn": 1,
+      "id": "cea252137886",
+      "source": "fabric-semantic",
+      "tokens": 1754,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.375,
+      "cited": false
+    },
+    {
+      "questionId": "1:event_ordering:0",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "used",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "1:event_ordering:0",
+      "turn": 1,
+      "id": "97c70e3a7876",
+      "source": "fabric-semantic",
+      "tokens": 1255,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.25,
+      "cited": false
+    },
+    {
+      "questionId": "1:event_ordering:0",
+      "turn": 1,
+      "id": "b92c5d02f634",
+      "source": "fabric-semantic",
+      "tokens": 1303,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.3125,
+      "cited": false
+    },
+    {
+      "questionId": "1:event_ordering:0",
+      "turn": 1,
+      "id": "71579da8b9a6",
+      "source": "fabric-semantic",
+      "tokens": 1277,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.25,
+      "cited": false
+    },
+    {
+      "questionId": "5:event_ordering:0",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "used",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "5:event_ordering:0",
+      "turn": 1,
+      "id": "7355ef3e3ffb",
+      "source": "fabric-semantic",
+      "tokens": 1013,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.4,
+      "cited": false
+    },
+    {
+      "questionId": "5:event_ordering:0",
+      "turn": 1,
+      "id": "55ca1805ea52",
+      "source": "fabric-semantic",
+      "tokens": 601,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "5:event_ordering:0",
+      "turn": 1,
+      "id": "56fd0473cec8",
+      "source": "fabric-semantic",
+      "tokens": 774,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "5:event_ordering:0",
+      "turn": 1,
+      "id": "8c1748ace876",
+      "source": "fabric-semantic",
+      "tokens": 678,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.4,
+      "cited": false
+    },
+    {
+      "questionId": "5:event_ordering:0",
+      "turn": 1,
+      "id": "944b48409e84",
+      "source": "fabric-semantic",
+      "tokens": 795,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "16:information_extraction:0",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 177,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "16:information_extraction:0",
+      "turn": 1,
+      "id": "dcbeaf610cfc",
+      "source": "fabric-semantic",
+      "tokens": 1086,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.625,
+      "cited": false
+    },
+    {
+      "questionId": "16:information_extraction:0",
+      "turn": 1,
+      "id": "8756968b6281",
+      "source": "fabric-semantic",
+      "tokens": 660,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.75,
+      "cited": false
+    },
+    {
+      "questionId": "16:information_extraction:0",
+      "turn": 1,
+      "id": "bbf19d564c1f",
+      "source": "fabric-semantic",
+      "tokens": 1025,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.625,
+      "cited": false
+    },
+    {
+      "questionId": "16:information_extraction:0",
+      "turn": 1,
+      "id": "4f33021042c5",
+      "source": "fabric-semantic",
+      "tokens": 907,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.375,
+      "cited": false
+    },
+    {
+      "questionId": "9:information_extraction:0",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "9:information_extraction:0",
+      "turn": 1,
+      "id": "4ed94e1cd6f5",
+      "source": "fabric-semantic",
+      "tokens": 730,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7142857142857143,
+      "cited": false
+    },
+    {
+      "questionId": "9:information_extraction:0",
+      "turn": 1,
+      "id": "9f40a1c0907d",
+      "source": "fabric-semantic",
+      "tokens": 1209,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.5714285714285714,
+      "cited": false
+    },
+    {
+      "questionId": "9:information_extraction:0",
+      "turn": 1,
+      "id": "a0c39e8703c3",
+      "source": "fabric-semantic",
+      "tokens": 657,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.42857142857142855,
+      "cited": false
+    },
+    {
+      "questionId": "9:information_extraction:0",
+      "turn": 1,
+      "id": "a90aeb3632b6",
+      "source": "fabric-semantic",
+      "tokens": 1127,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7142857142857143,
+      "cited": false
+    },
+    {
+      "questionId": "16:information_extraction:1",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 177,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "16:information_extraction:1",
+      "turn": 1,
+      "id": "1a138a193dfc",
+      "source": "fabric-semantic",
+      "tokens": 568,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.5882352941176471,
+      "cited": false
+    },
+    {
+      "questionId": "16:information_extraction:1",
+      "turn": 1,
+      "id": "47d5c8f19de7",
+      "source": "fabric-semantic",
+      "tokens": 1113,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.35294117647058826,
+      "cited": false
+    },
+    {
+      "questionId": "16:information_extraction:1",
+      "turn": 1,
+      "id": "a5e2c450b09f",
+      "source": "fabric-semantic",
+      "tokens": 1157,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.5882352941176471,
+      "cited": false
+    },
+    {
+      "questionId": "16:information_extraction:1",
+      "turn": 1,
+      "id": "33ce1c719483",
+      "source": "fabric-semantic",
+      "tokens": 877,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.6470588235294118,
+      "cited": false
+    }
+  ],
+  "attemptId": "202-baseline.beam-100k.passive-only.opencode-go.mimo-v2.5@1",
+  "protocolHash": "47f6e326c7ce24320212ee33403b8946dcfb77d78789927427c76139f94fd32e",
+  "resumedResults": 0,
+  "results": [
+    {
+      "id": "5:abstention:1",
+      "ability": "abstention",
+      "cluster": "beam-5",
+      "correct": false,
+      "judgeVerdicts": {
+        "opencode-go/deepseek-v4-pro": "no",
+        "opencode-go/glm-5.2": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "5:s1-r20",
+        "5:s1-r8",
+        "5:s1-r22"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 3974,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "stage": "abstention_error"
+    },
+    {
+      "id": "9:abstention:1",
+      "ability": "abstention",
+      "cluster": "beam-9",
+      "correct": false,
+      "judgeVerdicts": {
+        "opencode-go/deepseek-v4-pro": "no",
+        "opencode-go/glm-5.2": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "9:s1-r21",
+        "9:s4-r16",
+        "9:s4-r15"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 3687,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "stage": "abstention_error"
+    },
+    {
+      "id": "10:abstention:0",
+      "ability": "abstention",
+      "cluster": "beam-10",
+      "correct": false,
+      "judgeVerdicts": {
+        "opencode-go/deepseek-v4-pro": "no",
+        "opencode-go/glm-5.2": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "10:s0-r3",
+        "10:s1-r42",
+        "10:s2-r20"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 3690,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "stage": "abstention_error"
+    },
+    {
+      "id": "20:abstention:1",
+      "ability": "abstention",
+      "cluster": "beam-20",
+      "correct": false,
+      "judgeVerdicts": {
+        "opencode-go/deepseek-v4-pro": "no",
+        "opencode-go/glm-5.2": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "20:s3-r16",
+        "20:s3-r18",
+        "20:s3-r17",
+        "20:s3-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 3955,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "stage": "abstention_error"
+    },
+    {
+      "id": "8:contradiction_resolution:1",
+      "ability": "contradiction_resolution",
+      "cluster": "beam-8",
+      "correct": false,
+      "judgeVerdicts": {
+        "opencode-go/deepseek-v4-pro": "no",
+        "opencode-go/glm-5.2": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "8:s0-r13",
+        "8:s1-r26",
+        "8:s1-r17",
+        "8:s2-r2",
+        "8:s2-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 3929,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "stage": "gold_unknown"
+    },
+    {
+      "id": "3:contradiction_resolution:1",
+      "ability": "contradiction_resolution",
+      "cluster": "beam-3",
+      "correct": false,
+      "judgeVerdicts": {
+        "opencode-go/deepseek-v4-pro": "no",
+        "opencode-go/glm-5.2": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "3:s1-r25",
+        "3:s1-r26",
+        "3:s1-r31"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 3269,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "stage": "gold_unknown"
+    },
+    {
+      "id": "7:contradiction_resolution:0",
+      "ability": "contradiction_resolution",
+      "cluster": "beam-7",
+      "correct": false,
+      "judgeVerdicts": {
+        "opencode-go/deepseek-v4-pro": "no",
+        "opencode-go/glm-5.2": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "7:s0-r26",
+        "7:s1-r0",
+        "7:s4-r15",
+        "7:s4-r3"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 3789,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "stage": "gold_unknown"
+    },
+    {
+      "id": "9:contradiction_resolution:0",
+      "ability": "contradiction_resolution",
+      "cluster": "beam-9",
+      "correct": false,
+      "judgeVerdicts": {
+        "opencode-go/deepseek-v4-pro": "no",
+        "opencode-go/glm-5.2": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "9:s0-r25",
+        "9:s1-r4",
+        "9:s2-r3",
+        "9:s3-r2"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 3301,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "stage": "gold_unknown"
+    },
+    {
+      "id": "13:event_ordering:0",
+      "ability": "event_ordering",
+      "cluster": "beam-13",
+      "correct": false,
+      "judgeVerdicts": {
+        "opencode-go/deepseek-v4-pro": "no",
+        "opencode-go/glm-5.2": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "13:s0-r25",
+        "13:s3-r0",
+        "13:s3-r13",
+        "13:s3-r3"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 2875,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "stage": "gold_unknown"
+    },
+    {
+      "id": "1:event_ordering:1",
+      "ability": "event_ordering",
+      "cluster": "beam-1",
+      "correct": false,
+      "judgeVerdicts": {
+        "opencode-go/deepseek-v4-pro": "no",
+        "opencode-go/glm-5.2": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "1:s1-r13",
+        "1:s2-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 3230,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "stage": "gold_unknown"
+    },
+    {
+      "id": "1:event_ordering:0",
+      "ability": "event_ordering",
+      "cluster": "beam-1",
+      "correct": false,
+      "judgeVerdicts": {
+        "opencode-go/deepseek-v4-pro": "no",
+        "opencode-go/glm-5.2": "no"
+      },
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "1:s0-r22",
+        "1:s0-r8",
+        "1:s1-r13"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 3835,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "stage": "gold_unknown"
+    }
+  ],
+  "status": "failed",
+  "limitations": [
+    "Block-level injection accounting until item metadata lands in Tasks 4, 9, 11 and 12.",
+    "Injection token allocations are character estimates, not billing usage.",
+    "OpenCode Go and Hyper judges differ from the papers; scores are not directly comparable."
+  ],
+  "ratesAsOf": "2026-10-27",
+  "ratesStatus": "provider-catalog",
+  "inputCap": 870976,
+  "selectedQuestionIds": [
+    "5:abstention:1",
+    "9:abstention:1",
+    "10:abstention:0",
+    "20:abstention:1",
+    "8:contradiction_resolution:1",
+    "3:contradiction_resolution:1",
+    "7:contradiction_resolution:0",
+    "9:contradiction_resolution:0",
+    "13:event_ordering:0",
+    "5:event_ordering:0",
+    "1:event_ordering:1",
+    "1:event_ordering:0",
+    "16:information_extraction:0",
+    "16:information_extraction:1",
+    "9:information_extraction:0",
+    "19:information_extraction:0",
+    "18:instruction_following:0",
+    "9:instruction_following:1",
+    "13:instruction_following:1",
+    "8:instruction_following:1",
+    "4:knowledge_update:0",
+    "7:knowledge_update:1",
+    "2:knowledge_update:0",
+    "17:knowledge_update:1",
+    "6:multi_session_reasoning:1",
+    "2:multi_session_reasoning:0",
+    "9:multi_session_reasoning:1",
+    "13:multi_session_reasoning:1",
+    "10:preference_following:1",
+    "11:preference_following:0",
+    "18:preference_following:1",
+    "14:preference_following:0",
+    "10:summarization:0",
+    "17:summarization:0",
+    "1:summarization:1",
+    "8:summarization:1",
+    "18:temporal_reasoning:0",
+    "19:temporal_reasoning:1",
+    "14:temporal_reasoning:1",
+    "17:temporal_reasoning:0"
+  ],
+  "runPathFingerprint": "b58772fa192e3a60f6c98cf68ef13926e2e66acc06dbd0ed283608220a7b33bb",
+  "usageComplete": true,
+  "usageMissingExchanges": 0,
+  "wireExchanges": 106,
+  "errors": [
+    {
+      "questionId": "16:information_extraction:0",
+      "code": "MemoryBenchJudgeError:429",
+      "message": "MemoryBenchJudgeError:429",
+      "cause": {
+        "name": "Error",
+        "code": "429",
+        "message": "opencode-go request failed: 429 type:error,error:type:GoUsageLimitError,message:Go usage limit exceeded,metadata:workspace:wrk_01KMZ82MR6G3V8TPWTW338V400,limitN",
+        "failureClass": "quota"
+      }
+    },
+    {
+      "questionId": "5:event_ordering:0",
+      "code": "MemoryBenchJudgeError:429",
+      "message": "MemoryBenchJudgeError:429",
+      "cause": {
+        "name": "Error",
+        "code": "429",
+        "message": "opencode-go request failed: 429 type:error,error:type:GoUsageLimitError,message:Go usage limit exceeded,metadata:workspace:wrk_01KMZ82MR6G3V8TPWTW338V400,limitN",
+        "failureClass": "quota"
+      }
+    },
+    {
+      "questionId": "9:information_extraction:0",
+      "code": "MemoryBenchAnswerError:429",
+      "message": "MemoryBenchAnswerError:429",
+      "cause": {
+        "name": "Error",
+        "code": "429",
+        "message": "opencode-go request failed: 429 type:error,error:type:GoUsageLimitError,message:Go usage limit exceeded,metadata:workspace:wrk_01KMZ82MR6G3V8TPWTW338V400,limitN",
+        "failureClass": "quota"
+      },
+      "trace": {
+        "turns": 1,
+        "toolCalls": 0,
+        "recallCalls": 1,
+        "answerRetries": 0,
+        "mutating": false,
+        "maxTurns": 8,
+        "tools": []
+      }
+    },
+    {
+      "questionId": "16:information_extraction:1",
+      "code": "MemoryBenchAnswerError:429",
+      "message": "MemoryBenchAnswerError:429",
+      "cause": {
+        "name": "Error",
+        "code": "429",
+        "message": "opencode-go request failed: 429 type:error,error:type:GoUsageLimitError,message:Go usage limit exceeded,metadata:workspace:wrk_01KMZ82MR6G3V8TPWTW338V400,limitN",
+        "failureClass": "quota"
+      },
+      "trace": {
+        "turns": 1,
+        "toolCalls": 0,
+        "recallCalls": 1,
+        "answerRetries": 0,
+        "mutating": false,
+        "maxTurns": 8,
+        "tools": []
+      }
+    }
+  ],
+  "failure": {
+    "questionId": "16:information_extraction:1",
+    "code": "MemoryBenchAnswerError:429",
+    "message": "MemoryBenchAnswerError:429",
+    "cause": {
+      "name": "Error",
+      "code": "429",
+      "message": "opencode-go request failed: 429 type:error,error:type:GoUsageLimitError,message:Go usage limit exceeded,metadata:workspace:wrk_01KMZ82MR6G3V8TPWTW338V400,limitN",
+      "failureClass": "quota"
+    },
+    "trace": {
+      "turns": 1,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "answerRetries": 0,
+      "mutating": false,
+      "maxTurns": 8,
+      "tools": []
+    }
+  },
+  "timing": {
+    "wallMs": 440325.6,
+    "concurrency": {
+      "initial": 4,
+      "active": 1,
+      "floor": 1
+    },
+    "questions": {
+      "n": 15,
+      "wallMs": {
+        "p50": 116937.7,
+        "p95": 191814.3,
+        "mean": 116794.6
+      }
+    },
+    "roles": {
+      "injection-label": {
+        "calls": 55,
+        "firstByteMs": {
+          "p50": 8179.9,
+          "p95": 109694.9,
+          "mean": 30749.1
+        },
+        "totalMs": {
+          "p50": 8179.9,
+          "p95": 109694.9,
+          "mean": 30749.1
+        }
+      },
+      "judge": {
+        "calls": 81,
+        "firstByteMs": {
+          "p50": 4987,
+          "p95": 52846.1,
+          "mean": 12619.4
+        },
+        "totalMs": {
+          "p50": 4987,
+          "p95": 52846.1,
+          "mean": 12619.4
+        }
+      },
+      "solver": {
+        "calls": 15,
+        "firstByteMs": {
+          "p50": 3540.7,
+          "p95": 11322.1,
+          "mean": 4607
+        },
+        "totalMs": {
+          "p50": 6125.1,
+          "p95": 13956,
+          "mean": 6012.6
+        }
+      }
+    },
+    "calls": 151
+  },
+  "metricVersion": 2,
+  "abilities": {
+    "abstention": {
+      "n": 4,
+      "correct": 0,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "contradiction_resolution": {
+      "n": 4,
+      "correct": 0,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "contradiction_resolution",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "event_ordering": {
+      "n": 3,
+      "correct": 0,
+      "scored": 3,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "event_ordering",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    }
+  },
+  "abilityGroups": {
+    "abstention": {
+      "n": 4,
+      "correct": 0,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "contradiction_resolution": {
+      "n": 4,
+      "correct": 0,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "contradiction_resolution",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "event_ordering": {
+      "n": 3,
+      "correct": 0,
+      "scored": 3,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "event_ordering",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    }
+  },
+  "metricDefinitions": {
+    "abstention": {
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "contradiction_resolution": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "event_ordering": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    }
+  },
+  "runLimitRate": 0,
+  "errorRate": 0,
+  "cacheReadRatio": 0.026473248021010122,
+  "cacheWriteRatio": 0,
+  "cost": {
+    "currency": "USD",
+    "unit": "per_million_tokens",
+    "rates": {
+      "input": 0.14,
+      "output": 0.28,
+      "cacheRead": 0.0028,
+      "cacheWrite": null
+    },
+    "pricingStatus": "priced",
+    "measured": 0.027335,
+    "cachedPrefixSimulation": null,
+    "simulationAssumption": null,
+    "ratesAsOf": "2026-10-27",
+    "ratesStatus": "provider-catalog"
+  },
+  "judgeAgreement": {
+    "n": 11,
+    "judges": {
+      "opencode-go/deepseek-v4-pro": {
+        "scored": 11,
+        "agreementWithPanel": 1
+      },
+      "opencode-go/glm-5.2": {
+        "scored": 11,
+        "agreementWithPanel": 1
+      }
+    },
+    "pairs": [
+      {
+        "a": "opencode-go/deepseek-v4-pro",
+        "b": "opencode-go/glm-5.2",
+        "n": 11,
+        "agreement": 1,
+        "kappa": null
+      }
+    ],
+    "fleissKappa": null
+  },
+  "injectionPrecision": {
+    "granularity": "block",
+    "tokensPerTurn": 3810.3333333333335,
+    "irrelevantRate": 0.7924528301886793,
+    "citedIdRate": 0.01818181818181818,
+    "tokenAccounting": "estimated ceil(characters/4); billing is wire usage"
+  },
+  "injectionPrecisionReason": null,
+  "toolCalls": 0,
+  "toolCallsPerQuestion": 0,
+  "recallCalls": 11,
+  "retrievedSnippetTokens": 39534,
+  "answerSessionHitAtK": null,
+  "evidenceRoundCoverage": null,
+  "evidenceAllRequired": null,
+  "fineEvidenceRecall": null,
+  "fineEvidencePrecision": null,
+  "legacyRetrievalRecallAtK": null,
+  "retrievalRecallAtK": null,
+  "stages": {
+    "abstention_error": 4,
+    "gold_unknown": 7
+  }
+}

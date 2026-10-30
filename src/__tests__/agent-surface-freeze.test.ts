@@ -56,7 +56,7 @@ const TESTING_VALUES = ["createMockProvider", "mockProvider", "packageConformanc
 
 /** Member names pinned for the Phase 4 build. A new or renamed member is a deliberate edit here and in the doc. */
 const FROZEN_MEMBERS: Readonly<Record<string, readonly string[]>> = {
-  Agent: ["id", "config", "commands", "tools", "skills", "sessions", "models", "session", "subscribe", "dispose", "inspect"],
+  Agent: ["id", "config", "commands", "tools", "skills", "sessions", "models", "session", "reload", "subscribe", "dispose", "inspect"],
   AgentInspection: ["packages", "tools", "skills", "commands", "hooks", "slots", "store", "disabled", "statusNotes"],
   Session: [
     "id",

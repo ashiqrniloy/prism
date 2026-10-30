@@ -127,9 +127,12 @@ describe("wire-proxy", () => {
         fetch() {
           return new Response(
             new ReadableStream({
-              pull(controller) {
+              async pull(controller) {
                 if (pulls++ === 0) controller.enqueue(new TextEncoder().encode('data: {"type":"content_block_delta"}\n\n'));
-                else controller.error(new Error("upstream reset"));
+                else {
+                  await new Promise((resolve) => setTimeout(resolve, 20));
+                  controller.error(new Error("upstream reset"));
+                }
               },
             }),
             { headers: { "content-type": "text/event-stream" } },
@@ -352,4 +355,103 @@ describe("wire-proxy", () => {
       rmSync(tempLog, { force: true });
     }
   });
+});
+
+it("proxy_usage_log_reads_responses_terminal_usage", () => {
+  const usage = { input_tokens: 123, output_tokens: 17, input_tokens_details: { cached_tokens: 20 } };
+  const stream = `event: response.completed\ndata: ${JSON.stringify({ type: "response.completed", response: { id: "resp_1", usage } })}\n\n`;
+  assert.deepEqual(parseRawUpstreamUsage(stream, "text/event-stream"), usage);
+});
+
+it("proxy_records_transport_failures_as_unknown_usage", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "proxy-transport-"));
+  const upstream = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: () => new Response("unused") });
+  const port = upstream.port;
+  upstream.stop(true);
+  const proxy = await startWireProxy({ upstream: `http://127.0.0.1:${port}`, listen: "127.0.0.1:0", usageLog: join(dir, "usage.jsonl") });
+  try {
+    const response = await fetch(proxy.url, { method: "POST", body: JSON.stringify({ model: "free" }) });
+    assert.equal(response.status, 502);
+    await proxy.drain();
+    const row = JSON.parse(readFileSync(join(dir, "usage.jsonl"), "utf8"));
+    assert.equal(row.status, 502);
+    assert.equal(row.rawUsage, null);
+  } finally {
+    proxy.stop();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+it("wire_metadata_retains_generation_ids_without_response_text", async () => {
+  const { parseRawResponseId } = await import("./wire-proxy.mjs");
+  assert.equal(parseRawResponseId('data: {"id":"gen-test","choices":[]}\n\ndata: [DONE]\n'), "gen-test");
+  assert.equal(parseRawResponseId('{"id":"resp-test","output":[]}'), "resp-test");
+  assert.equal(parseRawResponseId('data: {"type":"response.completed","response":{"id":"resp-sse"}}\n'), "resp-sse");
+  assert.equal(parseRawResponseId('data: {"error":"no id"}\n'), undefined);
+});
+
+it("proxy_allows_model_prefill_longer_than_the_server_idle_default", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "proxy-quiet-"));
+  const upstream = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    idleTimeout: 0,
+    fetch() {
+      return new Response(
+        new ReadableStream({
+          async start(controller) {
+            controller.enqueue(new TextEncoder().encode("data: first\n\n"));
+            await new Promise((resolve) => setTimeout(resolve, 11000));
+            controller.enqueue(new TextEncoder().encode("data: last\n\n"));
+            controller.close();
+          },
+        }),
+        { headers: { "content-type": "text/event-stream" } },
+      );
+    },
+  });
+  const proxy = await startWireProxy({
+    upstream: `http://127.0.0.1:${upstream.port}`,
+    listen: "127.0.0.1:0",
+    usageLog: join(dir, "usage.jsonl"),
+  });
+  try {
+    const response = await fetch(proxy.url, { signal: AbortSignal.timeout(14000) });
+    assert.match(await response.text(), /data: last/);
+  } finally {
+    proxy.stop();
+    upstream.stop(true);
+    rmSync(dir, { recursive: true, force: true });
+  }
+}, 16000);
+
+it("wire_usage_log_retains_the_prompt_cache_key", async () => {
+  const { requestCacheKey } = await import("./wire-proxy.mjs");
+  assert.equal(requestCacheKey(new Headers({ "x-session-id": "prism-fabric-extract:default" }), null), "prism-fabric-extract:default");
+  assert.equal(requestCacheKey(new Headers({ session_id: "s" }), null), "s");
+  assert.equal(requestCacheKey(new Headers(), { prompt_cache_key: "k" }), "k");
+  assert.equal(requestCacheKey(new Headers(), "text body"), undefined);
+  const dir = mkdtempSync(join(tmpdir(), "proxy-cache-key-"));
+  const upstream = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch: () => Response.json({ id: "g", usage: { prompt_tokens: 3, completion_tokens: 1 } }),
+  });
+  const usageLog = join(dir, "usage.jsonl");
+  const proxy = await startWireProxy({ upstream: `http://127.0.0.1:${upstream.port}`, listen: "127.0.0.1:0", usageLog });
+  try {
+    for (const headers of [{ "x-session-id": "prism-fabric-extract:project" }, {}])
+      await fetch(`${proxy.url}/chat/completions`, { method: "POST", headers, body: JSON.stringify({ model: "m" }) });
+    await proxy.drain();
+    const rows = readFileSync(usageLog, "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    assert.equal(rows[0].cacheKey, "prism-fabric-extract:project");
+    assert.equal("cacheKey" in rows[1], false);
+  } finally {
+    proxy.stop();
+    upstream.stop(true);
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

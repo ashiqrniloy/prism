@@ -1,8 +1,9 @@
 import type { Database } from "bun:sqlite";
 import { closeSync, openSync } from "node:fs";
-import { HARD_DIRECTORY_TAGS, resolveDirectoryAsOf, resolveDirectoryLimit } from "../directory.js";
 import { assertAccessConstraint, assertAccessGrants, assertAuthorizationTenant, grantAllows, sourceIdFromRecord } from "../acl.js";
+import { HARD_DIRECTORY_TAGS, resolveDirectoryAsOf, resolveDirectoryLimit } from "../directory.js";
 import { MemoryConflictError, MemoryValidationError } from "../errors.js";
+import { lexicalCoverage, lexicalKeys, lexicalTermString, lexicalTerms, recordLexicalTerms } from "../lexical.js";
 import { assertInvalidationBatch, assertShareGrant, HARD_LINEAGE_EDGES, recordBlocked } from "../lineage.js";
 import {
   compareMemoryRecord,
@@ -41,13 +42,7 @@ import {
   requireNonEmptyString,
   requireScope,
 } from "../util.js";
-import { lexicalCoverage, lexicalKeys, lexicalTerms, lexicalTermString, recordLexicalTerms } from "../lexical.js";
-import {
-  buildSqliteMemoryDdl,
-  buildSqliteMemoryV3Migration,
-  SQLITE_MEMORY_APPLICATION_ID,
-  SQLITE_MEMORY_SCHEMA_VERSION,
-} from "./ddl.js";
+import { buildSqliteMemoryDdl, buildSqliteMemoryV3Migration, SQLITE_MEMORY_APPLICATION_ID, SQLITE_MEMORY_SCHEMA_VERSION } from "./ddl.js";
 
 export { buildSqliteMemoryDdl } from "./ddl.js";
 
@@ -138,6 +133,9 @@ export async function createSqliteMemoryStores(options: SqliteMemoryStoresOption
         } else if (version !== SQLITE_MEMORY_SCHEMA_VERSION) {
           throw new MemoryValidationError("Unknown SQLite memory schema");
         }
+        openedDb.exec(
+          "CREATE INDEX IF NOT EXISTS semantic_memory_session ON semantic_memory(tenant_id,resource_id,thread_id,json_extract(record,'$.metadata.fabric.session'),json_extract(record,'$.metadata.fabric.tRef'),id)",
+        );
         const stored = openedDb.query<{ dimensions: number | null }, []>("SELECT dimensions FROM memory_config WHERE id = 1").get();
         if (!stored) throw new MemoryValidationError("Missing SQLite memory configuration");
         if (dimensions !== undefined && stored.dimensions !== null && dimensions !== stored.dimensions)
@@ -355,9 +353,12 @@ export async function createSqliteMemoryStores(options: SqliteMemoryStoresOption
       assertNotAborted(options.signal);
       const s = requireScope(scope, true);
       if (!ids.length) return [];
-      return database.query<{ record: string }, string[]>(
-        `SELECT record FROM semantic_memory WHERE tenant_id=? AND resource_id=? AND thread_id=? AND id IN (${ids.map(() => "?").join(",")})`,
-      ).all(s.tenantId, s.resourceId, s.threadId!, ...ids).map(row => decode<MemoryVectorRecord>(row.record));
+      return database
+        .query<{ record: string }, string[]>(
+          `SELECT record FROM semantic_memory WHERE tenant_id=? AND resource_id=? AND thread_id=? AND id IN (${ids.map(() => "?").join(",")})`,
+        )
+        .all(s.tenantId, s.resourceId, s.threadId!, ...ids)
+        .map((row) => decode<MemoryVectorRecord>(row.record));
     },
     async getByThread(scope) {
       return rows(scope).sort((a, b) => compareMemoryRecords(a, b, "sequence"));
@@ -473,6 +474,22 @@ export async function createSqliteMemoryStores(options: SqliteMemoryStoresOption
       assertNotAborted(opts.signal);
       return state<MemoryShareGrant>(scope, "share", requireNonEmptyString(child, "childThreadId"));
     },
+    async listBySession(scope, session, opts = {}) {
+      assertNotAborted(opts.signal);
+      const exact = requireScope(scope, true);
+      requireNonEmptyString(session, "session");
+      return database
+        .query<{ id: string; metadata: string; createdAt: string }, string[]>(
+          `SELECT s.id, json_extract(s.record,'$.metadata') AS metadata,
+         json_extract(s.record,'$.createdAt') AS createdAt FROM semantic_memory s WHERE s.tenant_id=? AND s.resource_id=? AND s.thread_id=?
+         AND json_extract(s.record,'$.metadata.fabric.session')=?
+         AND json_extract(s.record,'$.metadata.fabric.kind')='exchange'
+         AND json_extract(s.record,'$.consent.visible')=1 AND ${NOT_BLOCKED}
+         ORDER BY json_extract(s.record,'$.metadata.fabric.tRef'),s.id`,
+        )
+        .all(...scopeArgs(exact), session)
+        .map((row) => ({ id: row.id, metadata: JSON.parse(row.metadata), createdAt: row.createdAt }));
+    },
     async scanMetadata(query: VectorScanMetadataQuery): Promise<MemoryVectorMetadataPage> {
       assertNotAborted(query.signal);
       const { tenantId, resourceId } = requireScanScope(query);
@@ -502,9 +519,7 @@ export async function createSqliteMemoryStores(options: SqliteMemoryStoresOption
       const last = found[query.limit - 1];
       return Object.freeze({
         rows: Object.freeze(page),
-        ...(last && found.length > page.length
-          ? { nextCursor: encodeMetadataCursor({ threadId: last.thread_id, id: last.id }) }
-          : {}),
+        ...(last && found.length > page.length ? { nextCursor: encodeMetadataCursor({ threadId: last.thread_id, id: last.id }) } : {}),
       });
     },
     async listResources(query: VectorListResourcesQuery) {

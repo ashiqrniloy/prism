@@ -221,7 +221,32 @@ kernel member):
 | `tools`, `skills` | Frozen `ToolInfo { name, description, effects, package }` and `SkillInfo { name, description, package }` lists. |
 | `inspect()` | What loaded: packages, hooks in execution order, slot owners. Reads the same tool and skill view. |
 | `subscribe(options?)` | Agent-scoped events until `dispose()`. |
+| `reload()` | Re-assembles skills, packages, and hooks in place without replacing the agent or its open sessions. See [`reload()`](#reload). |
 | `dispose()` | Aborts active runs, closes open sessions, then disposes packages in reverse load order and ends every `subscribe()` stream. See [dispose()](#dispose). |
+
+### `reload()`
+
+```ts
+await agent.reload();           // live sessions keep their conversation
+```
+
+`reload()` re-reads `skills.dirs`, re-runs every loaded package's `setup` on a fresh hook bus and slot
+registry, and re-compiles the inline `AgentConfig.hooks`. A package whose `setup` discovers a skill
+directory (or re-reads a config file) picks up the edit, and a hook callback that reads host state is
+compiled again. `agent.tools`, `agent.skills`, `agent.commands`, and `inspect()` reflect the swap; an
+open session sees the new skills and hooks on its next run, because its `hooks()` lookup re-binds to the
+new bus. An open session keeps the `store` instance it opened with; new sessions resolve the reloaded
+slot.
+
+The swap is atomic: a package whose `setup` throws (or a slot/model conflict) rejects `reload()` and
+leaves the committed packages, hooks, slots, skills, and `agent.config` untouched. One reload runs at a
+time; concurrent callers await the same attempt. A session with an active run makes `reload()` reject
+(`Cannot reload while a session run is active`), because package teardown closes resources that run may
+hold, and a run that starts during the swap rejects with `Agent is reloading; retry the run`. After
+`dispose()` starts, `reload()` rejects with `AgentDisposedError`.
+
+`SessionStart` hooks do not re-fire for sessions that were already open; use the run-scoped hooks
+(`UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `Stop`) for changes that must affect the next turn.
 
 ### `dispose()`
 
@@ -471,7 +496,7 @@ Pinned member names:
 
 | Type | Members |
 | --- | --- |
-| `Agent` | `id`, `config`, `commands`, `tools`, `skills`, `sessions`, `models`, `session`, `subscribe`, `dispose`, `inspect` |
+| `Agent` | `id`, `config`, `commands`, `tools`, `skills`, `sessions`, `models`, `session`, `reload`, `subscribe`, `dispose`, `inspect` |
 | `AgentInspection` | `packages`, `tools`, `skills`, `commands`, `hooks`, `slots`, `store`, `disabled`, `statusNotes` |
 | `Session` | `id`, `run`, `stream`, `steer`, `abort`, `resume`, `messages`, `fork`, `compact`, `close`, plus the kernel members `leafId`, `entries`, `checkout`, `contextMeter`, `subscribe`, `getLoadedSkillNames`, `restoreLoadedSkills` |
 | `RunResult` | `sessionId`, `runId`, `status`, `leafId`, `text`, `content`, `message`, `messages`, `usage`, `limit`, `attribution`, `error`, `abortReason`, `stopReason`, `stopDetail`, `pending`, `runState` |

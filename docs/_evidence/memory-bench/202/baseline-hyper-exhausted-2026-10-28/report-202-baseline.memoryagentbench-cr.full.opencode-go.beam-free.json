@@ -1,0 +1,678 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 2,
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "usageSource": "wire-proxy",
+  "phase": "all",
+  "labelInjections": "on",
+  "concurrency": 6,
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "writeGeneration": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "generatedAt": "2026-10-28T01:39:02.987Z",
+  "suite": "memoryagentbench-cr",
+  "subset": "dev",
+  "ability": null,
+  "seed": null,
+  "config": "full",
+  "ingestion": "none",
+  "embeddings": null,
+  "provider": "opencode-go",
+  "model": "beam-free",
+  "judge": "hyper/glm-5.3-flash",
+  "judgePanel": [
+    "hyper/glm-5.3-flash",
+    "hyper/kimi-k2.7-code"
+  ],
+  "judgeCalibration": null,
+  "repeats": 1,
+  "judgeProtocol": "plain-text-v1",
+  "dataset": {
+    "file": "memoryagentbench-cr.parquet",
+    "format": "parquet",
+    "bytes": 1491588,
+    "sha256": "24d5c3f09ce0ce15625cb9f8a98f44f0d864ca6c94d7b4ad04eb697ca3a5ff45",
+    "license": "MIT",
+    "url": "https://huggingface.co/datasets/ai-hyz/MemoryAgentBench/resolve/7ea066982b140a19337e17e60d45d4076e042faf/data/Conflict_Resolution-00000-of-00001.parquet",
+    "licenseUrl": "https://huggingface.co/datasets/ai-hyz/MemoryAgentBench/blob/7ea066982b140a19337e17e60d45d4076e042faf/README.md"
+  },
+  "maxInputTokens": 7500000,
+  "ablations": [],
+  "sourceVariants": [],
+  "sourceRevision": "5c2570df52a084b43120ee4e77921746a029480e",
+  "protocol": {
+    "answerAttempts": 3,
+    "answerBackoffMs": [
+      2000,
+      10000
+    ],
+    "judgeAttempts": 8,
+    "judgeBackoffMs": [
+      1000,
+      2000
+    ],
+    "maxTurns": 8
+  },
+  "memoryConfig": {
+    "observational": null,
+    "fabric": null
+  },
+  "inputTokens": 1285232,
+  "cacheReadTokens": 218752,
+  "cacheWriteTokens": 0,
+  "outputTokens": 7056,
+  "calls": {
+    "observer": 0,
+    "reflector": 0,
+    "dropper": 0,
+    "embedding": 0,
+    "decider": 0,
+    "consolidate": 0,
+    "judge": 0,
+    "judgeAttempts": 0,
+    "gatewayRetries": 0,
+    "judgeCacheHits": 0,
+    "judgeCacheMisses": 0,
+    "concurrencyHalvings": 0,
+    "overloads": 0
+  },
+  "turns": 12,
+  "injectedContextTokens": 0,
+  "injections": [],
+  "attemptId": "202-baseline.memoryagentbench-cr.full.opencode-go.beam-free@1",
+  "protocolHash": "77feb432f00c67b455dc712bf45e10beda1625a41cabd6b4b0af65b1dfb24c2b",
+  "resumedResults": 0,
+  "results": [
+    {
+      "id": "5:69",
+      "ability": "conflict-resolution-single-hop",
+      "cluster": "mab-5",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "5:25",
+      "ability": "conflict-resolution-single-hop",
+      "cluster": "mab-5",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "stage": "correct"
+    },
+    {
+      "id": "6:44",
+      "ability": "conflict-resolution-single-hop",
+      "cluster": "mab-6",
+      "correct": false,
+      "truncated": true,
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "6:99",
+      "ability": "conflict-resolution-single-hop",
+      "cluster": "mab-6",
+      "correct": true,
+      "truncated": true,
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "stage": "correct"
+    },
+    {
+      "id": "6:84",
+      "ability": "conflict-resolution-single-hop",
+      "cluster": "mab-6",
+      "correct": false,
+      "truncated": true,
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "6:68",
+      "ability": "conflict-resolution-single-hop",
+      "cluster": "mab-6",
+      "correct": false,
+      "truncated": true,
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "5:72",
+      "ability": "conflict-resolution-single-hop",
+      "cluster": "mab-5",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "7:47",
+      "ability": "conflict-resolution-single-hop",
+      "cluster": "mab-7",
+      "correct": false,
+      "truncated": true,
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "7:97",
+      "ability": "conflict-resolution-single-hop",
+      "cluster": "mab-7",
+      "correct": false,
+      "truncated": true,
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "3:49",
+      "ability": "conflict-resolution-multi-hop",
+      "cluster": "mab-3",
+      "correct": false,
+      "truncated": true,
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "0:24",
+      "ability": "conflict-resolution-multi-hop",
+      "cluster": "mab-0",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": true,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "stage": "candidate_gap"
+    }
+  ],
+  "status": "failed",
+  "limitations": [
+    "Block-level injection accounting until item metadata lands in Tasks 4, 9, 11 and 12.",
+    "Injection token allocations are character estimates, not billing usage.",
+    "OpenCode Go and Hyper judges differ from the papers; scores are not directly comparable."
+  ],
+  "ratesAsOf": "2026-10-28",
+  "ratesStatus": "provider-catalog",
+  "inputCap": 134976,
+  "selectedQuestionIds": [
+    "5:69",
+    "5:25",
+    "6:44",
+    "6:99",
+    "6:84",
+    "6:68",
+    "5:67",
+    "5:72",
+    "7:47",
+    "7:97",
+    "3:49",
+    "0:24",
+    "2:20",
+    "0:30",
+    "1:42",
+    "0:99",
+    "0:90",
+    "2:66",
+    "3:46",
+    "2:86"
+  ],
+  "runPathFingerprint": "5f4573c034544c06c56481798767d7bc75bafa89e51d3ed00e88d96b8ab067f1",
+  "usageComplete": true,
+  "usageMissingExchanges": 0,
+  "wireExchanges": 12,
+  "errors": [
+    {
+      "questionId": "5:67",
+      "code": "MemoryBenchAnswerError:23",
+      "message": "MemoryBenchAnswerError:23",
+      "cause": {
+        "name": "TimeoutError",
+        "code": "23",
+        "message": "The operation timed out.",
+        "failureClass": "unknown"
+      },
+      "trace": {
+        "turns": 1,
+        "toolCalls": 0,
+        "recallCalls": 0,
+        "answerRetries": 0,
+        "mutating": false,
+        "maxTurns": 8,
+        "tools": []
+      }
+    }
+  ],
+  "failure": {
+    "questionId": "5:67",
+    "code": "MemoryBenchAnswerError:23",
+    "message": "MemoryBenchAnswerError:23",
+    "cause": {
+      "name": "TimeoutError",
+      "code": "23",
+      "message": "The operation timed out.",
+      "failureClass": "unknown"
+    },
+    "trace": {
+      "turns": 1,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "answerRetries": 0,
+      "mutating": false,
+      "maxTurns": 8,
+      "tools": []
+    }
+  },
+  "timing": {
+    "wallMs": 473855,
+    "concurrency": {
+      "initial": 6,
+      "active": 6,
+      "floor": 1
+    },
+    "questions": {
+      "n": 12,
+      "wallMs": {
+        "p50": 146609.6,
+        "p95": 466485.9,
+        "mean": 235718
+      }
+    },
+    "roles": {
+      "solver": {
+        "calls": 12,
+        "firstByteMs": {
+          "p50": 3567.3,
+          "p95": 441099.4,
+          "mean": 75095.3
+        },
+        "totalMs": {
+          "p50": 8754.2,
+          "p95": 441099.7,
+          "mean": 77124.6
+        }
+      }
+    },
+    "calls": 12
+  },
+  "metricVersion": 2,
+  "abilities": {
+    "conflict-resolution-single-hop": {
+      "n": 9,
+      "correct": 2,
+      "scored": 9,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.2222222222222222,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "conflict-resolution-single-hop",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "conflict-resolution-multi-hop": {
+      "n": 2,
+      "correct": 0,
+      "scored": 2,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "conflict-resolution-multi-hop",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    }
+  },
+  "abilityGroups": {
+    "conflict-resolution-single-hop": {
+      "n": 9,
+      "correct": 2,
+      "scored": 9,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.2222222222222222,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "conflict-resolution-single-hop",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "conflict-resolution-multi-hop": {
+      "n": 2,
+      "correct": 0,
+      "scored": 2,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "conflict-resolution-multi-hop",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    }
+  },
+  "metricDefinitions": {
+    "conflict-resolution-single-hop": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "conflict-resolution-multi-hop": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    }
+  },
+  "runLimitRate": 0,
+  "errorRate": 0,
+  "cacheReadRatio": 0.170204289964769,
+  "cacheWriteRatio": 0,
+  "cost": {
+    "currency": "USD",
+    "unit": "per_million_tokens",
+    "rates": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0
+    },
+    "pricingStatus": "priced",
+    "measured": 0,
+    "cachedPrefixSimulation": 0,
+    "simulationAssumption": "all input tokens are a cached prefix; history pays cacheRead, output pays output",
+    "ratesAsOf": "2026-10-28",
+    "ratesStatus": "provider-catalog"
+  },
+  "judgeAgreement": {
+    "n": 0,
+    "judges": {
+      "hyper/glm-5.3-flash": {
+        "scored": 0,
+        "agreementWithPanel": null
+      },
+      "hyper/kimi-k2.7-code": {
+        "scored": 0,
+        "agreementWithPanel": null
+      }
+    },
+    "pairs": [
+      {
+        "a": "hyper/glm-5.3-flash",
+        "b": "hyper/kimi-k2.7-code",
+        "n": 0,
+        "agreement": null,
+        "kappa": null
+      }
+    ],
+    "fleissKappa": null
+  },
+  "injectionPrecision": {
+    "granularity": "block",
+    "tokensPerTurn": 0,
+    "irrelevantRate": null,
+    "citedIdRate": null,
+    "tokenAccounting": "estimated ceil(characters/4); billing is wire usage"
+  },
+  "injectionPrecisionReason": null,
+  "toolCalls": 0,
+  "toolCallsPerQuestion": 0,
+  "recallCalls": 0,
+  "retrievedSnippetTokens": 0,
+  "answerSessionHitAtK": null,
+  "evidenceRoundCoverage": null,
+  "evidenceAllRequired": null,
+  "fineEvidenceRecall": null,
+  "fineEvidencePrecision": null,
+  "legacyRetrievalRecallAtK": null,
+  "retrievalRecallAtK": null,
+  "stages": {
+    "candidate_gap": 9,
+    "correct": 2
+  }
+}

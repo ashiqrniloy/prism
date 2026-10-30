@@ -144,7 +144,55 @@ test("bootstrap_10000_iterations_1000_items_under_two_seconds", () => {
 import { lifecycleCluster } from "./lifecycle/suite.mjs";
 import { METRIC_VERSION } from "./metrics.mjs";
 import { summarize } from "./report.mjs";
-import { pairedPowerSimulation } from "./stats.mjs";
+import { pairedAnalysis, pairedNoninferioritySizing, pairedPowerSimulation, rubricAbilitySizing } from "./stats.mjs";
+
+test("repeated_questions_do_not_increase_independent_cluster_count", () => {
+  const [a, b] = arms(3);
+  const result = pairedAnalysis(a, b);
+  assert.equal(result.clusters, 3);
+  assert.equal(result.n, 12);
+  assert.equal(result.wins, 12);
+  assert.equal(result.losses, 0);
+  assert.deepEqual(pairedAnalysis(a, [...b].reverse()), result);
+  assert.throws(() => pairedAnalysis(a, [...b, b[0]]), /unique paired ids/);
+  assert.throws(
+    () =>
+      pairedAnalysis(
+        a,
+        b.map((r) => ({ ...r, cluster: "wrong" })),
+      ),
+    /matching paired/,
+  );
+});
+
+test("acceptance_sizing_uses_declared_noninferiority_design", () => {
+  const design = { clusterSizes: Array(30).fill(1), discordance: 0.25, icc: 1 };
+  const result = pairedNoninferioritySizing(design);
+  assert.equal(result.nullBoundary, -0.03);
+  assert.equal(result.alpha, 0.025);
+  assert.equal(result.targetPower, 0.8);
+  assert.equal(result.feasible, false);
+  // (z_.975 + z_.8)^2 * .25 / .03^2 = 2180.24 independent pairs.
+  assert.equal(result.requiredClusters, 2181);
+  assert.ok(result.power > 0.03 && result.power < 0.06);
+  const repeated = pairedNoninferioritySizing({ ...design, clusterSizes: Array(30).fill(10) });
+  assert.equal(repeated.effectiveN, 30);
+  assert.equal(repeated.requiredClusters, result.requiredClusters);
+  assert.ok(pairedNoninferioritySizing({ ...design, trueDiff: -0.03 }).power < 0.026);
+  assert.ok(pairedNoninferioritySizing({ ...design, icc: 0, clusterSizes: Array(30).fill(10) }).power > result.power);
+  assert.throws(() => pairedNoninferioritySizing({ ...design, discordance: -1 }));
+});
+
+test("rubric_ability_sizing_uses_graded_estimand_and_flags_oracle_ceiling", () => {
+  const result = rubricAbilitySizing({ clusterSizes: [1, 1, 2], baseline: 0.1873, oracleCeiling: 0.8988, pairedSd: 0.5 });
+  assert.equal(result.estimand, "continuous paired graded difference");
+  assert.equal(result.clusters, 3);
+  assert.ok(result.normalApproxMde > result.headroom);
+  assert.equal(result.minimumDetectableDifference, null);
+  assert.equal(result.status, "not lever-discriminating at this sample");
+  assert.equal(result.minimumTwoSidedP, 0.25);
+  assert.throws(() => rubricAbilitySizing({ clusterSizes: [], baseline: 0, oracleCeiling: 1, pairedSd: 0.5 }));
+});
 
 const reportV2 = (results) => ({
   suite: "lifecycle",

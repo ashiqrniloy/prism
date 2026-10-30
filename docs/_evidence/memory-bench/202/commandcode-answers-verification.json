@@ -1,0 +1,30 @@
+{
+  "kind": "202-commandcode-answers-verification",
+  "generatedAt": "2026-10-29T14:21:25.583Z",
+  "status": "passed",
+  "harnessHash": "905a3f9ab4176647e4dd87b0d8ee8b1a90733a9c4ad61648d867fefe1821729e",
+  "checks": [
+    {
+      "command": "PRISM_MEMORY_BENCH_PYTHON=.cache/memory-bench/python/bin/python3 timeout 900 bun test --timeout=0 scripts/memory-bench",
+      "result": "357 pass / one Vibe official-image environment skip / zero failures",
+      "log": ".cache/memory-bench/commandcode-answers-tests.log"
+    },
+    {
+      "command": "timeout 180 bun run typecheck",
+      "result": "pass",
+      "log": ".cache/memory-bench/commandcode-answers-typecheck.log"
+    },
+    {
+      "command": "Biome affected files; timeout 20 git diff --check",
+      "result": "pass"
+    }
+  ],
+  "liveProof": "commandcode-answer-selection.json and readiness-operations.json: all selected routes pass, new answer models pass imported/full development history and tool/follow-up checks with complete usage",
+  "scope": "Benchmark model selection, exact paid authorization and readiness; no SDK/product/public export/dependency change",
+  "limitations": [
+    "Glyph excluded before generation: 100/day cannot cover 1050 frozen question/arm slots",
+    "Hy3 262K context; record ineligible full histories explicitly",
+    "One gateway; no cross-provider Robust claim",
+    "Task 4 remains incomplete until every selected broad cell and final lever analysis finish"
+  ]
+}

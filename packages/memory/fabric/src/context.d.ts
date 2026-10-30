@@ -24,7 +24,9 @@ export declare function recallPeriod(text: string, timestamp: string): {
     text: string;
     options: MemoryFabricRecallOptions;
 };
-export declare function createFabricContext(memory: Memory, recall: MemoryFabric["recall"], inject?: false | MemoryFabricInjectConfig, options?: MemoryContextProviderOptions, directory?: FabricDirectoryHandle, tracker?: FabricCitationTracker, touchedPaths?: (sessionId: string) => readonly string[], core?: FabricCore, cues?: FabricCues): {
+export declare function createFabricContext(memory: Memory, recall: MemoryFabric["recall"], inject?: false | MemoryFabricInjectConfig, options?: MemoryContextProviderOptions, directory?: FabricDirectoryHandle, tracker?: FabricCitationTracker, touchedPaths?: (sessionId: string) => readonly string[], core?: FabricCore, cues?: FabricCues, memories?: readonly Memory[]): {
+    refresh(sessionId?: string): void;
+    forget(sessionId: string): void;
     build(draft: ContextDraft, context: HookContext): Promise<ContextDraft>;
     observe(content: ContentBlock, context: HookContext): void;
     cited(context: HookContext): readonly string[];

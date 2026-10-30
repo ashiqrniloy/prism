@@ -12,7 +12,6 @@ import { createScopedMemoryHealthCommand } from "../eval/runner.js";
 function loadFixture(name: string): unknown {
   const candidates = [
     join(process.cwd(), "src/scoped/eval/fixtures", name),
-    join(process.cwd(), "packages/memory/src/scoped/eval/fixtures", name),
     join(process.cwd(), "packages/memory/fabric/src/scoped/eval/fixtures", name),
   ];
   const path = candidates.find((item) => existsSync(item));

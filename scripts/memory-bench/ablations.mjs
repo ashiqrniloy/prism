@@ -120,6 +120,10 @@ export function memoryConfigs(options, { lifecycle = false, policy = {} } = {}) 
   // The extractor budget reaches only an arm that promotes: adding `promote` to `fabric-x` would
   // give an LLM-free write side a model call.
   if (fabric && typeof fabric.promote === "object") fabric.promote = { ...fabric.promote, ...extractorSettings(options) };
+  // MAB supplies raw fact lists, not conversations. Record this explicit corpus adapter override.
+  if (fabric && options.suite === "memoryagentbench-cr" && fabric.inject !== false) {
+    fabric.inject = { ...(fabric.inject ?? presetFields(fabric.preset)?.inject), kinds: ["fact"] };
+  }
   const configs = { om: observational, fabric };
   const seen = new Set();
   if (options.ablate !== undefined && !Array.isArray(options.ablate)) throw new Error("MemoryBenchAblation: expected array");

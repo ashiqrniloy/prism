@@ -1,0 +1,206 @@
+{
+  "kind": "202-historical-completion-diagnosis",
+  "models": [
+    {
+      "source": "docs/_evidence/memory-bench/202/exploratory-original-2026-10-28/report-202-baseline.beam-100k.preset-r1.opencode-go.beam-free.json",
+      "sha256": "b5dc4337a54d1040cd4cee53c1d9085be0778fddd5cde9f1bb7901b774479901",
+      "model": "beam-free",
+      "questions": 40,
+      "runLimits": 8,
+      "failures": [
+        {
+          "id": "5:abstention:1",
+          "ability": "abstention",
+          "turns": 8,
+          "toolCalls": 8,
+          "recallCalls": 2,
+          "turnTrace": [
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall"
+          ],
+          "outcome": "run_limit"
+        },
+        {
+          "id": "9:abstention:1",
+          "ability": "abstention",
+          "turns": 8,
+          "toolCalls": 8,
+          "recallCalls": 2,
+          "turnTrace": [
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall"
+          ],
+          "outcome": "run_limit"
+        },
+        {
+          "id": "5:event_ordering:0",
+          "ability": "event_ordering",
+          "turns": 8,
+          "toolCalls": 8,
+          "recallCalls": 2,
+          "turnTrace": [
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall"
+          ],
+          "outcome": "run_limit"
+        },
+        {
+          "id": "10:preference_following:1",
+          "ability": "preference_following",
+          "turns": 8,
+          "toolCalls": 8,
+          "recallCalls": 2,
+          "turnTrace": [
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall"
+          ],
+          "outcome": "run_limit"
+        },
+        {
+          "id": "10:summarization:0",
+          "ability": "summarization",
+          "turns": 8,
+          "toolCalls": 8,
+          "recallCalls": 2,
+          "turnTrace": [
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall"
+          ],
+          "outcome": "run_limit"
+        },
+        {
+          "id": "17:summarization:0",
+          "ability": "summarization",
+          "turns": 8,
+          "toolCalls": 8,
+          "recallCalls": 2,
+          "turnTrace": [
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall"
+          ],
+          "outcome": "run_limit"
+        },
+        {
+          "id": "8:summarization:1",
+          "ability": "summarization",
+          "turns": 8,
+          "toolCalls": 8,
+          "recallCalls": 2,
+          "turnTrace": [
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall",
+            "memory.recall"
+          ],
+          "outcome": "run_limit"
+        },
+        {
+          "id": "19:temporal_reasoning:1",
+          "ability": "temporal_reasoning",
+          "turns": 8,
+          "toolCalls": 8,
+          "recallCalls": 2,
+          "turnTrace": [
+            "memory.recall",
+            "memory.recall",
+            "memory.view",
+            "memory.read",
+            "memory.read",
+            "memory.read",
+            "memory.read",
+            "memory.recall"
+          ],
+          "outcome": "run_limit"
+        }
+      ]
+    },
+    {
+      "source": "docs/_evidence/memory-bench/202/exploratory-original-2026-10-28/report-202-baseline.beam-100k.preset-r1.opencode-go.minimax-m3.json",
+      "sha256": "c8437965e1701294d6819a3ae109550048844c740ffb717cb7f6a0b0217de20e",
+      "model": "minimax-m3",
+      "questions": 40,
+      "runLimits": 1,
+      "failures": [
+        {
+          "id": "19:temporal_reasoning:1",
+          "ability": "temporal_reasoning",
+          "turns": 8,
+          "toolCalls": 21,
+          "recallCalls": 1,
+          "turnTrace": [
+            "memory.recall",
+            "memory.view",
+            "memory.recall",
+            "memory.recall",
+            "memory.read",
+            "memory.read",
+            "memory.read",
+            "memory.read",
+            "memory.read",
+            "memory.read",
+            "memory.read",
+            "memory.read",
+            "memory.recall",
+            "memory.read",
+            "memory.read",
+            "memory.read",
+            "memory.read",
+            "memory.read",
+            "memory.recall",
+            "memory.read",
+            "memory.view"
+          ],
+          "outcome": "run_limit"
+        }
+      ]
+    }
+  ],
+  "findings": [
+    "All nine historical run-limit rows reached eight model turns.",
+    "Seven of eight Beam failures issued eight memory.recall calls; the eighth mixed recall, view and read.",
+    "MiniMax reached eight turns with 21 tool calls (including parallel calls).",
+    "Historical recallCalls is undercounted because the metrics hook reset it each model request; use toolCalls and turnTrace for historical call counts.",
+    "Historical public traces contain tool names, not arguments, tool results or provider finish reasons; exact repeated-query identity and error handling require the bounded current probe.",
+    "The counter repair changes reporting only. Historical run limits remain end-to-end failures; no budget or prompt was changed."
+  ]
+}

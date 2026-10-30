@@ -1,0 +1,355 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 2,
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "usageSource": "wire-proxy",
+  "phase": "all",
+  "labelInjections": "on",
+  "concurrency": 6,
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "writeGeneration": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "generatedAt": "2026-10-28T01:36:00.775Z",
+  "suite": "locomo",
+  "subset": "dev",
+  "ability": null,
+  "seed": null,
+  "config": "full-truncated",
+  "ingestion": "none",
+  "embeddings": null,
+  "provider": "opencode-go",
+  "model": "beam-free",
+  "judge": "hyper/glm-5.3-flash",
+  "judgePanel": [
+    "hyper/glm-5.3-flash",
+    "hyper/kimi-k2.7-code"
+  ],
+  "judgeCalibration": null,
+  "repeats": 1,
+  "judgeProtocol": "plain-text-v1",
+  "dataset": {
+    "file": "locomo.json",
+    "bytes": 2805274,
+    "sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+    "license": "CC BY-NC 4.0 (noncommercial)",
+    "url": "https://raw.githubusercontent.com/snap-research/locomo/3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376/data/locomo10.json",
+    "licenseUrl": "https://github.com/snap-research/locomo/blob/3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376/LICENSE.txt"
+  },
+  "maxInputTokens": 10000000,
+  "ablations": [],
+  "sourceVariants": [],
+  "sourceRevision": "5c2570df52a084b43120ee4e77921746a029480e",
+  "protocol": {
+    "answerAttempts": 3,
+    "answerBackoffMs": [
+      2000,
+      10000
+    ],
+    "judgeAttempts": 8,
+    "judgeBackoffMs": [
+      1000,
+      2000
+    ],
+    "maxTurns": 8
+  },
+  "memoryConfig": {
+    "observational": null,
+    "fabric": null
+  },
+  "inputTokens": 251582,
+  "cacheReadTokens": 219392,
+  "cacheWriteTokens": 0,
+  "outputTokens": 2594,
+  "calls": {
+    "observer": 0,
+    "reflector": 0,
+    "dropper": 0,
+    "embedding": 0,
+    "decider": 0,
+    "consolidate": 0,
+    "judge": 6,
+    "judgeAttempts": 6,
+    "gatewayRetries": 0,
+    "judgeCacheHits": 0,
+    "judgeCacheMisses": 0,
+    "concurrencyHalvings": 0,
+    "overloads": 0
+  },
+  "turns": 6,
+  "injectedContextTokens": 0,
+  "injections": [],
+  "attemptId": "202-baseline.locomo.full-truncated.opencode-go.beam-free@1",
+  "protocolHash": "3f23c8b51f5a7b4b4b986f7e6c9b5e09467f9bc40c7c5cb8e4baeab854b6e602",
+  "resumedResults": 0,
+  "results": [],
+  "status": "failed",
+  "limitations": [
+    "Block-level injection accounting until item metadata lands in Tasks 4, 9, 11 and 12.",
+    "Injection token allocations are character estimates, not billing usage.",
+    "OpenCode Go and Hyper judges differ from the papers; scores are not directly comparable."
+  ],
+  "ratesAsOf": "2026-10-28",
+  "ratesStatus": "provider-catalog",
+  "inputCap": 134976,
+  "selectedQuestionIds": [
+    "conv-41:21",
+    "conv-44:24",
+    "conv-49:21",
+    "conv-44:32",
+    "conv-49:78",
+    "conv-26:38",
+    "conv-42:34",
+    "conv-43:4",
+    "conv-43:48",
+    "conv-43:43",
+    "conv-47:9",
+    "conv-42:42",
+    "conv-48:81",
+    "conv-44:30",
+    "conv-42:29",
+    "conv-44:1",
+    "conv-49:52",
+    "conv-42:32",
+    "conv-42:21",
+    "conv-41:4",
+    "conv-26:57",
+    "conv-41:16",
+    "conv-50:65",
+    "conv-48:55",
+    "conv-48:36",
+    "conv-26:50",
+    "conv-48:23",
+    "conv-43:5",
+    "conv-43:8",
+    "conv-26:81",
+    "conv-48:11",
+    "conv-26:14",
+    "conv-44:44",
+    "conv-47:44",
+    "conv-50:21",
+    "conv-42:0",
+    "conv-26:82",
+    "conv-26:103",
+    "conv-49:111",
+    "conv-49:121",
+    "conv-47:128",
+    "conv-47:131",
+    "conv-43:123",
+    "conv-42:185",
+    "conv-42:175",
+    "conv-48:159",
+    "conv-47:98",
+    "conv-50:91",
+    "conv-41:163",
+    "conv-43:183",
+    "conv-43:212",
+    "conv-44:154",
+    "conv-49:164",
+    "conv-49:185",
+    "conv-43:234",
+    "conv-50:180",
+    "conv-41:175",
+    "conv-43:214",
+    "conv-48:227",
+    "conv-43:224"
+  ],
+  "runPathFingerprint": "a1ad77b7f4e10bc4fe9e929fc32bb09ccba92974ea79a03e2584c82956efa4a2",
+  "usageComplete": true,
+  "usageMissingExchanges": 0,
+  "wireExchanges": 12,
+  "errors": [
+    {
+      "questionId": "conv-26:38",
+      "code": "MemoryBenchJudgeError:402",
+      "message": "MemoryBenchJudgeError:402",
+      "cause": {
+        "name": "Error",
+        "code": "402",
+        "message": "Hyper request failed: 402 error:message:You're out of credits. Add more at https://hyper.charm.land,type:billing_error,code:null",
+        "failureClass": "permanent"
+      }
+    },
+    {
+      "questionId": "conv-49:78",
+      "code": "MemoryBenchJudgeError:402",
+      "message": "MemoryBenchJudgeError:402",
+      "cause": {
+        "name": "Error",
+        "code": "402",
+        "message": "Hyper request failed: 402 error:message:You're out of credits. Add more at https://hyper.charm.land,type:billing_error,code:null",
+        "failureClass": "permanent"
+      }
+    },
+    {
+      "questionId": "conv-49:21",
+      "code": "MemoryBenchJudgeError:402",
+      "message": "MemoryBenchJudgeError:402",
+      "cause": {
+        "name": "Error",
+        "code": "402",
+        "message": "Hyper request failed: 402 error:message:You're out of credits. Add more at https://hyper.charm.land,type:billing_error,code:null",
+        "failureClass": "permanent"
+      }
+    },
+    {
+      "questionId": "conv-44:32",
+      "code": "MemoryBenchJudgeError:402",
+      "message": "MemoryBenchJudgeError:402",
+      "cause": {
+        "name": "Error",
+        "code": "402",
+        "message": "Hyper request failed: 402 error:message:You're out of credits. Add more at https://hyper.charm.land,type:billing_error,code:null",
+        "failureClass": "permanent"
+      }
+    },
+    {
+      "questionId": "conv-41:21",
+      "code": "MemoryBenchJudgeError:402",
+      "message": "MemoryBenchJudgeError:402",
+      "cause": {
+        "name": "Error",
+        "code": "402",
+        "message": "Hyper request failed: 402 error:message:You're out of credits. Add more at https://hyper.charm.land,type:billing_error,code:null",
+        "failureClass": "permanent"
+      }
+    },
+    {
+      "questionId": "conv-44:24",
+      "code": "MemoryBenchJudgeError:402",
+      "message": "MemoryBenchJudgeError:402",
+      "cause": {
+        "name": "Error",
+        "code": "402",
+        "message": "Hyper request failed: 402 error:message:You're out of credits. Add more at https://hyper.charm.land,type:billing_error,code:null",
+        "failureClass": "permanent"
+      }
+    }
+  ],
+  "failure": {
+    "questionId": "conv-44:24",
+    "code": "MemoryBenchJudgeError:402",
+    "message": "MemoryBenchJudgeError:402",
+    "cause": {
+      "name": "Error",
+      "code": "402",
+      "message": "Hyper request failed: 402 error:message:You're out of credits. Add more at https://hyper.charm.land,type:billing_error,code:null",
+      "failureClass": "permanent"
+    }
+  },
+  "timing": {
+    "wallMs": 26514.6,
+    "concurrency": {
+      "initial": 6,
+      "active": 6,
+      "floor": 1
+    },
+    "questions": {
+      "n": 6,
+      "wallMs": {
+        "p50": 12578.4,
+        "p95": 24663.7,
+        "mean": 14611
+      }
+    },
+    "roles": {
+      "judge": {
+        "calls": 6,
+        "firstByteMs": {
+          "p50": 345.2,
+          "p95": 444.7,
+          "mean": 374.7
+        },
+        "totalMs": {
+          "p50": 345.2,
+          "p95": 444.7,
+          "mean": 374.7
+        }
+      },
+      "solver": {
+        "calls": 6,
+        "firstByteMs": {
+          "p50": 1451.4,
+          "p95": 1795.2,
+          "mean": 1525.1
+        },
+        "totalMs": {
+          "p50": 2945.2,
+          "p95": 4123.7,
+          "mean": 3258.6
+        }
+      }
+    },
+    "calls": 12
+  },
+  "metricVersion": 2,
+  "abilities": {},
+  "abilityGroups": {},
+  "metricDefinitions": {},
+  "runLimitRate": 0,
+  "errorRate": 0,
+  "cacheReadRatio": 0.8720496696902004,
+  "cacheWriteRatio": 0,
+  "cost": {
+    "currency": "USD",
+    "unit": "per_million_tokens",
+    "rates": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0
+    },
+    "pricingStatus": "priced",
+    "measured": 0,
+    "cachedPrefixSimulation": null,
+    "simulationAssumption": null,
+    "ratesAsOf": "2026-10-28",
+    "ratesStatus": "provider-catalog"
+  },
+  "judgeAgreement": {
+    "n": 0,
+    "judges": {
+      "hyper/glm-5.3-flash": {
+        "scored": 0,
+        "agreementWithPanel": null
+      },
+      "hyper/kimi-k2.7-code": {
+        "scored": 0,
+        "agreementWithPanel": null
+      }
+    },
+    "pairs": [
+      {
+        "a": "hyper/glm-5.3-flash",
+        "b": "hyper/kimi-k2.7-code",
+        "n": 0,
+        "agreement": null,
+        "kappa": null
+      }
+    ],
+    "fleissKappa": null
+  },
+  "injectionPrecision": {
+    "granularity": "block",
+    "tokensPerTurn": 0,
+    "irrelevantRate": null,
+    "citedIdRate": null,
+    "tokenAccounting": "estimated ceil(characters/4); billing is wire usage"
+  },
+  "injectionPrecisionReason": null,
+  "toolCalls": 0,
+  "toolCallsPerQuestion": 0,
+  "recallCalls": 0,
+  "retrievedSnippetTokens": 0,
+  "answerSessionHitAtK": null,
+  "evidenceRoundCoverage": null,
+  "evidenceAllRequired": null,
+  "fineEvidenceRecall": null,
+  "fineEvidencePrecision": null,
+  "legacyRetrievalRecallAtK": null,
+  "retrievalRecallAtK": null
+}

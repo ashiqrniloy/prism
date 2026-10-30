@@ -1,0 +1,79 @@
+{
+  "kind": "202-minimax-judge-admission",
+  "generatedAt": "2026-10-29T13:50:12.439Z",
+  "ref": "commandcode/minimax/minimax-m3.1-flash",
+  "limits": {
+    "wireAttempts": 4,
+    "inputTokens": 5000000,
+    "outputTokens": 40000,
+    "wallMs": 210000,
+    "retries429": 0
+  },
+  "status": "passed",
+  "calibration": "Synthetic admission controls only; not human calibration or benchmark accuracy",
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 8192
+  },
+  "model": {
+    "provider": "commandcode",
+    "model": "minimax/minimax-m3.1-flash",
+    "displayName": "MiniMax M3.1 Flash",
+    "limits": {
+      "contextWindow": 1000000
+    },
+    "capabilities": {
+      "input": [
+        "text",
+        "image"
+      ],
+      "output": [
+        "text"
+      ],
+      "reasoning": false,
+      "tools": true,
+      "streaming": true
+    },
+    "compat": {
+      "thinkingFamily": "reasoning_effort",
+      "preserveThinking": true,
+      "route": "openai",
+      "pricing_source": "https://commandcode.ai/docs/resources/pricing-limits"
+    },
+    "cache": {
+      "kind": "implicit"
+    },
+    "parameters": {
+      "maxTokens": 4096,
+      "temperature": 0
+    }
+  },
+  "positive": true,
+  "negative": false,
+  "usage": {
+    "inputTokens": 592,
+    "cacheReadTokens": 325,
+    "cacheWriteTokens": 0,
+    "outputTokens": 6,
+    "accountedInputTokens": 592,
+    "accountedOutputTokens": 6,
+    "usageMissingExchanges": 0,
+    "usageComplete": true,
+    "wireAttempts": 2
+  },
+  "allocations": [
+    {
+      "provider": "commandcode",
+      "exchange": 1,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 2,
+      "inputBound": 1000000,
+      "outputBound": 8192
+    }
+  ],
+  "finishedAt": "2026-10-29T13:50:16.142Z"
+}

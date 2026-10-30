@@ -1,31 +1,27 @@
-COMMANDCODE_DEFAULT_API_KEY_REF	export declare const COMMANDCODE_DEFAULT_API_KEY_REF = "env:COMMANDCODE_API_KEY"
-COMMAND_CODE_ANTHROPIC_HOOKS	export declare const COMMAND_CODE_ANTHROPIC_HOOKS: AnthropicMessagesRouteHooks
+COMMAND_CODE_CHAT_ROUTE	export declare const COMMAND_CODE_CHAT_ROUTE: RoutedProviderRoute<"openai-chat">
+COMMAND_CODE_DEFAULT_API_KEY_REF	export declare const COMMAND_CODE_DEFAULT_API_KEY_REF = "env:COMMAND_CODE_API_KEY"
 COMMAND_CODE_DEFAULT_BASE_URL	export declare const COMMAND_CODE_DEFAULT_BASE_URL = "https://api.commandcode.ai/provider/v1"
-applyCommandCodeCacheControl	export declare function applyCommandCodeCacheControl(request: ProviderRequest): readonly import("@arnilo/prism").Message[]
-classifyCommandCodeError	export declare function classifyCommandCodeError(input: CommandCodeErrorInput): CommandCodeRetryDecision
-commandCodeCacheEnabled	export declare function commandCodeCacheEnabled(request: ProviderRequest): boolean
-commandCodeChatBody	export declare function commandCodeChatBody(request: ProviderRequest): JsonObject
-commandCodeChatEvents	export declare function commandCodeChatEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
-commandCodeEffort	export declare function commandCodeEffort(request: ProviderRequest): string | undefined
-commandCodeHttpError	export declare function commandCodeHttpError(decision: CommandCodeRetryDecision, bodyText: string, secrets: readonly (string | undefined)[]): Error
+COMMAND_CODE_MESSAGES_ROUTE	export declare const COMMAND_CODE_MESSAGES_ROUTE: RoutedProviderRoute<"anthropic-messages">
+COMMAND_CODE_PRICING_SOURCE	export declare const COMMAND_CODE_PRICING_SOURCE = "https://commandcode.ai/docs/resources/pricing-limits"
+COMMAND_CODE_RESPONSES_ENDPOINT	export declare const COMMAND_CODE_RESPONSES_ENDPOINT = "/responses"
+COMMAND_CODE_RESPONSES_ROUTE	export declare const COMMAND_CODE_RESPONSES_ROUTE: RoutedProviderRoute<"openai-responses">
+COMMAND_CODE_SESSION_ID_MAX_LENGTH	export declare const COMMAND_CODE_SESSION_ID_MAX_LENGTH = 128
+COMMAND_CODE_ZDR_HEADER	export declare const COMMAND_CODE_ZDR_HEADER = "x-cmd-zdr"
+commandCodeFamily	export declare function commandCodeFamily(modelId: string): CommandCodeModelFamily | undefined
+commandCodeHttpError	export declare function commandCodeHttpError(response: Response, bodyText: string, secrets: readonly (string | undefined)[]): Error
 commandCodeModels	export declare const commandCodeModels: readonly ModelConfig[]
-commandCodePreserveThinking	export declare function commandCodePreserveThinking(request: ProviderRequest): boolean
-commandCodeReasoning	export declare function commandCodeReasoning(request: ProviderRequest): JsonObject | undefined
+commandCodeSession	export declare function commandCodeSession(request: ProviderRequest): Record<string, string>
 commandCodeThinking	export declare function commandCodeThinking(request: ProviderRequest): JsonObject | undefined
-commandCodeThinkingFamily	export declare function commandCodeThinkingFamily(modelId: string): ThinkingCompatFamily | undefined
-commandCodeThinkingLevels	export declare function commandCodeThinkingLevels(modelId: string): readonly string[] | undefined
 commandcode	export declare function commandcode(options?: CommandCodeProviderPackageOptions & CommandCodeProviderConfig): PackageInstance
 createCommandCodeProvider	export declare function createCommandCodeProvider(options?: CommandCodeProviderOptions): ModelProvider
 default	export default
 defineCommandCodeModel	export declare function defineCommandCodeModel(config: CommandCodeModelConfig): ModelConfig
 listCommandCodeModels	export declare function listCommandCodeModels(options?: ListCommandCodeModelsOptions): Promise<ModelConfig[]>
 mapCommandCodeModel	export declare function mapCommandCodeModel(entry: CommandCodeModelEntry, options?:
-routeForCommandCodeModel	export declare function routeForCommandCodeModel(modelId: string): CommandCodeRoute
-serializeCommandCodeChatMessage	export declare function serializeCommandCodeChatMessage(message: Message, preserveThinking: boolean): JsonObject
-stripCommandCodeOwnedCompat	export declare function stripCommandCodeOwnedCompat(compat: JsonObject | undefined): JsonObject | undefined
-type CommandCodeErrorInput	export { type CommandCodeErrorInput, type CommandCodeRetryDecision, classifyCommandCodeError, commandCodeHttpError, } from "./errors.js"
-type CommandCodeModelConfig	export { COMMAND_CODE_DEFAULT_BASE_URL, type CommandCodeModelConfig, type CommandCodeModelEntry, type CommandCodeRoute, commandCodeModels, commandCodeThinkingFamily, commandCodeThinkingLevels, defineCommandCodeModel, listCommandCodeModels, mapCommandCodeModel, routeForCommandCodeModel, } from "./models.js"
-type CommandCodeModelEntry	export { COMMAND_CODE_DEFAULT_BASE_URL, type CommandCodeModelConfig, type CommandCodeModelEntry, type CommandCodeRoute, commandCodeModels, commandCodeThinkingFamily, commandCodeThinkingLevels, defineCommandCodeModel, listCommandCodeModels, mapCommandCodeModel, routeForCommandCodeModel, } from "./models.js"
-type CommandCodeProviderOptions	export { COMMAND_CODE_ANTHROPIC_HOOKS, type CommandCodeProviderOptions, createCommandCodeProvider, } from "./provider.js"
-type CommandCodeRetryDecision	export { type CommandCodeErrorInput, type CommandCodeRetryDecision, classifyCommandCodeError, commandCodeHttpError, } from "./errors.js"
-type CommandCodeRoute	export { COMMAND_CODE_DEFAULT_BASE_URL, type CommandCodeModelConfig, type CommandCodeModelEntry, type CommandCodeRoute, commandCodeModels, commandCodeThinkingFamily, commandCodeThinkingLevels, defineCommandCodeModel, listCommandCodeModels, mapCommandCodeModel, routeForCommandCodeModel, } from "./models.js"
+routeForCommandCodeModel	export declare function routeForCommandCodeModel(modelId: string, supportedEndpoints?: readonly string[]): CommandCodeRoute
+type CommandCodeModelConfig	export { commandCodeFamily, commandCodeModels, COMMAND_CODE_DEFAULT_BASE_URL, COMMAND_CODE_PRICING_SOURCE, COMMAND_CODE_RESPONSES_ENDPOINT, type CommandCodeModelConfig, type CommandCodeModelEntry, type CommandCodeModelFamily, type CommandCodeRoute, defineCommandCodeModel, type ListCommandCodeModelsOptions, listCommandCodeModels, mapCommandCodeModel, routeForCommandCodeModel, } from "./models.js"
+type CommandCodeModelEntry	export { commandCodeFamily, commandCodeModels, COMMAND_CODE_DEFAULT_BASE_URL, COMMAND_CODE_PRICING_SOURCE, COMMAND_CODE_RESPONSES_ENDPOINT, type CommandCodeModelConfig, type CommandCodeModelEntry, type CommandCodeModelFamily, type CommandCodeRoute, defineCommandCodeModel, type ListCommandCodeModelsOptions, listCommandCodeModels, mapCommandCodeModel, routeForCommandCodeModel, } from "./models.js"
+type CommandCodeModelFamily	export { commandCodeFamily, commandCodeModels, COMMAND_CODE_DEFAULT_BASE_URL, COMMAND_CODE_PRICING_SOURCE, COMMAND_CODE_RESPONSES_ENDPOINT, type CommandCodeModelConfig, type CommandCodeModelEntry, type CommandCodeModelFamily, type CommandCodeRoute, defineCommandCodeModel, type ListCommandCodeModelsOptions, listCommandCodeModels, mapCommandCodeModel, routeForCommandCodeModel, } from "./models.js"
+type CommandCodeProviderOptions	export { createCommandCodeProvider, type CommandCodeProviderOptions, COMMAND_CODE_CHAT_ROUTE, COMMAND_CODE_MESSAGES_ROUTE, COMMAND_CODE_RESPONSES_ROUTE, COMMAND_CODE_SESSION_ID_MAX_LENGTH, COMMAND_CODE_ZDR_HEADER, commandCodeHttpError, commandCodeSession, commandCodeThinking, } from "./provider.js"
+type CommandCodeRoute	export { commandCodeFamily, commandCodeModels, COMMAND_CODE_DEFAULT_BASE_URL, COMMAND_CODE_PRICING_SOURCE, COMMAND_CODE_RESPONSES_ENDPOINT, type CommandCodeModelConfig, type CommandCodeModelEntry, type CommandCodeModelFamily, type CommandCodeRoute, defineCommandCodeModel, type ListCommandCodeModelsOptions, listCommandCodeModels, mapCommandCodeModel, routeForCommandCodeModel, } from "./models.js"
+type ListCommandCodeModelsOptions	export { commandCodeFamily, commandCodeModels, COMMAND_CODE_DEFAULT_BASE_URL, COMMAND_CODE_PRICING_SOURCE, COMMAND_CODE_RESPONSES_ENDPOINT, type CommandCodeModelConfig, type CommandCodeModelEntry, type CommandCodeModelFamily, type CommandCodeRoute, defineCommandCodeModel, type ListCommandCodeModelsOptions, listCommandCodeModels, mapCommandCodeModel, routeForCommandCodeModel, } from "./models.js"

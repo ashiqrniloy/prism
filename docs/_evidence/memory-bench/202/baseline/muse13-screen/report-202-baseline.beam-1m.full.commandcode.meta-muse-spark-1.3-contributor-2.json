@@ -1,0 +1,2153 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 2,
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "usageSource": "wire-proxy",
+  "phase": "all",
+  "labelInjections": "off",
+  "concurrency": 1,
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 8192
+  },
+  "freeOnly": false,
+  "boundedWire": true,
+  "writeGeneration": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "generatedAt": "2026-10-29T23:16:20.357Z",
+  "suite": "beam-1m",
+  "subset": "dev",
+  "ability": null,
+  "seed": null,
+  "config": "full",
+  "comparatorPolicyVersion": 1,
+  "ingestion": "none",
+  "embeddings": null,
+  "provider": "commandcode",
+  "model": "meta/muse-spark-1.3-contributor",
+  "judge": "commandcode/minimax/minimax-m3.1-flash",
+  "judgePanel": [
+    "commandcode/minimax/minimax-m3.1-flash",
+    "commandcode/z-ai/glm-5.3-flash"
+  ],
+  "judgeCalibration": null,
+  "repeats": 1,
+  "judgeProtocol": "plain-text-v1",
+  "dataset": {
+    "file": "beam-1m.parquet",
+    "format": "parquet",
+    "parquetLiterals": [
+      "probing_questions"
+    ],
+    "bytes": 66156374,
+    "sha256": "41b5acbbb55a586b1305514ef9d9fb03365d9b3331b598a1c2dd7603d93ef533",
+    "license": "CC BY-SA 4.0",
+    "url": "https://huggingface.co/datasets/Mohammadta/BEAM/resolve/3205395e897e7318c7b094ef4e6047b9b82dbb03/data/1M-00000-of-00001.parquet",
+    "licenseUrl": "https://huggingface.co/datasets/Mohammadta/BEAM/blob/3205395e897e7318c7b094ef4e6047b9b82dbb03/README.md"
+  },
+  "normalization": {
+    "version": "beam-source-annotations-v1",
+    "sourceHash": "034978f56e5f10463a4923debcb85c6e354aa1e3397b5faf584397e029090985"
+  },
+  "maxInputTokens": 42000000,
+  "ablations": [],
+  "sourceVariants": [],
+  "sourceRevision": "5c2570df52a084b43120ee4e77921746a029480e",
+  "protocol": {
+    "answerAttempts": 3,
+    "answerBackoffMs": [
+      2000,
+      10000
+    ],
+    "judgeAttempts": 8,
+    "judgeBackoffMs": [
+      1000,
+      2000
+    ],
+    "maxTurns": 8
+  },
+  "memoryConfig": {
+    "observational": null,
+    "fabric": null
+  },
+  "inputTokens": 8208848,
+  "cacheReadTokens": 1704,
+  "cacheWriteTokens": 0,
+  "outputTokens": 11180,
+  "calls": {
+    "observer": 0,
+    "reflector": 0,
+    "dropper": 0,
+    "embedding": 0,
+    "decider": 0,
+    "consolidate": 0,
+    "judge": 16,
+    "judgeAttempts": 16,
+    "gatewayRetries": 0,
+    "judgeCacheHits": 2,
+    "judgeCacheMisses": 16,
+    "concurrencyHalvings": 0,
+    "overloads": 0
+  },
+  "turns": 8,
+  "injectedContextTokens": 0,
+  "injections": [],
+  "attemptId": "202-baseline.beam-1m.full.commandcode.meta/muse-spark-1.3-contributor@2",
+  "measurementVersion": "product-phases-attribution-v2",
+  "analysisVersion": "202-paired-cluster-v1",
+  "judgeTemplateVersion": "e3883a2aa5910f76c3f6b377f1758fd4a57ca6dda1449cd86291abd0eea5f306",
+  "gradedTemplateVersion": "f7ff5f9c24afd87f0a5e00bd168103019f6e7140d64031f3e5bec264043c24cb",
+  "protocolHash": "91874d94d5df11f3858f551bed9adacbd807a3aaf8201e697af7dd5fc8ce27ad",
+  "resumedResults": 1,
+  "results": [
+    {
+      "id": "15:abstention:0",
+      "ability": "abstention",
+      "cluster": "beam-15",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 36.5,
+        "answer": 603.5
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 1936,
+        "removedSourceMessages": 112,
+        "removedMessages": 112,
+        "removedEstimatedTokens": 57441,
+        "contextHash": "215eb337f1f27cca4916bc10e2176ab47513c0ef9634de0daa9142c7db122db2"
+      }
+    },
+    {
+      "id": "10:abstention:1",
+      "ability": "abstention",
+      "cluster": "beam-10",
+      "phaseTiming": {
+        "ingestion": 30.7,
+        "answer": 28222.6,
+        "evaluation": 2320.7
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 1776,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "ac08ff5602121538fe52f367cbd6399c38a919ee2eef64cfbe719a44a1f1f707"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 0,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "abstention_error",
+      "resumed": true
+    },
+    {
+      "id": "21:abstention:0",
+      "ability": "abstention",
+      "cluster": "beam-21",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 41.1,
+        "answer": 3082.4
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 2334,
+        "removedSourceMessages": 566,
+        "removedMessages": 566,
+        "removedEstimatedTokens": 331604,
+        "contextHash": "6d1a682bccc56851a1870d650ad47e44b71be4c91f6007e7168338c650ad3fb9"
+      }
+    },
+    {
+      "id": "31:abstention:0",
+      "ability": "abstention",
+      "cluster": "beam-31",
+      "phaseTiming": {
+        "ingestion": 40.6,
+        "answer": 29200.9,
+        "evaluation": 2435.7
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 1982,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "02737b68916ec638374aa2e68e326304aea4fdade12f08a7a93dd68263d93719"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 0,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "correct"
+    },
+    {
+      "id": "15:contradiction_resolution:1",
+      "ability": "contradiction_resolution",
+      "cluster": "beam-15",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 42.7,
+        "answer": 659.6
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 1936,
+        "removedSourceMessages": 112,
+        "removedMessages": 112,
+        "removedEstimatedTokens": 57441,
+        "contextHash": "ec67072a59588236558eb53f828f7690c89b33bd35df253d316082cd49d04428"
+      }
+    },
+    {
+      "id": "21:contradiction_resolution:0",
+      "ability": "contradiction_resolution",
+      "cluster": "beam-21",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 45.5,
+        "answer": 3119.3
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 2334,
+        "removedSourceMessages": 566,
+        "removedMessages": 566,
+        "removedEstimatedTokens": 331604,
+        "contextHash": "d12ca2100520a782abe5ab3e7ce7415060175d7d6d4ac647998aa8b4d1110192"
+      }
+    },
+    {
+      "id": "26:contradiction_resolution:1",
+      "ability": "contradiction_resolution",
+      "cluster": "beam-26",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 47.8,
+        "answer": 4795.6
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 2418,
+        "removedSourceMessages": 862,
+        "removedMessages": 862,
+        "removedEstimatedTokens": 542424,
+        "contextHash": "a8aecbcb425b57c80c0515e220183b55abf0bf899446d8abd8190bc19be172ff"
+      }
+    },
+    {
+      "id": "20:contradiction_resolution:1",
+      "ability": "contradiction_resolution",
+      "cluster": "beam-20",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 41.9,
+        "answer": 3229.1
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 2410,
+        "removedSourceMessages": 696,
+        "removedMessages": 696,
+        "removedEstimatedTokens": 372124,
+        "contextHash": "579489874e2975c3914ae654e78ecd0028ee71ac6226906683a6cceece0ba1cc"
+      }
+    },
+    {
+      "id": "28:event_ordering:1",
+      "ability": "event_ordering",
+      "cluster": "beam-28",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 44.1,
+        "answer": 3348.3
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 2356,
+        "removedSourceMessages": 674,
+        "removedMessages": 674,
+        "removedEstimatedTokens": 393575,
+        "contextHash": "f4274faf23c1c74b5eaf8c86ac2f7be1931dbfc3d9dd52a75260ec5147f8cbc0"
+      }
+    },
+    {
+      "id": "12:event_ordering:0",
+      "ability": "event_ordering",
+      "cluster": "beam-12",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 40.9,
+        "answer": 3637.5
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 2214,
+        "removedSourceMessages": 616,
+        "removedMessages": 616,
+        "removedEstimatedTokens": 354695,
+        "contextHash": "06694a5221cf4a9feddc018ae45fda8a91794a177621c6e729d0a256f378145f"
+      }
+    },
+    {
+      "id": "1:event_ordering:1",
+      "ability": "event_ordering",
+      "cluster": "beam-1",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 35.4,
+        "answer": 700.5
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 1710,
+        "removedSourceMessages": 172,
+        "removedMessages": 172,
+        "removedEstimatedTokens": 115045,
+        "contextHash": "ba07e93174c4e6750d8a07e48ca567bfefbdedd8e92d6d3c48cc3802eb0ff3da"
+      }
+    },
+    {
+      "id": "34:event_ordering:0",
+      "ability": "event_ordering",
+      "cluster": "beam-34",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 62.8,
+        "answer": 8096.1
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 2874,
+        "removedSourceMessages": 1360,
+        "removedMessages": 1360,
+        "removedEstimatedTokens": 924444,
+        "contextHash": "a0b5fb43fa140ad92e7678ee17d770866f5773693d9d262a2399f9ffed787644"
+      }
+    },
+    {
+      "id": "34:information_extraction:0",
+      "ability": "information_extraction",
+      "cluster": "beam-34",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 58.3,
+        "answer": 7882.6
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 2874,
+        "removedSourceMessages": 1360,
+        "removedMessages": 1360,
+        "removedEstimatedTokens": 924444,
+        "contextHash": "ef50463c7ada6699838d7fa45f9e8ae2c8d632292bd89ef5163e9496a9a96081"
+      }
+    },
+    {
+      "id": "10:information_extraction:0",
+      "ability": "information_extraction",
+      "cluster": "beam-10",
+      "phaseTiming": {
+        "ingestion": 35.1,
+        "answer": 40512.2,
+        "evaluation": 2407.6
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 1776,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "399f4724d1d5e91623b0ecb04bc6167e070ffab89b4c427f2a33c8f1843cf70d"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "correct"
+    },
+    {
+      "id": "25:information_extraction:0",
+      "ability": "information_extraction",
+      "cluster": "beam-25",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 58.6,
+        "answer": 8721.8
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 3008,
+        "removedSourceMessages": 1470,
+        "removedMessages": 1470,
+        "removedEstimatedTokens": 949912,
+        "contextHash": "c714a2921b1da116e74be734f55217ac9fa34aa9999632d1f4e8b68b56854d34"
+      }
+    },
+    {
+      "id": "17:information_extraction:0",
+      "ability": "information_extraction",
+      "cluster": "beam-17",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 44.2,
+        "answer": 792.4
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 1966,
+        "removedSourceMessages": 136,
+        "removedMessages": 136,
+        "removedEstimatedTokens": 74585,
+        "contextHash": "9d980cc4d1c86020216d51638b2fa00ef07d873cbe7bf90b1858a79e61f71f94"
+      }
+    },
+    {
+      "id": "7:instruction_following:1",
+      "ability": "instruction_following",
+      "cluster": "beam-7",
+      "phaseTiming": {
+        "ingestion": 38.8,
+        "answer": 41149.5,
+        "evaluation": 2785.2
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 1662,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "4656262ae2fb4825004948f371cc91bfc0af02e12e9ec7a03fd65f64b9b841aa"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "12:instruction_following:0",
+      "ability": "instruction_following",
+      "cluster": "beam-12",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 47.2,
+        "answer": 3773.3
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 2214,
+        "removedSourceMessages": 616,
+        "removedMessages": 616,
+        "removedEstimatedTokens": 354695,
+        "contextHash": "1c1a53908ff914465180c288b9ea236ee5180857976af14b7859ac052d0ff93f"
+      }
+    },
+    {
+      "id": "16:instruction_following:1",
+      "ability": "instruction_following",
+      "cluster": "beam-16",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 38.4,
+        "answer": 1573.8
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 2182,
+        "removedSourceMessages": 316,
+        "removedMessages": 316,
+        "removedEstimatedTokens": 153240,
+        "contextHash": "75ac71aa79d63226f858ff4cfb6107ddc2fd8300a37c54b9af03b823f06e4ffa"
+      }
+    },
+    {
+      "id": "19:instruction_following:0",
+      "ability": "instruction_following",
+      "cluster": "beam-19",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 38.1,
+        "answer": 1477
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 1970,
+        "removedSourceMessages": 316,
+        "removedMessages": 316,
+        "removedEstimatedTokens": 184670,
+        "contextHash": "5007f16ec211fb2a826bad5bc2724f298e5a30c45c57d185c606ccb07a83b31f"
+      }
+    },
+    {
+      "id": "24:knowledge_update:0",
+      "ability": "knowledge_update",
+      "cluster": "beam-24",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 38.6,
+        "answer": 1645.5
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 1894,
+        "removedSourceMessages": 350,
+        "removedMessages": 350,
+        "removedEstimatedTokens": 233923,
+        "contextHash": "ff5ef942bcb6d552aa8b94389025c24cdbb4dd2766cae54840959d5939e130d5"
+      }
+    },
+    {
+      "id": "22:knowledge_update:0",
+      "ability": "knowledge_update",
+      "cluster": "beam-22",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 37.9,
+        "answer": 1634.1
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 2202,
+        "removedSourceMessages": 332,
+        "removedMessages": 332,
+        "removedEstimatedTokens": 161734,
+        "contextHash": "6817e189289b316d9bd9aeadb196896618f2bea76e996b99b550eacca432a666"
+      }
+    },
+    {
+      "id": "3:knowledge_update:1",
+      "ability": "knowledge_update",
+      "cluster": "beam-3",
+      "phaseTiming": {
+        "ingestion": 39.7,
+        "answer": 38276.4,
+        "evaluation": 1713.4
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 1556,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "031fafcfc03314e2c17f657906ba0fecbb6e4404a2f2f3d9301a9e782435c58a"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "correct"
+    },
+    {
+      "id": "29:knowledge_update:1",
+      "ability": "knowledge_update",
+      "cluster": "beam-29",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 43.7,
+        "answer": 1406.3
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 2026,
+        "removedSourceMessages": 224,
+        "removedMessages": 224,
+        "removedEstimatedTokens": 115048,
+        "contextHash": "7a7fa429075f5c392f7c6146a3adcd5606d1d05501e874e3c6d05ec3d5d26166"
+      }
+    },
+    {
+      "id": "23:multi_session_reasoning:0",
+      "ability": "multi_session_reasoning",
+      "cluster": "beam-23",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 40.1,
+        "answer": 921.6
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 2016,
+        "removedSourceMessages": 190,
+        "removedMessages": 190,
+        "removedEstimatedTokens": 100774,
+        "contextHash": "e99db5d754af71f213e76227b0baddf660d27f4609dd0bdeee7a63c5714b48fb"
+      }
+    },
+    {
+      "id": "25:multi_session_reasoning:0",
+      "ability": "multi_session_reasoning",
+      "cluster": "beam-25",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 55.3,
+        "answer": 8198
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 3008,
+        "removedSourceMessages": 1470,
+        "removedMessages": 1470,
+        "removedEstimatedTokens": 949912,
+        "contextHash": "fbe446e2749420a9109e48d17d8c8c699f28c2e893b73635d8eb2dc5539177ce"
+      }
+    },
+    {
+      "id": "26:multi_session_reasoning:1",
+      "ability": "multi_session_reasoning",
+      "cluster": "beam-26",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 45.5,
+        "answer": 4714.7
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 2418,
+        "removedSourceMessages": 862,
+        "removedMessages": 862,
+        "removedEstimatedTokens": 542424,
+        "contextHash": "c9305ef0e39fa2da631d9582f5b930877483f142ca1a0dfec8c52d76f985de66"
+      }
+    },
+    {
+      "id": "15:multi_session_reasoning:1",
+      "ability": "multi_session_reasoning",
+      "cluster": "beam-15",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 42.4,
+        "answer": 662.6
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 1936,
+        "removedSourceMessages": 112,
+        "removedMessages": 112,
+        "removedEstimatedTokens": 57442,
+        "contextHash": "7e4f6087bdd0d737fd29282f0a58d6a09f3e350b0c0d9625f0f78428a24c86b3"
+      }
+    },
+    {
+      "id": "12:preference_following:1",
+      "ability": "preference_following",
+      "cluster": "beam-12",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 40.5,
+        "answer": 3630.2
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 2214,
+        "removedSourceMessages": 616,
+        "removedMessages": 616,
+        "removedEstimatedTokens": 354695,
+        "contextHash": "6d16fefacf8572d7134542b34e29ad73ea883fc01941f2a784d88bc035c1920c"
+      }
+    },
+    {
+      "id": "29:preference_following:0",
+      "ability": "preference_following",
+      "cluster": "beam-29",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 43.4,
+        "answer": 1173.8
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 2026,
+        "removedSourceMessages": 224,
+        "removedMessages": 224,
+        "removedEstimatedTokens": 115048,
+        "contextHash": "b43080b4c9f119bc9dc067c971be6105e41f015651a1a657a3e0a287ae4bda2b"
+      }
+    },
+    {
+      "id": "10:preference_following:0",
+      "ability": "preference_following",
+      "cluster": "beam-10",
+      "phaseTiming": {
+        "ingestion": 33.9,
+        "answer": 38323.7,
+        "evaluation": 6269.3
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "yes",
+        "commandcode/z-ai/glm-5.3-flash": "yes"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 1776,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "33989410ac37c97dc3001f5f2db16f8e7eac4429ee9974b4b4d2d9ac0967617d"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "correct"
+    },
+    {
+      "id": "4:preference_following:1",
+      "ability": "preference_following",
+      "cluster": "beam-4",
+      "phaseTiming": {
+        "ingestion": 31,
+        "answer": 117909.7,
+        "evaluation": 3951.7
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 1600,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "703281c3ed729fa7008a3bfe05ae24d45ce673b59ec0b7d458a2390b02c28d5e"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "32:summarization:0",
+      "ability": "summarization",
+      "cluster": "beam-32",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 41.6,
+        "answer": 147.7
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 2088,
+        "removedSourceMessages": 18,
+        "removedMessages": 18,
+        "removedEstimatedTokens": 8389,
+        "contextHash": "33ef5761efaa2c6194d05e320b1af85ccbff421c0d8e6ef4ed1cca53818440a8"
+      }
+    },
+    {
+      "id": "1:summarization:1",
+      "ability": "summarization",
+      "cluster": "beam-1",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 27.8,
+        "answer": 657.6
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 1710,
+        "removedSourceMessages": 172,
+        "removedMessages": 172,
+        "removedEstimatedTokens": 115046,
+        "contextHash": "6e3b2d5402ada9a4005c362dc520fab04c694da0b81e8349d2d830df18b2d948"
+      }
+    },
+    {
+      "id": "18:summarization:0",
+      "ability": "summarization",
+      "cluster": "beam-18",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 47.8,
+        "answer": 4655.3
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 2612,
+        "removedSourceMessages": 870,
+        "removedMessages": 870,
+        "removedEstimatedTokens": 513085,
+        "contextHash": "d5036257d86ffc01baf342ea9a96982d5ff7625a628546074f0f20dd6b1c2ba4"
+      }
+    },
+    {
+      "id": "10:summarization:0",
+      "ability": "summarization",
+      "cluster": "beam-10",
+      "phaseTiming": {
+        "ingestion": 29.5,
+        "answer": 25237.4,
+        "evaluation": 14523.2
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "graded": 0.9,
+      "gradedSpread": 0,
+      "gradedDisagreement": false,
+      "gradedJudges": {
+        "commandcode/minimax/minimax-m3.1-flash": 0.9,
+        "commandcode/z-ai/glm-5.3-flash": 0.9
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 1776,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "1e3d00d9fd17ab9e8b0d84312bb1b82956161f8d71a1fecdd93064aa80995e10"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 5,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 5,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "12:temporal_reasoning:1",
+      "ability": "temporal_reasoning",
+      "cluster": "beam-12",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 42.6,
+        "answer": 3417.3
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 2214,
+        "removedSourceMessages": 616,
+        "removedMessages": 616,
+        "removedEstimatedTokens": 354695,
+        "contextHash": "952947c2818866850e0d087cd9b234cc9ede89519e098a3e2db35e9de8eaade8"
+      }
+    },
+    {
+      "id": "7:temporal_reasoning:0",
+      "ability": "temporal_reasoning",
+      "cluster": "beam-7",
+      "phaseTiming": {
+        "ingestion": 25,
+        "answer": 66120.6,
+        "evaluation": 4.6
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 1662,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "96d022ec4f4f4fef033bdf85de4d235409e730133875c70d1f2591043850b56c"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 4,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 4,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "25:temporal_reasoning:0",
+      "ability": "temporal_reasoning",
+      "cluster": "beam-25",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 52.4,
+        "answer": 8001.2
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 3008,
+        "removedSourceMessages": 1470,
+        "removedMessages": 1470,
+        "removedEstimatedTokens": 949912,
+        "contextHash": "e6b02e7a9fb5067ee8315fed7f402ceafe2f928b4e67e89d614473354945663e"
+      }
+    },
+    {
+      "id": "30:temporal_reasoning:1",
+      "ability": "temporal_reasoning",
+      "cluster": "beam-30",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 43.9,
+        "answer": 1921.9
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 2356,
+        "removedSourceMessages": 410,
+        "removedMessages": 410,
+        "removedEstimatedTokens": 207969,
+        "contextHash": "4959cc9236807b10a28897189a1db9c51935ec5a075d7f73b5b4dee7bf74b798"
+      }
+    }
+  ],
+  "status": "completed",
+  "limitations": [
+    "Block-level injection accounting until item metadata lands in Tasks 4, 9, 11 and 12.",
+    "Injection token allocations are character estimates, not billing usage.",
+    "OpenCode Go and Hyper judges differ from the papers; scores are not directly comparable."
+  ],
+  "ratesAsOf": "2026-10-29",
+  "ratesStatus": "provider-catalog",
+  "resumedFrom": {
+    "protocolHash": "91874d94d5df11f3858f551bed9adacbd807a3aaf8201e697af7dd5fc8ce27ad",
+    "results": 3,
+    "inputTokens": 938432
+  },
+  "inputCap": 1047552,
+  "comparatorContext": {
+    "version": 1,
+    "policy": "complete-history",
+    "effectiveInputCap": 1047552,
+    "requestHeadroomTokens": 1024,
+    "modelConfig": {
+      "provider": "commandcode",
+      "model": "meta/muse-spark-1.3-contributor",
+      "limits": {
+        "contextWindow": 1048576
+      },
+      "parameters": {
+        "maxTokens": 8192,
+        "temperature": 0
+      }
+    },
+    "tokenMeasure": "estimated-json-chars-div-4"
+  },
+  "selectedQuestionIds": [
+    "15:abstention:0",
+    "10:abstention:1",
+    "21:abstention:0",
+    "31:abstention:0",
+    "15:contradiction_resolution:1",
+    "21:contradiction_resolution:0",
+    "26:contradiction_resolution:1",
+    "20:contradiction_resolution:1",
+    "28:event_ordering:1",
+    "12:event_ordering:0",
+    "1:event_ordering:1",
+    "34:event_ordering:0",
+    "34:information_extraction:0",
+    "10:information_extraction:0",
+    "25:information_extraction:0",
+    "17:information_extraction:0",
+    "7:instruction_following:1",
+    "12:instruction_following:0",
+    "16:instruction_following:1",
+    "19:instruction_following:0",
+    "24:knowledge_update:0",
+    "22:knowledge_update:0",
+    "3:knowledge_update:1",
+    "29:knowledge_update:1",
+    "23:multi_session_reasoning:0",
+    "25:multi_session_reasoning:0",
+    "26:multi_session_reasoning:1",
+    "15:multi_session_reasoning:1",
+    "12:preference_following:1",
+    "29:preference_following:0",
+    "10:preference_following:0",
+    "4:preference_following:1",
+    "32:summarization:0",
+    "1:summarization:1",
+    "18:summarization:0",
+    "10:summarization:0",
+    "12:temporal_reasoning:1",
+    "7:temporal_reasoning:0",
+    "25:temporal_reasoning:0",
+    "30:temporal_reasoning:1"
+  ],
+  "runPathFingerprint": "c2dcd918147ab2d59752695c55d01cdbde49ecbee9d615e473242d89ac80ad2e",
+  "measurementPolicy": {
+    "version": "product-phases-v1",
+    "judgeCallsPerHour": 450,
+    "injectionAnnotation": false,
+    "retriesAndBackoffIncluded": true,
+    "queueWaitIncluded": false,
+    "seedSnapshot": false
+  },
+  "roleUsage": {
+    "product": {
+      "inputTokens": 8200147,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 9191,
+      "exchanges": 18,
+      "complete": true,
+      "measured": 0.821853,
+      "cold": 0.821853,
+      "warm": 0.018238,
+      "inputWarm": 0.016398,
+      "inputCold": 0.820014
+    },
+    "evaluation": {
+      "inputTokens": 8701,
+      "cacheReadTokens": 1704,
+      "cacheWriteTokens": 0,
+      "outputTokens": 1989,
+      "exchanges": 18,
+      "complete": true,
+      "measured": 0.002184,
+      "cold": 0.002412,
+      "warm": 0.002184,
+      "inputWarm": 0.001075,
+      "inputCold": 0.001305
+    },
+    "unknown": {
+      "inputTokens": 0,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 0,
+      "exchanges": 0,
+      "complete": true,
+      "measured": 0,
+      "cold": 0,
+      "warm": 0,
+      "inputWarm": 0,
+      "inputCold": 0
+    },
+    "total": {
+      "inputTokens": 8208848,
+      "cacheReadTokens": 1704,
+      "cacheWriteTokens": 0,
+      "outputTokens": 11180,
+      "exchanges": 36,
+      "measured": 0.824037
+    }
+  },
+  "accountedInputTokens": 8208848,
+  "usageComplete": true,
+  "usageMissingExchanges": 0,
+  "wireExchanges": 36,
+  "timing": {
+    "wallMs": 533769.7,
+    "concurrency": {
+      "initial": 1,
+      "active": 1,
+      "floor": 1
+    },
+    "questions": {
+      "n": 40,
+      "wallMs": {
+        "p50": 3409,
+        "p95": 44628.8,
+        "mean": 13276.5
+      }
+    },
+    "phases": {
+      "ingestion": {
+        "n": 40,
+        "wallMs": {
+          "p50": 41.1,
+          "p95": 58.3,
+          "mean": 41.8
+        }
+      },
+      "restore": {
+        "n": 0,
+        "wallMs": {
+          "p50": null,
+          "p95": null,
+          "mean": null
+        }
+      },
+      "answer": {
+        "n": 40,
+        "wallMs": {
+          "p50": 3417.3,
+          "p95": 41149.5,
+          "mean": 13080.8
+        }
+      },
+      "evaluation": {
+        "n": 9,
+        "wallMs": {
+          "p50": 2435.7,
+          "p95": 14523.2,
+          "mean": 4045.7
+        }
+      }
+    },
+    "policy": {
+      "answer": "after ingestion, before grading, annotation, final background settlement and disposal",
+      "queueWaitIncluded": false,
+      "retriesAndBackoffIncluded": true
+    },
+    "roles": {
+      "judge": {
+        "calls": 16,
+        "firstByteMs": {
+          "p50": 1707.8,
+          "p95": 5627.8,
+          "mean": 2123.9
+        },
+        "totalMs": {
+          "p50": 1707.8,
+          "p95": 5627.8,
+          "mean": 2123.9
+        }
+      },
+      "solver": {
+        "calls": 8,
+        "firstByteMs": {
+          "p50": 37671.2,
+          "p95": 116020.6,
+          "mean": 48348
+        },
+        "totalMs": {
+          "p50": 38238.1,
+          "p95": 117824,
+          "mean": 49499.7
+        }
+      }
+    },
+    "calls": 24
+  },
+  "metricVersion": 2,
+  "comparatorEligibility": {
+    "completeHistoryQuestions": 9,
+    "ineligibleQuestions": 31,
+    "truncatedQuestions": 31,
+    "unprovenQuestions": 0
+  },
+  "abilities": {
+    "abstention": {
+      "n": 4,
+      "correct": 1,
+      "scored": 2,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.5,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "contradiction_resolution": {
+      "n": 4,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "contradiction_resolution",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "event_ordering": {
+      "n": 4,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "event_ordering",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "information_extraction": {
+      "n": 4,
+      "correct": 1,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "information_extraction",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "instruction_following": {
+      "n": 4,
+      "correct": 0,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "instruction_following",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "knowledge_update": {
+      "n": 4,
+      "correct": 1,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "knowledge_update",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "multi_session_reasoning": {
+      "n": 4,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "multi_session_reasoning",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "preference_following": {
+      "n": 4,
+      "correct": 1,
+      "scored": 2,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.5,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "preference_following",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "summarization": {
+      "n": 4,
+      "correct": 0,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": 0.9,
+      "gradedDisagreementRate": 0,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "summarization",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "temporal_reasoning": {
+      "n": 4,
+      "correct": 0,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "temporal_reasoning",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    }
+  },
+  "abilityGroups": {
+    "abstention": {
+      "n": 4,
+      "correct": 1,
+      "scored": 2,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.5,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "contradiction_resolution": {
+      "n": 4,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "contradiction_resolution",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "event_ordering": {
+      "n": 4,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "event_ordering",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "information_extraction": {
+      "n": 4,
+      "correct": 1,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "information_extraction",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "instruction_following": {
+      "n": 4,
+      "correct": 0,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "instruction_following",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "knowledge_update": {
+      "n": 4,
+      "correct": 1,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "knowledge_update",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "multi_session_reasoning": {
+      "n": 4,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "multi_session_reasoning",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "preference_following": {
+      "n": 4,
+      "correct": 1,
+      "scored": 2,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.5,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "preference_following",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "summarization": {
+      "n": 4,
+      "correct": 0,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": 0.9,
+      "gradedDisagreementRate": 0,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "summarization",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "temporal_reasoning": {
+      "n": 4,
+      "correct": 0,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "temporal_reasoning",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    }
+  },
+  "metricDefinitions": {
+    "abstention": {
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "contradiction_resolution": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "event_ordering": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "information_extraction": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "instruction_following": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "knowledge_update": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "multi_session_reasoning": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "preference_following": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "summarization": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "temporal_reasoning": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    }
+  },
+  "runLimitRate": 0,
+  "errorRate": 0,
+  "cacheReadRatio": 0.00020758089320206685,
+  "cacheWriteRatio": 0,
+  "cost": {
+    "currency": "USD",
+    "unit": "per_million_tokens",
+    "rates": null,
+    "pricingStatus": "priced",
+    "measured": 0.824037,
+    "cachedPrefixSimulation": null,
+    "simulationAssumption": "product warm: full input is a cached prefix; other arms use reported cache tokens; cold reprices input uncached",
+    "ratesAsOf": "2026-10-29",
+    "ratesStatus": "provider-catalog",
+    "scope": "campaign: product plus evaluation plus unknown historical usage",
+    "product": {
+      "inputTokens": 8200147,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 9191,
+      "exchanges": 18,
+      "complete": true,
+      "measured": 0.821853,
+      "cold": 0.821853,
+      "warm": 0.018238,
+      "inputWarm": 0.016398,
+      "inputCold": 0.820014
+    },
+    "evaluation": {
+      "inputTokens": 8701,
+      "cacheReadTokens": 1704,
+      "cacheWriteTokens": 0,
+      "outputTokens": 1989,
+      "exchanges": 18,
+      "complete": true,
+      "measured": 0.002184,
+      "cold": 0.002412,
+      "warm": 0.002184,
+      "inputWarm": 0.001075,
+      "inputCold": 0.001305
+    }
+  },
+  "judgeAgreement": {
+    "n": 9,
+    "judges": {
+      "commandcode/minimax/minimax-m3.1-flash": {
+        "scored": 9,
+        "agreementWithPanel": 1
+      },
+      "commandcode/z-ai/glm-5.3-flash": {
+        "scored": 9,
+        "agreementWithPanel": 1
+      }
+    },
+    "pairs": [
+      {
+        "a": "commandcode/minimax/minimax-m3.1-flash",
+        "b": "commandcode/z-ai/glm-5.3-flash",
+        "n": 9,
+        "agreement": 1,
+        "kappa": 1
+      }
+    ],
+    "fleissKappa": null
+  },
+  "injectionPrecision": null,
+  "injectionPrecisionReason": "not-labelled",
+  "toolCalls": 0,
+  "toolCallsPerQuestion": 0,
+  "recallCalls": 0,
+  "retrievedSnippetTokens": 0,
+  "answerSessionHitAtK": null,
+  "evidenceRoundCoverage": null,
+  "evidenceAllRequired": null,
+  "fineEvidenceRecall": null,
+  "fineEvidencePrecision": null,
+  "legacyRetrievalRecallAtK": null,
+  "retrievalRecallAtK": null,
+  "stages": {
+    "abstention_error": 1,
+    "correct": 4,
+    "candidate_gap": 4
+  }
+}

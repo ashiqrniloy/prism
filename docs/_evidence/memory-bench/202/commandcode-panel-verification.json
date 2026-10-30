@@ -1,0 +1,35 @@
+{
+  "kind": "202-commandcode-panel-verification",
+  "status": "passed",
+  "generatedAt": "2026-10-29T14:04:24.032Z",
+  "harnessHash": "c0dd203165dfca7f22f3dd59cbd3237a56c6247d735968df9322f56a9365a8db",
+  "checks": [
+    {
+      "command": "PRISM_MEMORY_BENCH_PYTHON=.cache/memory-bench/python/bin/python3 timeout 900 bun test --timeout=0 scripts/memory-bench",
+      "result": "356 pass / one Vibe official-image environment skip / zero fail",
+      "log": ".cache/memory-bench/commandcode-panel-tests-final.log"
+    },
+    {
+      "command": "timeout 180 bun run typecheck",
+      "result": "pass",
+      "log": ".cache/memory-bench/commandcode-panel-typecheck-final.log"
+    },
+    {
+      "command": "Biome affected benchmark files",
+      "result": "pass; one inherited unused test parameter warning"
+    },
+    {
+      "command": "timeout 20 git diff --check",
+      "result": "pass"
+    }
+  ],
+  "liveProof": "readiness-pilot-v6/scoring-proof.json: all 42 preserved Muse answers scored, 104 new judge calls, full usage accounting, no answer regeneration",
+  "controls": {
+    "status": "completed",
+    "rows": 44,
+    "mismatches": 0,
+    "usageComplete": true
+  },
+  "scope": "Benchmark orchestration/evidence only; no SDK/product/public export/dependency change",
+  "limitation": "Task 4 incomplete; two original OpenRouter free answer models have no quota. No broad campaign executed."
+}

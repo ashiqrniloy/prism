@@ -1,0 +1,326 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 2,
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "usageSource": "wire-proxy",
+  "phase": "all",
+  "labelInjections": "on",
+  "concurrency": 4,
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "writeGeneration": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "generatedAt": "2026-10-27T16:23:49.061Z",
+  "suite": "memoryagentbench-cr",
+  "subset": "dev",
+  "ability": null,
+  "seed": null,
+  "config": "full",
+  "ingestion": "none",
+  "embeddings": null,
+  "provider": "opencode-go",
+  "model": "qwen3.7-plus",
+  "judge": "opencode-go/deepseek-v4-pro",
+  "judgePanel": [
+    "opencode-go/deepseek-v4-pro",
+    "opencode-go/glm-5.2"
+  ],
+  "judgeCalibration": null,
+  "repeats": 1,
+  "judgeProtocol": "plain-text-v1",
+  "dataset": {
+    "file": "memoryagentbench-cr.parquet",
+    "format": "parquet",
+    "bytes": 1491588,
+    "sha256": "24d5c3f09ce0ce15625cb9f8a98f44f0d864ca6c94d7b4ad04eb697ca3a5ff45",
+    "license": "MIT",
+    "url": "https://huggingface.co/datasets/ai-hyz/MemoryAgentBench/resolve/7ea066982b140a19337e17e60d45d4076e042faf/data/Conflict_Resolution-00000-of-00001.parquet",
+    "licenseUrl": "https://huggingface.co/datasets/ai-hyz/MemoryAgentBench/blob/7ea066982b140a19337e17e60d45d4076e042faf/README.md"
+  },
+  "maxInputTokens": 7500000,
+  "ablations": [],
+  "sourceVariants": [],
+  "sourceRevision": "5c2570df52a084b43120ee4e77921746a029480e",
+  "protocol": {
+    "answerAttempts": 3,
+    "answerBackoffMs": [
+      2000,
+      10000
+    ],
+    "judgeAttempts": 3,
+    "judgeBackoffMs": [
+      1000,
+      2000
+    ],
+    "maxTurns": 8
+  },
+  "memoryConfig": {
+    "observational": null,
+    "fabric": null
+  },
+  "inputTokens": 0,
+  "cacheReadTokens": 0,
+  "cacheWriteTokens": 0,
+  "outputTokens": 0,
+  "calls": {
+    "observer": 0,
+    "reflector": 0,
+    "dropper": 0,
+    "embedding": 0,
+    "decider": 0,
+    "consolidate": 0,
+    "judge": 0,
+    "judgeAttempts": 0,
+    "gatewayRetries": 8,
+    "judgeCacheHits": 0,
+    "judgeCacheMisses": 0,
+    "concurrencyHalvings": 2,
+    "overloads": 12
+  },
+  "turns": 4,
+  "injectedContextTokens": 0,
+  "injections": [],
+  "attemptId": "202-baseline.memoryagentbench-cr.full.opencode-go.qwen3.7-plus@1",
+  "protocolHash": "4c3bc9f3633dc1f53d735b7938bbc7e942333f99be37d87f07d75aeb993d901c",
+  "resumedResults": 0,
+  "results": [],
+  "status": "failed",
+  "limitations": [
+    "Block-level injection accounting until item metadata lands in Tasks 4, 9, 11 and 12.",
+    "Injection token allocations are character estimates, not billing usage.",
+    "OpenCode Go and Hyper judges differ from the papers; scores are not directly comparable."
+  ],
+  "ratesAsOf": "2026-10-27",
+  "ratesStatus": "provider-catalog",
+  "inputCap": 933440,
+  "selectedQuestionIds": [
+    "5:69",
+    "5:25",
+    "6:44",
+    "6:99",
+    "6:84",
+    "6:68",
+    "5:67",
+    "5:72",
+    "7:47",
+    "7:97",
+    "3:49",
+    "0:24",
+    "2:20",
+    "0:30",
+    "1:42",
+    "0:99",
+    "0:90",
+    "2:66",
+    "3:46",
+    "2:86"
+  ],
+  "runPathFingerprint": "52e5d35cd8ae9f7bad36c103fada5d7210d1295ccd926f6e2461ea31fa9e8e1b",
+  "usageComplete": true,
+  "usageMissingExchanges": 0,
+  "wireExchanges": 12,
+  "errors": [
+    {
+      "questionId": "5:25",
+      "code": "MemoryBenchAnswerError:429",
+      "message": "MemoryBenchAnswerError:429",
+      "cause": {
+        "name": "Error",
+        "code": "429",
+        "message": "opencode-go request failed: 429 type:error,error:type:GoUsageLimitError,message:Go usage limit exceeded,metadata:workspace:wrk_01KMZ82MR6G3V8TPWTW338V400,limitN",
+        "failureClass": "quota"
+      },
+      "trace": {
+        "turns": 1,
+        "toolCalls": 0,
+        "recallCalls": 0,
+        "answerRetries": 0,
+        "mutating": false,
+        "maxTurns": 8,
+        "tools": []
+      }
+    },
+    {
+      "questionId": "5:69",
+      "code": "MemoryBenchAnswerError:429",
+      "message": "MemoryBenchAnswerError:429",
+      "cause": {
+        "name": "Error",
+        "code": "429",
+        "message": "opencode-go request failed: 429 type:error,error:type:GoUsageLimitError,message:Go usage limit exceeded,metadata:workspace:wrk_01KMZ82MR6G3V8TPWTW338V400,limitN",
+        "failureClass": "quota"
+      },
+      "trace": {
+        "turns": 1,
+        "toolCalls": 0,
+        "recallCalls": 0,
+        "answerRetries": 0,
+        "mutating": false,
+        "maxTurns": 8,
+        "tools": []
+      }
+    },
+    {
+      "questionId": "6:44",
+      "code": "MemoryBenchAnswerError:429",
+      "message": "MemoryBenchAnswerError:429",
+      "cause": {
+        "name": "Error",
+        "code": "429",
+        "message": "opencode-go request failed: 429 type:error,error:type:GoUsageLimitError,message:Go usage limit exceeded,metadata:workspace:wrk_01KMZ82MR6G3V8TPWTW338V400,limitN",
+        "failureClass": "quota"
+      },
+      "trace": {
+        "turns": 1,
+        "toolCalls": 0,
+        "recallCalls": 0,
+        "answerRetries": 0,
+        "mutating": false,
+        "maxTurns": 8,
+        "tools": []
+      }
+    },
+    {
+      "questionId": "6:99",
+      "code": "MemoryBenchAnswerError:429",
+      "message": "MemoryBenchAnswerError:429",
+      "cause": {
+        "name": "Error",
+        "code": "429",
+        "message": "opencode-go request failed: 429 type:error,error:type:GoUsageLimitError,message:Go usage limit exceeded,metadata:workspace:wrk_01KMZ82MR6G3V8TPWTW338V400,limitN",
+        "failureClass": "quota"
+      },
+      "trace": {
+        "turns": 1,
+        "toolCalls": 0,
+        "recallCalls": 0,
+        "answerRetries": 0,
+        "mutating": false,
+        "maxTurns": 8,
+        "tools": []
+      }
+    }
+  ],
+  "failure": {
+    "questionId": "6:99",
+    "code": "MemoryBenchAnswerError:429",
+    "message": "MemoryBenchAnswerError:429",
+    "cause": {
+      "name": "Error",
+      "code": "429",
+      "message": "opencode-go request failed: 429 type:error,error:type:GoUsageLimitError,message:Go usage limit exceeded,metadata:workspace:wrk_01KMZ82MR6G3V8TPWTW338V400,limitN",
+      "failureClass": "quota"
+    },
+    "trace": {
+      "turns": 1,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "answerRetries": 0,
+      "mutating": false,
+      "maxTurns": 8,
+      "tools": []
+    }
+  },
+  "timing": {
+    "wallMs": 5812.5,
+    "concurrency": {
+      "initial": 4,
+      "active": 1,
+      "floor": 1
+    },
+    "questions": {
+      "n": 4,
+      "wallMs": {
+        "p50": 4257.4,
+        "p95": 4621.5,
+        "mean": 4261.9
+      }
+    },
+    "roles": {
+      "solver": {
+        "calls": 4,
+        "firstByteMs": {
+          "p50": 3605.1,
+          "p95": 3979.3,
+          "mean": 3782.3
+        },
+        "totalMs": {
+          "p50": 3605.1,
+          "p95": 3979.3,
+          "mean": 3782.4
+        }
+      }
+    },
+    "calls": 4
+  },
+  "metricVersion": 2,
+  "abilities": {},
+  "abilityGroups": {},
+  "metricDefinitions": {},
+  "runLimitRate": 0,
+  "errorRate": 0,
+  "cacheReadRatio": 0,
+  "cacheWriteRatio": 0,
+  "cost": {
+    "currency": "USD",
+    "unit": "per_million_tokens",
+    "rates": {
+      "input": 0.4,
+      "output": 1.6,
+      "cacheRead": 0.04,
+      "cacheWrite": 0.5
+    },
+    "pricingStatus": "priced",
+    "measured": 0,
+    "cachedPrefixSimulation": 0,
+    "simulationAssumption": "all input tokens are a cached prefix; history pays cacheRead, output pays output",
+    "ratesAsOf": "2026-10-27",
+    "ratesStatus": "provider-catalog"
+  },
+  "judgeAgreement": {
+    "n": 0,
+    "judges": {
+      "opencode-go/deepseek-v4-pro": {
+        "scored": 0,
+        "agreementWithPanel": null
+      },
+      "opencode-go/glm-5.2": {
+        "scored": 0,
+        "agreementWithPanel": null
+      }
+    },
+    "pairs": [
+      {
+        "a": "opencode-go/deepseek-v4-pro",
+        "b": "opencode-go/glm-5.2",
+        "n": 0,
+        "agreement": null,
+        "kappa": null
+      }
+    ],
+    "fleissKappa": null
+  },
+  "injectionPrecision": {
+    "granularity": "block",
+    "tokensPerTurn": 0,
+    "irrelevantRate": null,
+    "citedIdRate": null,
+    "tokenAccounting": "estimated ceil(characters/4); billing is wire usage"
+  },
+  "injectionPrecisionReason": null,
+  "toolCalls": 0,
+  "toolCallsPerQuestion": 0,
+  "recallCalls": 0,
+  "retrievedSnippetTokens": 0,
+  "answerSessionHitAtK": null,
+  "evidenceRoundCoverage": null,
+  "evidenceAllRequired": null,
+  "fineEvidenceRecall": null,
+  "fineEvidencePrecision": null,
+  "legacyRetrievalRecallAtK": null,
+  "retrievalRecallAtK": null
+}

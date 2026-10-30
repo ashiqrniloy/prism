@@ -18,7 +18,7 @@ import {
 } from "@arnilo/prism-memory-core";
 import { memoryWriteVersion } from "../directory.js";
 import { isActiveNote, normalizeNoteStatus, type StorageWeights, storageStrength } from "../lifecycle/index.js";
-import { type MemoryNoteKind, type MemoryNoteMetadata, parseMemoryNoteMetadata } from "../types.js";
+import { isMemoryNoteValidAt, type MemoryNoteKind, type MemoryNoteMetadata, parseMemoryNoteMetadata } from "../types.js";
 
 /** Scope levels the core draws from, in the order the block lists them. */
 export type FabricCoreScope = "user" | "project";
@@ -138,7 +138,7 @@ export function coreCandidateRows(
     if (normalizeNoteStatus(row.metadata?.status as string | undefined, "verified") !== "verified") continue;
     if (!CORE_KINDS.has(metadata.kind)) continue;
     if ((metadata.flags?.length ?? 0) > 0) continue;
-    if (!isActiveNote(metadata)) continue;
+    if (!isActiveNote(metadata) || !isMemoryNoteValidAt(metadata, Date.now())) continue;
     found.push({ id: row.id, metadata, storage: storageStrength(metadata, weights) });
   }
   return found.sort(

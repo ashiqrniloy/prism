@@ -1,7 +1,9 @@
+import { mcnemarExact as mcnemar } from "@arnilo/prism-evals";
 import { improvementDelta, METRIC_VERSION, metricDefinition, metricValue } from "./metrics.mjs";
 
-import { mcnemarExact as mcnemar } from "@arnilo/prism-evals";
 export { mcnemar };
+
+export const PAIRED_ANALYSIS_VERSION = "202-paired-cluster-v1";
 
 function randomSource(seed) {
   if (!Number.isSafeInteger(seed)) throw new Error("Statistics requires an integer seed");
@@ -111,6 +113,138 @@ export function pairedClusterPermutation(a, b, { cluster = (row) => row.cluster,
       iterations,
       seed,
     ),
+  };
+}
+
+/** Unique questions stay paired; repeated conversations are resampled as one unit. */
+export function pairedAnalysis(a, b, { metric = (row) => Number(row.correct), iterations = 10000, seed = 7 } = {}) {
+  const scored = (rows) =>
+    rows.map((row) => {
+      const value = metric(row);
+      if (!Number.isFinite(value)) throw new Error("Paired analysis requires scored questions");
+      return { ...row, value };
+    });
+  const left = scored(a),
+    right = scored(b);
+  const pairs = pairRows(left, right, (row) => row.cluster);
+  const index = new Map(b.map((row) => [row.id, row]));
+  if (a.some((row) => row.ability !== index.get(row.id).ability)) throw new Error("Paired analysis requires matching abilities");
+  return {
+    ...pairedClusterPermutation(left, right, { iterations, seed }),
+    n: pairs.length,
+    clusters: new Set(pairs.map((row) => row.cluster)).size,
+    clusterUnit: "conversation",
+    wins: pairs.filter((row) => row.value > 0).length,
+    losses: pairs.filter((row) => row.value < 0).length,
+    ties: pairs.filter((row) => row.value === 0).length,
+  };
+}
+
+function normalQuantile(p) {
+  let low = -10,
+    high = 10;
+  for (let i = 0; i < 80; i++) {
+    const mid = (low + high) / 2;
+    if (normalCdf(mid) < p) low = mid;
+    else high = mid;
+  }
+  return (low + high) / 2;
+}
+
+function effectivePairs(clusterSizes, icc) {
+  if (!clusterSizes.length || clusterSizes.some((n) => !Number.isSafeInteger(n) || n < 1) || !Number.isFinite(icc) || icc < 0 || icc > 1)
+    throw new Error("Sizing requires positive cluster sizes and ICC in [0, 1]");
+  const n = clusterSizes.reduce((sum, size) => sum + size, 0);
+  return (n * n) / ((1 - icc) * n + icc * clusterSizes.reduce((sum, size) => sum + size * size, 0));
+}
+
+/** Prospective Wald approximation for H0: candidate-comparator <= -margin. Not a verdict. */
+export function pairedNoninferioritySizing({
+  clusterSizes,
+  discordance,
+  icc = 1,
+  margin = 0.03,
+  trueDiff = 0,
+  alpha = 0.025,
+  targetPower = 0.8,
+}) {
+  if (
+    ![discordance, margin, trueDiff, alpha, targetPower].every(Number.isFinite) ||
+    discordance <= 0 ||
+    discordance > 1 ||
+    Math.abs(trueDiff) >= discordance ||
+    margin <= 0 ||
+    margin > 1 ||
+    alpha <= 0 ||
+    alpha >= 0.5 ||
+    targetPower <= 0.5 ||
+    targetPower >= 1
+  )
+    throw new Error("Sizing requires valid discordance, margin, effect, alpha and power");
+  const effectiveN = effectivePairs(clusterSizes, icc);
+  const variance = discordance - trueDiff * trueDiff;
+  const separation = trueDiff + margin;
+  const z = normalQuantile(1 - alpha);
+  const power = normalCdf(separation * Math.sqrt(effectiveN / variance) - z);
+  const requiredEffectiveN = separation > 0 ? ((z + normalQuantile(targetPower)) ** 2 * variance) / separation ** 2 : null;
+  const requiredClusters = requiredEffectiveN === null ? null : Math.ceil((requiredEffectiveN * clusterSizes.length) / effectiveN);
+  return {
+    method: "paired-cluster-Wald-planning-approximation",
+    nullBoundary: -margin,
+    margin,
+    trueDiff,
+    alpha,
+    targetPower,
+    discordance,
+    icc,
+    clusters: clusterSizes.length,
+    effectiveN,
+    power,
+    requiredEffectiveN,
+    requiredClusters,
+    feasible: power >= targetPower,
+    status: power >= targetPower ? "sized-under-assumptions" : "claim unresolved",
+  };
+}
+
+/** Screening uses the registered continuous score, with the exact sign-flip resolution floor. */
+export function rubricAbilitySizing({ clusterSizes, baseline, oracleCeiling, pairedSd, icc = 1, alpha = 0.05, targetPower = 0.8 }) {
+  if (
+    ![baseline, oracleCeiling, pairedSd, alpha, targetPower].every(Number.isFinite) ||
+    baseline < 0 ||
+    baseline > 1 ||
+    oracleCeiling < 0 ||
+    oracleCeiling > 1 ||
+    pairedSd <= 0 ||
+    alpha <= 0 ||
+    alpha >= 0.5 ||
+    targetPower <= 0.5 ||
+    targetPower >= 1
+  )
+    throw new Error("Sizing requires valid graded scores, paired SD, alpha and power");
+  const effectiveN = effectivePairs(clusterSizes, icc);
+  const normalApproxMde = ((normalQuantile(1 - alpha / 2) + normalQuantile(targetPower)) * pairedSd) / Math.sqrt(effectiveN);
+  const minimumTwoSidedP = 2 ** (1 - clusterSizes.length);
+  const minimumDetectableDifference = minimumTwoSidedP > alpha ? null : normalApproxMde;
+  const headroom = Math.max(0, oracleCeiling - baseline);
+  return {
+    estimand: "continuous paired graded difference",
+    clusters: clusterSizes.length,
+    effectiveN,
+    icc,
+    pairedSd,
+    alpha,
+    targetPower,
+    baseline,
+    oracleCeiling,
+    headroom,
+    normalApproxMde,
+    minimumTwoSidedP,
+    minimumDetectableDifference,
+    status:
+      minimumDetectableDifference === null || minimumDetectableDifference > headroom
+        ? "not lever-discriminating at this sample"
+        : "potentially discriminating under SD assumption",
   };
 }
 
@@ -242,6 +376,7 @@ export function compare(a, b, { iterations = 10000, seed = 7, icc = 1, simulatio
     !a.results.length ||
     a.judgeProtocol !== b.judgeProtocol ||
     (a.judge && b.judge && a.judge !== b.judge) ||
+    JSON.stringify(a.judgePanel ?? null) !== JSON.stringify(b.judgePanel ?? null) ||
     a.suite !== b.suite ||
     a.subset !== b.subset ||
     a.results.some((row) => !index.has(row.id) || index.get(row.id).ability !== row.ability)

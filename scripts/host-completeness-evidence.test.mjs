@@ -79,7 +79,7 @@ test("rows cannot claim passed while out, blocked, or live-only", () => {
 test("hermetic/live rows name existing tests; required live suites are active", () => {
   assertRequiredLive(matrix.suites);
   const isRetired = (p) =>
-    /providers\/(ai-sdk|alibaba|anthropic|azure|bedrock|clinepass|commandcode|deepseek|google|kimi|neuralwatt|ollama|openai|vertex|xai|zai)\b/.test(
+    /providers\/(ai-sdk|alibaba|anthropic|azure|bedrock|clinepass|deepseek|google|kimi|neuralwatt|ollama|openai|vertex|xai|zai)\b/.test(
       p,
     );
   const byId = new Map(matrix.suites.map((suite) => [suite.id, suite]));

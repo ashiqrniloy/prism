@@ -125,31 +125,25 @@ export function buildConsolidationExtractPrompt(input: ConsolidationPromptInput)
   };
 }
 
-/** The tool parameters: one array of notes, bounded by the pass's candidate count. */
-export function consolidationExtractSchema(input: {
-  readonly candidateIds: readonly string[];
-  readonly existingIds?: readonly string[];
-  readonly segmentIds?: readonly string[];
-  readonly maxNotes?: number;
-}): JsonObject {
-  const kinds = input.segmentIds?.length ? EXTRACT_NOTE_KINDS : EXTRACT_NOTE_KINDS.filter((kind) => kind !== "episode");
+/** Stable across sessions; the parser checks id membership and the pass's note bound. */
+export function consolidationExtractSchema(input: { readonly maxNotes?: number }): JsonObject {
   const properties: JsonObject = {
     text: { type: "string", minLength: 1, maxLength: MAX_EXTRACTED_TEXT_CHARS },
-    kind: { type: "string", enum: [...kinds] },
+    kind: { type: "string", enum: [...EXTRACT_NOTE_KINDS] },
     scope: { type: "string", enum: [...EXTRACT_NOTE_SCOPES] },
     applies_to: { type: "array", minItems: 1, maxItems: 8, items: { type: "string", minLength: 1, maxLength: 200 } },
     key: { type: "string", pattern: EXTRACT_KEY_PATTERN },
     tRef: { type: "string", pattern: ISO_TIMESTAMP_PATTERN },
     keywords: { type: "array", maxItems: MAX_EXTRACTED_KEYWORDS, items: { type: "string", minLength: 1, maxLength: 48 } },
     aliases: { type: "array", maxItems: MAX_EXTRACTED_ALIASES, items: { type: "string", minLength: 1, maxLength: 48 } },
-    evidence: { type: "array", minItems: 1, maxItems: MAX_EXTRACTED_EVIDENCE, items: { type: "string", enum: [...input.candidateIds] } },
+    evidence: { type: "array", minItems: 1, maxItems: MAX_EXTRACTED_EVIDENCE, items: { type: "string" } },
     explicit: { type: "boolean" },
     correction: { type: "boolean" },
     generality: { type: "number", minimum: 0, maximum: 1 },
     ephemerality: { type: "number", minimum: 0, maximum: 1 },
     derivable: { type: "boolean" },
-    ...(input.existingIds?.length ? { contradicts: { type: "string", enum: [...input.existingIds] } } : {}),
-    ...(input.segmentIds?.length ? { segment: { type: "string", enum: [...input.segmentIds] } } : {}),
+    contradicts: { type: "string" },
+    segment: { type: "string" },
   };
   return {
     type: "object",

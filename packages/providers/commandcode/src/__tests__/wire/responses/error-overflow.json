@@ -1,0 +1,27 @@
+{
+  "method": "POST",
+  "path": "/provider/v1/responses",
+  "requestBody": {
+    "model": "gpt-5.6-luna",
+    "input": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "hi"
+          }
+        ]
+      }
+    ],
+    "stream": true,
+    "store": false,
+    "include": [
+      "reasoning.encrypted_content"
+    ],
+    "prompt_cache_key": "cc-fixture-resp-error"
+  },
+  "status": 400,
+  "contentType": "application/json",
+  "responseBody": "{\"error\":{\"message\":\"{\\\"error\\\":{\\\"message\\\":\\\"This model's maximum context length is 1048576 tokens. However, your messages resulted in 1100047 tokens. Please reduce the length of the messages.\\\",\\\"type\\\":\\\"AI_APICallError\\\",\\\"param\\\":{\\\"error\\\":\\\"This model's maximum context length is 1048576 tokens. However, your messages resulted in 1100047 tokens. Please reduce the length of the messages.\\\",\\\"statusCode\\\":400,\\\"name\\\":\\\"AI_APICallError\\\",\\\"message\\\":\\\"This model's maximum context length is 1048576 tokens. However, your messages resulted in 1100047 tokens. Please reduce the length of the messages.\\\",\\\"isRetryable\\\":false,\\\"type\\\":\\\"AI_APICallError\\\"}},\\\"providerMetadata\\\":{\\\"gateway\\\":{\\\"routing\\\":{\\\"originalModelId\\\":\\\"reflection/beam-free\\\",\\\"resolvedProvider\\\":\\\"reflection\\\",\\\"fallbacksAvailable\\\":[],\\\"canonicalSlug\\\":\\\"reflection/beam\\\",\\\"modelAttemptCount\\\":1,\\\"modelAttempts\\\":[{\\\"canonicalSlug\\\":\\\"reflection/beam\\\",\\\"success\\\":false,\\\"providerAttemptCount\\\":1,\\\"providerAttempts\\\":[{\\\"provider\\\":\\\"reflection\\\",\\\"credentialType\\\":\\\"system\\\",\\\"success\\\":false,\\\"error\\\":\\\"This …(truncated)\",\"type\":\"invalid_request_error\"}}"
+}

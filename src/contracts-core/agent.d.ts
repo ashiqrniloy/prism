@@ -213,6 +213,15 @@ export interface Agent {
     readonly models: ModelIndex;
     session(options?: SessionOptions): Promise<Session>;
     /**
+     * Re-assembles this agent in place: re-reads `skills.dirs`, re-runs every package's `setup` (so a
+     * package can re-discover its own skill directories), and re-compiles `AgentConfig.hooks` and package
+     * hooks on a fresh bus, then swaps in the new runtime. Open sessions keep their conversation and see
+     * the new skills and hooks on their next run; `tool`, `skill`, and `command` views reflect the swap.
+     * One reload runs at a time. A failure leaves the committed runtime untouched. Rejects with
+     * `AgentDisposedError` once `dispose()` has started.
+     */
+    reload(): Promise<void>;
+    /**
      * Agent-scoped events across every session until `dispose()`: `package.status`, `background.*`, and
      * `session.opened` / `session.closed`. Redacted with the agent's redactor. A slow consumer follows
      * `SubscribeOptions.overflow` and never blocks a run.

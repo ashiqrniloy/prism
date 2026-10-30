@@ -1,0 +1,92 @@
+{
+  "seed": "prism-202-memory-bench-vibemembench",
+  "draw": "SHA-256(\"prism-202-memory-bench-vibemembench:\" + id), ascending inside each ability and partition",
+  "source": "https://huggingface.co/datasets/Tongyi-ConvAI/VibeMemBench/resolve/11164976b4f920cdb0d0cd570ca572e49acea1e8/test.parquet",
+  "datasetSha256": "22238743ca143276e3ff4616f569b3921c42945bfee1a6aa8fa376a02feebb98",
+  "strata": {
+    "coding": [
+      30,
+      15,
+      15
+    ]
+  },
+  "part": "dev | heldout-a | heldout-b; heldout-b is reserved for the single remediation round",
+  "residualPool": {
+    "coding": 51
+  },
+  "idsHash": "682c85a1bc111b5eb00d6303658b4a42ef430ff3932f9d4ea0b16d9e531c9631",
+  "abilities": {
+    "dev": {
+      "coding": [
+        "sdv-dev__rdt-963",
+        "platers__obsidian-linter-492",
+        "marcoieni__release-plz-1778",
+        "gluesql__gluesql-91",
+        "alteryx__woodwork-640",
+        "delvedor__find-my-way-282",
+        "analysis-dev__diktat-1369",
+        "ember-cli__eslint-plugin-ember-973",
+        "pybamm-team__pybamm-4267",
+        "raphlinus__pulldown-cmark-841",
+        "rust-phf__rust-phf-348",
+        "cpisciotta__xcbeautify-307",
+        "dbader__node-datadog-metrics-137",
+        "pyccel__pyccel-2019",
+        "semantic-release__semantic-release-1000",
+        "scille__umongo-245",
+        "python-attrs__attrs-1372",
+        "allegro__marathon-consul-212",
+        "aquasecurity__tfsec-1326",
+        "i18next__i18next-parser-957",
+        "adamchainz__flake8-comprehensions-553",
+        "mpmath__mpmath-881",
+        "theacodes__nox-267",
+        "neurodatawithoutborders__pynwb-998",
+        "google__yamlfmt-42",
+        "dtolnay__cxx-1281",
+        "getmoto__moto-8780",
+        "systemd__mkosi-3346",
+        "quick__nimble-1183",
+        "aio-libs__aiohttp-7907"
+      ]
+    },
+    "heldout-a": {
+      "coding": [
+        "babel__minify-882",
+        "mozilla__nunjucks-849",
+        "elastic__curator-1437",
+        "pandas-dev__pandas-59080",
+        "http-apis__hydrus-556",
+        "doctrine__migrations-1229",
+        "aws-cloudformation__cfn-lint-3965",
+        "neurodatawithoutborders__pynwb-846",
+        "pypa__setuptools-1847",
+        "getmoto__moto-7035",
+        "eslint__eslint-9906",
+        "pennylaneai__pennylane-5439",
+        "codezonediitj__pydatastructs-253",
+        "apollographql__apollo-rs-835",
+        "aio-libs__aiohttp-8026"
+      ]
+    },
+    "heldout-b": {
+      "coding": [
+        "kubernetes-sigs__cloud-provider-azure-4234",
+        "denvercoder1__readme-typing-svg-254",
+        "hdmf-dev__hdmf-839",
+        "qiskit__qiskit-terra-8995",
+        "jhump__protoreflect-337",
+        "aws-cloudformation__cfn-lint-3342",
+        "s-knibbs__dataclasses-jsonschema-64",
+        "decorators-squad__eo-yaml-577",
+        "pulumi__actions-994",
+        "fatiando__harmonica-478",
+        "ember-cli__eslint-plugin-ember-894",
+        "jeremymailen__kotlinter-gradle-358",
+        "pypa__setuptools-1921",
+        "aws-cloudformation__cfn-lint-3875",
+        "bashtage__arch-752"
+      ]
+    }
+  }
+}

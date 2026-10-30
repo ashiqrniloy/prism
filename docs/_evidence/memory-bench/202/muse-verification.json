@@ -1,0 +1,31 @@
+{
+  "kind": "202-muse-continuation-verification",
+  "status": "passed",
+  "harnessHash": "610f0fe6985383527287fac77343dff2954d576d80802d53952ad73450d7c931",
+  "sdkHash": "2bc1b8c228b1c08df23a746565b4d218bdc66da319a3fe946c3f05fa012e2afb",
+  "checks": [
+    {
+      "command": "timeout 600 bun test scripts/memory-bench",
+      "result": "344 pass / 2 existing environment skips / 0 fail on repeat",
+      "initialAttempt": "343 pass / 2 skip / one existing five-second fractional_recall_comparison_matches_reported_mean timeout; retained in local log"
+    },
+    {
+      "command": "timeout 180 bun run typecheck",
+      "result": "pass"
+    },
+    {
+      "command": "timeout 60 bun test --timeout=0 scripts/memory-bench/audit/pilot.test.mjs",
+      "result": "7 pass / 0 fail; new paid model/pricing test failed before implementation"
+    },
+    {
+      "command": "timeout 60 bunx biome check --write scripts/memory-bench/audit/pilot.mjs scripts/memory-bench/audit/pilot.test.mjs",
+      "result": "pass; formatted pilot.mjs"
+    },
+    {
+      "command": "git diff --check",
+      "result": "pass"
+    }
+  ],
+  "retention": "Four completed Lightning report run-path fingerprints recomputed and matched; original reports and journal unchanged. See muse-transition.json.",
+  "scope": "Harness-only pilot model selection and paid cost reporting; no memory product, package/kernel contract, dependency or public export change. No compatibility baseline update or release gate required."
+}

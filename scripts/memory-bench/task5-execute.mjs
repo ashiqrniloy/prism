@@ -1,0 +1,211 @@
+/**
+ * Plan 202 Task 5.4: execute the approved paired development comparison.
+ *
+ * The proposal stays frozen; this module only turns it into the campaign shape journal.mjs already
+ * understands, refuses to run without a passing gate, and makes the control worktree comparable.
+ */
+import { execFile } from "node:child_process";
+import { existsSync } from "node:fs";
+import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { promisify } from "node:util";
+import { assertCacheStabilityPin } from "./audit/readiness.mjs";
+import { manifestFingerprint } from "./journal.mjs";
+import {
+  assertTask5CandidateClean,
+  assertTask5OwnerGate,
+  auditTask5Comparison,
+  ensureTask5ControlRef,
+  TASK5_EVIDENCE,
+  TASK5_GATE,
+  TASK5_JOURNAL,
+  TASK5_MANIFEST,
+} from "./task5-comparison.mjs";
+
+const run = promisify(execFile);
+
+export const TASK5_LOGS = ".cache/memory-bench/task5/logs";
+export const TASK5_SUMMARY = `${TASK5_EVIDENCE}/execution-run.json`;
+export const TASK5_VERIFICATION = `${TASK5_EVIDENCE}/execution-verification.json`;
+export const TASK5_KEY_TIER = `${TASK5_EVIDENCE}/free-key.json`;
+/** OpenRouter grants 1,000 free-model requests per day once 10 credits have been purchased, 50 otherwise. */
+export const FREE_TIER_DAILY_REQUESTS = 1000;
+export const TASK5_CONTROL_WORKTREE = ".cache/memory-bench/task5/control-worktree";
+
+export async function readTask5Proposal(root = ".") {
+  return JSON.parse(await readFile(join(root, TASK5_MANIFEST), "utf8"));
+}
+
+/**
+ * The control needs its own checkout for the product and its own node_modules for workspace links,
+ * then the frozen harness on top. Copying it is what makes "only the product is the treatment" true.
+ */
+export async function prepareTask5Control({ root = ".", worktree = TASK5_CONTROL_WORKTREE, proposal } = {}) {
+  if (!proposal) throw new Error("Task5Execute: prepareTask5Control needs the frozen proposal");
+  const control = proposal.product.control.revision;
+  // r2 is derived, never hand-made: the candidate tree with the product paths from the source commit.
+  const built = await ensureTask5ControlRef(proposal.product.candidate.revision, { root });
+  if (built !== control) throw new Error(`Task5Execute: the control ref is ${built}, expected ${control}`);
+  const dir = join(root, worktree);
+  if (existsSync(join(dir, ".git"))) {
+    const head = (await run("git", ["-C", dir, "rev-parse", "HEAD"])).stdout.trim();
+    // A stale worktree is rebuilt, never reused: its HEAD is part of the treatment.
+    if (head !== control) await run("git", ["-C", root, "worktree", "remove", "--force", dir], { maxBuffer: 1 << 28 });
+  }
+  if (!existsSync(join(dir, ".git"))) await run("git", ["-C", root, "worktree", "add", "--detach", dir, control], { maxBuffer: 1 << 28 });
+  const revision = (await run("git", ["-C", dir, "rev-parse", "HEAD"])).stdout.trim();
+  if (revision !== control) throw new Error(`Task5Execute: control worktree is at ${revision}, expected ${control}`);
+  if (!existsSync(join(dir, "node_modules")))
+    await cp(join(root, "node_modules"), join(dir, "node_modules"), { recursive: true, verbatimSymlinks: true });
+  // The frozen harness is copied on top so both arms run byte-identical benchmark code.
+  await rm(join(dir, "scripts/memory-bench"), { recursive: true, force: true });
+  await cp(join(root, "scripts/memory-bench"), join(dir, "scripts/memory-bench"), { recursive: true });
+  return dir;
+}
+
+/** Reduce `GET /api/v1/key` to the tier and remaining counts; the key itself never leaves the process. */
+export function freeTierFromKeyResponse(body) {
+  const data = body?.data ?? body ?? {};
+  const paidTier = data.is_free_tier === false;
+  return {
+    paidTier,
+    dailyFreeRequests: paidTier ? FREE_TIER_DAILY_REQUESTS : 50,
+    limitRemainingUsd: typeof data.limit_remaining === "number" ? data.limit_remaining : null,
+    usageUsd: typeof data.usage === "number" ? data.usage : null,
+  };
+}
+
+export async function readOpenRouterKeyTier({ apiKey = process.env.OPENROUTER_API_KEY, fetchImpl = fetch } = {}) {
+  if (!apiKey) throw new Error("Task5Execute: OPENROUTER_API_KEY is not set");
+  const response = await fetchImpl("https://openrouter.ai/api/v1/key", {
+    headers: { Authorization: `Bearer ${apiKey}` },
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!response.ok) throw new Error(`Task5Execute: GET /api/v1/key returned ${response.status}`);
+  return freeTierFromKeyResponse(await response.json());
+}
+
+/** Below the 1,000/day tier the campaign cannot finish, so it must not start. */
+export function assertTask5FreeTier(tier) {
+  if (!tier || tier.dailyFreeRequests < FREE_TIER_DAILY_REQUESTS)
+    throw new Error(
+      `Task5Execute: the account is on the ${tier?.dailyFreeRequests ?? "unknown"}-requests/day free tier; the campaign needs ${FREE_TIER_DAILY_REQUESTS}`,
+    );
+  return tier;
+}
+
+/**
+ * A finished journal is evidence, not a resume point (Task 5.4.4): the earlier failed attempt keeps
+ * its 7.5M reservation and $0 charge exactly as recorded, and the next campaign opens a new one.
+ * A journal that is still open (for example after a daily-quota halt) is left for its own resume.
+ */
+export async function archiveFinishedTask5Journal({ root = ".", journalPath = TASK5_JOURNAL, evidence = TASK5_EVIDENCE } = {}) {
+  const path = join(root, journalPath);
+  if (!existsSync(path)) return null;
+  const journal = JSON.parse(await readFile(path, "utf8"));
+  if (!journal.campaignId || journal.status !== "finished") return null;
+  const archived = `${evidence}/journal-${journal.campaignId}.json`;
+  if (!existsSync(join(root, archived))) {
+    await mkdir(join(root, evidence), { recursive: true });
+    await writeFile(join(root, archived), `${JSON.stringify(journal, null, 2)}\n`);
+  }
+  await rm(path, { force: true });
+  return { campaignId: journal.campaignId, archived };
+}
+
+/**
+ * The revision-1 product must run on the r2 kernel. Serial execution is deliberate: the fabric
+ * suites share temp state across files and flake in parallel (pre-existing, unrelated to Task 5).
+ */
+export async function verifyTask5Control(dir) {
+  const exec = (command, args, timeout) => run(command, args, { cwd: dir, maxBuffer: 1 << 28, timeout });
+  await exec("bun", ["test", "--concurrency=1", "packages/memory/fabric", "packages/memory/core"], 900_000);
+  await exec("bun", ["run", "typecheck"], 1_200_000);
+}
+
+/** The journal identity is the frozen fingerprint; a rebuilt campaign must reproduce it exactly. */
+export function task5CampaignFingerprint(proposal) {
+  return manifestFingerprint({
+    criteriaHash: proposal.criteriaHash,
+    ceiling: proposal.budgets.campaign.ceiling,
+    provider: proposal.models.answers[0].split("/")[0],
+    model: proposal.models.answers[0].split("/").slice(1).join("/"),
+    jobs: proposal.cells,
+  });
+}
+
+export async function buildTask5CampaignManifest({ root = "." } = {}) {
+  const proposal = await readTask5Proposal(root);
+  const gate = JSON.parse(await readFile(join(root, TASK5_GATE), "utf8"));
+  assertTask5OwnerGate(gate, proposal);
+  if (task5CampaignFingerprint(proposal) !== gate.journal.fingerprint)
+    throw new Error("Task5Execute: the campaign fingerprint differs from the approved journal identity");
+  // Source pins only; preflight refreshes and then strictly audits the control worktree.
+  await auditTask5Comparison(proposal, { root, worktree: null });
+  const [provider, ...model] = proposal.models.answers[0].split("/");
+  return {
+    schemaVersion: 1,
+    kind: "202-task5-execution",
+    plan: 202,
+    task: 5,
+    subtask: 5.4,
+    status: "approved",
+    gate: { path: TASK5_GATE, manifestHash: gate.proposal.manifestHash, journal: gate.journal.fingerprint },
+    criteriaHash: proposal.criteriaHash,
+    evidenceProtocolHash: proposal.evidenceProtocolHash,
+    analysisHash: proposal.analysisHash,
+    ceiling: proposal.budgets.campaign.ceiling,
+    provider,
+    model: model.join("/"),
+    journalPath: TASK5_JOURNAL,
+    summaryPath: TASK5_SUMMARY,
+    jobs: proposal.cells.map(({ reuse, ...job }) => job),
+    results: [],
+  };
+}
+
+export async function preflightTask5(manifest, { root = ".", keyTier } = {}) {
+  const proposal = await readTask5Proposal(root);
+  if (task5CampaignFingerprint(proposal) !== manifest.gate.journal)
+    throw new Error("Task5Execute: the campaign fingerprint changed before execution");
+  // Working-tree drift could enter the candidate arm, and the control worktree is part of the arms.
+  await assertTask5CandidateClean({ root });
+  const dir = await prepareTask5Control({ root, proposal });
+  await auditTask5Comparison(proposal, { root });
+  await assertCacheStabilityPin(proposal, { root });
+  // The account's free tier decides whether the run can finish; check it before spending anything.
+  const tier = assertTask5FreeTier(keyTier ?? (await readOpenRouterKeyTier()));
+  // Never resume a finished campaign: its attempts are frozen evidence, not a starting point.
+  await archiveFinishedTask5Journal({ root });
+  await writeFile(
+    join(root, TASK5_KEY_TIER),
+    `${JSON.stringify({ kind: "202-task5-free-key-tier", checkedAt: new Date().toISOString(), ...tier }, null, 2)}\n`,
+  );
+  await verifyTask5Control(dir);
+  return tier;
+}
+
+/** Post-execution provenance: the same pins must still hold, and the journal owns the spend. */
+export async function postflightTask5(manifest, journal, { root = "." } = {}) {
+  const proposal = await readTask5Proposal(root);
+  assertTask5OwnerGate(JSON.parse(await readFile(join(root, TASK5_GATE), "utf8")), proposal);
+  await auditTask5Comparison(proposal, { root });
+  const record = {
+    kind: "202-task5-execution-verification",
+    gate: manifest.gate,
+    journal: { campaignId: journal.campaignId, status: journal.status, ceiling: journal.ceiling },
+    product: {
+      control: proposal.product.control.productHash,
+      candidate: proposal.product.candidate.productHash,
+      harness: proposal.product.harnessHash,
+    },
+    criteriaHash: proposal.criteriaHash,
+    evidenceProtocolHash: proposal.evidenceProtocolHash,
+    analysisHash: proposal.analysisHash,
+    results: manifest.results,
+    provider: manifest.provider,
+    model: manifest.model,
+  };
+  await writeFile(join(root, TASK5_VERIFICATION), `${JSON.stringify(record, null, 2)}\n`);
+  return record;
+}

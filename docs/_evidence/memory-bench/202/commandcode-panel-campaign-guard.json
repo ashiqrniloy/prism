@@ -1,0 +1,13 @@
+{
+  "kind": "202-commandcode-panel-campaign-guard",
+  "generatedAt": "2026-10-29T14:05:26.561Z",
+  "status": "passed",
+  "blockers": [
+    "broad-models-panel-context-unverified",
+    "quota-unavailable-or-unverified"
+  ],
+  "newJournalCreated": false,
+  "modelCalls": 0,
+  "journal": ".cache/memory-bench/202-commandcode-panel-baseline/journal.json",
+  "retainedCharge": 449371971
+}

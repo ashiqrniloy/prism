@@ -120,6 +120,37 @@ export function scanPayloadForSecrets(payloadText, secrets = []) {
  * Extracts raw upstream usage object from streaming SSE or JSON responses.
  * Implemented independently of provider-kit codecs.
  */
+/**
+ * The prompt-cache affinity key a route sent, from the headers the shipped routes use for it
+ * (`x-session-id`, `session_id`, `x-client-request-id`, `x-opencode-session`) or the body's
+ * `prompt_cache_key`. Retained so write-side accounting can split the extractor by its stable key.
+ */
+export function requestCacheKey(headers, body) {
+  for (const name of ["x-session-id", "session_id", "x-client-request-id", "x-opencode-session"]) {
+    const value = headers?.get?.(name);
+    if (value) return value;
+  }
+  return typeof body?.prompt_cache_key === "string" && body.prompt_cache_key ? body.prompt_cache_key : undefined;
+}
+
+export function parseRawResponseId(body) {
+  const candidates = [
+    body,
+    ...body
+      .split(/\r?\n/)
+      .filter((line) => line.startsWith("data:"))
+      .map((line) => line.slice(5).trim()),
+  ];
+  for (const candidate of candidates) {
+    try {
+      const value = JSON.parse(candidate);
+      const id = value.id ?? value.response?.id ?? value.message?.id;
+      if (typeof id === "string" && id) return id;
+    } catch {}
+  }
+  return undefined;
+}
+
 export function parseRawUpstreamUsage(responseBody, contentType = "") {
   if (!responseBody || typeof responseBody !== "string") return null;
 
@@ -160,6 +191,10 @@ export function parseRawUpstreamUsage(responseBody, contentType = "") {
       // Anthropic message_delta
       if (data.type === "message_delta" && data.usage) {
         anthropicDeltaUsage = { ...anthropicDeltaUsage, ...data.usage };
+      }
+      // Responses terminal events nest usage under the completed response.
+      if (data.response?.usage && typeof data.response.usage === "object") {
+        lastOpenAIUsage = data.response.usage;
       }
       // OpenAI streaming chunk usage
       if (data.usage && typeof data.usage === "object") {
@@ -260,6 +295,8 @@ export async function startWireProxy(options = {}) {
   const pendingExchanges = [];
 
   const server = Bun.serve({
+    // Long model prefill and quiet SSE periods use the caller's deadline.
+    idleTimeout: 0,
     hostname: host,
     port,
     async fetch(req) {
@@ -287,6 +324,7 @@ export async function startWireProxy(options = {}) {
         }
       }
 
+      const cacheKey = requestCacheKey(req.headers, parsedReqBody);
       let upstreamResponse;
       try {
         upstreamResponse = await fetch(targetUrl.toString(), {
@@ -296,18 +334,39 @@ export async function startWireProxy(options = {}) {
           // @ts-expect-error
           duplex: "half",
         });
-      } catch (err) {
-        return new Response(`[wire-proxy] Upstream fetch failed: ${err.message}`, { status: 502 });
+      } catch {
+        // A request may have reached the model before transport failed; retain unknown usage.
+        const body = "[wire-proxy] Upstream fetch failed";
+        await handleExchangeCompletion({
+          exchange: currentExchange,
+          method: req.method,
+          path: reqUrl.pathname + reqUrl.search,
+          parsedReqBody,
+          rawReqBodyText: reqBodyText ?? "",
+          resStatus: 502,
+          resContentType: "text/plain",
+          resBodyText: body,
+          recordDir: record,
+          usageLogFile: usageLog,
+          cacheKey,
+          secrets,
+        });
+        return new Response(body, { status: 502 });
       }
 
       const resContentType = upstreamResponse.headers.get("content-type") || "";
 
       // If neither recording nor usage-log is configured, stream through directly.
+      // fetch() decompresses the body but leaves content-encoding/length on the headers;
+      // forwarding both makes the client inflate plaintext (ZlibError on Hyper deflate).
+      const responseHeaders = new Headers(upstreamResponse.headers);
+      responseHeaders.delete("content-encoding");
+      responseHeaders.delete("content-length");
       if (!record && !usageLog) {
         return new Response(upstreamResponse.body, {
           status: upstreamResponse.status,
           statusText: upstreamResponse.statusText,
-          headers: upstreamResponse.headers,
+          headers: responseHeaders,
         });
       }
 
@@ -352,6 +411,7 @@ export async function startWireProxy(options = {}) {
             resBodyText,
             recordDir: record,
             usageLogFile: usageLog,
+            cacheKey,
             secrets,
           });
         })();
@@ -367,6 +427,7 @@ export async function startWireProxy(options = {}) {
           resBodyText: "",
           recordDir: record,
           usageLogFile: usageLog,
+          cacheKey,
           secrets,
         });
       }
@@ -376,7 +437,7 @@ export async function startWireProxy(options = {}) {
       return new Response(clientBody, {
         status: upstreamResponse.status,
         statusText: upstreamResponse.statusText,
-        headers: upstreamResponse.headers,
+        headers: responseHeaders,
       });
     },
   });
@@ -408,6 +469,7 @@ async function handleExchangeCompletion(params) {
     resBodyText,
     recordDir,
     usageLogFile,
+    cacheKey,
     secrets,
   } = params;
 
@@ -450,6 +512,9 @@ async function handleExchangeCompletion(params) {
     const logEntry = {
       exchange,
       path,
+      model: parsedReqBody?.model,
+      ...(cacheKey ? { cacheKey } : {}),
+      generationId: parseRawResponseId(resBodyText),
       status: resStatus,
       rawUsage,
       usage: rawUsage,

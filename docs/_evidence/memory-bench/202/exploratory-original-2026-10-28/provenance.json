@@ -1,0 +1,276 @@
+{
+  "kind": "plan-202-original-exploratory-run",
+  "preservedAt": "2026-10-28",
+  "source": "docs/_evidence/memory-bench/202/baseline",
+  "status": "exploratory; not corrected-protocol or acceptance evidence",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 9093,
+      "sha256": "0506d04bd30e5416163fcd9a2b1c8507c069ab91b7083e4b6e1e1a868fa91cf2"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 48317,
+      "sha256": "29d0d9954c6342b796b7b92474f3d188bcb4543bc147df22c34ecfb8ed8992fe"
+    },
+    {
+      "path": "report-202-baseline.beam-100k.full-truncated.opencode-go.beam-free.json",
+      "bytes": 54938,
+      "sha256": "560f594c0d1ef086949066e94c57790b7f9522be97658cacfc612d5493212eb9"
+    },
+    {
+      "path": "report-202-baseline.beam-100k.full-truncated.opencode-go.beam-free.md",
+      "bytes": 1821,
+      "sha256": "97cca4d96d4d0b2b75ad74ef71cbcfc388e50286872c8950913fc68922b68938"
+    },
+    {
+      "path": "report-202-baseline.beam-100k.full.opencode-go.beam-free.json",
+      "bytes": 54975,
+      "sha256": "ad821e44cd82d7a89dc8defd037d73cd3c1e3d7884910f0f0fedf5ea1e8fbf47"
+    },
+    {
+      "path": "report-202-baseline.beam-100k.full.opencode-go.beam-free.md",
+      "bytes": 1801,
+      "sha256": "39d7320609116228dc43e51f275c1282fdc408359ef54aaaf624e1a7466b99f9"
+    },
+    {
+      "path": "report-202-baseline.beam-100k.full.opencode-go.minimax-m3.json",
+      "bytes": 22182,
+      "sha256": "2df0e9588dcdeab0b07ebf231f5d60cff4028bb0f4355ed75f834c25c24fbc3f"
+    },
+    {
+      "path": "report-202-baseline.beam-100k.full.opencode-go.minimax-m3.md",
+      "bytes": 1307,
+      "sha256": "fe57594d810bc5a5b45a8c73b984cde32d1e64125f8dd0101ad71d873c9aa9e1"
+    },
+    {
+      "path": "report-202-baseline.beam-100k.lexical-topk.opencode-go.beam-free.json",
+      "bytes": 54971,
+      "sha256": "5a2a3c6f9e9b20d27eea9097e46b4a572e79ac2e3af9942b87f6df2f66bebc8a"
+    },
+    {
+      "path": "report-202-baseline.beam-100k.lexical-topk.opencode-go.beam-free.md",
+      "bytes": 1812,
+      "sha256": "8a5b70a42f77f257890f031790d9fbef849d9fc04a7d6debb013266808aab8b6"
+    },
+    {
+      "path": "report-202-baseline.beam-100k.passive-only.opencode-go.beam-free-2.json",
+      "bytes": 128957,
+      "sha256": "dcb680be194a2fb2459efe78a7465d785961bbe3507f03e92dd68b9bee1618d6"
+    },
+    {
+      "path": "report-202-baseline.beam-100k.passive-only.opencode-go.beam-free-2.md",
+      "bytes": 1860,
+      "sha256": "08e6443f0b7325968bc62dc9a9dfee416387474300fb32b32b2c945ef352cfa1"
+    },
+    {
+      "path": "report-202-baseline.beam-100k.passive-only.opencode-go.beam-free.json",
+      "bytes": 68785,
+      "sha256": "714abfa005cb3092926b2121a0c23f1b5ea6ed73438a9c11ff07fd036a0c27cf"
+    },
+    {
+      "path": "report-202-baseline.beam-100k.passive-only.opencode-go.beam-free.md",
+      "bytes": 1340,
+      "sha256": "3958571d093f9791c94fea5a8ea8c60f2cf4b359d08b926f79f94aacf1c9732a"
+    },
+    {
+      "path": "report-202-baseline.beam-100k.passive-only.opencode-go.minimax-m3.json",
+      "bytes": 120642,
+      "sha256": "03d55ea494e54938648cb4f1feb9aeb93f77ee118ef44ec51c5c50d08f33a0c4"
+    },
+    {
+      "path": "report-202-baseline.beam-100k.passive-only.opencode-go.minimax-m3.md",
+      "bytes": 1862,
+      "sha256": "fd008dbcc8e290aeb11c9639bc9edda50c684131191e1af18617a2f8a1c22542"
+    },
+    {
+      "path": "report-202-baseline.beam-100k.preset-r1.opencode-go.beam-free.json",
+      "bytes": 298093,
+      "sha256": "b5dc4337a54d1040cd4cee53c1d9085be0778fddd5cde9f1bb7901b774479901"
+    },
+    {
+      "path": "report-202-baseline.beam-100k.preset-r1.opencode-go.beam-free.md",
+      "bytes": 1865,
+      "sha256": "1a12c62cadec5531acf3e9fcceb10a9ecb6cc93592f0c8032053f3e2add3fee4"
+    },
+    {
+      "path": "report-202-baseline.beam-100k.preset-r1.opencode-go.minimax-m3.json",
+      "bytes": 203938,
+      "sha256": "c8437965e1701294d6819a3ae109550048844c740ffb717cb7f6a0b0217de20e"
+    },
+    {
+      "path": "report-202-baseline.beam-100k.preset-r1.opencode-go.minimax-m3.md",
+      "bytes": 1868,
+      "sha256": "c4e6645a66c550a5a1d98776522458f6667ebb1c058459d7884444b8a7898551"
+    },
+    {
+      "path": "summary.json",
+      "bytes": 28215,
+      "sha256": "7051178977e7b7147d5c3ecc7ac0b690fa8e9276068b7a556dd70297e4464e8d"
+    }
+  ],
+  "completedReports": [
+    {
+      "suite": "beam-100k",
+      "config": "full-truncated",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "sourceRevision": "5c2570df52a084b43120ee4e77921746a029480e",
+      "protocolVersion": 2,
+      "protocolHash": "00622926776332b98094f821427a927bdba3a0c683984c8067e8188fb284a371",
+      "runPathFingerprint": "3ffb55adca80879a48fb96eb181cead87ab76acd933345173f34ef153bda16aa",
+      "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+      "generation": {
+        "temperature": 0,
+        "maxTokens": 4096
+      },
+      "judgePanel": [
+        "opencode-go/qwen3.7-plus",
+        "opencode-go/kimi-k3"
+      ],
+      "judgeProtocol": "plain-text-v1",
+      "inputCap": 134976,
+      "path": "report-202-baseline.beam-100k.full-truncated.opencode-go.beam-free.json",
+      "questions": 40
+    },
+    {
+      "suite": "beam-100k",
+      "config": "full",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "sourceRevision": "5c2570df52a084b43120ee4e77921746a029480e",
+      "protocolVersion": 2,
+      "protocolHash": "b8371e026de9852cb145a1c6a8647671804e6644667376237f82f3804b55d524",
+      "runPathFingerprint": "c5c526573385997db2c82d8ebd232b2653a80a2b300f13a4ef68917111a32e8d",
+      "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+      "generation": {
+        "temperature": 0,
+        "maxTokens": 4096
+      },
+      "judgePanel": [
+        "opencode-go/qwen3.7-plus",
+        "opencode-go/kimi-k3"
+      ],
+      "judgeProtocol": "plain-text-v1",
+      "inputCap": 134976,
+      "path": "report-202-baseline.beam-100k.full.opencode-go.beam-free.json",
+      "questions": 40
+    },
+    {
+      "suite": "beam-100k",
+      "config": "lexical-topk",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "sourceRevision": "5c2570df52a084b43120ee4e77921746a029480e",
+      "protocolVersion": 2,
+      "protocolHash": "5312c08d11ce4a24ec74722041303a49c2e748c2e996a163f134dac74a5b7497",
+      "runPathFingerprint": "20f37be185d5b70f97b0d8da4a136e1d32d23dcc01f4bde6958d73774370e9fa",
+      "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+      "generation": {
+        "temperature": 0,
+        "maxTokens": 4096
+      },
+      "judgePanel": [
+        "opencode-go/qwen3.7-plus",
+        "opencode-go/kimi-k3"
+      ],
+      "judgeProtocol": "plain-text-v1",
+      "inputCap": 134976,
+      "path": "report-202-baseline.beam-100k.lexical-topk.opencode-go.beam-free.json",
+      "questions": 40
+    },
+    {
+      "suite": "beam-100k",
+      "config": "fabric-x",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "sourceRevision": "5c2570df52a084b43120ee4e77921746a029480e",
+      "protocolVersion": 2,
+      "protocolHash": "af4adfa87afa998f482de1c9838962470e5ad399fc0f1c36da9e57cc042cb85c",
+      "runPathFingerprint": "580933cf43856c74fe4fb1bafada25eaadf0db570ed3d40a9be8729d35090d7b",
+      "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+      "generation": {
+        "temperature": 0,
+        "maxTokens": 4096
+      },
+      "judgePanel": [
+        "opencode-go/qwen3.7-plus",
+        "opencode-go/kimi-k3"
+      ],
+      "judgeProtocol": "plain-text-v1",
+      "inputCap": 134976,
+      "path": "report-202-baseline.beam-100k.passive-only.opencode-go.beam-free-2.json",
+      "questions": 40
+    },
+    {
+      "suite": "beam-100k",
+      "config": "fabric-x",
+      "provider": "opencode-go",
+      "model": "minimax-m3",
+      "sourceRevision": "5c2570df52a084b43120ee4e77921746a029480e",
+      "protocolVersion": 2,
+      "protocolHash": "944669986ffb7ba11bd01b4a46c01f228148c8de0238016179d7b93116b6302a",
+      "runPathFingerprint": "06190c7ff2032016ad93c78278f435aa63f672f84edb25e69a5c9d5cae8aa565",
+      "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+      "generation": {
+        "temperature": 0,
+        "maxTokens": 4096
+      },
+      "judgePanel": [
+        "opencode-go/qwen3.7-plus",
+        "opencode-go/kimi-k3"
+      ],
+      "judgeProtocol": "plain-text-v1",
+      "inputCap": 867904,
+      "path": "report-202-baseline.beam-100k.passive-only.opencode-go.minimax-m3.json",
+      "questions": 40
+    },
+    {
+      "suite": "beam-100k",
+      "config": "fabric-x-tools",
+      "provider": "opencode-go",
+      "model": "beam-free",
+      "sourceRevision": "5c2570df52a084b43120ee4e77921746a029480e",
+      "protocolVersion": 2,
+      "protocolHash": "9accd3d06899f5821e2191b156dfd0a9742aa1904714872540d64bebef02bf83",
+      "runPathFingerprint": "e7cc2856f9508237a496066fc543a9ceba286a1b1d32a20ddd3da5f3ff39b0f5",
+      "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+      "generation": {
+        "temperature": 0,
+        "maxTokens": 4096
+      },
+      "judgePanel": [
+        "opencode-go/qwen3.7-plus",
+        "opencode-go/kimi-k3"
+      ],
+      "judgeProtocol": "plain-text-v1",
+      "inputCap": 134976,
+      "path": "report-202-baseline.beam-100k.preset-r1.opencode-go.beam-free.json",
+      "questions": 40
+    },
+    {
+      "suite": "beam-100k",
+      "config": "fabric-x-tools",
+      "provider": "opencode-go",
+      "model": "minimax-m3",
+      "sourceRevision": "5c2570df52a084b43120ee4e77921746a029480e",
+      "protocolVersion": 2,
+      "protocolHash": "fb7941fbc2bc4ae0745c01afda1cd806e113f6fde5e34b7677f757c5ca6b45a9",
+      "runPathFingerprint": "c738434a7077c22a08749316e3f183a91f9d49465bcaf23bb3ec9a69fc9813fb",
+      "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+      "generation": {
+        "temperature": 0,
+        "maxTokens": 4096
+      },
+      "judgePanel": [
+        "opencode-go/qwen3.7-plus",
+        "opencode-go/kimi-k3"
+      ],
+      "judgeProtocol": "plain-text-v1",
+      "inputCap": 867904,
+      "path": "report-202-baseline.beam-100k.preset-r1.opencode-go.minimax-m3.json",
+      "questions": 40
+    }
+  ]
+}

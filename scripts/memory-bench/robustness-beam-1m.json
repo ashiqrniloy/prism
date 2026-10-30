@@ -1,0 +1,220 @@
+{
+  "seed": "prism-202-memory-bench-beam-1m",
+  "draw": "SHA-256(\"prism-202-memory-bench-beam-1m:\" + id), ascending inside each ability and partition",
+  "source": "https://huggingface.co/datasets/Mohammadta/BEAM/resolve/3205395e897e7318c7b094ef4e6047b9b82dbb03/data/1M-00000-of-00001.parquet",
+  "datasetSha256": "41b5acbbb55a586b1305514ef9d9fb03365d9b3331b598a1c2dd7603d93ef533",
+  "strata": {
+    "abstention": [
+      4,
+      2,
+      2
+    ],
+    "contradiction_resolution": [
+      4,
+      2,
+      2
+    ],
+    "event_ordering": [
+      4,
+      2,
+      2
+    ],
+    "information_extraction": [
+      4,
+      2,
+      2
+    ],
+    "instruction_following": [
+      4,
+      2,
+      2
+    ],
+    "knowledge_update": [
+      4,
+      2,
+      2
+    ],
+    "multi_session_reasoning": [
+      4,
+      2,
+      2
+    ],
+    "preference_following": [
+      4,
+      2,
+      2
+    ],
+    "summarization": [
+      4,
+      2,
+      2
+    ],
+    "temporal_reasoning": [
+      4,
+      2,
+      2
+    ]
+  },
+  "part": "dev | heldout-a | heldout-b; heldout-b is reserved for the single remediation round",
+  "residualPool": {
+    "abstention": 62,
+    "contradiction_resolution": 62,
+    "event_ordering": 62,
+    "information_extraction": 62,
+    "instruction_following": 62,
+    "knowledge_update": 62,
+    "multi_session_reasoning": 62,
+    "preference_following": 62,
+    "summarization": 62,
+    "temporal_reasoning": 62
+  },
+  "idsHash": "9ee618b8ed072b2ecf541fcf48737328aa2211d6d510583b222a6e3ae9562f55",
+  "abilities": {
+    "dev": {
+      "abstention": [
+        "15:abstention:0",
+        "10:abstention:1",
+        "21:abstention:0",
+        "31:abstention:0"
+      ],
+      "contradiction_resolution": [
+        "15:contradiction_resolution:1",
+        "21:contradiction_resolution:0",
+        "26:contradiction_resolution:1",
+        "20:contradiction_resolution:1"
+      ],
+      "event_ordering": [
+        "28:event_ordering:1",
+        "12:event_ordering:0",
+        "1:event_ordering:1",
+        "34:event_ordering:0"
+      ],
+      "information_extraction": [
+        "34:information_extraction:0",
+        "10:information_extraction:0",
+        "25:information_extraction:0",
+        "17:information_extraction:0"
+      ],
+      "instruction_following": [
+        "7:instruction_following:1",
+        "12:instruction_following:0",
+        "16:instruction_following:1",
+        "19:instruction_following:0"
+      ],
+      "knowledge_update": [
+        "24:knowledge_update:0",
+        "22:knowledge_update:0",
+        "3:knowledge_update:1",
+        "29:knowledge_update:1"
+      ],
+      "multi_session_reasoning": [
+        "23:multi_session_reasoning:0",
+        "25:multi_session_reasoning:0",
+        "26:multi_session_reasoning:1",
+        "15:multi_session_reasoning:1"
+      ],
+      "preference_following": [
+        "12:preference_following:1",
+        "29:preference_following:0",
+        "10:preference_following:0",
+        "4:preference_following:1"
+      ],
+      "summarization": [
+        "32:summarization:0",
+        "1:summarization:1",
+        "18:summarization:0",
+        "10:summarization:0"
+      ],
+      "temporal_reasoning": [
+        "12:temporal_reasoning:1",
+        "7:temporal_reasoning:0",
+        "25:temporal_reasoning:0",
+        "30:temporal_reasoning:1"
+      ]
+    },
+    "heldout-a": {
+      "abstention": [
+        "14:abstention:1",
+        "4:abstention:1"
+      ],
+      "contradiction_resolution": [
+        "5:contradiction_resolution:1",
+        "25:contradiction_resolution:0"
+      ],
+      "event_ordering": [
+        "6:event_ordering:1",
+        "24:event_ordering:0"
+      ],
+      "information_extraction": [
+        "12:information_extraction:0",
+        "7:information_extraction:1"
+      ],
+      "instruction_following": [
+        "8:instruction_following:1",
+        "11:instruction_following:1"
+      ],
+      "knowledge_update": [
+        "33:knowledge_update:0",
+        "5:knowledge_update:0"
+      ],
+      "multi_session_reasoning": [
+        "8:multi_session_reasoning:0",
+        "32:multi_session_reasoning:1"
+      ],
+      "preference_following": [
+        "31:preference_following:0",
+        "15:preference_following:0"
+      ],
+      "summarization": [
+        "33:summarization:0",
+        "6:summarization:1"
+      ],
+      "temporal_reasoning": [
+        "21:temporal_reasoning:0",
+        "21:temporal_reasoning:1"
+      ]
+    },
+    "heldout-b": {
+      "abstention": [
+        "10:abstention:0",
+        "27:abstention:0"
+      ],
+      "contradiction_resolution": [
+        "4:contradiction_resolution:0",
+        "6:contradiction_resolution:0"
+      ],
+      "event_ordering": [
+        "3:event_ordering:1",
+        "27:event_ordering:1"
+      ],
+      "information_extraction": [
+        "4:information_extraction:1",
+        "21:information_extraction:1"
+      ],
+      "instruction_following": [
+        "24:instruction_following:0",
+        "3:instruction_following:0"
+      ],
+      "knowledge_update": [
+        "12:knowledge_update:1",
+        "9:knowledge_update:1"
+      ],
+      "multi_session_reasoning": [
+        "13:multi_session_reasoning:0",
+        "19:multi_session_reasoning:1"
+      ],
+      "preference_following": [
+        "21:preference_following:1",
+        "17:preference_following:0"
+      ],
+      "summarization": [
+        "28:summarization:0",
+        "26:summarization:1"
+      ],
+      "temporal_reasoning": [
+        "15:temporal_reasoning:1",
+        "2:temporal_reasoning:1"
+      ]
+    }
+  }
+}

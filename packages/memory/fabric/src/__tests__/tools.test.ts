@@ -533,7 +533,8 @@ it("explicit_kinds_search_only_those_kinds_in_one_query", async () => {
   );
   try {
     const empty = await recall.execute({ query: "cobalt", kinds: ["fact"] });
-    assert.equal(text(empty), "no match in any kind");
+    assert.match(text(empty), /^no match in any kind/);
+    assert.deepEqual((empty.value as { unmatchedTerms: string[] }).unmatchedTerms, ["cobalt"]);
     assert.equal(spy.mock.calls.length, 1, "no kind-discovery query follows a zero-hit call");
     spy.mockClear();
     await recall.execute({ query: "cobalt" });

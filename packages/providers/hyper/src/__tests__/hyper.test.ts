@@ -1,11 +1,7 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import type { ModelConfig, ProviderEvent, ProviderRequest, Usage } from "@arnilo/prism";
-import {
-  assertNoFetches,
-  assertNoSecretLeak,
-  ProviderRequirementError,
-} from "@arnilo/prism/provider-kit";
+import { assertNoFetches, assertNoSecretLeak, ProviderRequirementError } from "@arnilo/prism/provider-kit";
 import { loadProviderPackage } from "@arnilo/prism/testing";
 import {
   createHyperProvider,
@@ -298,6 +294,35 @@ describe("@arnilo/prism-provider-hyper", () => {
     assert.equal(qwen.compat?.route, "anthropic");
     assert.equal(qwen.cache?.kind, "cache_control");
     assert.deepEqual(qwen.capabilities?.input, ["text", "image"]);
+  });
+
+  it("hyper_catalog_caps_an_output_limit_that_equals_the_context_window", async () => {
+    const fetchImpl = (async () =>
+      new Response(
+        JSON.stringify({
+          data: [
+            {
+              id: "minimax-m3",
+              display_name: "MiniMax M3",
+              context_window: 512_000,
+              max_output_tokens: 512_000,
+              capabilities: { vision: false },
+            },
+            {
+              id: "qwen3.8-27b",
+              display_name: "Qwen 3.8 27B",
+              context_window: 1_000_000,
+              max_output_tokens: 128_000,
+              capabilities: { vision: false },
+            },
+          ],
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      )) as typeof fetch;
+    const [minimax, qwen] = await listHyperModels({ fetch: fetchImpl });
+    assert.equal(minimax.limits?.contextWindow, 512_000);
+    assert.equal(minimax.limits?.maxOutputTokens, 128_000, "the output limit cannot consume the whole window");
+    assert.equal(qwen.limits?.maxOutputTokens, 128_000, "a sane output limit is untouched");
   });
 
   it("hyper_credits_reports_balance", async () => {

@@ -1,0 +1,438 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 2,
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "usageSource": "wire-proxy",
+  "phase": "all",
+  "labelInjections": "on",
+  "concurrency": 4,
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "writeGeneration": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "generatedAt": "2026-10-27T20:48:38.476Z",
+  "suite": "beam-100k",
+  "subset": "dev",
+  "ability": null,
+  "seed": null,
+  "config": "full",
+  "ingestion": "none",
+  "embeddings": null,
+  "provider": "openrouter",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "judge": "hyper/qwen3.8-flash",
+  "judgePanel": [
+    "hyper/qwen3.8-flash",
+    "hyper/glm-5.3-flash"
+  ],
+  "judgeCalibration": null,
+  "repeats": 1,
+  "judgeProtocol": "plain-text-v1",
+  "dataset": {
+    "file": "beam-100k.parquet",
+    "format": "parquet",
+    "parquetLiterals": [
+      "probing_questions"
+    ],
+    "bytes": 5429768,
+    "sha256": "c0519be25907005ba873c927c50877471d550873039d96c041554d0075a78ace",
+    "license": "CC BY-SA 4.0",
+    "url": "https://huggingface.co/datasets/Mohammadta/BEAM/resolve/3205395e897e7318c7b094ef4e6047b9b82dbb03/data/100K-00000-of-00001.parquet",
+    "licenseUrl": "https://huggingface.co/datasets/Mohammadta/BEAM/blob/3205395e897e7318c7b094ef4e6047b9b82dbb03/README.md"
+  },
+  "maxInputTokens": 10000000,
+  "ablations": [],
+  "sourceVariants": [],
+  "sourceRevision": "5c2570df52a084b43120ee4e77921746a029480e",
+  "protocol": {
+    "answerAttempts": 3,
+    "answerBackoffMs": [
+      2000,
+      10000
+    ],
+    "judgeAttempts": 8,
+    "judgeBackoffMs": [
+      1000,
+      2000
+    ],
+    "maxTurns": 8
+  },
+  "memoryConfig": {
+    "observational": null,
+    "fabric": null
+  },
+  "inputTokens": 1216310,
+  "cacheReadTokens": 457920,
+  "cacheWriteTokens": 0,
+  "outputTokens": 9303,
+  "calls": {
+    "observer": 0,
+    "reflector": 0,
+    "dropper": 0,
+    "embedding": 0,
+    "decider": 0,
+    "consolidate": 0,
+    "judge": 0,
+    "judgeAttempts": 0,
+    "gatewayRetries": 24,
+    "judgeCacheHits": 0,
+    "judgeCacheMisses": 0,
+    "concurrencyHalvings": 2,
+    "overloads": 36
+  },
+  "turns": 12,
+  "injectedContextTokens": 0,
+  "injections": [],
+  "attemptId": "202-baseline.beam-100k.full.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free@5",
+  "protocolHash": "4a1fa377fde823aec4174d63f1700a38e423dcccd62c62cf05c7cc79686eb99a",
+  "resumedResults": 3,
+  "results": [
+    {
+      "id": "5:abstention:1",
+      "ability": "abstention",
+      "cluster": "beam-5",
+      "correct": false,
+      "outcome": "error",
+      "errorCode": "Error",
+      "truncated": false,
+      "syntheticDates": false,
+      "resumed": true
+    },
+    {
+      "id": "9:abstention:1",
+      "ability": "abstention",
+      "cluster": "beam-9",
+      "correct": false,
+      "outcome": "error",
+      "errorCode": "Error",
+      "truncated": false,
+      "syntheticDates": false,
+      "resumed": true
+    },
+    {
+      "id": "20:abstention:1",
+      "ability": "abstention",
+      "cluster": "beam-20",
+      "correct": false,
+      "outcome": "error",
+      "errorCode": "Error",
+      "truncated": false,
+      "syntheticDates": false,
+      "resumed": true
+    }
+  ],
+  "status": "failed",
+  "limitations": [
+    "Block-level injection accounting until item metadata lands in Tasks 4, 9, 11 and 12.",
+    "Injection token allocations are character estimates, not billing usage.",
+    "OpenCode Go and Hyper judges differ from the papers; scores are not directly comparable."
+  ],
+  "ratesAsOf": "2026-10-27",
+  "ratesStatus": "provider-catalog",
+  "resumedFrom": {
+    "protocolHash": "4a1fa377fde823aec4174d63f1700a38e423dcccd62c62cf05c7cc79686eb99a",
+    "results": 3,
+    "inputTokens": 1216310
+  },
+  "inputCap": 933440,
+  "selectedQuestionIds": [
+    "5:abstention:1",
+    "9:abstention:1",
+    "10:abstention:0",
+    "20:abstention:1",
+    "8:contradiction_resolution:1",
+    "3:contradiction_resolution:1",
+    "7:contradiction_resolution:0",
+    "9:contradiction_resolution:0",
+    "13:event_ordering:0",
+    "5:event_ordering:0",
+    "1:event_ordering:1",
+    "1:event_ordering:0",
+    "16:information_extraction:0",
+    "16:information_extraction:1",
+    "9:information_extraction:0",
+    "19:information_extraction:0",
+    "18:instruction_following:0",
+    "9:instruction_following:1",
+    "13:instruction_following:1",
+    "8:instruction_following:1",
+    "4:knowledge_update:0",
+    "7:knowledge_update:1",
+    "2:knowledge_update:0",
+    "17:knowledge_update:1",
+    "6:multi_session_reasoning:1",
+    "2:multi_session_reasoning:0",
+    "9:multi_session_reasoning:1",
+    "13:multi_session_reasoning:1",
+    "10:preference_following:1",
+    "11:preference_following:0",
+    "18:preference_following:1",
+    "14:preference_following:0",
+    "10:summarization:0",
+    "17:summarization:0",
+    "1:summarization:1",
+    "8:summarization:1",
+    "18:temporal_reasoning:0",
+    "19:temporal_reasoning:1",
+    "14:temporal_reasoning:1",
+    "17:temporal_reasoning:0"
+  ],
+  "runPathFingerprint": "743e736dc0ab837751978c8f43e160048c3a34aedb4145568b9754a60073d815",
+  "usageComplete": true,
+  "usageMissingExchanges": 0,
+  "wireExchanges": 284,
+  "errors": [
+    {
+      "questionId": "7:contradiction_resolution:0",
+      "code": "MemoryBenchAnswerError:429",
+      "message": "MemoryBenchAnswerError:429",
+      "cause": {
+        "name": "Error",
+        "code": "429",
+        "message": "OpenRouter request failed: 429 Daily quota exhausted. error:message:Rate limit exceeded: free-models-per-day-high-balance. ,code:429,metadata:headers:X-RateLimi",
+        "failureClass": "quota"
+      },
+      "trace": {
+        "turns": 3,
+        "toolCalls": 0,
+        "recallCalls": 0,
+        "answerRetries": 2,
+        "mutating": false,
+        "maxTurns": 8,
+        "tools": []
+      }
+    },
+    {
+      "questionId": "3:contradiction_resolution:1",
+      "code": "MemoryBenchAnswerError:429",
+      "message": "MemoryBenchAnswerError:429",
+      "cause": {
+        "name": "Error",
+        "code": "429",
+        "message": "OpenRouter request failed: 429 Daily quota exhausted. error:message:Rate limit exceeded: free-models-per-day-high-balance. ,code:429,metadata:headers:X-RateLimi",
+        "failureClass": "quota"
+      },
+      "trace": {
+        "turns": 3,
+        "toolCalls": 0,
+        "recallCalls": 0,
+        "answerRetries": 2,
+        "mutating": false,
+        "maxTurns": 8,
+        "tools": []
+      }
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "code": "MemoryBenchAnswerError:429",
+      "message": "MemoryBenchAnswerError:429",
+      "cause": {
+        "name": "Error",
+        "code": "429",
+        "message": "OpenRouter request failed: 429 Daily quota exhausted. error:message:Rate limit exceeded: free-models-per-day-high-balance. ,code:429,metadata:headers:X-RateLimi",
+        "failureClass": "quota"
+      },
+      "trace": {
+        "turns": 3,
+        "toolCalls": 0,
+        "recallCalls": 0,
+        "answerRetries": 2,
+        "mutating": false,
+        "maxTurns": 8,
+        "tools": []
+      }
+    },
+    {
+      "questionId": "10:abstention:0",
+      "code": "MemoryBenchAnswerError:429",
+      "message": "MemoryBenchAnswerError:429",
+      "cause": {
+        "name": "Error",
+        "code": "429",
+        "message": "OpenRouter request failed: 429 Daily quota exhausted. error:message:Rate limit exceeded: free-models-per-day-high-balance. ,code:429,metadata:headers:X-RateLimi",
+        "failureClass": "quota"
+      },
+      "trace": {
+        "turns": 3,
+        "toolCalls": 0,
+        "recallCalls": 0,
+        "answerRetries": 2,
+        "mutating": false,
+        "maxTurns": 8,
+        "tools": []
+      }
+    }
+  ],
+  "failure": {
+    "questionId": "10:abstention:0",
+    "code": "MemoryBenchAnswerError:429",
+    "message": "MemoryBenchAnswerError:429",
+    "cause": {
+      "name": "Error",
+      "code": "429",
+      "message": "OpenRouter request failed: 429 Daily quota exhausted. error:message:Rate limit exceeded: free-models-per-day-high-balance. ,code:429,metadata:headers:X-RateLimi",
+      "failureClass": "quota"
+    },
+    "trace": {
+      "turns": 3,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "answerRetries": 2,
+      "mutating": false,
+      "maxTurns": 8,
+      "tools": []
+    }
+  },
+  "timing": {
+    "wallMs": 20202.1,
+    "concurrency": {
+      "initial": 4,
+      "active": 1,
+      "floor": 1
+    },
+    "questions": {
+      "n": 7,
+      "wallMs": {
+        "p50": 16256,
+        "p95": 18922.9,
+        "mean": 10109.4
+      }
+    },
+    "roles": {
+      "solver": {
+        "calls": 12,
+        "firstByteMs": {
+          "p50": 1382.2,
+          "p95": 3128.6,
+          "mean": 1859.9
+        },
+        "totalMs": {
+          "p50": 1382.3,
+          "p95": 3128.7,
+          "mean": 1860
+        }
+      }
+    },
+    "calls": 12
+  },
+  "metricVersion": 2,
+  "abilities": {
+    "abstention": {
+      "n": 3,
+      "correct": 0,
+      "scored": 3,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 1,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    }
+  },
+  "abilityGroups": {
+    "abstention": {
+      "n": 3,
+      "correct": 0,
+      "scored": 3,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 1,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    }
+  },
+  "metricDefinitions": {
+    "abstention": {
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    }
+  },
+  "runLimitRate": 0,
+  "errorRate": 1,
+  "cacheReadRatio": 0.37648296897994754,
+  "cacheWriteRatio": 0,
+  "cost": {
+    "currency": "USD",
+    "unit": "per_million_tokens",
+    "rates": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0
+    },
+    "pricingStatus": "priced",
+    "measured": 0,
+    "cachedPrefixSimulation": 0,
+    "simulationAssumption": "all input tokens are a cached prefix; history pays cacheRead, output pays output",
+    "ratesAsOf": "2026-10-27",
+    "ratesStatus": "provider-catalog"
+  },
+  "judgeAgreement": {
+    "n": 0,
+    "judges": {
+      "hyper/qwen3.8-flash": {
+        "scored": 0,
+        "agreementWithPanel": null
+      },
+      "hyper/glm-5.3-flash": {
+        "scored": 0,
+        "agreementWithPanel": null
+      }
+    },
+    "pairs": [
+      {
+        "a": "hyper/qwen3.8-flash",
+        "b": "hyper/glm-5.3-flash",
+        "n": 0,
+        "agreement": null,
+        "kappa": null
+      }
+    ],
+    "fleissKappa": null
+  },
+  "injectionPrecision": {
+    "granularity": "block",
+    "tokensPerTurn": 0,
+    "irrelevantRate": null,
+    "citedIdRate": null,
+    "tokenAccounting": "estimated ceil(characters/4); billing is wire usage"
+  },
+  "injectionPrecisionReason": null,
+  "toolCalls": 0,
+  "toolCallsPerQuestion": 0,
+  "recallCalls": 0,
+  "retrievedSnippetTokens": 0,
+  "answerSessionHitAtK": null,
+  "evidenceRoundCoverage": null,
+  "evidenceAllRequired": null,
+  "fineEvidenceRecall": null,
+  "fineEvidencePrecision": null,
+  "legacyRetrievalRecallAtK": null,
+  "retrievalRecallAtK": null
+}

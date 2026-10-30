@@ -118,14 +118,38 @@ test("recovery_reconciles_usage_exactly_once", async () => {
 });
 
 test("retry_and_inflight_headroom_count_before_call", () => {
+  // Two concurrent calls cannot each spend the same remaining allocation.
   const admission = createAdmission({ reservedInputTokens: 400_000, spent: () => 0 });
   admission.check();
-  assert.throws(() => admission.check(), CampaignBudgetBlocked);
+  assert.throws(() => admission.check(), CampaignBudgetBlocked, "in-flight requests share the reservation");
+  const spentAdmission = createAdmission({ reservedInputTokens: 400_000, spent: () => 200_000 });
+  assert.throws(() => spentAdmission.check(), CampaignBudgetBlocked, "spend plus this request exceeds the reservation");
+  const tight = createAdmission({ reservedInputTokens: 400_000, spent: () => 300_000 });
+  assert.doesNotThrow(() => tight.check(100_000));
+  assert.throws(() => tight.check(250_000), CampaignBudgetBlocked);
+});
+
+test("an_admission_token_releases_exactly_its_own_bound", () => {
+  const admission = createAdmission({ reservedInputTokens: 1_000_000, spent: () => 0 });
+  const first = admission.check();
+  admission.check();
+  admission.release(first);
+  // The token accounting stays balanced; the spend gate is what decides admission.
+  assert.doesNotThrow(() => admission.check());
   admission.release();
+  assert.throws(() => createAdmission({ reservedInputTokens: 100_000, spent: () => 50_000 }).check(), CampaignBudgetBlocked);
+});
+
+test("a_stale_in_flight_bound_expires_instead_of_holding_the_reservation", () => {
+  let clock = 0;
+  const admission = createAdmission({ reservedInputTokens: 600_000, spent: () => 0, now: () => clock });
+  const tokens = [admission.check(), admission.check()];
+  assert.equal(tokens.filter(Boolean).length, 2);
+  assert.throws(() => admission.check(), CampaignBudgetBlocked);
+  // A leaked entry (an abandoned stream) is expired rather than held forever.
+  clock += 660_001;
   admission.check();
   admission.release();
-  const spentAdmission = createAdmission({ reservedInputTokens: 400_000, spent: () => 200_000 });
-  assert.throws(() => spentAdmission.check(), CampaignBudgetBlocked);
 });
 
 test("legacy_evidence_is_imported_once_at_its_allocation", async () => {
@@ -169,4 +193,10 @@ test("parallel_arms_never_exceed_ceiling_when_all_hit_caps", async () => {
     assert.equal(attempt.attempt.reservedInputTokens, reserved(cap));
   }
   assert.equal(availableTokens(journal), 1);
+});
+
+test("resumed_baseline_journal_identity_includes_frozen_execution_protocol", async () => {
+  const { manifestFingerprint } = await import("./journal.mjs");
+  const base = { criteriaHash: "criteria", ceiling: 1000, jobs: [], resumeProtocolHash: "first" };
+  assert.notEqual(manifestFingerprint(base), manifestFingerprint({ ...base, resumeProtocolHash: "changed" }));
 });

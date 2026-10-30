@@ -1,0 +1,45 @@
+{
+  "method": "POST",
+  "path": "/provider/v1/responses",
+  "requestBody": {
+    "model": "gpt-5.6-luna",
+    "input": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "What is the weather in Tokyo? Use the tool."
+          }
+        ]
+      }
+    ],
+    "stream": true,
+    "store": false,
+    "tools": [
+      {
+        "type": "function",
+        "name": "get_weather",
+        "description": "Get the current weather for a location.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "location": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "location"
+          ]
+        }
+      }
+    ],
+    "include": [
+      "reasoning.encrypted_content"
+    ],
+    "prompt_cache_key": "cc-fixture-resp-tools"
+  },
+  "status": 200,
+  "contentType": "text/event-stream",
+  "responseBody": "event: response.created\ndata: {\"type\":\"response.created\",\"sequence_number\":0,\"response\":{\"id\":\"gen_01M5ZDXW9MA75ZKYV96PQFJSC1\",\"object\":\"response\",\"created_at\":1793129902,\"status\":\"in_progress\",\"completed_at\":null,\"incomplete_details\":null,\"error\":null,\"output\":[],\"usage\":{\"input_tokens\":0,\"output_tokens\":0,\"total_tokens\":0,\"input_tokens_details\":{\"cached_tokens\":0},\"output_tokens_details\":{\"reasoning_tokens\":0}},\"model\":\"reflection/beam:free\",\"instructions\":null,\"previous_response_id\":null,\"temperature\":1,\"top_p\":1,\"max_output_tokens\":null,\"presence_penalty\":0,\"frequency_penalty\":0,\"top_logprobs\":0,\"tools\":[{\"type\":\"function\",\"name\":\"get_weather\",\"description\":\"Get the current weather for a location.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\"}},\"required\":[\"location\"]},\"strict\":null}],\"tool_choice\":\"auto\",\"parallel_tool_calls\":true,\"max_tool_calls\":null,\"text\":{\"format\":{\"type\":\"text\"}},\"truncation\":\"disabled\",\"reasoning\":null,\"store\":false,\"background\":false,\"service_tier\":\"auto\",\"metadata\":{},\"safety_identifier\":\"1479ee0c6a096d530ef222a768788e6c991ac4644c82783161906b488f8c6487\",\"prompt_cache_key\":null,\"prompt_cache_retention\":null}}\n\nevent: response.in_progress\ndata: {\"type\":\"response.in_progress\",\"sequence_number\":1,\"response\":{\"id\":\"gen_01M5ZDXW9MA75ZKYV96PQFJSC1\",\"object\":\"response\",\"created_at\":1793129902,\"status\":\"in_progress\",\"completed_at\":null,\"incomplete_details\":null,\"error\":null,\"output\":[],\"usage\":{\"input_tokens\":0,\"output_tokens\":0,\"total_tokens\":0,\"input_tokens_details\":{\"cached_tokens\":0},\"output_tokens_details\":{\"reasoning_tokens\":0}},\"model\":\"reflection/beam:free\",\"instructions\":null,\"previous_response_id\":null,\"temperature\":1,\"top_p\":1,\"max_output_tokens\":null,\"presence_penalty\":0,\"frequency_penalty\":0,\"top_logprobs\":0,\"tools\":[{\"type\":\"function\",\"name\":\"get_weather\",\"description\":\"Get the current weather for a location.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\"}},\"required\":[\"location\"]},\"strict\":null}],\"tool_choice\":\"auto\",\"parallel_tool_calls\":true,\"max_tool_calls\":null,\"text\":{\"format\":{\"type\":\"text\"}},\"truncation\":\"disabled\",\"reasoning\":null,\"store\":false,\"background\":false,\"service_tier\":\"auto\",\"metadata\":{},\"safety_identifier\":\"1479ee0c6a096d530ef222a768788e6c991ac4644c82783161906b488f8c6487\",\"prompt_cache_key\":null,\"prompt_cache_retention\":null}}\n\nevent: response.output_item.added\ndata: {\"type\":\"response.output_item.added\",\"sequence_number\":2,\"output_index\":0,\"item\":{\"type\":\"reasoning\",\"id\":\"rs_1793129902798_pldz417go1\",\"summary\":[]}}\n\nevent: response.reasoning.delta\ndata: {\"type\":\"response.reasoning.delta\",\"sequence_number\":3,\"item_id\":\"rs_1793129902798_pldz417go1\",\"output_index\":0,\"content_index\":0,\"delta\":\"The user wants to\"}\n\nevent: response.reasoning.delta\ndata: {\"type\":\"response.reasoning.delta\",\"sequence_number\":4,\"item_id\":\"rs_1793129902798_pldz417go1\",\"output_index\":0,\"content_index\":0,\"delta\":\" know the weather in Tokyo and asks me to use the tool. I\"}\n\nevent: response.reasoning.delta\ndata: {\"type\":\"response.reasoning.delta\",\"sequence_number\":5,\"item_id\":\"rs_1793129902798_pldz417go1\",\"output_index\":0,\"content_index\":0,\"delta\":\"'ll call the get\"}\n\nevent: response.reasoning.delta\ndata: {\"type\":\"response.reasoning.delta\",\"sequence_number\":6,\"item_id\":\"rs_1793129902798_pldz417go1\",\"output_index\":0,\"content_index\":0,\"delta\":\"_weather function with location \\\"Tokyo\"}\n\nevent: response.reasoning.delta\ndata: {\"type\":\"response.reasoning.delta\",\"sequence_number\":7,\"item_id\":\"rs_1793129902798_pldz417go1\",\"output_index\":0,\"content_index\":0,\"delta\":\"\\\".\"}\n\nevent: response.reasoning.done\ndata: {\"type\":\"response.reasoning.done\",\"sequence_number\":8,\"item_id\":\"rs_1793129902798_pldz417go1\",\"output_index\":0,\"content_index\":0,\"text\":\"The user wants to know the weather in Tokyo and asks me to use the tool. I'll call the get_weather function with location \\\"Tokyo\\\".\"}\n\nevent: response.output_item.done\ndata: {\"type\":\"response.output_item.done\",\"sequence_number\":9,\"output_index\":0,\"item\":{\"type\":\"reasoning\",\"id\":\"rs_1793129902798_pldz417go1\",\"summary\":[],\"content\":[{\"type\":\"reasoning_text\",\"text\":\"The user wants to know the weather in Tokyo and asks me to use the tool. I'll call the get_weather function with location \\\"Tokyo\\\".\"}]}}\n\nevent: response.output_item.added\ndata: {\"type\":\"response.output_item.added\",\"sequence_number\":10,\"output_index\":1,\"item\":{\"type\":\"function_call\",\"id\":\"fc_1793129902983_zpbth5vqhas\",\"call_id\":\"call-256bce33-1ddc-4dec-8538-237d440ebb0a\",\"name\":\"get_weather\",\"arguments\":\"\",\"status\":\"in_progress\"}}\n\nevent: response.function_call_arguments.delta\ndata: {\"type\":\"response.function_call_arguments.delta\",\"sequence_number\":11,\"item_id\":\"fc_1793129902983_zpbth5vqhas\",\"output_index\":1,\"delta\":\"{\\\"location\\\": \\\"Tokyo\\\"}\"}\n\nevent: response.function_call_arguments.done\ndata: {\"type\":\"response.function_call_arguments.done\",\"sequence_number\":12,\"item_id\":\"fc_1793129902983_zpbth5vqhas\",\"output_index\":1,\"arguments\":\"{\\\"location\\\": \\\"Tokyo\\\"}\"}\n\nevent: response.output_item.done\ndata: {\"type\":\"response.output_item.done\",\"sequence_number\":13,\"output_index\":1,\"item\":{\"type\":\"function_call\",\"id\":\"fc_1793129902983_zpbth5vqhas\",\"call_id\":\"call-256bce33-1ddc-4dec-8538-237d440ebb0a\",\"name\":\"get_weather\",\"arguments\":\"{\\\"location\\\": \\\"Tokyo\\\"}\",\"status\":\"completed\"}}\n\nevent: response.completed\ndata: {\"type\":\"response.completed\",\"sequence_number\":14,\"response\":{\"id\":\"gen_01M5ZDXW9MA75ZKYV96PQFJSC1\",\"object\":\"response\",\"created_at\":1793129902,\"status\":\"completed\",\"completed_at\":1793129903,\"incomplete_details\":null,\"error\":null,\"output\":[{\"type\":\"reasoning\",\"id\":\"rs_1793129902798_pldz417go1\",\"summary\":[],\"content\":[{\"type\":\"reasoning_text\",\"text\":\"The user wants to know the weather in Tokyo and asks me to use the tool. I'll call the get_weather function with location \\\"Tokyo\\\".\"}]},{\"type\":\"function_call\",\"id\":\"fc_1793129902983_zpbth5vqhas\",\"call_id\":\"call-256bce33-1ddc-4dec-8538-237d440ebb0a\",\"name\":\"get_weather\",\"arguments\":\"{\\\"location\\\": \\\"Tokyo\\\"}\",\"status\":\"completed\"}],\"usage\":{\"input_tokens\":88,\"output_tokens\":52,\"total_tokens\":140,\"input_tokens_details\":{\"cached_tokens\":0},\"output_tokens_details\":{\"reasoning_tokens\":39}},\"model\":\"reflection/beam:free\",\"instructions\":null,\"previous_response_id\":null,\"temperature\":1,\"top_p\":1,\"max_output_tokens\":null,\"presence_penalty\":0,\"frequency_penalty\":0,\"top_logprobs\":0,\"tools\":[{\"type\":\"function\",\"name\":\"get_weather\",\"description\":\"Get the current weather for a location.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\"}},\"required\":[\"location\"]},\"strict\":null}],\"tool_choice\":\"auto\",\"parallel_tool_calls\":true,\"max_tool_calls\":null,\"text\":{\"format\":{\"type\":\"text\"}},\"truncation\":\"disabled\",\"reasoning\":null,\"store\":false,\"background\":false,\"service_tier\":\"auto\",\"metadata\":{},\"safety_identifier\":\"1479ee0c6a096d530ef222a768788e6c991ac4644c82783161906b488f8c6487\",\"prompt_cache_key\":null,\"prompt_cache_retention\":null}}\n\n"
+}

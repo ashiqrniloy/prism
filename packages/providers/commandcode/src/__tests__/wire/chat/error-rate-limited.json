@@ -1,0 +1,20 @@
+{
+  "method": "POST",
+  "path": "/provider/v1/chat/completions",
+  "requestBody": {
+    "model": "minimax/minimax-m3.1-flash",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hi"
+      }
+    ],
+    "stream": true,
+    "stream_options": {
+      "include_usage": true
+    }
+  },
+  "status": 400,
+  "contentType": "application/json",
+  "responseBody": "{\"error\":{\"message\":\"Upstream model provider is temporarily unavailable. Please try again in a moment.\",\"type\":\"rate_limit_error\"}}"
+}

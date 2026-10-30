@@ -1,0 +1,333 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 2,
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "usageSource": "wire-proxy",
+  "phase": "all",
+  "labelInjections": "on",
+  "concurrency": 4,
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "writeGeneration": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "generatedAt": "2026-10-27T19:07:40.965Z",
+  "suite": "locomo",
+  "subset": "dev",
+  "ability": null,
+  "seed": null,
+  "config": "full-truncated",
+  "ingestion": "none",
+  "embeddings": null,
+  "provider": "opencode-go",
+  "model": "beam-free",
+  "judge": "hyper/qwen3.8-flash",
+  "judgePanel": [
+    "hyper/qwen3.8-flash",
+    "hyper/glm-5.3-flash"
+  ],
+  "judgeCalibration": null,
+  "repeats": 1,
+  "judgeProtocol": "plain-text-v1",
+  "dataset": {
+    "file": "locomo.json",
+    "bytes": 2805274,
+    "sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+    "license": "CC BY-NC 4.0 (noncommercial)",
+    "url": "https://raw.githubusercontent.com/snap-research/locomo/3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376/data/locomo10.json",
+    "licenseUrl": "https://github.com/snap-research/locomo/blob/3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376/LICENSE.txt"
+  },
+  "maxInputTokens": 10000000,
+  "ablations": [],
+  "sourceVariants": [],
+  "sourceRevision": "5c2570df52a084b43120ee4e77921746a029480e",
+  "protocol": {
+    "answerAttempts": 3,
+    "answerBackoffMs": [
+      2000,
+      10000
+    ],
+    "judgeAttempts": 8,
+    "judgeBackoffMs": [
+      1000,
+      2000
+    ],
+    "maxTurns": 8
+  },
+  "memoryConfig": {
+    "observational": null,
+    "fabric": null
+  },
+  "inputTokens": 182961,
+  "cacheReadTokens": 49088,
+  "cacheWriteTokens": 0,
+  "outputTokens": 5225,
+  "calls": {
+    "observer": 0,
+    "reflector": 0,
+    "dropper": 0,
+    "embedding": 0,
+    "decider": 0,
+    "consolidate": 0,
+    "judge": 4,
+    "judgeAttempts": 32,
+    "gatewayRetries": 64,
+    "judgeCacheHits": 0,
+    "judgeCacheMisses": 0,
+    "concurrencyHalvings": 2,
+    "overloads": 96
+  },
+  "turns": 4,
+  "injectedContextTokens": 0,
+  "injections": [],
+  "attemptId": "202-baseline.locomo.full-truncated.opencode-go.beam-free@1",
+  "protocolHash": "64e9e653cb9713037d94331d421a4e15e05c11192d821a698706797e01263c1a",
+  "resumedResults": 0,
+  "results": [],
+  "status": "failed",
+  "limitations": [
+    "Block-level injection accounting until item metadata lands in Tasks 4, 9, 11 and 12.",
+    "Injection token allocations are character estimates, not billing usage.",
+    "OpenCode Go and Hyper judges differ from the papers; scores are not directly comparable."
+  ],
+  "ratesAsOf": "2026-10-27",
+  "ratesStatus": "provider-catalog",
+  "inputCap": 134976,
+  "selectedQuestionIds": [
+    "conv-41:21",
+    "conv-44:24",
+    "conv-49:21",
+    "conv-44:32",
+    "conv-49:78",
+    "conv-26:38",
+    "conv-42:34",
+    "conv-43:4",
+    "conv-43:48",
+    "conv-43:43",
+    "conv-47:9",
+    "conv-42:42",
+    "conv-48:81",
+    "conv-44:30",
+    "conv-42:29",
+    "conv-44:1",
+    "conv-49:52",
+    "conv-42:32",
+    "conv-42:21",
+    "conv-41:4",
+    "conv-26:57",
+    "conv-41:16",
+    "conv-50:65",
+    "conv-48:55",
+    "conv-48:36",
+    "conv-26:50",
+    "conv-48:23",
+    "conv-43:5",
+    "conv-43:8",
+    "conv-26:81",
+    "conv-48:11",
+    "conv-26:14",
+    "conv-44:44",
+    "conv-47:44",
+    "conv-50:21",
+    "conv-42:0",
+    "conv-26:82",
+    "conv-26:103",
+    "conv-49:111",
+    "conv-49:121",
+    "conv-47:128",
+    "conv-47:131",
+    "conv-43:123",
+    "conv-42:185",
+    "conv-42:175",
+    "conv-48:159",
+    "conv-47:98",
+    "conv-50:91",
+    "conv-41:163",
+    "conv-43:183",
+    "conv-43:212",
+    "conv-44:154",
+    "conv-49:164",
+    "conv-49:185",
+    "conv-43:234",
+    "conv-50:180",
+    "conv-41:175",
+    "conv-43:214",
+    "conv-48:227",
+    "conv-43:224"
+  ],
+  "runPathFingerprint": "71f0299653499b875c25cfcdde5afb07b2df9b23ba24b157ff81f53e65ae52af",
+  "usageComplete": true,
+  "usageMissingExchanges": 0,
+  "wireExchanges": 100,
+  "errors": [
+    {
+      "questionId": "conv-44:32",
+      "code": "MemoryBenchJudgeError:429",
+      "message": "MemoryBenchJudgeError:429",
+      "cause": {
+        "name": "Error",
+        "code": "429",
+        "message": "Hyper request failed: 429 retry_after_ms399000 error:message:You've hit your hourly rate limit. Please try again in 6m39s.,type:rate_limit_error,code:null",
+        "failureClass": "rate_limited"
+      }
+    },
+    {
+      "questionId": "conv-44:24",
+      "code": "MemoryBenchJudgeError:429",
+      "message": "MemoryBenchJudgeError:429",
+      "cause": {
+        "name": "Error",
+        "code": "429",
+        "message": "Hyper request failed: 429 retry_after_ms398000 error:message:You've hit your hourly rate limit. Please try again in 6m38s.,type:rate_limit_error,code:null",
+        "failureClass": "rate_limited"
+      }
+    },
+    {
+      "questionId": "conv-49:21",
+      "code": "MemoryBenchJudgeError:429",
+      "message": "MemoryBenchJudgeError:429",
+      "cause": {
+        "name": "Error",
+        "code": "429",
+        "message": "Hyper request failed: 429 retry_after_ms398000 error:message:You've hit your hourly rate limit. Please try again in 6m38s.,type:rate_limit_error,code:null",
+        "failureClass": "rate_limited"
+      }
+    },
+    {
+      "questionId": "conv-41:21",
+      "code": "MemoryBenchJudgeError:429",
+      "message": "MemoryBenchJudgeError:429",
+      "cause": {
+        "name": "Error",
+        "code": "429",
+        "message": "Hyper request failed: 429 retry_after_ms397000 error:message:You've hit your hourly rate limit. Please try again in 6m37s.,type:rate_limit_error,code:null",
+        "failureClass": "rate_limited"
+      }
+    }
+  ],
+  "failure": {
+    "questionId": "conv-41:21",
+    "code": "MemoryBenchJudgeError:429",
+    "message": "MemoryBenchJudgeError:429",
+    "cause": {
+      "name": "Error",
+      "code": "429",
+      "message": "Hyper request failed: 429 retry_after_ms397000 error:message:You've hit your hourly rate limit. Please try again in 6m37s.,type:rate_limit_error,code:null",
+      "failureClass": "rate_limited"
+    }
+  },
+  "timing": {
+    "wallMs": 41936.2,
+    "concurrency": {
+      "initial": 4,
+      "active": 1,
+      "floor": 1
+    },
+    "questions": {
+      "n": 4,
+      "wallMs": {
+        "p50": 39363.6,
+        "p95": 40667.3,
+        "mean": 39439.8
+      }
+    },
+    "roles": {
+      "judge": {
+        "calls": 32,
+        "firstByteMs": {
+          "p50": 1804.9,
+          "p95": 2639.6,
+          "mean": 1992.4
+        },
+        "totalMs": {
+          "p50": 1804.9,
+          "p95": 2639.6,
+          "mean": 1992.4
+        }
+      },
+      "solver": {
+        "calls": 4,
+        "firstByteMs": {
+          "p50": 1989.6,
+          "p95": 2044,
+          "mean": 1972.7
+        },
+        "totalMs": {
+          "p50": 3186.6,
+          "p95": 10393.1,
+          "mean": 5172.4
+        }
+      }
+    },
+    "calls": 36
+  },
+  "metricVersion": 2,
+  "abilities": {},
+  "abilityGroups": {},
+  "metricDefinitions": {},
+  "runLimitRate": 0,
+  "errorRate": 0,
+  "cacheReadRatio": 0.26829761533878804,
+  "cacheWriteRatio": 0,
+  "cost": {
+    "currency": "USD",
+    "unit": "per_million_tokens",
+    "rates": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0
+    },
+    "pricingStatus": "priced",
+    "measured": 0,
+    "cachedPrefixSimulation": null,
+    "simulationAssumption": null,
+    "ratesAsOf": "2026-10-27",
+    "ratesStatus": "provider-catalog"
+  },
+  "judgeAgreement": {
+    "n": 0,
+    "judges": {
+      "hyper/qwen3.8-flash": {
+        "scored": 0,
+        "agreementWithPanel": null
+      },
+      "hyper/glm-5.3-flash": {
+        "scored": 0,
+        "agreementWithPanel": null
+      }
+    },
+    "pairs": [
+      {
+        "a": "hyper/qwen3.8-flash",
+        "b": "hyper/glm-5.3-flash",
+        "n": 0,
+        "agreement": null,
+        "kappa": null
+      }
+    ],
+    "fleissKappa": null
+  },
+  "injectionPrecision": {
+    "granularity": "block",
+    "tokensPerTurn": 0,
+    "irrelevantRate": null,
+    "citedIdRate": null,
+    "tokenAccounting": "estimated ceil(characters/4); billing is wire usage"
+  },
+  "injectionPrecisionReason": null,
+  "toolCalls": 0,
+  "toolCallsPerQuestion": 0,
+  "recallCalls": 0,
+  "retrievedSnippetTokens": 0,
+  "answerSessionHitAtK": null,
+  "evidenceRoundCoverage": null,
+  "evidenceAllRequired": null,
+  "fineEvidenceRecall": null,
+  "fineEvidencePrecision": null,
+  "legacyRetrievalRecallAtK": null,
+  "retrievalRecallAtK": null
+}

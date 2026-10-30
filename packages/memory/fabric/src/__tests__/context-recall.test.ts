@@ -36,15 +36,15 @@ function harness() {
   };
 }
 
-it("inject off makes no recall; working memory stays in the prefix", async () => {
+it("inject off makes no recall; working memory follows the transcript", async () => {
   const h = harness();
   await h.memory.updateWorking({ preference: "concise" });
   const projection = createFabricContext(h.memory, async () => {
     throw new Error("unexpected recall");
   });
   const draft = await projection.build(h.draft, h.context);
-  assert.equal(draft.context?.[0]?.metadata?.source, "fabric-working");
-  assert.equal(draft.messages.length, 1);
+  assert.match(JSON.stringify(draft.messages.at(-1)?.metadata), /fabric-working/);
+  assert.equal(draft.messages.length, 2);
 });
 
 it("semantic tail is computed once including empty results, and resets for new persisted user entries", async () => {
@@ -65,10 +65,10 @@ it("semantic tail is computed once including empty results, and resets for new p
     h.context,
   );
   assert.equal(calls, 1);
-  assert.deepEqual(first.messages[0], second.messages[0]);
-  assert.match(JSON.stringify(first.messages[0]), /Cite the ids you use/);
+  assert.deepEqual(first.messages.at(-1), second.messages.at(-1));
+  assert.match(JSON.stringify(first.messages.at(-1)), /Cite the ids you use/);
   assert.equal(first.context, undefined);
-  assert.equal(first.messages[1]?.role, "user");
+  assert.equal(first.messages[0]?.role, "user");
   h.setEntries([user("steer")]);
   await projection.build(h.draft, h.context);
   assert.equal(calls, 2);

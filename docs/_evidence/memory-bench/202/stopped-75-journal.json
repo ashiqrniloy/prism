@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "campaignId": "campaign-a7663686a2da",
+  "manifestHash": "a7663686a2da72ea4761dcab1ebcb6b1fb28cbb7f6fdf62f1cc78c6019d2d612",
+  "ceiling": 2000000000,
+  "priorReservation": 449371971,
+  "createdAt": "2026-10-29T14:23:20.498Z",
+  "updatedAt": "2026-10-29T15:12:42.456Z",
+  "status": "stopped-by-owner",
+  "legacy": [],
+  "attempts": [
+    {
+      "attemptId": "202-baseline.beam-100k.preset-r1.commandcode.meta/muse-spark-1.2-contributor@1",
+      "jobId": "202-baseline.beam-100k.preset-r1.commandcode.meta/muse-spark-1.2-contributor",
+      "manifestHash": "a7663686a2da72ea4761dcab1ebcb6b1fb28cbb7f6fdf62f1cc78c6019d2d612",
+      "status": "completed",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/202/baseline/commandcode-panel-campaign/report-202-baseline.beam-100k.preset-r1.commandcode.meta-muse-spark-1.2-contributor.json",
+      "maxInputTokens": 10000000,
+      "reservedInputTokens": 10500000,
+      "startedAt": "2026-10-29T14:23:20.500Z",
+      "confirmedInputTokens": 1702517,
+      "usageComplete": true,
+      "cacheReadTokens": 8797,
+      "outputTokens": 70975,
+      "endedAt": "2026-10-29T14:37:45.094Z"
+    },
+    {
+      "attemptId": "202-baseline.beam-100k.passive-only.commandcode.meta/muse-spark-1.2-contributor@1",
+      "jobId": "202-baseline.beam-100k.passive-only.commandcode.meta/muse-spark-1.2-contributor",
+      "manifestHash": "a7663686a2da72ea4761dcab1ebcb6b1fb28cbb7f6fdf62f1cc78c6019d2d612",
+      "status": "completed",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/202/baseline/commandcode-panel-campaign/report-202-baseline.beam-100k.passive-only.commandcode.meta-muse-spark-1.2-contributor.json",
+      "maxInputTokens": 10000000,
+      "reservedInputTokens": 10500000,
+      "startedAt": "2026-10-29T14:37:45.095Z",
+      "confirmedInputTokens": 260453,
+      "usageComplete": true,
+      "cacheReadTokens": 9585,
+      "outputTokens": 64903,
+      "endedAt": "2026-10-29T14:48:37.049Z"
+    },
+    {
+      "attemptId": "202-baseline.beam-100k.full.commandcode.meta/muse-spark-1.2-contributor@1",
+      "jobId": "202-baseline.beam-100k.full.commandcode.meta/muse-spark-1.2-contributor",
+      "manifestHash": "a7663686a2da72ea4761dcab1ebcb6b1fb28cbb7f6fdf62f1cc78c6019d2d612",
+      "status": "completed",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/202/baseline/commandcode-panel-campaign/report-202-baseline.beam-100k.full.commandcode.meta-muse-spark-1.2-contributor.json",
+      "maxInputTokens": 42000000,
+      "reservedInputTokens": 42500000,
+      "startedAt": "2026-10-29T14:48:37.050Z",
+      "confirmedInputTokens": 5301023,
+      "usageComplete": true,
+      "cacheReadTokens": 9877,
+      "outputTokens": 66056,
+      "endedAt": "2026-10-29T15:00:39.849Z"
+    },
+    {
+      "attemptId": "202-baseline.beam-100k.full-truncated.commandcode.meta/muse-spark-1.2-contributor@1",
+      "jobId": "202-baseline.beam-100k.full-truncated.commandcode.meta/muse-spark-1.2-contributor",
+      "manifestHash": "a7663686a2da72ea4761dcab1ebcb6b1fb28cbb7f6fdf62f1cc78c6019d2d612",
+      "status": "abandoned",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/202/baseline/commandcode-panel-campaign/report-202-baseline.beam-100k.full-truncated.commandcode.meta-muse-spark-1.2-contributor.json",
+      "maxInputTokens": 42000000,
+      "reservedInputTokens": 42500000,
+      "startedAt": "2026-10-29T15:00:39.849Z",
+      "confirmedInputTokens": 42500000,
+      "usageComplete": false,
+      "endedAt": "2026-10-29T15:12:42.456Z"
+    }
+  ]
+}

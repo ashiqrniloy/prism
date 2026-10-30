@@ -1,0 +1,7 @@
+{
+  "kind": "202-muse-admission-diagnostics",
+  "firstUnreportedAttemptRetainedCharge": 600000,
+  "secondKnownZeroSpendCharge": 0,
+  "coveredByExistingPreflightAllowance": true,
+  "reason": "First assertion stopped before a report was preserved: retain its whole allocation. Second and corrected third diagnostics verify zero physical requests. No historical charge refunded."
+}

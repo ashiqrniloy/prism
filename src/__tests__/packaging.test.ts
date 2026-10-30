@@ -94,6 +94,7 @@ const packages: Array<{
   { dir: "packages/providers/laya", name: "@arnilo/prism-provider-laya", sourceExport: true },
   { dir: "packages/providers/liquid", name: "@arnilo/prism-provider-liquid", sourceExport: true },
   { dir: "packages/providers/openai-codex", name: "@arnilo/prism-provider-openai-codex", sourceExport: true },
+  { dir: "packages/providers/commandcode", name: "@arnilo/prism-provider-commandcode", sourceExport: true },
   { dir: "packages/providers/opencode-go", name: "@arnilo/prism-provider-opencode-go", sourceExport: true },
   { dir: "packages/providers/openrouter", name: "@arnilo/prism-provider-openrouter", sourceExport: true },
   { dir: "packages/providers/typesafe", name: "@arnilo/prism-provider-typesafe", sourceExport: true },
@@ -449,7 +450,7 @@ describe("packaging guard", () => {
     // packages/providers/openai-codex/src before the shell exists; Task 5 adds the manifest, and this
     // list grows with it.
     const shipped = providerDirs.filter((name) => existsSync(join(repoRoot, "packages/providers", name, "package.json")));
-    assert.deepEqual(shipped, ["hyper", "laya", "liquid", "openai-codex", "opencode-go", "openrouter", "typesafe"]);
+    assert.deepEqual(shipped, ["commandcode", "hyper", "laya", "liquid", "openai-codex", "opencode-go", "openrouter", "typesafe"]);
     for (const vendor of providerDirs.filter((name) => !shipped.includes(name)))
       assert.equal(
         existsSync(join(repoRoot, "packages/providers", vendor, "src/index.ts")),
@@ -470,11 +471,7 @@ describe("packaging guard", () => {
       const files = getPackList(entry.dir, entry.name);
       assert.ok(files.includes("src/index.ts"), `${vendor} pack missing src/index.ts`);
       const manifest = readPkg(entry.dir);
-      assert.deepEqual(
-        manifest.exports,
-        { ".": "./src/index.ts" },
-        `${pkgName} must export its TypeScript entrypoint`,
-      );
+      assert.deepEqual(manifest.exports, { ".": "./src/index.ts" }, `${pkgName} must export its TypeScript entrypoint`);
       assert.equal(
         (manifest.peerDependencies as Record<string, string>)["@arnilo/prism"],
         KERNEL_PEER,
@@ -487,11 +484,7 @@ describe("packaging guard", () => {
       );
 
       const missing = validateProviderPackageRequirements(pkgDir, vendor, liveMatrix.suites);
-      assert.deepEqual(
-        missing,
-        [],
-        `provider package ${vendor} is missing required supported-provider gate items: ${missing.join(", ")}`,
-      );
+      assert.deepEqual(missing, [], `provider package ${vendor} is missing required supported-provider gate items: ${missing.join(", ")}`);
     }
 
     assert.ok(!existsSync(join(repoRoot, "packages/prism-providers")), "the retired @arnilo/prism-providers workspace must be deleted");
@@ -841,7 +834,7 @@ describe("packaging guard", () => {
   it("0.4 package set — 61 manifests in lockstep, no shims, family roots stay inert", () => {
     const root = readPkg(".");
     const names = packages.map((pkg) => pkg.name).sort();
-    assert.equal(names.length, 47, "47 active packages including root (OpenRouter and OpenAI Codex restored)");
+    assert.equal(names.length, 48, "48 active packages including root (Command Code, OpenRouter and OpenAI Codex restored)");
     assert.ok(names.includes("@arnilo/prism-tools-work"), "work package must be present");
     assert.ok(!names.includes("@arnilo/prism-office"), "office package must be absent");
     // Plan 140 Task 1: the SDK is on its own version line (0.1.x).
@@ -924,7 +917,10 @@ describe("packaging guard", () => {
           if (entry.name === "node_modules" || entry.name === "dist") continue;
           walk(join(dir, entry.name));
         } else if (entry.name === "package.json") {
-          manifests.push({ file: join(dir, entry.name), ...(JSON.parse(readFileSync(join(dir, entry.name), "utf8")) as Record<string, unknown>) });
+          manifests.push({
+            file: join(dir, entry.name),
+            ...(JSON.parse(readFileSync(join(dir, entry.name), "utf8")) as Record<string, unknown>),
+          });
         }
       }
     };

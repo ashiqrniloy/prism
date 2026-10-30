@@ -251,6 +251,7 @@ describe("public contracts", () => {
           },
           subscribe: () => ({}) as never,
           commands: { list: () => [], run: async () => undefined },
+          reload: async () => {},
           dispose: async () => {},
           inspect: () => ({}) as never,
         };

@@ -468,6 +468,17 @@
         "@arnilo/prism": ">=0.13.0 <1.0.0",
       },
     },
+    "packages/providers/commandcode": {
+      "name": "@arnilo/prism-provider-commandcode",
+      "version": "0.13.0",
+      "devDependencies": {
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": ">=0.13.0 <1.0.0",
+      },
+    },
     "packages/providers/hyper": {
       "name": "@arnilo/prism-provider-hyper",
       "version": "0.13.0",
@@ -806,6 +817,8 @@
     "@arnilo/prism-model-router": ["@arnilo/prism-model-router@workspace:packages/policy/model-router"],
 
     "@arnilo/prism-observability": ["@arnilo/prism-observability@workspace:packages/integrations/observability"],
+
+    "@arnilo/prism-provider-commandcode": ["@arnilo/prism-provider-commandcode@workspace:packages/providers/commandcode"],
 
     "@arnilo/prism-provider-hyper": ["@arnilo/prism-provider-hyper@workspace:packages/providers/hyper"],
 

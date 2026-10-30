@@ -70,6 +70,69 @@ function input(reply: unknown, overrides: Partial<ExtractConsolidationNotesInput
 const existing: readonly ConsolidationExistingNote[] = [{ id: "aaaaaaaaaaaa", text: "Bun runs tests in this repo.", scope: "project" }];
 
 describe("consolidation extractor", () => {
+  it("extractor_requests_share_a_stable_cache_key_across_sessions", async () => {
+    for (const repositoryRules of [false, true]) {
+      const requests: Parameters<ModelClient["generate"]>[0][] = [];
+      for (const sessionId of ["tenant-one:user-one:session-one", "tenant-two:user-two:session-two"]) {
+        const result = await extractConsolidationNotes(
+          input(
+            { notes: [] },
+            {
+              sessionId,
+              repositoryRules,
+              thinkingLevel: "low",
+              client: client({ notes: [] }, (request) => requests.push(request as (typeof requests)[number])),
+            },
+          ),
+        );
+        assert.equal(result.modelCalls, 1);
+        assert.equal(result.correctionCalls, 0);
+      }
+      assert.deepEqual(
+        requests.map((request) => request.options?.sessionId),
+        ["tenant-one:user-one:session-one", "tenant-two:user-two:session-two"],
+      );
+      const key = `prism-fabric-extract:${repositoryRules ? "project" : "default"}`;
+      assert.deepEqual(
+        requests.map((request) => request.options?.cacheKey),
+        [key, key],
+      );
+    }
+  });
+
+  it("extractor_tool_and_system_segments_identical_across_candidate_sets", async () => {
+    for (const repositoryRules of [false, true]) {
+      const requests: Parameters<ModelClient["generate"]>[0][] = [];
+      for (const populated of [false, true]) {
+        await extractConsolidationNotes(
+          input(
+            { notes: [] },
+            {
+              repositoryRules,
+              sessionId: populated ? "second" : "first",
+              candidates: populated ? candidates : [candidates[0]!],
+              segments: populated ? [{ id: "private-segment", goal: "Ship" }] : [],
+              recallExisting: () => (populated ? existing : []),
+              client: client({ notes: [] }, (request) => requests.push(request as (typeof requests)[number])),
+            },
+          ),
+        );
+      }
+      const prefix = (request: (typeof requests)[number]) =>
+        JSON.stringify({
+          system: request.messages?.filter((message) => message.role === "system"),
+          tools: request.tools,
+        });
+      assert.equal(prefix(requests[0]!), prefix(requests[1]!));
+      assert.notDeepEqual(requests[0]!.messages?.[1], requests[1]!.messages?.[1], "evidence stays in the session's user message");
+      const schema = requests[0]!.tools![0]!.parameters as JsonObject;
+      const properties = (((schema.properties as JsonObject).notes as JsonObject).items as JsonObject).properties as JsonObject;
+      assert.deepEqual(properties.evidence, { type: "array", minItems: 1, maxItems: 16, items: { type: "string" } });
+      assert.deepEqual(properties.contradicts, { type: "string" });
+      assert.deepEqual(properties.segment, { type: "string" });
+    }
+  });
+
   it("extractor_makes_one_call_and_returns_typed_scoped_notes", async () => {
     let calls = 0;
     const seen: JsonObject[] = [];
@@ -203,21 +266,6 @@ describe("consolidation extractor", () => {
   });
 
   it("no_segments_means_no_episode_output", async () => {
-    let schema: JsonObject | undefined;
-    const client_: ModelClient = {
-      model: { provider: "test", model: "extractor" },
-      async *generate(request) {
-        schema = request.tools?.[0]?.parameters as JsonObject;
-        yield providerToolCall(toolCallContent("x1", "record_notes", { notes: [] }));
-        yield providerDone();
-      },
-    };
-    await extractConsolidationNotes({ ...input(undefined), client: client_ });
-    assert.ok(schema);
-    const kind = ((schema.properties as JsonObject).notes as JsonObject).items as JsonObject;
-    const enumValues = ((kind.properties as JsonObject).kind as JsonObject).enum as readonly string[];
-    assert.equal(enumValues.includes("episode"), false, "no shown segment means episodes are not offered");
-
     await assert.rejects(
       extractConsolidationNotes(input({ notes: [note({ kind: "episode", segment: "s1" })] })),
       (error: unknown) => error instanceof ConsolidationExtractionError && error.reasonCode === "segment_not_shown",
@@ -225,7 +273,7 @@ describe("consolidation extractor", () => {
   });
 
   it("path_scope_requires_globs_in_schema_and_parser", async () => {
-    const schema = consolidationExtractSchema({ candidateIds: ["c1"] }) as JsonSchema;
+    const schema = consolidationExtractSchema({}) as JsonSchema;
     const pathNote = note({ scope: "path", applies_to: ["src/**"] });
     assert.equal(validateJsonSchema(schema, { notes: [pathNote] }).ok, true);
     const missing = validateJsonSchema(schema, { notes: [note({ scope: "path" })] });

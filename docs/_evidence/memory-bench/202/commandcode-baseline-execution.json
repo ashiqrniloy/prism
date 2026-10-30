@@ -1,0 +1,52 @@
+{
+  "kind": "202-commandcode-baseline-execution",
+  "observedAt": "2026-10-29T15:15:19.608563+00:00",
+  "status": "stopped-by-owner",
+  "journal": ".cache/memory-bench/202-commandcode-panel-baseline/journal.json",
+  "log": ".cache/memory-bench/commandcode-answer-baseline.log",
+  "processes": [
+    {
+      "pid": 3479689,
+      "command": "bun scripts/memory-bench/campaign.mjs --baseline-202 --parallel-arms 1"
+    }
+  ],
+  "startedAt": "2026-10-29T14:23:20.500Z",
+  "selectedCells": 75,
+  "models": [
+    {
+      "provider": "commandcode",
+      "model": "meta/muse-spark-1.2-contributor"
+    },
+    {
+      "provider": "commandcode",
+      "model": "meta/muse-spark-1.3-contributor"
+    },
+    {
+      "provider": "commandcode",
+      "model": "tencent/hy3-paid"
+    }
+  ],
+  "judges": [
+    "commandcode/minimax/minimax-m3.1-flash",
+    "commandcode/z-ai/glm-5.3-flash"
+  ],
+  "priorReservation": 449371971,
+  "ceiling": 2000000000,
+  "task4Complete": false,
+  "policy": "Serial arms; hard per-attempt and aggregate token bounds; no new paid fallback; no held-out execution",
+  "journalStatus": "stopped-by-owner",
+  "completedCells": 3,
+  "currentCell": {
+    "id": "202-baseline.beam-100k.full-truncated.commandcode.meta/muse-spark-1.2-contributor",
+    "reportStatus": "running",
+    "scored": 18,
+    "total": 40,
+    "inputTokens": 2394961,
+    "outputTokens": 24038,
+    "usageComplete": true
+  },
+  "ownerSteering": "Let's finish the current run. We will think about this later",
+  "rolePolicy": "75-cell execution stopped; Muse 1.3 screen selected by owner",
+  "stopEvidence": "docs/_evidence/memory-bench/202/stopped-75-campaign.json",
+  "replacement": "25-cell Muse 1.3 screen"
+}

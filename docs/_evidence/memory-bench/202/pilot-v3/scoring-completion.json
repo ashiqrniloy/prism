@@ -1,0 +1,93 @@
+{
+  "kind": "202-pilot-scoring-completion-v1",
+  "protocolHash": "f7a3d611bd76cd97fe5b44aa4d28c2646d3979760b9815a867f4193eaa1d9987",
+  "jobId": "full.10:summarization:0",
+  "answerKey": "ff2dbb1aa6b872136eb66022ae864aade70256af7c210c6150e288e66173387f",
+  "status": "completed",
+  "binary": {
+    "openrouter/dots-studio/dots-3-note-preview:free": "no",
+    "openrouter/cohere/north-mini-code:free": "no"
+  },
+  "gradedJudges": {
+    "openrouter/dots-studio/dots-3-note-preview:free": 0.5,
+    "openrouter/cohere/north-mini-code:free": 0.4
+  },
+  "correct": false,
+  "graded": 0.45,
+  "spread": 0.09999999999999998,
+  "disagreement": false,
+  "usage": {
+    "inputTokens": 9272,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0,
+    "outputTokens": 8651,
+    "wireAttempts": 4
+  },
+  "timing": {
+    "wallMs": 90154,
+    "concurrency": 1,
+    "questions": {
+      "n": 0,
+      "wallMs": {
+        "p50": null,
+        "p95": null,
+        "mean": null
+      }
+    },
+    "phases": {
+      "ingestion": {
+        "n": 0,
+        "wallMs": {
+          "p50": null,
+          "p95": null,
+          "mean": null
+        }
+      },
+      "restore": {
+        "n": 0,
+        "wallMs": {
+          "p50": null,
+          "p95": null,
+          "mean": null
+        }
+      },
+      "answer": {
+        "n": 0,
+        "wallMs": {
+          "p50": null,
+          "p95": null,
+          "mean": null
+        }
+      },
+      "evaluation": {
+        "n": 0,
+        "wallMs": {
+          "p50": null,
+          "p95": null,
+          "mean": null
+        }
+      }
+    },
+    "policy": {
+      "answer": "after ingestion, before grading, annotation, final background settlement and disposal",
+      "queueWaitIncluded": false,
+      "retriesAndBackoffIncluded": true
+    },
+    "roles": {
+      "judge": {
+        "calls": 4,
+        "firstByteMs": {
+          "p50": 16933.4,
+          "p95": 35333.8,
+          "mean": 22325
+        },
+        "totalMs": {
+          "p50": 16933.4,
+          "p95": 35333.8,
+          "mean": 22325
+        }
+      }
+    },
+    "calls": 4
+  }
+}

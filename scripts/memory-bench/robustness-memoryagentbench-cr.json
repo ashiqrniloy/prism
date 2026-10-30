@@ -1,0 +1,84 @@
+{
+  "seed": "prism-202-memory-bench-memoryagentbench-cr",
+  "draw": "SHA-256(\"prism-202-memory-bench-memoryagentbench-cr:\" + id), ascending inside each ability and partition",
+  "source": "https://huggingface.co/datasets/ai-hyz/MemoryAgentBench/resolve/7ea066982b140a19337e17e60d45d4076e042faf/data/Conflict_Resolution-00000-of-00001.parquet",
+  "datasetSha256": "24d5c3f09ce0ce15625cb9f8a98f44f0d864ca6c94d7b4ad04eb697ca3a5ff45",
+  "strata": {
+    "conflict-resolution-single-hop": [
+      10,
+      5,
+      5
+    ],
+    "conflict-resolution-multi-hop": [
+      10,
+      5,
+      5
+    ]
+  },
+  "part": "dev | heldout-a | heldout-b; heldout-b is reserved for the single remediation round",
+  "residualPool": {
+    "conflict-resolution-single-hop": 380,
+    "conflict-resolution-multi-hop": 380
+  },
+  "idsHash": "b96dba43ea61072d4bb290df35f82a56800cb7052cd2b3347a45307f01c4b842",
+  "abilities": {
+    "dev": {
+      "conflict-resolution-single-hop": [
+        "5:69",
+        "5:25",
+        "6:44",
+        "6:99",
+        "6:84",
+        "6:68",
+        "5:67",
+        "5:72",
+        "7:47",
+        "7:97"
+      ],
+      "conflict-resolution-multi-hop": [
+        "3:49",
+        "0:24",
+        "2:20",
+        "0:30",
+        "1:42",
+        "0:99",
+        "0:90",
+        "2:66",
+        "3:46",
+        "2:86"
+      ]
+    },
+    "heldout-a": {
+      "conflict-resolution-single-hop": [
+        "7:51",
+        "7:78",
+        "4:2",
+        "4:96",
+        "5:68"
+      ],
+      "conflict-resolution-multi-hop": [
+        "0:92",
+        "3:6",
+        "2:14",
+        "1:43",
+        "1:15"
+      ]
+    },
+    "heldout-b": {
+      "conflict-resolution-single-hop": [
+        "4:94",
+        "4:41",
+        "7:44",
+        "5:57",
+        "5:50"
+      ],
+      "conflict-resolution-multi-hop": [
+        "1:97",
+        "2:42",
+        "3:66",
+        "1:7",
+        "2:23"
+      ]
+    }
+  }
+}

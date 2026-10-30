@@ -1,0 +1,44 @@
+{
+  "kind": "202-task5.1-offline-verification",
+  "generatedAt": "2026-10-30T13:31:12.977107+00:00",
+  "inventorySha256": "9d0117508db75d1e41a6070eaff427e05980fea0e4ec801643124bfab3cfdd42",
+  "checks": {
+    "sourcesHashesVerified": 8,
+    "protectedArtifactsHashesVerified": 32,
+    "privateInventoryHashesVerified": 783,
+    "closedScreenUnchanged": true,
+    "unknownSurfacing": 210,
+    "reusedHistoricalControls": 0,
+    "requiredFreshControls": 5,
+    "liveCalls": 0
+  },
+  "commands": [
+    {
+      "command": "PRISM_MEMORY_BENCH_PYTHON=.cache/memory-bench/python/bin/python3 timeout 240 bun scripts/memory-bench/audit/task5-traces.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "timeout 120 bun test --timeout=0 src/__tests__/docs.test.ts scripts/memory-bench/tool-surfacing.test.mjs scripts/memory-bench/measurement-repairs.test.mjs scripts/memory-bench/audit/task5-traces.test.mjs",
+      "exitCode": 0,
+      "passed": 79,
+      "failed": 0
+    },
+    {
+      "command": "timeout 1200 bun run typecheck",
+      "exitCode": 0
+    },
+    {
+      "command": "timeout 30 bunx biome check scripts/memory-bench/audit/task5-traces.mjs scripts/memory-bench/audit/task5-traces.test.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "timeout 20 git diff --check",
+      "exitCode": 0
+    }
+  ],
+  "notRun": [
+    "Live model/provider requests",
+    "Whole-plan acceptance, release and PostgreSQL gates"
+  ],
+  "scope": "Task 5.1 evidence inventory only; no SDK behavior change or recall-quality verdict"
+}

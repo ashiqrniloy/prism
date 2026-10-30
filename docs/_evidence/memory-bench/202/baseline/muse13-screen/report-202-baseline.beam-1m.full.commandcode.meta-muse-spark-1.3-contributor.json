@@ -1,0 +1,610 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 2,
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "usageSource": "wire-proxy",
+  "phase": "all",
+  "labelInjections": "off",
+  "concurrency": 1,
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 8192
+  },
+  "freeOnly": false,
+  "boundedWire": true,
+  "writeGeneration": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "generatedAt": "2026-10-29T21:23:52.309Z",
+  "suite": "beam-1m",
+  "subset": "dev",
+  "ability": null,
+  "seed": null,
+  "config": "full",
+  "comparatorPolicyVersion": 1,
+  "ingestion": "none",
+  "embeddings": null,
+  "provider": "commandcode",
+  "model": "meta/muse-spark-1.3-contributor",
+  "judge": "commandcode/minimax/minimax-m3.1-flash",
+  "judgePanel": [
+    "commandcode/minimax/minimax-m3.1-flash",
+    "commandcode/z-ai/glm-5.3-flash"
+  ],
+  "judgeCalibration": null,
+  "repeats": 1,
+  "judgeProtocol": "plain-text-v1",
+  "dataset": {
+    "file": "beam-1m.parquet",
+    "format": "parquet",
+    "parquetLiterals": [
+      "probing_questions"
+    ],
+    "bytes": 66156374,
+    "sha256": "41b5acbbb55a586b1305514ef9d9fb03365d9b3331b598a1c2dd7603d93ef533",
+    "license": "CC BY-SA 4.0",
+    "url": "https://huggingface.co/datasets/Mohammadta/BEAM/resolve/3205395e897e7318c7b094ef4e6047b9b82dbb03/data/1M-00000-of-00001.parquet",
+    "licenseUrl": "https://huggingface.co/datasets/Mohammadta/BEAM/blob/3205395e897e7318c7b094ef4e6047b9b82dbb03/README.md"
+  },
+  "normalization": {
+    "version": "beam-source-annotations-v1",
+    "sourceHash": "034978f56e5f10463a4923debcb85c6e354aa1e3397b5faf584397e029090985"
+  },
+  "maxInputTokens": 42000000,
+  "ablations": [],
+  "sourceVariants": [],
+  "sourceRevision": "5c2570df52a084b43120ee4e77921746a029480e",
+  "protocol": {
+    "answerAttempts": 3,
+    "answerBackoffMs": [
+      2000,
+      10000
+    ],
+    "judgeAttempts": 8,
+    "judgeBackoffMs": [
+      1000,
+      2000
+    ],
+    "maxTurns": 8
+  },
+  "memoryConfig": {
+    "observational": null,
+    "fabric": null
+  },
+  "inputTokens": 938432,
+  "cacheReadTokens": 197,
+  "cacheWriteTokens": 0,
+  "outputTokens": 997,
+  "calls": {
+    "observer": 0,
+    "reflector": 0,
+    "dropper": 0,
+    "embedding": 0,
+    "decider": 0,
+    "consolidate": 0,
+    "judge": 2,
+    "judgeAttempts": 2,
+    "gatewayRetries": 6,
+    "judgeCacheHits": 0,
+    "judgeCacheMisses": 2,
+    "concurrencyHalvings": 0,
+    "overloads": 9
+  },
+  "turns": 4,
+  "injectedContextTokens": 0,
+  "injections": [],
+  "attemptId": "202-baseline.beam-1m.full.commandcode.meta/muse-spark-1.3-contributor@1",
+  "measurementVersion": "product-phases-attribution-v2",
+  "analysisVersion": "202-paired-cluster-v1",
+  "judgeTemplateVersion": "e3883a2aa5910f76c3f6b377f1758fd4a57ca6dda1449cd86291abd0eea5f306",
+  "gradedTemplateVersion": "f7ff5f9c24afd87f0a5e00bd168103019f6e7140d64031f3e5bec264043c24cb",
+  "protocolHash": "91874d94d5df11f3858f551bed9adacbd807a3aaf8201e697af7dd5fc8ce27ad",
+  "resumedResults": 0,
+  "results": [
+    {
+      "id": "15:abstention:0",
+      "ability": "abstention",
+      "cluster": "beam-15",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 32.1,
+        "answer": 554.5
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 1936,
+        "removedSourceMessages": 112,
+        "removedMessages": 112,
+        "removedEstimatedTokens": 57441,
+        "contextHash": "215eb337f1f27cca4916bc10e2176ab47513c0ef9634de0daa9142c7db122db2"
+      }
+    },
+    {
+      "id": "10:abstention:1",
+      "ability": "abstention",
+      "cluster": "beam-10",
+      "phaseTiming": {
+        "ingestion": 30.7,
+        "answer": 28222.6,
+        "evaluation": 2320.7
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "commandcode/minimax/minimax-m3.1-flash": "no",
+        "commandcode/z-ai/glm-5.3-flash": "no"
+      },
+      "truncated": false,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 1776,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "ac08ff5602121538fe52f367cbd6399c38a919ee2eef64cfbe719a44a1f1f707"
+      },
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 0,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "abstention_error"
+    },
+    {
+      "id": "21:abstention:0",
+      "ability": "abstention",
+      "cluster": "beam-21",
+      "outcome": "comparator_ineligible",
+      "phaseTiming": {
+        "ingestion": 46.1,
+        "answer": 2790.1
+      },
+      "truncated": true,
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 1046527,
+        "completeHistory": false,
+        "eligible": false,
+        "sourceMessages": 2334,
+        "removedSourceMessages": 566,
+        "removedMessages": 566,
+        "removedEstimatedTokens": 331604,
+        "contextHash": "6d1a682bccc56851a1870d650ad47e44b71be4c91f6007e7168338c650ad3fb9"
+      }
+    }
+  ],
+  "status": "failed",
+  "limitations": [
+    "Block-level injection accounting until item metadata lands in Tasks 4, 9, 11 and 12.",
+    "Injection token allocations are character estimates, not billing usage.",
+    "OpenCode Go and Hyper judges differ from the papers; scores are not directly comparable."
+  ],
+  "ratesAsOf": "2026-10-29",
+  "ratesStatus": "provider-catalog",
+  "inputCap": 1047552,
+  "comparatorContext": {
+    "version": 1,
+    "policy": "complete-history",
+    "effectiveInputCap": 1047552,
+    "requestHeadroomTokens": 1024,
+    "modelConfig": {
+      "provider": "commandcode",
+      "model": "meta/muse-spark-1.3-contributor",
+      "limits": {
+        "contextWindow": 1048576
+      },
+      "parameters": {
+        "maxTokens": 8192,
+        "temperature": 0
+      }
+    },
+    "tokenMeasure": "estimated-json-chars-div-4"
+  },
+  "selectedQuestionIds": [
+    "15:abstention:0",
+    "10:abstention:1",
+    "21:abstention:0",
+    "31:abstention:0",
+    "15:contradiction_resolution:1",
+    "21:contradiction_resolution:0",
+    "26:contradiction_resolution:1",
+    "20:contradiction_resolution:1",
+    "28:event_ordering:1",
+    "12:event_ordering:0",
+    "1:event_ordering:1",
+    "34:event_ordering:0",
+    "34:information_extraction:0",
+    "10:information_extraction:0",
+    "25:information_extraction:0",
+    "17:information_extraction:0",
+    "7:instruction_following:1",
+    "12:instruction_following:0",
+    "16:instruction_following:1",
+    "19:instruction_following:0",
+    "24:knowledge_update:0",
+    "22:knowledge_update:0",
+    "3:knowledge_update:1",
+    "29:knowledge_update:1",
+    "23:multi_session_reasoning:0",
+    "25:multi_session_reasoning:0",
+    "26:multi_session_reasoning:1",
+    "15:multi_session_reasoning:1",
+    "12:preference_following:1",
+    "29:preference_following:0",
+    "10:preference_following:0",
+    "4:preference_following:1",
+    "32:summarization:0",
+    "1:summarization:1",
+    "18:summarization:0",
+    "10:summarization:0",
+    "12:temporal_reasoning:1",
+    "7:temporal_reasoning:0",
+    "25:temporal_reasoning:0",
+    "30:temporal_reasoning:1"
+  ],
+  "runPathFingerprint": "c2dcd918147ab2d59752695c55d01cdbde49ecbee9d615e473242d89ac80ad2e",
+  "measurementPolicy": {
+    "version": "product-phases-v1",
+    "judgeCallsPerHour": 450,
+    "injectionAnnotation": false,
+    "retriesAndBackoffIncluded": true,
+    "queueWaitIncluded": false,
+    "seedSnapshot": false
+  },
+  "roleUsage": {
+    "product": {
+      "inputTokens": 937723,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 991,
+      "exchanges": 10,
+      "complete": true,
+      "measured": 0.093971,
+      "cold": 0.093971,
+      "warm": 0.002074,
+      "inputWarm": 0.001875,
+      "inputCold": 0.093772
+    },
+    "evaluation": {
+      "inputTokens": 709,
+      "cacheReadTokens": 197,
+      "cacheWriteTokens": 0,
+      "outputTokens": 6,
+      "exchanges": 2,
+      "complete": true,
+      "measured": 0.000083,
+      "cold": 0.000109,
+      "warm": 0.000083,
+      "inputWarm": 0.00008,
+      "inputCold": 0.000107
+    },
+    "unknown": {
+      "inputTokens": 0,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 0,
+      "exchanges": 0,
+      "complete": true,
+      "measured": 0,
+      "cold": 0,
+      "warm": 0,
+      "inputWarm": 0,
+      "inputCold": 0
+    },
+    "total": {
+      "inputTokens": 938432,
+      "cacheReadTokens": 197,
+      "cacheWriteTokens": 0,
+      "outputTokens": 997,
+      "exchanges": 12,
+      "measured": 0.094054
+    }
+  },
+  "accountedInputTokens": 938432,
+  "usageComplete": true,
+  "usageMissingExchanges": 0,
+  "wireExchanges": 12,
+  "errors": [
+    {
+      "questionId": "31:abstention:0",
+      "code": "MemoryBenchAnswerError:429",
+      "message": "MemoryBenchAnswerError:429",
+      "cause": {
+        "name": "Error",
+        "code": "429",
+        "message": "Command Code request failed: 429 error:message:You've reached your 5-hour usage limit for your plan. Your limit resets at 2026-10-29T22:43:06.859Z. Please wait ",
+        "failureClass": "quota"
+      },
+      "trace": {
+        "turns": 3,
+        "toolCalls": 0,
+        "recallCalls": 0,
+        "answerRetries": 2,
+        "mutating": false,
+        "maxTurns": 8,
+        "tools": []
+      }
+    }
+  ],
+  "failure": {
+    "questionId": "31:abstention:0",
+    "code": "MemoryBenchAnswerError:429",
+    "message": "MemoryBenchAnswerError:429",
+    "cause": {
+      "name": "Error",
+      "code": "429",
+      "message": "Command Code request failed: 429 error:message:You've reached your 5-hour usage limit for your plan. Your limit resets at 2026-10-29T22:43:06.859Z. Please wait ",
+      "failureClass": "quota"
+    },
+    "trace": {
+      "turns": 3,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "answerRetries": 2,
+      "mutating": false,
+      "maxTurns": 8,
+      "tools": []
+    }
+  },
+  "timing": {
+    "wallMs": 57491.6,
+    "concurrency": {
+      "initial": 1,
+      "active": 1,
+      "floor": 1
+    },
+    "questions": {
+      "n": 4,
+      "wallMs": {
+        "p50": 2840.6,
+        "p95": 30576.7,
+        "mean": 13734.8
+      }
+    },
+    "phases": {
+      "ingestion": {
+        "n": 3,
+        "wallMs": {
+          "p50": 32.1,
+          "p95": 46.1,
+          "mean": 36.3
+        }
+      },
+      "restore": {
+        "n": 0,
+        "wallMs": {
+          "p50": null,
+          "p95": null,
+          "mean": null
+        }
+      },
+      "answer": {
+        "n": 3,
+        "wallMs": {
+          "p50": 2790.1,
+          "p95": 28222.6,
+          "mean": 10522.4
+        }
+      },
+      "evaluation": {
+        "n": 1,
+        "wallMs": {
+          "p50": 2320.7,
+          "p95": 2320.7,
+          "mean": 2320.7
+        }
+      }
+    },
+    "policy": {
+      "answer": "after ingestion, before grading, annotation, final background settlement and disposal",
+      "queueWaitIncluded": false,
+      "retriesAndBackoffIncluded": true
+    },
+    "roles": {
+      "judge": {
+        "calls": 2,
+        "firstByteMs": {
+          "p50": 1124.8,
+          "p95": 1193.3,
+          "mean": 1159.1
+        },
+        "totalMs": {
+          "p50": 1124.8,
+          "p95": 1193.3,
+          "mean": 1159.1
+        }
+      },
+      "solver": {
+        "calls": 4,
+        "firstByteMs": {
+          "p50": 2734.6,
+          "p95": 27745.6,
+          "mean": 9067.1
+        },
+        "totalMs": {
+          "p50": 2734.7,
+          "p95": 28151.8,
+          "mean": 9168.7
+        }
+      }
+    },
+    "calls": 6
+  },
+  "metricVersion": 2,
+  "comparatorEligibility": {
+    "completeHistoryQuestions": 1,
+    "ineligibleQuestions": 2,
+    "truncatedQuestions": 2,
+    "unprovenQuestions": 0
+  },
+  "abilities": {
+    "abstention": {
+      "n": 3,
+      "correct": 0,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    }
+  },
+  "abilityGroups": {
+    "abstention": {
+      "n": 3,
+      "correct": 0,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    }
+  },
+  "metricDefinitions": {
+    "abstention": {
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    }
+  },
+  "runLimitRate": 0,
+  "errorRate": 0,
+  "cacheReadRatio": 0.00020992464025097185,
+  "cacheWriteRatio": 0,
+  "cost": {
+    "currency": "USD",
+    "unit": "per_million_tokens",
+    "rates": null,
+    "pricingStatus": "priced",
+    "measured": 0.094054,
+    "cachedPrefixSimulation": null,
+    "simulationAssumption": "product warm: full input is a cached prefix; other arms use reported cache tokens; cold reprices input uncached",
+    "ratesAsOf": "2026-10-29",
+    "ratesStatus": "provider-catalog",
+    "scope": "campaign: product plus evaluation plus unknown historical usage",
+    "product": {
+      "inputTokens": 937723,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 991,
+      "exchanges": 10,
+      "complete": true,
+      "measured": 0.093971,
+      "cold": 0.093971,
+      "warm": 0.002074,
+      "inputWarm": 0.001875,
+      "inputCold": 0.093772
+    },
+    "evaluation": {
+      "inputTokens": 709,
+      "cacheReadTokens": 197,
+      "cacheWriteTokens": 0,
+      "outputTokens": 6,
+      "exchanges": 2,
+      "complete": true,
+      "measured": 0.000083,
+      "cold": 0.000109,
+      "warm": 0.000083,
+      "inputWarm": 0.00008,
+      "inputCold": 0.000107
+    }
+  },
+  "judgeAgreement": {
+    "n": 1,
+    "judges": {
+      "commandcode/minimax/minimax-m3.1-flash": {
+        "scored": 1,
+        "agreementWithPanel": 1
+      },
+      "commandcode/z-ai/glm-5.3-flash": {
+        "scored": 1,
+        "agreementWithPanel": 1
+      }
+    },
+    "pairs": [
+      {
+        "a": "commandcode/minimax/minimax-m3.1-flash",
+        "b": "commandcode/z-ai/glm-5.3-flash",
+        "n": 1,
+        "agreement": 1,
+        "kappa": null
+      }
+    ],
+    "fleissKappa": null
+  },
+  "injectionPrecision": null,
+  "injectionPrecisionReason": "not-labelled",
+  "toolCalls": 0,
+  "toolCallsPerQuestion": 0,
+  "recallCalls": 0,
+  "retrievedSnippetTokens": 0,
+  "answerSessionHitAtK": null,
+  "evidenceRoundCoverage": null,
+  "evidenceAllRequired": null,
+  "fineEvidenceRecall": null,
+  "fineEvidencePrecision": null,
+  "legacyRetrievalRecallAtK": null,
+  "retrievalRecallAtK": null,
+  "stages": {
+    "abstention_error": 1
+  }
+}

@@ -12,6 +12,7 @@
 import { createHash } from "node:crypto";
 import type { Message, SecretRedactor, SessionEntry } from "@arnilo/prism";
 import type { MemoryConsentInput } from "@arnilo/prism-memory-core";
+import { lexicalTerms } from "@arnilo/prism-memory-core";
 import { scanScopedMemoryContent } from "./scoped/trust.js";
 import type { MemoryFabric, MemoryFabricWriteOptions, MemoryNoteScope } from "./types.js";
 
@@ -155,6 +156,33 @@ function chunkText(text: string, size: number): readonly string[] {
   return chunks.length > 0 ? chunks : [""];
 }
 
+/** Deterministic index expansion; categories bridge common paraphrases without a model. */
+export function exchangeKeywords(text: string): readonly string[] {
+  const terms = lexicalTerms(text);
+  const keywords = new Set<string>();
+  for (const entity of text.match(
+    /\b[A-Z][\p{L}\p{N}-]*(?:[ \t]+[A-Z][\p{L}\p{N}-]*)*|\b\d+(?:[./:-]\d+)*(?:\s?(?:kg|km|cm|mg|ml|hours?|minutes?|days?|years?))?/gu,
+  ) ?? []) {
+    keywords.add(entity.toLowerCase().trim());
+  }
+  const categories: Readonly<Record<string, string>> = {
+    travel: "flight airport hotel vacation trip journey",
+    health: "doctor hospital medication illness surgery",
+    employment: "job work employer career salary interview",
+    education: "school university college degree course exam",
+    residence: "house apartment home moved rent",
+    family: "mother father daughter son wife husband sibling",
+    preference: "favorite favourite prefer love like dislike",
+    exercise: "running cycling swimming gym workout marathon",
+    finance: "bank budget savings investment mortgage",
+    food: "restaurant dinner lunch breakfast cooking recipe",
+  };
+  for (const [category, words] of Object.entries(categories)) {
+    if ([...lexicalTerms(words)].some((term) => terms.has(term))) keywords.add(category);
+  }
+  return [...keywords].sort();
+}
+
 function emptyReport(): ExchangeArchiveReport {
   return { archived: 0, skipped: 0, parts: 0, refused: { trust: 0, secret: 0 } };
 }
@@ -203,8 +231,10 @@ export function createExchangeArchive(options: ExchangeArchiveOptions): Exchange
           id: ids[part]!,
           content,
           scope,
+          session: sessionId || input.user.sessionId,
           tRef: input.user.timestamp,
           sourceEntryIds: [input.user.id, input.assistant.id],
+          keywords: exchangeKeywords(content),
           ...(contents.length < 2 ? {} : { context: `part ${part + 1} of ${contents.length}` }),
           ...(links === undefined ? {} : { links }),
           ...(options.consent === undefined ? {} : { consent: options.consent }),

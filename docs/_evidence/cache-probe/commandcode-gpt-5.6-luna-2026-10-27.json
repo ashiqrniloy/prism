@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "provider": "commandcode",
+  "model": "gpt-5.6-luna",
+  "affinity": true,
+  "requestedTurns": 4,
+  "requests": 4,
+  "stablePrefixTokens": 8336,
+  "stablePrefixTokensSource": "reported-first-request",
+  "minimumPrefixTokens": 8192,
+  "outputTokensLimit": 128,
+  "turns": [
+    {
+      "turn": 1,
+      "inputTokens": 8336,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": null,
+      "stablePrefixTokens": 8336,
+      "latencyMs": 2250.121311
+    },
+    {
+      "turn": 2,
+      "inputTokens": 8354,
+      "cacheReadTokens": 8333,
+      "cacheWriteTokens": null,
+      "stablePrefixTokens": 8336,
+      "latencyMs": 1714.4666909999996
+    },
+    {
+      "turn": 3,
+      "inputTokens": 8372,
+      "cacheReadTokens": 8351,
+      "cacheWriteTokens": null,
+      "stablePrefixTokens": 8336,
+      "latencyMs": 1515.7407099999996
+    },
+    {
+      "turn": 4,
+      "inputTokens": 8390,
+      "cacheReadTokens": 8369,
+      "cacheWriteTokens": null,
+      "stablePrefixTokens": 8336,
+      "latencyMs": 2026.2581480000008
+    }
+  ],
+  "status": "measured",
+  "reuse": 1.001799424184261
+}

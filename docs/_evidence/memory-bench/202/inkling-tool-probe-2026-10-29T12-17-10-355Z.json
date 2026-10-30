@@ -1,0 +1,46 @@
+{
+  "kind": "202-inkling-free-tool-probe",
+  "ref": "openrouter/thinkingmachines/inkling:free",
+  "limits": {
+    "wireAttempts": 3,
+    "inputTokens": 4000000,
+    "outputTokens": 12000,
+    "wallMs": 180000,
+    "retries429": 0
+  },
+  "startedAt": "2026-10-29T12:17:10.356Z",
+  "campaignChanged": false,
+  "status": "blocked-or-failed",
+  "toolCalls": 0,
+  "result": {
+    "status": "failed",
+    "nonempty": false,
+    "error": {
+      "name": "Error",
+      "message": "OpenRouter request failed: 403 {\"error\":{\"message\":\"thinkingmachines/inkling:free is only available on agentic harnesses. Try plugging it into a coding agent or productivity app listed on https://openrouter.ai/apps\",\"code\":403,\"metadata\":{\"routing_funnel\":[{\"step\":\"Initial Endpoints\",\"endpoint_count\":1}],\"failed_routing_step\":\"Gate Free Endpoints by Agentic Harness\"}}}",
+      "code": 403,
+      "failureClass": "auth"
+    }
+  },
+  "usage": {
+    "inputTokens": 0,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0,
+    "outputTokens": 0,
+    "accountedInputTokens": 0,
+    "accountedOutputTokens": 0,
+    "usageMissingExchanges": 0,
+    "usageComplete": true,
+    "wireAttempts": 1
+  },
+  "allocations": [
+    {
+      "provider": "openrouter",
+      "exchange": 1,
+      "inputBound": 1048576,
+      "outputBound": 2048
+    }
+  ],
+  "protectedArtifactsUnchanged": true,
+  "finishedAt": "2026-10-29T12:17:11.563Z"
+}

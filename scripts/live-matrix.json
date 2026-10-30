@@ -176,6 +176,37 @@
       "cost": "~5 requests; local server, free."
     },
     {
+      "id": "providers/commandcode",
+      "package": "@arnilo/prism-provider-commandcode",
+      "status": "active",
+      "source": "packages/providers/commandcode/src/__tests__/live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts src/__tests__/live-agent.test.ts",
+      "cwd": "packages/providers/commandcode",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "COMMAND_CODE_API_KEY"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_COMMANDCODE_CHAT_MODEL",
+          "default": "minimax/minimax-m3.1-flash",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_COMMANDCODE_RESPONSES_MODEL",
+          "default": "gpt-5.6-luna",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_COMMANDCODE_MESSAGES_MODEL",
+          "default": "claude-haiku-5-5",
+          "wired": true
+        }
+      ],
+      "scope": "Three Provider API wires: Chat Completions, Responses, Anthropic Messages, one exemplar each. Per route: text, tool loop, structured output, abort, leak scan. No cache probe: the gateway caches upstream and Chat has no lever.",
+      "cost": "~22-27 requests across three wires: the shared text/tool-loop/thinking-replay/structured/abort/error scenarios, one kernel smoke per wire (2 turns + image), and the ZDR pair; under $0.10/run. The 4-request warm-prefix probe lives in plan 184."
+    },
+    {
       "id": "providers/openai-codex",
       "package": "@arnilo/prism-provider-openai-codex",
       "status": "active",

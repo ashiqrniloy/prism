@@ -1,0 +1,30 @@
+{
+  "kind": "202-muse-new-panel-scoring-proof",
+  "generatedAt": "2026-10-29T14:03:04.615Z",
+  "status": "passed",
+  "judges": [
+    "commandcode/minimax/minimax-m3.1-flash",
+    "commandcode/z-ai/glm-5.3-flash"
+  ],
+  "manifestHash": "33e2fae1d10e03ab11a9c84759c7b8f3b2ed8bee203c0549421e3febb3ac9291",
+  "sourceAnswersHash": "fe4eda8ad1db7e7c90996c57f02acf8bd85b074c205ebffdabc0f277da50e515",
+  "sourceAnswersPreserved": 42,
+  "newAnswerCalls": 0,
+  "scoredAnswers": 42,
+  "dispositions": 52,
+  "equivalentPolicyRepeats": 10,
+  "evaluation": {
+    "inputTokens": 53636,
+    "outputTokens": 19766,
+    "physicalRequests": 104,
+    "costUsd": 0.018184000000000006
+  },
+  "usageComplete": true,
+  "sourcePinsMatch": true,
+  "scoringHarness": ".cache/memory-bench/frozen-panel-v6",
+  "allocationCount": 154,
+  "newScoringJournalCharge": 53636,
+  "originalV5ReservationHeld": 50500000,
+  "calibration": "owner-waived; two model families, descriptive development evidence only",
+  "limitation": "Rubric controls and complete broad readiness remain separate requirements. No BFC/Robust, held-out or final lever claim."
+}

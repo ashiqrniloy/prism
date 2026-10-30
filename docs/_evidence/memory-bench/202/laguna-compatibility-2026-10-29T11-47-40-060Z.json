@@ -1,0 +1,129 @@
+{
+  "kind": "202-laguna-compatibility-probe",
+  "ref": "commandcode/poolside/laguna-s-2.1-free",
+  "limits": {
+    "wireAttempts": 4,
+    "inputTokens": 4000000,
+    "outputTokens": 50000,
+    "wallMs": 600000,
+    "retries429": 0
+  },
+  "startedAt": "2026-10-29T11:47:40.060Z",
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 2048,
+    "reasoning": "provider default",
+    "maxTurns": 8
+  },
+  "cases": [
+    "imported-assistant-history",
+    "one-frozen-development-complete-history",
+    "tool-call-and-result",
+    "follow-up-and-stop"
+  ],
+  "routeOverride": "openai",
+  "benchmarkScoring": false,
+  "scope": "diagnostic only; no held-out request, judge call, campaign model change or baseline resumption",
+  "tests": [
+    {
+      "name": "imported-assistant-history",
+      "status": "completed",
+      "passed": true,
+      "wallMs": 1638,
+      "nonempty": true,
+      "errorCode": null,
+      "errorMessage": null,
+      "reusedFrom": "docs/_evidence/memory-bench/202/laguna-compatibility-2026-10-29T11-43-02-524Z.json"
+    },
+    {
+      "name": "development-complete-history",
+      "status": "completed",
+      "passed": true,
+      "wallMs": 8042,
+      "nonempty": true,
+      "errorCode": null,
+      "errorMessage": null
+    },
+    {
+      "name": "tool-call-and-result",
+      "status": "failed",
+      "passed": false,
+      "wallMs": 843,
+      "nonempty": false,
+      "errorCode": null,
+      "errorMessage": "ZeroScoreRateLimited"
+    },
+    {
+      "name": "follow-up-and-stop",
+      "status": "failed",
+      "passed": false,
+      "wallMs": 544,
+      "nonempty": false,
+      "errorCode": null,
+      "errorMessage": "ZeroScoreRateLimited"
+    }
+  ],
+  "status": "failed",
+  "model": {
+    "limits": {
+      "contextWindow": 256000
+    },
+    "compat": {
+      "thinkingFamily": "openai_reasoning",
+      "preserveThinking": true,
+      "route": "openai",
+      "pricing_source": "https://commandcode.ai/docs/resources/pricing-limits"
+    },
+    "inputCap": 254976,
+    "freeRoute": true
+  },
+  "localHarnessCorrection": "Disable default cumulative kernel input/total limits, matching the benchmark; model context and diagnostic wire limits remain enforced.",
+  "history": {
+    "suite": "beam-100k",
+    "subset": "dev",
+    "id": "5:abstention:1",
+    "sourceMessages": 238,
+    "sourceAssistantMessages": 119,
+    "removedSourceMessages": 0,
+    "annotationsSent": false
+  },
+  "toolCalls": 0,
+  "failure": {
+    "name": "AssertionError",
+    "code": "ERR_ASSERTION"
+  },
+  "usage": {
+    "inputTokens": 0,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0,
+    "outputTokens": 0,
+    "accountedInputTokens": 0,
+    "accountedOutputTokens": 0,
+    "usageMissingExchanges": 0,
+    "usageComplete": true,
+    "wireAttempts": 3
+  },
+  "allocations": [
+    {
+      "provider": "commandcode",
+      "exchange": 1,
+      "inputBound": 256000,
+      "outputBound": 2048
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 2,
+      "inputBound": 256000,
+      "outputBound": 2048
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 3,
+      "inputBound": 256000,
+      "outputBound": 2048
+    }
+  ],
+  "protectedArtifactsUnchanged": true,
+  "finishedAt": "2026-10-29T11:47:49.927Z",
+  "wallMs": 9867
+}

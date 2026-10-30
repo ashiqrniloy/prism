@@ -1,0 +1,42 @@
+{
+  "kind": "legacy-memory-tree-retirement-fix",
+  "status": "passed",
+  "verifiedAt": "2026-10-30T09:43:55.253031+00:00",
+  "removed": [
+    "packages/memory/src/package-command.ts",
+    "packages/memory/src/wiki/__tests__/package.test.ts",
+    "packages/memory/src/compaction/llm/__tests__/package.test.ts",
+    "packages/memory/src/compaction/observational-memory/__tests__/package.test.ts"
+  ],
+  "otherChange": "Removed retired fixture path fallback from packages/memory/fabric/src/scoped/__tests__/eval.test.ts",
+  "guardUnchanged": "packages/memory/fabric/src/__tests__/package.test.ts:696",
+  "publicExportOrDependencyChanges": false,
+  "checks": [
+    {
+      "command": "timeout 600 bun test --timeout=0 packages/memory/fabric/src",
+      "result": "504 pass / 23 PostgreSQL environment skips / zero fail",
+      "log": ".cache/memory-bench/legacy-tree-fabric-tests.log"
+    },
+    {
+      "command": "timeout 120 bun test packages/memory/wiki/src/__tests__/package.test.ts packages/memory/compaction/src/__tests__/package.test.ts packages/memory/observational/src/__tests__/observational.test.ts -t 'conformance|rejects_private_url'",
+      "result": "5 pass / zero fail",
+      "log": ".cache/memory-bench/legacy-tree-conformance-tests.log"
+    },
+    {
+      "command": "timeout 60 bun test src/scoped/__tests__/eval.test.ts",
+      "cwd": "packages/memory/fabric",
+      "result": "5 pass / zero fail"
+    },
+    {
+      "command": "timeout 180 bun run typecheck",
+      "result": "pass",
+      "log": ".cache/memory-bench/legacy-tree-typecheck.log"
+    },
+    {
+      "command": "git diff --check",
+      "result": "pass"
+    }
+  ],
+  "analysis": "Removed unused migration adapter and obsolete tests whose coverage exists in active wiki, compaction and observational packages. No live adapter callers; only a frozen historical compatibility baseline retains the retired name. The source tree remains absent after typecheck.",
+  "liveModelRequests": 0
+}

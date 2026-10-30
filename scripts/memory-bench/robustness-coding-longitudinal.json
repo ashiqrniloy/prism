@@ -1,0 +1,44 @@
+{
+  "seed": "prism-202-memory-bench-coding-longitudinal",
+  "draw": "SHA-256(\"prism-202-memory-bench-coding-longitudinal:\" + id), ascending inside the coding-lifecycle stratum",
+  "source": "lifecycle/synth.mjs personas=12 (project-owned synthetic generator)",
+  "datasetSha256": null,
+  "strata": {
+    "coding-lifecycle": [
+      4,
+      4,
+      4
+    ]
+  },
+  "part": "dev | heldout-a | heldout-b; heldout-b is reserved for the single remediation round",
+  "residualPool": {
+    "coding-lifecycle": 0
+  },
+  "idsHash": "7d0d2d4221bb77d51f79a6de558a9193e701c2be055d7d6a6525c818515fb183",
+  "abilities": {
+    "dev": {
+      "coding-lifecycle": [
+        "p10",
+        "p6",
+        "p9",
+        "p5"
+      ]
+    },
+    "heldout-a": {
+      "coding-lifecycle": [
+        "p2",
+        "p3",
+        "p0",
+        "p1"
+      ]
+    },
+    "heldout-b": {
+      "coding-lifecycle": [
+        "p7",
+        "p4",
+        "p11",
+        "p8"
+      ]
+    }
+  }
+}

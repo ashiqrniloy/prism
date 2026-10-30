@@ -15,7 +15,19 @@ export const ARM_OVERSHOOT_TOKENS = 500_000;
 export const REQUEST_BOUND_TOKENS = 250_000;
 /** One planned infrastructure retry per arm; later attempts need a new campaign decision. */
 export const MAX_ATTEMPTS_PER_JOB = 2;
-export const TERMINAL_ATTEMPT_STATUSES = ["completed", "failed", "setup-failure", "token-ceiling", "abandoned"];
+export const TERMINAL_ATTEMPT_STATUSES = [
+  "completed",
+  "failed",
+  // Deterministic: the provider answered 4xx in a way a retry cannot change (context too long,
+  // unsupported parameter, unknown model). Retrying spends quota on the same refusal.
+  "failed-permanent",
+  "setup-failure",
+  "token-ceiling",
+  "abandoned",
+  // Plan 202 Task 5.4.3: the account's daily free-model cap reopened later. The attempt is kept as
+  // evidence, does not consume the job's attempts, and the rerun continues from its checkpoints.
+  "quota-daily",
+];
 
 export class CampaignBudgetBlocked extends Error {}
 export class CampaignLocked extends Error {}
@@ -48,6 +60,9 @@ export function stableHash(value) {
 
 export function manifestFingerprint(manifest) {
   return stableHash({
+    // Plan 202 Task 2: the pre-registered criteria hash is part of the campaign identity.
+    criteria: manifest.criteriaHash ?? null,
+    ...(manifest.resumeProtocolHash ? { resumeProtocol: manifest.resumeProtocolHash } : {}),
     ceiling: manifest.ceiling,
     provider: manifest.provider,
     model: manifest.model,
@@ -143,7 +158,7 @@ export function findAttempt(journal, attemptId) {
 export function reconcileAttempt(
   journal,
   attemptId,
-  { status, inputTokens, usageComplete, cacheReadTokens, outputTokens, now = new Date().toISOString() },
+  { status, inputTokens, usageComplete, cacheReadTokens, outputTokens, cause, now = new Date().toISOString() },
 ) {
   if (!TERMINAL_ATTEMPT_STATUSES.includes(status)) throw new JournalInvalid(`invalid terminal status: ${status}`);
   const attempt = findAttempt(journal, attemptId);
@@ -152,6 +167,7 @@ export function reconcileAttempt(
   attempt.usageComplete = usageComplete === true ? true : usageComplete === false ? false : undefined;
   if (cacheReadTokens !== undefined) attempt.cacheReadTokens = count(cacheReadTokens, "cacheReadTokens");
   if (outputTokens !== undefined) attempt.outputTokens = count(outputTokens, "outputTokens");
+  if (cause !== undefined) attempt.cause = cause;
   attempt.endedAt = now;
   journal.updatedAt = now;
   return attempt;
@@ -192,8 +208,9 @@ export function validateJournal(journal) {
 
 export async function saveJournal(path, journal) {
   validateJournal(journal);
-  await writeFile(`${path}.tmp`, `${JSON.stringify(journal, null, 2)}\n`);
-  await rename(`${path}.tmp`, path);
+  const temp = `${path}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
+  await writeFile(temp, `${JSON.stringify(journal, null, 2)}\n`);
+  await rename(temp, path);
 }
 
 export async function loadJournal(path) {
@@ -288,21 +305,37 @@ export async function releaseCampaignLock(path) {
   await unlink(path).catch(() => {});
 }
 
-/** Headroom gate for calls inside an arm: reservation is a hard ceiling, retries included. */
-export function createAdmission({ reservedInputTokens, spent, bound = REQUEST_BOUND_TOKENS }) {
-  let inflight = 0;
+/** In-flight bounds share the hard reservation; retries must fit before they start. */
+export function createAdmission({ reservedInputTokens, spent, bound = REQUEST_BOUND_TOKENS, now = () => Date.now(), staleMs = 660_000 }) {
+  const live = [];
+  const sweep = () => {
+    const at = now();
+    while (live.length && at - live[0].at > staleMs) live.shift();
+  };
+  const inflight = () => live.reduce((sum, entry) => sum + entry.bound, 0);
   return {
     bound,
+    /** Returns the reservation token; pass it back to `release` so a call frees its own bound. */
     check(requestBound = bound) {
+      sweep();
       const used = spent();
-      if (used + inflight + requestBound > reservedInputTokens)
+      const held = inflight();
+      if (used + held + requestBound > reservedInputTokens)
         throw new CampaignBudgetBlocked(
-          `reserved ${reservedInputTokens} tokens exhausted: used ${used}, in flight ${inflight}, next ${requestBound}`,
+          `reserved ${reservedInputTokens} tokens exhausted: used ${used}, in flight ${held}, next ${requestBound}`,
         );
-      inflight += requestBound;
+      const entry = { bound: requestBound, at: now() };
+      live.push(entry);
+      return entry;
     },
-    release(requestBound = bound) {
-      inflight = Math.max(0, inflight - requestBound);
+    release(token) {
+      sweep();
+      if (!token) {
+        live.shift();
+        return;
+      }
+      const index = live.indexOf(token);
+      if (index >= 0) live.splice(index, 1);
     },
   };
 }

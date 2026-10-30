@@ -1,0 +1,888 @@
+{
+  "kind": "202-memory-efficacy-diagnosis",
+  "generatedAt": "2026-10-30T01:04:35.218Z",
+  "liveCalls": 0,
+  "sourceReportHashesVerified": 23,
+  "suites": [
+    {
+      "suite": "beam-100k",
+      "questions": 40,
+      "memoryCorrect": 13,
+      "passiveCorrect": 12,
+      "stages": {
+        "abstention_error": 3,
+        "correct": 13,
+        "answer_gap": 3,
+        "partial_evidence": 9,
+        "candidate_gap": 11,
+        "run_limit": 1
+      },
+      "explicitRecallQuestions": 18,
+      "automaticRecallCountedInRecallCalls": true,
+      "candidateCountsIdenticalToSelected": true,
+      "runLimits": 1,
+      "lexicalRetrieval": "lexical",
+      "promotionEnabled": false
+    },
+    {
+      "suite": "locomo",
+      "questions": 60,
+      "memoryCorrect": 39,
+      "passiveCorrect": 34,
+      "stages": {
+        "fine_selection_gap": 13,
+        "correct": 39,
+        "candidate_gap": 5,
+        "run_limit": 3
+      },
+      "explicitRecallQuestions": 32,
+      "automaticRecallCountedInRecallCalls": true,
+      "candidateCountsIdenticalToSelected": true,
+      "runLimits": 3,
+      "lexicalRetrieval": "lexical",
+      "promotionEnabled": false
+    },
+    {
+      "suite": "memoryagentbench-cr",
+      "questions": 20,
+      "memoryCorrect": 0,
+      "passiveCorrect": 0,
+      "stages": {
+        "candidate_gap": 20
+      },
+      "explicitRecallQuestions": 20,
+      "automaticRecallCountedInRecallCalls": true,
+      "candidateCountsIdenticalToSelected": true,
+      "runLimits": 0,
+      "lexicalRetrieval": "lexical",
+      "promotionEnabled": false
+    },
+    {
+      "suite": "longmemeval-m",
+      "questions": 50,
+      "memoryCorrect": 35,
+      "passiveCorrect": 30,
+      "stages": {
+        "correct": 35,
+        "answer_gap": 9,
+        "run_limit": 2,
+        "candidate_gap": 4
+      },
+      "explicitRecallQuestions": 21,
+      "automaticRecallCountedInRecallCalls": true,
+      "candidateCountsIdenticalToSelected": true,
+      "runLimits": 2,
+      "lexicalRetrieval": "lexical",
+      "promotionEnabled": false
+    },
+    {
+      "suite": "beam-1m",
+      "questions": 40,
+      "memoryCorrect": 14,
+      "passiveCorrect": 13,
+      "stages": {
+        "abstention_error": 4,
+        "partial_evidence": 11,
+        "candidate_gap": 9,
+        "gold_unknown": 2,
+        "correct": 14
+      },
+      "explicitRecallQuestions": 16,
+      "automaticRecallCountedInRecallCalls": true,
+      "candidateCountsIdenticalToSelected": true,
+      "runLimits": 0,
+      "lexicalRetrieval": "lexical",
+      "promotionEnabled": false
+    }
+  ],
+  "fitComparisons": [
+    {
+      "suite": "beam-100k",
+      "n": 40,
+      "memoryCorrect": 13,
+      "fullCorrect": 13,
+      "memoryAccuracy": 0.325,
+      "fullAccuracy": 0.325,
+      "diff": 0,
+      "ci95": [
+        -0.10810810810810811,
+        0.0975609756097561
+      ],
+      "p": 1,
+      "clusters": 18,
+      "clusterUnit": "conversation",
+      "wins": 3,
+      "losses": 3,
+      "ties": 34,
+      "validMemoryIngest": true,
+      "interpretation": "Retrospective identical-id context-eligible subset only; not a whole-suite estimate when filtered"
+    },
+    {
+      "suite": "locomo",
+      "n": 60,
+      "memoryCorrect": 39,
+      "fullCorrect": 46,
+      "memoryAccuracy": 0.65,
+      "fullAccuracy": 0.7666666666666667,
+      "diff": -0.11666666666666667,
+      "ci95": [
+        -0.19672131147540983,
+        -0.03571428571428571
+      ],
+      "p": 0.125,
+      "clusters": 9,
+      "clusterUnit": "conversation",
+      "wins": 1,
+      "losses": 8,
+      "ties": 51,
+      "validMemoryIngest": true,
+      "interpretation": "Retrospective identical-id context-eligible subset only; not a whole-suite estimate when filtered"
+    },
+    {
+      "suite": "memoryagentbench-cr",
+      "n": 20,
+      "memoryCorrect": 0,
+      "fullCorrect": 4,
+      "memoryAccuracy": 0,
+      "fullAccuracy": 0.2,
+      "diff": -0.2,
+      "ci95": [
+        -0.375,
+        -0.045454545454545456
+      ],
+      "p": 0.25,
+      "clusters": 7,
+      "clusterUnit": "conversation",
+      "wins": 0,
+      "losses": 4,
+      "ties": 16,
+      "validMemoryIngest": false,
+      "interpretation": "Invalid memory exposure: user-only source cannot form completed exchange pairs"
+    },
+    {
+      "suite": "longmemeval-m",
+      "n": 4,
+      "memoryCorrect": 3,
+      "fullCorrect": 3,
+      "memoryAccuracy": 0.75,
+      "fullAccuracy": 0.75,
+      "diff": 0,
+      "ci95": [
+        0,
+        0
+      ],
+      "p": 1,
+      "clusters": 4,
+      "clusterUnit": "conversation",
+      "wins": 0,
+      "losses": 0,
+      "ties": 4,
+      "validMemoryIngest": true,
+      "interpretation": "Retrospective identical-id context-eligible subset only; not a whole-suite estimate when filtered"
+    },
+    {
+      "suite": "beam-1m",
+      "n": 9,
+      "memoryCorrect": 4,
+      "fullCorrect": 4,
+      "memoryAccuracy": 0.4444444444444444,
+      "fullAccuracy": 0.4444444444444444,
+      "diff": 0,
+      "ci95": [
+        -0.4,
+        0.4
+      ],
+      "p": 1,
+      "clusters": 5,
+      "clusterUnit": "conversation",
+      "wins": 1,
+      "losses": 1,
+      "ties": 7,
+      "validMemoryIngest": true,
+      "interpretation": "Retrospective identical-id context-eligible subset only; not a whole-suite estimate when filtered"
+    }
+  ],
+  "cohort": [
+    {
+      "suite": "beam-100k",
+      "questionIds": [
+        "5:abstention:1",
+        "9:abstention:1",
+        "10:abstention:0",
+        "20:abstention:1",
+        "8:contradiction_resolution:1",
+        "3:contradiction_resolution:1",
+        "7:contradiction_resolution:0",
+        "9:contradiction_resolution:0",
+        "13:event_ordering:0",
+        "5:event_ordering:0",
+        "1:event_ordering:1",
+        "1:event_ordering:0",
+        "16:information_extraction:0",
+        "16:information_extraction:1",
+        "9:information_extraction:0",
+        "19:information_extraction:0",
+        "18:instruction_following:0",
+        "9:instruction_following:1",
+        "13:instruction_following:1",
+        "8:instruction_following:1",
+        "4:knowledge_update:0",
+        "7:knowledge_update:1",
+        "2:knowledge_update:0",
+        "17:knowledge_update:1",
+        "6:multi_session_reasoning:1",
+        "2:multi_session_reasoning:0",
+        "9:multi_session_reasoning:1",
+        "13:multi_session_reasoning:1",
+        "10:preference_following:1",
+        "11:preference_following:0",
+        "18:preference_following:1",
+        "14:preference_following:0",
+        "10:summarization:0",
+        "17:summarization:0",
+        "1:summarization:1",
+        "8:summarization:1",
+        "18:temporal_reasoning:0",
+        "19:temporal_reasoning:1",
+        "14:temporal_reasoning:1",
+        "17:temporal_reasoning:0"
+      ],
+      "validForCurrentEfficacy": true,
+      "selection": "Full-history eligibility only; not answer correctness"
+    },
+    {
+      "suite": "locomo",
+      "questionIds": [
+        "conv-41:21",
+        "conv-44:24",
+        "conv-49:21",
+        "conv-44:32",
+        "conv-49:78",
+        "conv-26:38",
+        "conv-42:34",
+        "conv-43:4",
+        "conv-43:48",
+        "conv-43:43",
+        "conv-47:9",
+        "conv-42:42",
+        "conv-48:81",
+        "conv-44:30",
+        "conv-42:29",
+        "conv-44:1",
+        "conv-49:52",
+        "conv-42:32",
+        "conv-42:21",
+        "conv-41:4",
+        "conv-26:57",
+        "conv-41:16",
+        "conv-50:65",
+        "conv-48:55",
+        "conv-48:36",
+        "conv-26:50",
+        "conv-48:23",
+        "conv-43:5",
+        "conv-43:8",
+        "conv-26:81",
+        "conv-48:11",
+        "conv-26:14",
+        "conv-44:44",
+        "conv-47:44",
+        "conv-50:21",
+        "conv-42:0",
+        "conv-26:82",
+        "conv-26:103",
+        "conv-49:111",
+        "conv-49:121",
+        "conv-47:128",
+        "conv-47:131",
+        "conv-43:123",
+        "conv-42:185",
+        "conv-42:175",
+        "conv-48:159",
+        "conv-47:98",
+        "conv-50:91",
+        "conv-41:163",
+        "conv-43:183",
+        "conv-43:212",
+        "conv-44:154",
+        "conv-49:164",
+        "conv-49:185",
+        "conv-43:234",
+        "conv-50:180",
+        "conv-41:175",
+        "conv-43:214",
+        "conv-48:227",
+        "conv-43:224"
+      ],
+      "validForCurrentEfficacy": true,
+      "selection": "Full-history eligibility only; not answer correctness"
+    },
+    {
+      "suite": "memoryagentbench-cr",
+      "questionIds": [
+        "5:69",
+        "5:25",
+        "6:44",
+        "6:99",
+        "6:84",
+        "6:68",
+        "5:67",
+        "5:72",
+        "7:47",
+        "7:97",
+        "3:49",
+        "0:24",
+        "2:20",
+        "0:30",
+        "1:42",
+        "0:99",
+        "0:90",
+        "2:66",
+        "3:46",
+        "2:86"
+      ],
+      "validForCurrentEfficacy": false,
+      "selection": "Full-history eligibility only; not answer correctness"
+    },
+    {
+      "suite": "longmemeval-m",
+      "questionIds": [
+        "gpt4_78cf46a3",
+        "gpt4_93159ced",
+        "982b5123_abs",
+        "gpt4_70e84552_abs"
+      ],
+      "validForCurrentEfficacy": true,
+      "selection": "Full-history eligibility only; not answer correctness"
+    },
+    {
+      "suite": "beam-1m",
+      "questionIds": [
+        "10:abstention:1",
+        "31:abstention:0",
+        "10:information_extraction:0",
+        "7:instruction_following:1",
+        "3:knowledge_update:1",
+        "10:preference_following:0",
+        "4:preference_following:1",
+        "10:summarization:0",
+        "7:temporal_reasoning:0"
+      ],
+      "validForCurrentEfficacy": true,
+      "selection": "Full-history eligibility only; not answer correctness"
+    }
+  ],
+  "limitations": [
+    "Retrospective development analysis; no new significance or acceptance claim",
+    "Evidence ids do not prove the labelled facts survived excerpt rendering",
+    "Candidate and selected pools are not separately instrumented",
+    "All-phase final answers, recall query arguments and delivered excerpts were not saved; causal replay of those exact outputs is unavailable"
+  ],
+  "mabIngest": {
+    "questions": 20,
+    "sessionInstances": 118778,
+    "messages": 118778,
+    "assistantMessages": 0,
+    "completedExchangePairs": 0,
+    "archiveSample": {
+      "archived": 0,
+      "skipped": 0,
+      "parts": 0,
+      "refused": {
+        "trust": 0,
+        "secret": 0
+      }
+    },
+    "rememberCalls": 0,
+    "diagnosis": "Confirmed adapter/archive contract mismatch; memory receives no historical exchange notes"
+  },
+  "locomoGranularity": {
+    "affectedQuestions": 60,
+    "incorrectFineSelectionLabels": 13,
+    "failedLabelledFineGapWithAllMappedRoundsRecalled": 8,
+    "rows": [
+      {
+        "id": "conv-41:21",
+        "correct": false,
+        "reportedStage": "fine_selection_gap",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 0.5,
+        "allLabelledRoundsRecalled": false
+      },
+      {
+        "id": "conv-44:24",
+        "correct": false,
+        "reportedStage": "fine_selection_gap",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 0.5,
+        "allLabelledRoundsRecalled": false
+      },
+      {
+        "id": "conv-49:21",
+        "correct": false,
+        "reportedStage": "fine_selection_gap",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 0.3333333333333333,
+        "allLabelledRoundsRecalled": false
+      },
+      {
+        "id": "conv-44:32",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-49:78",
+        "correct": false,
+        "reportedStage": "fine_selection_gap",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-26:38",
+        "correct": false,
+        "reportedStage": "candidate_gap",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 0,
+        "allLabelledRoundsRecalled": false
+      },
+      {
+        "id": "conv-42:34",
+        "correct": false,
+        "reportedStage": "fine_selection_gap",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-43:4",
+        "correct": false,
+        "reportedStage": "fine_selection_gap",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 0.14285714285714285,
+        "allLabelledRoundsRecalled": false
+      },
+      {
+        "id": "conv-43:48",
+        "correct": false,
+        "reportedStage": "fine_selection_gap",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-43:43",
+        "correct": false,
+        "reportedStage": "fine_selection_gap",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-47:9",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 0.5,
+        "allLabelledRoundsRecalled": false
+      },
+      {
+        "id": "conv-42:42",
+        "correct": false,
+        "reportedStage": "run_limit",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 0,
+        "allLabelledRoundsRecalled": false
+      },
+      {
+        "id": "conv-48:81",
+        "correct": false,
+        "reportedStage": "candidate_gap",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 0,
+        "allLabelledRoundsRecalled": false
+      },
+      {
+        "id": "conv-44:30",
+        "correct": false,
+        "reportedStage": "candidate_gap",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 0,
+        "allLabelledRoundsRecalled": false
+      },
+      {
+        "id": "conv-42:29",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-44:1",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-49:52",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 0.5,
+        "allLabelledRoundsRecalled": false
+      },
+      {
+        "id": "conv-42:32",
+        "correct": false,
+        "reportedStage": "run_limit",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-42:21",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-41:4",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-26:57",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 0,
+        "allLabelledRoundsRecalled": false
+      },
+      {
+        "id": "conv-41:16",
+        "correct": false,
+        "reportedStage": "fine_selection_gap",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-50:65",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-48:55",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 0.3333333333333333,
+        "allLabelledRoundsRecalled": false
+      },
+      {
+        "id": "conv-48:36",
+        "correct": false,
+        "reportedStage": "candidate_gap",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 0,
+        "allLabelledRoundsRecalled": false
+      },
+      {
+        "id": "conv-26:50",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 0,
+        "allLabelledRoundsRecalled": false
+      },
+      {
+        "id": "conv-48:23",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 0.5,
+        "allLabelledRoundsRecalled": false
+      },
+      {
+        "id": "conv-43:5",
+        "correct": false,
+        "reportedStage": "candidate_gap",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 0,
+        "allLabelledRoundsRecalled": false
+      },
+      {
+        "id": "conv-43:8",
+        "correct": false,
+        "reportedStage": "fine_selection_gap",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-26:81",
+        "correct": false,
+        "reportedStage": "fine_selection_gap",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-48:11",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 0.5,
+        "allLabelledRoundsRecalled": false
+      },
+      {
+        "id": "conv-26:14",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 0.5,
+        "allLabelledRoundsRecalled": false
+      },
+      {
+        "id": "conv-44:44",
+        "correct": false,
+        "reportedStage": "fine_selection_gap",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 0.5,
+        "allLabelledRoundsRecalled": false
+      },
+      {
+        "id": "conv-47:44",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 0.5,
+        "allLabelledRoundsRecalled": false
+      },
+      {
+        "id": "conv-50:21",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 0,
+        "allLabelledRoundsRecalled": false
+      },
+      {
+        "id": "conv-42:0",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 0,
+        "allLabelledRoundsRecalled": false
+      },
+      {
+        "id": "conv-26:82",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-26:103",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-49:111",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-49:121",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-47:128",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-47:131",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-43:123",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-42:185",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-42:175",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-48:159",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-47:98",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-50:91",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-41:163",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-43:183",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-43:212",
+        "correct": false,
+        "reportedStage": "run_limit",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 0,
+        "allLabelledRoundsRecalled": false
+      },
+      {
+        "id": "conv-44:154",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-49:164",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-49:185",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-43:234",
+        "correct": false,
+        "reportedStage": "fine_selection_gap",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-50:180",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-41:175",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-43:214",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      },
+      {
+        "id": "conv-48:227",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 0,
+        "allLabelledRoundsRecalled": false
+      },
+      {
+        "id": "conv-43:224",
+        "correct": true,
+        "reportedStage": "correct",
+        "reportedFineRecall": 0,
+        "mappedRoundCoverage": 1,
+        "allLabelledRoundsRecalled": true
+      }
+    ],
+    "diagnosis": "Fine gold retains message ids while recall reports round ids; reported zero fine recall is not a valid fine-grained metric"
+  },
+  "ownerClosurePreserved": true
+}

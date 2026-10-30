@@ -1,0 +1,205 @@
+{
+  "provider": "commandcode",
+  "wire": "responses",
+  "model": "gpt-5.6-luna",
+  "sessionId": "cache-parity-fixture-205",
+  "source": "offline recording of pi-commandcode-provider 0.7.10 (pi-ai 1.4.0 codecs) against a fake fetch; no upstream, no key",
+  "requests": [
+    {
+      "method": "POST",
+      "path": "/provider/v1/responses",
+      "headers": {
+        "content-type": "application/json",
+        "x-client-request-id": "cache-parity-fixture-205"
+      },
+      "body": {
+        "model": "gpt-5.6-luna",
+        "input": [
+          {
+            "role": "system",
+            "content": "You are reviewing a tiny coding fixture. Keep tools and prior history unchanged. Reply OK; do not call tools."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "input_text",
+                "text": "Inspect fixture.js."
+              }
+            ]
+          }
+        ],
+        "stream": true,
+        "prompt_cache_key": "cache-parity-fixture-205",
+        "store": false,
+        "max_output_tokens": 65536,
+        "tools": [
+          {
+            "type": "function",
+            "name": "read",
+            "description": "Read a fixture file",
+            "parameters": {
+              "type": "object"
+            }
+          },
+          {
+            "type": "function",
+            "name": "test",
+            "description": "Check fixture tests",
+            "parameters": {
+              "type": "object"
+            }
+          }
+        ],
+        "reasoning": {
+          "effort": "high",
+          "summary": "auto"
+        },
+        "include": [
+          "reasoning.encrypted_content"
+        ]
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/provider/v1/responses",
+      "headers": {
+        "content-type": "application/json",
+        "x-client-request-id": "cache-parity-fixture-205"
+      },
+      "body": {
+        "model": "gpt-5.6-luna",
+        "input": [
+          {
+            "role": "system",
+            "content": "You are reviewing a tiny coding fixture. Keep tools and prior history unchanged. Reply OK; do not call tools."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "input_text",
+                "text": "Inspect fixture.js."
+              }
+            ]
+          },
+          {
+            "type": "function_call",
+            "call_id": "call_read",
+            "name": "read",
+            "arguments": "{}"
+          },
+          {
+            "type": "function_call_output",
+            "call_id": "call_read",
+            "output": "export const answer = 42;"
+          }
+        ],
+        "stream": true,
+        "prompt_cache_key": "cache-parity-fixture-205",
+        "store": false,
+        "max_output_tokens": 65536,
+        "tools": [
+          {
+            "type": "function",
+            "name": "read",
+            "description": "Read a fixture file",
+            "parameters": {
+              "type": "object"
+            }
+          },
+          {
+            "type": "function",
+            "name": "test",
+            "description": "Check fixture tests",
+            "parameters": {
+              "type": "object"
+            }
+          }
+        ],
+        "reasoning": {
+          "effort": "high",
+          "summary": "auto"
+        },
+        "include": [
+          "reasoning.encrypted_content"
+        ]
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/provider/v1/responses",
+      "headers": {
+        "content-type": "application/json",
+        "x-client-request-id": "cache-parity-fixture-205"
+      },
+      "body": {
+        "model": "gpt-5.6-luna",
+        "input": [
+          {
+            "role": "system",
+            "content": "You are reviewing a tiny coding fixture. Keep tools and prior history unchanged. Reply OK; do not call tools."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "input_text",
+                "text": "Inspect fixture.js."
+              }
+            ]
+          },
+          {
+            "type": "function_call",
+            "call_id": "call_read",
+            "name": "read",
+            "arguments": "{}"
+          },
+          {
+            "type": "function_call_output",
+            "call_id": "call_read",
+            "output": "export const answer = 42;"
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "input_text",
+                "text": "Confirm the fixture. Reply OK."
+              }
+            ]
+          }
+        ],
+        "stream": true,
+        "prompt_cache_key": "cache-parity-fixture-205",
+        "store": false,
+        "max_output_tokens": 65536,
+        "tools": [
+          {
+            "type": "function",
+            "name": "read",
+            "description": "Read a fixture file",
+            "parameters": {
+              "type": "object"
+            }
+          },
+          {
+            "type": "function",
+            "name": "test",
+            "description": "Check fixture tests",
+            "parameters": {
+              "type": "object"
+            }
+          }
+        ],
+        "reasoning": {
+          "effort": "high",
+          "summary": "auto"
+        },
+        "include": [
+          "reasoning.encrypted_content"
+        ]
+      }
+    }
+  ]
+}

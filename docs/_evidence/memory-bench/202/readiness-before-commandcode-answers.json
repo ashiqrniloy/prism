@@ -1,0 +1,477 @@
+{
+  "kind": "202-baseline-readiness",
+  "task": "4.8",
+  "generatedAt": "2026-10-29T14:04:24.298Z",
+  "status": "not-ready",
+  "baselineComplete": false,
+  "measurementChecks": {
+    "source-mapping": true,
+    "historical-provenance": true,
+    "pilot-provenance": true,
+    "role-accounting": true,
+    "wire-role-reconciliation": true,
+    "pilot-cells": true,
+    "comparator-eligibility": true,
+    "judge-controls": true,
+    "graded-registration": true,
+    "borderline-controls": true,
+    "complete-history-attribution": true,
+    "pilot-graded-scores": true,
+    "pilot-coverage": true,
+    "separated-measurements": true,
+    "paired-product-only-analysis": true,
+    "usage-reconciliation": true,
+    "reservation-ceiling": true,
+    "elapsed-wall-ceiling": true,
+    "active-wall-ceiling": true,
+    "request-budget-ceiling": true
+  },
+  "verification": {
+    "record": "readiness.md",
+    "status": "passed"
+  },
+  "blockers": [
+    "broad-models-panel-context-unverified",
+    "quota-unavailable-or-unverified"
+  ],
+  "pins": {
+    "productHash": "5418409011323fa3a1c8c6c31a62395b78173794b0b169a8717659e9cc30a141",
+    "harnessHash": "c0dd203165dfca7f22f3dd59cbd3237a56c6247d735968df9322f56a9365a8db",
+    "wireProxyHash": "cb31695f2100599d66b9b6db8d7a6527e8a32c411b2ef762d8056eb2adb1e977",
+    "evidenceHash": "7dace9e1ba28009a631cd4e80a2448ebc78a8df89c8834f701ff5f09d0ef70e1",
+    "sources": {
+      "beam-source-inventory.json": "5ab8e74cb3b42fbf8d9190b47e0882653093d58233ddb519f51d52cbb025c6a3",
+      "comparator-eligibility.md": "b728f48bddaa7747ba00d7deb41865e7a0e416f043b1dab1b898639262cafd97",
+      "failure-attribution.json": "3dbfef12d8304f40927a16acde7493ca99fae565bdb5a7156fd07a5356e9411e",
+      "zero-score-abilities.json": "f5e4cfa302193477f1bcaf97900ada4d669559db9272883e571de2e22074030f",
+      "graded-rubric-scoring.json": "4e3f6ef54bba37a48175ecdac38dd81fe257fa03545bbdfcf033f55d87000073",
+      "paired-analysis-sizing.json": "cb221f0c42001938256bf27e7aeb07026a1764cd23ce9eca0aa61717fab67916",
+      "readiness-pilot-v6/manifest.json": "4ae3e2b801994552a14b587ef440a562cb453e14df5e81b73a8f208622dde5bc",
+      "readiness-pilot-v6/results.json": "4898cbd43620c96b2f65c4a029f7926110f517ffd5322ebf313d03f6d65b821d",
+      "pilot/completion.json": "1a663f22cd9cdcdfa40182a2518f3ad45d6629c9d55ed2d6b6b83c9dc73594a6",
+      "pilot-v3/budget-accounting.json": "af8cbaaadfb94b894a3c729fb3909c5a05cd3d2cd68f6fdd68670b43afdc43ca",
+      "readiness-operations.json": "3d1cb7eaf664c794d29ec2ad0e65f4386ff742206dea354d853d43f3ae8b4942",
+      "readiness-verification.json": "b8c288f0fd3d0f8d07d8d152de86cbb678db8668e6c44aba048aaa03d26643f0",
+      "readiness-quota.json": "2e594950ad03349dde2db1951ef40d7e6ca2f5e145f5a91d534107dd2d1f9ede",
+      "commandcode-panel-controls.json": "6ea3bfbd296d1d4d8b38906c7a470b1ae2aeddc4f8cf85c690c11e58ab908715",
+      "docs/_evidence/memory-bench/202/baseline/free-campaign-manifest.json": "30cbe1dc26225ad97167e43093451c226d4d7fe374f4fe12e5d5dcfe65717199",
+      ".cache/memory-bench/202-free-baseline/journal.json": "8077a2344ded424deda6640115a2825484eef980040b74a1eafed177db1fe360",
+      ".cache/memory-bench/audit/4.8-pilot-v5/journal.json": "c3d8e6a6869d3b4f6976f35cc4ba77cc037a1ab096c93f5670ccd29b60a1ea7b",
+      ".cache/memory-bench/audit/4.8-pilot-v6/journal.json": "c99658336ec4fe014f6310cbc486079e5de3f2ad44a4fd5c17be409bd577bb6a"
+    }
+  },
+  "manifestHash": "6783a96cf6be27e3809447c4338d2cbe6245e59f817cedd121ed4cf6e55c8f2f",
+  "protocol": {
+    "analysisVersion": "202-paired-cluster-v1",
+    "analysisHash": "7fb6af6d34b98f20f2e7faf68deff525acf746197d8abd33cc7327ce1210a9bf",
+    "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+    "datasets": {
+      "beam-100k": {
+        "datasetSha256": "c0519be25907005ba873c927c50877471d550873039d96c041554d0075a78ace",
+        "idsHash": "8ead1f2d43bb523d25a0d7bea18e602b00122b2870e04ca0d7162928ac1d3567"
+      },
+      "locomo": {
+        "datasetSha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+        "idsHash": "f8462784b7acf89a4b82a40d68369c2abf35f3e69d69e39b4b2b118b4c714dbf"
+      },
+      "memoryagentbench-cr": {
+        "datasetSha256": "24d5c3f09ce0ce15625cb9f8a98f44f0d864ca6c94d7b4ad04eb697ca3a5ff45",
+        "idsHash": "b96dba43ea61072d4bb290df35f82a56800cb7052cd2b3347a45307f01c4b842"
+      },
+      "longmemeval-m": {
+        "datasetSha256": "9d79e5524794a2e6900a3aa9cb7d9152c5a3e8319c9a87c25494ba1eacee495f",
+        "idsHash": "80f5ded49f8ebe8ad09948d879d048849c8a0d6a168f2a532acd6ad9dba4bab5"
+      },
+      "beam-1m": {
+        "datasetSha256": "41b5acbbb55a586b1305514ef9d9fb03365d9b3331b598a1c2dd7603d93ef533",
+        "idsHash": "9ee618b8ed072b2ecf541fcf48737328aa2211d6d510583b222a6e3ae9562f55"
+      }
+    },
+    "normalization": {
+      "version": "beam-source-annotations-v1",
+      "sourceHash": "034978f56e5f10463a4923debcb85c6e354aa1e3397b5faf584397e029090985"
+    },
+    "judges": {
+      "binaryTemplate": "e3883a2aa5910f76c3f6b377f1758fd4a57ca6dda1449cd86291abd0eea5f306",
+      "gradedTemplate": "f7ff5f9c24afd87f0a5e00bd168103019f6e7140d64031f3e5bec264043c24cb",
+      "sourceHash": "894e35a2e1c7aac941eeb424a9deedea9e809639a1c8cabdd36533c18a641c65"
+    },
+    "context": {
+      "policyVersion": 1,
+      "measurementVersion": "product-phases-attribution-v2",
+      "sourceHash": "9943e5d35d7c8f7a24db855d9678aef66d9c3890e1a8ef5f5bbb190b65bb44d8"
+    },
+    "pairing": "unique question ids, matching conversation clusters and abilities; incomplete comparisons have no gap",
+    "screening": "item-weighted paired mean; 10000 whole-cluster bootstrap draws; two-sided cluster sign-flips; seed 7",
+    "multiplicity": "Holm across all emitted overall, ability-binary and ability-graded tests in one baseline summary; pointwise CIs; descriptive only",
+    "acceptance": {
+      "metric": "frozen binary",
+      "margin": 0.03,
+      "null": "candidate - comparator <= -0.03",
+      "trueDiff": 0,
+      "alpha": 0.025,
+      "targetPower": 0.8,
+      "method": "paired-cluster-Wald-planning-approximation",
+      "multiplicity": "BFC is a conjunction: every required suite/model NI row and superiority row must pass its frozen bound; no selectable-row claims. Any subset claim needs prospective multiplicity registration.",
+      "warning": "Sizing is conditional on discordance and within-conversation paired-difference ICC; not an acceptance verdict. Normal approximation is optimistic with few clusters."
+    },
+    "resumption": "not authorized; Task 4.7 pilot and Task 4.8 readiness must freeze current models, judges, limits, product and this protocol"
+  },
+  "pilot": {
+    "intended": 52,
+    "dispositions": 52,
+    "scored": 42,
+    "model": "commandcode/meta/muse-spark-1.3-contributor",
+    "judges": [
+      "commandcode/minimax/minimax-m3.1-flash",
+      "commandcode/z-ai/glm-5.3-flash"
+    ],
+    "generation": {
+      "temperature": 0,
+      "maxTokens": 8192,
+      "reasoning": "provider default; no override",
+      "maxTurns": 8
+    },
+    "modelLimits": {
+      "contextWindow": 1048576
+    },
+    "inputCap": 1047552,
+    "configurationLabel": "frozen baseline model configuration, 8192 output cap, eight-turn stop, provider-default reasoning; no acceptance claim"
+  },
+  "judgeControls": {
+    "binaryPassed": 72,
+    "gradedWithinTolerance": 71,
+    "gradedChecks": 72,
+    "mismatches": [
+      {
+        "id": "5:event_ordering:0",
+        "variant": "minusOne",
+        "judge": "openrouter/cohere/north-mini-code:free",
+        "metric": "graded",
+        "got": 0.5410727405360969,
+        "want": 0.7878787878787878
+      }
+    ],
+    "interpretation": "one item-mapping miss; panel within tolerance; disagreement retained, not human calibration"
+  },
+  "budget": {
+    "inputTokens": 1641565,
+    "outputTokens": 72883,
+    "cacheReadTokens": 9391,
+    "cacheWriteTokens": 0,
+    "wireAttempts": 154,
+    "accountedInputTokens": 1641565,
+    "accountedOutputTokens": 72883,
+    "usageMissingExchanges": 0,
+    "usageComplete": true,
+    "missingUsageExchanges": 0,
+    "reservationCharge": 1641565,
+    "elapsedMinutesIncludingEngineeringAndProbe": 7.9508,
+    "activeAttemptMinutes": 18.621966666666665
+  },
+  "reuse": [
+    {
+      "suite": "beam-100k",
+      "model": "opencode-go/beam-free",
+      "arm": "fabric-x",
+      "disposition": "rerun",
+      "reason": "historical source mapping/scoring/context/measurement protocol; original answers unavailable for rejudging; scores exploratory only"
+    },
+    {
+      "suite": "beam-100k",
+      "model": "opencode-go/beam-free",
+      "arm": "fabric-x-tools",
+      "disposition": "rerun",
+      "reason": "historical source mapping/scoring/context/measurement protocol; original answers unavailable for rejudging; scores exploratory only"
+    },
+    {
+      "suite": "beam-100k",
+      "model": "opencode-go/beam-free",
+      "arm": "full",
+      "disposition": "rerun",
+      "reason": "historical source mapping/scoring/context/measurement protocol; original answers unavailable for rejudging; scores exploratory only"
+    },
+    {
+      "suite": "beam-100k",
+      "model": "opencode-go/beam-free",
+      "arm": "full-truncated",
+      "disposition": "rerun",
+      "reason": "historical source mapping/scoring/context/measurement protocol; original answers unavailable for rejudging; scores exploratory only"
+    },
+    {
+      "suite": "beam-100k",
+      "model": "opencode-go/beam-free",
+      "arm": "lexical-topk",
+      "disposition": "rerun",
+      "reason": "historical source mapping/scoring/context/measurement protocol; original answers unavailable for rejudging; scores exploratory only"
+    },
+    {
+      "suite": "beam-100k",
+      "model": "opencode-go/minimax-m3",
+      "arm": "fabric-x",
+      "disposition": "rerun",
+      "reason": "historical source mapping/scoring/context/measurement protocol; original answers unavailable for rejudging; scores exploratory only"
+    },
+    {
+      "suite": "beam-100k",
+      "model": "opencode-go/minimax-m3",
+      "arm": "fabric-x-tools",
+      "disposition": "rerun",
+      "reason": "historical source mapping/scoring/context/measurement protocol; original answers unavailable for rejudging; scores exploratory only"
+    }
+  ],
+  "pilotReuse": "diagnostic evidence only; completion-enriched ten-id draw on the declared capped configuration, not any broad cell",
+  "quotas": {
+    "kind": "202-free-readiness-operations",
+    "generatedAt": "2026-10-29T14:00:37.102Z",
+    "expiresAt": "2026-10-29T20:00:37.102Z",
+    "limits": {
+      "wireAttempts": 40,
+      "inputTokens": 20000000,
+      "outputTokens": 200000,
+      "wallMs": 900000,
+      "retries429": 0
+    },
+    "generation": {
+      "temperature": 0,
+      "maxTokens": 8192,
+      "reasoning": "provider default; no override"
+    },
+    "quota": {
+      "used": 1293,
+      "limit": 1000,
+      "remaining": 0,
+      "observedAt": "2026-10-29T14:00:35.745Z",
+      "source": "GET https://openrouter.ai/api/v1/key"
+    },
+    "models": [
+      {
+        "ref": "openrouter/nvidia/nemotron-3.5-lightning:free",
+        "limits": {
+          "contextWindow": 1000000,
+          "maxOutputTokens": 65536
+        },
+        "parameters": {
+          "temperature": 0,
+          "maxTokens": 8192
+        },
+        "compat": {
+          "thinkingFamily": "openai_reasoning",
+          "preserveThinking": true
+        },
+        "inputCap": 933440,
+        "free": true,
+        "status": "quota-unavailable",
+        "evidence": "Fresh read-only account check; no model request sent"
+      },
+      {
+        "ref": "commandcode/meta/muse-spark-1.3-contributor",
+        "limits": {
+          "contextWindow": 1048576
+        },
+        "parameters": {
+          "temperature": 0,
+          "maxTokens": 8192
+        },
+        "compat": {
+          "thinkingFamily": "openai_reasoning",
+          "preserveThinking": true,
+          "route": "responses",
+          "pricing_source": "https://commandcode.ai/docs/resources/pricing-limits"
+        },
+        "inputCap": 1047552,
+        "free": false,
+        "status": "passed",
+        "outcome": "completed",
+        "errorCode": "completed",
+        "toolCalls": 1,
+        "nonempty": true
+      },
+      {
+        "ref": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+        "limits": {
+          "contextWindow": 1000000,
+          "maxOutputTokens": 65536
+        },
+        "parameters": {
+          "temperature": 0,
+          "maxTokens": 8192
+        },
+        "compat": {
+          "thinkingFamily": "openai_reasoning",
+          "preserveThinking": true
+        },
+        "inputCap": 933440,
+        "free": true,
+        "status": "quota-unavailable",
+        "evidence": "Fresh read-only account check; no model request sent"
+      }
+    ],
+    "judges": [
+      {
+        "ref": "commandcode/minimax/minimax-m3.1-flash",
+        "limits": {
+          "contextWindow": 1000000
+        },
+        "parameters": {
+          "temperature": 0,
+          "maxTokens": 8192
+        },
+        "compat": {
+          "thinkingFamily": "reasoning_effort",
+          "preserveThinking": true,
+          "route": "openai",
+          "pricing_source": "https://commandcode.ai/docs/resources/pricing-limits"
+        },
+        "inputCap": 998976,
+        "free": false,
+        "status": "passed",
+        "positive": true,
+        "negative": false
+      },
+      {
+        "ref": "commandcode/z-ai/glm-5.3-flash",
+        "limits": {
+          "contextWindow": 1048576
+        },
+        "parameters": {
+          "temperature": 0,
+          "maxTokens": 8192
+        },
+        "compat": {
+          "thinkingFamily": "reasoning_effort",
+          "preserveThinking": true,
+          "route": "openai",
+          "pricing_source": "https://commandcode.ai/docs/resources/pricing-limits"
+        },
+        "inputCap": 1047552,
+        "free": false,
+        "status": "passed",
+        "positive": true,
+        "negative": false
+      }
+    ],
+    "usage": {
+      "inputTokens": 2799,
+      "cacheReadTokens": 384,
+      "cacheWriteTokens": 0,
+      "outputTokens": 958,
+      "accountedInputTokens": 2799,
+      "accountedOutputTokens": 958,
+      "usageMissingExchanges": 0,
+      "usageComplete": true,
+      "wireAttempts": 6
+    },
+    "quotaPolicy": "Successful probes establish admission now, not a reserved future free allowance. Serial campaign stops on quota; no reset is assumed or awaited. Recheck expired readiness before resuming.",
+    "billing": "Only owner-selected Muse Contributor and MiniMax/GLM judges are paid; other named answers remain free, no fallback",
+    "calibration": "owner-waived; controls are model assisted, not human calibration",
+    "allocations": [
+      {
+        "provider": "commandcode",
+        "exchange": 1,
+        "inputBound": 1048576,
+        "outputBound": 8192
+      },
+      {
+        "provider": "commandcode",
+        "exchange": 2,
+        "inputBound": 1048576,
+        "outputBound": 8192
+      },
+      {
+        "provider": "commandcode",
+        "exchange": 3,
+        "inputBound": 1000000,
+        "outputBound": 8192
+      },
+      {
+        "provider": "commandcode",
+        "exchange": 4,
+        "inputBound": 1000000,
+        "outputBound": 8192
+      },
+      {
+        "provider": "commandcode",
+        "exchange": 5,
+        "inputBound": 1048576,
+        "outputBound": 8192
+      },
+      {
+        "provider": "commandcode",
+        "exchange": 6,
+        "inputBound": 1048576,
+        "outputBound": 8192
+      }
+    ],
+    "finishedAt": "2026-10-29T14:01:25.900Z"
+  },
+  "reservations": {
+    "historicalCharges": [
+      {
+        "path": ".cache/memory-bench/202-baseline/journal.json",
+        "charge": 23641339
+      },
+      {
+        "path": ".cache/memory-bench/audit/4.7/journal.json",
+        "charge": 8500000
+      },
+      {
+        "path": ".cache/memory-bench/audit/4.7-v2/journal.json",
+        "charge": 7641758
+      },
+      {
+        "path": ".cache/memory-bench/audit/4.7-v3/journal.json",
+        "charge": 7136891
+      },
+      {
+        "path": ".cache/memory-bench/audit/4.7-v3/rejudge/journal.json",
+        "charge": 750000
+      },
+      {
+        "path": ".cache/memory-bench/audit/4.8-pilot/journal.json",
+        "charge": 50500000
+      },
+      {
+        "path": ".cache/memory-bench/audit/4.8-pilot-v2/journal.json",
+        "charge": 1150683
+      },
+      {
+        "path": ".cache/memory-bench/audit/4.8-pilot-v3/journal.json",
+        "charge": 0
+      },
+      {
+        "path": ".cache/memory-bench/audit/4.8-pilot-v4/journal.json",
+        "charge": 1666380
+      }
+    ],
+    "coveredByPreviousCampaign": {
+      "path": ".cache/memory-bench/202-free-baseline/journal.json",
+      "charge": 398818335,
+      "note": "Includes the historical charges, preflight allowance and first broad attempts; do not sum these again."
+    },
+    "historicalPilot": {
+      "wireAttempts": 246,
+      "reportedInputTokens": 2673235,
+      "reportedOutputTokens": 254371,
+      "missingUsageExchanges": 11,
+      "activeAttemptMinutes": 74.18721666666667,
+      "elapsedMinutesIncludingEngineeringAndProbe": 295.2365,
+      "reservationCharge": 24028649
+    },
+    "preflightAllowance": 250000000,
+    "retainedCharge": 449371971,
+    "refunded": 0,
+    "remainingExecutableBudget": 1550628029
+  },
+  "security": {
+    "subset": "dev",
+    "heldoutExecuted": false,
+    "heldoutTextRead": false,
+    "credentials": "existing env/keyring refs only; offline check loads no credentials",
+    "publicArtifacts": "ids/hashes/counts/configuration only; no raw source/gold/answer/judge text",
+    "calibration": "owner-waived; model-assisted, not human calibrated; two distinct model families, development-only"
+  },
+  "claims": "No BFC/Robust, final lever, default or acceptance claim. Task 18 binary criteria unchanged; sizing remains unresolved at frozen supply. Genuine stopping failures remain failures.",
+  "nextCommand": "timeout 180 bun scripts/memory-bench/audit/readiness.mjs",
+  "resumeCommand": null
+}

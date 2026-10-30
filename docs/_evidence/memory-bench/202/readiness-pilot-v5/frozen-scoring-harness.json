@@ -1,0 +1,10 @@
+{
+  "path": ".cache/memory-bench/frozen-muse-v5",
+  "pins": {
+    "harnessHash": "610f0fe6985383527287fac77343dff2954d576d80802d53952ad73450d7c931",
+    "sdkHash": "2bc1b8c228b1c08df23a746565b4d218bdc66da319a3fe946c3f05fa012e2afb",
+    "productHash": "57aa47d94eb3cad629e232372f220296131583ea7ac06189d6f589b39c825799"
+  },
+  "status": "verified",
+  "policy": "Run scoring from the frozen scripts directory; shared SDK/product must still pass original source checks; no pin exception or answer regeneration."
+}

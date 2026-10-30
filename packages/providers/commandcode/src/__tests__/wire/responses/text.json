@@ -1,0 +1,28 @@
+{
+  "method": "POST",
+  "path": "/provider/v1/responses",
+  "requestBody": {
+    "model": "gpt-5.6-luna",
+    "input": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "Say hello from Command Code."
+          }
+        ]
+      }
+    ],
+    "stream": true,
+    "store": false,
+    "instructions": "You are a concise assistant.",
+    "include": [
+      "reasoning.encrypted_content"
+    ],
+    "prompt_cache_key": "cc-fixture-resp-text"
+  },
+  "status": 200,
+  "contentType": "text/event-stream",
+  "responseBody": "event: response.created\ndata: {\"type\":\"response.created\",\"sequence_number\":0,\"response\":{\"id\":\"gen_01M5ZCBN7RSSWFRVWFQMZ4BNHQ\",\"object\":\"response\",\"created_at\":1793128257,\"status\":\"in_progress\",\"completed_at\":null,\"incomplete_details\":null,\"error\":null,\"output\":[],\"usage\":{\"input_tokens\":0,\"output_tokens\":0,\"total_tokens\":0,\"input_tokens_details\":{\"cached_tokens\":0},\"output_tokens_details\":{\"reasoning_tokens\":0}},\"model\":\"reflection/beam:free\",\"instructions\":null,\"previous_response_id\":null,\"temperature\":1,\"top_p\":1,\"max_output_tokens\":16,\"presence_penalty\":0,\"frequency_penalty\":0,\"top_logprobs\":0,\"tools\":[],\"tool_choice\":\"auto\",\"parallel_tool_calls\":true,\"max_tool_calls\":null,\"text\":{\"format\":{\"type\":\"text\"}},\"truncation\":\"disabled\",\"reasoning\":null,\"store\":false,\"background\":false,\"service_tier\":\"auto\",\"metadata\":{},\"safety_identifier\":\"1479ee0c6a096d530ef222a768788e6c991ac4644c82783161906b488f8c6487\",\"prompt_cache_key\":\"prism-probe-resp-1\",\"prompt_cache_retention\":null}}\n\nevent: response.in_progress\ndata: {\"type\":\"response.in_progress\",\"sequence_number\":1,\"response\":{\"id\":\"gen_01M5ZCBN7RSSWFRVWFQMZ4BNHQ\",\"object\":\"response\",\"created_at\":1793128257,\"status\":\"in_progress\",\"completed_at\":null,\"incomplete_details\":null,\"error\":null,\"output\":[],\"usage\":{\"input_tokens\":0,\"output_tokens\":0,\"total_tokens\":0,\"input_tokens_details\":{\"cached_tokens\":0},\"output_tokens_details\":{\"reasoning_tokens\":0}},\"model\":\"reflection/beam:free\",\"instructions\":null,\"previous_response_id\":null,\"temperature\":1,\"top_p\":1,\"max_output_tokens\":16,\"presence_penalty\":0,\"frequency_penalty\":0,\"top_logprobs\":0,\"tools\":[],\"tool_choice\":\"auto\",\"parallel_tool_calls\":true,\"max_tool_calls\":null,\"text\":{\"format\":{\"type\":\"text\"}},\"truncation\":\"disabled\",\"reasoning\":null,\"store\":false,\"background\":false,\"service_tier\":\"auto\",\"metadata\":{},\"safety_identifier\":\"1479ee0c6a096d530ef222a768788e6c991ac4644c82783161906b488f8c6487\",\"prompt_cache_key\":\"prism-probe-resp-1\",\"prompt_cache_retention\":null}}\n\nevent: response.output_item.added\ndata: {\"type\":\"response.output_item.added\",\"sequence_number\":2,\"output_index\":0,\"item\":{\"type\":\"reasoning\",\"id\":\"rs_1793128257333_hh09itvyb7n\",\"summary\":[]}}\n\nevent: response.reasoning.delta\ndata: {\"type\":\"response.reasoning.delta\",\"sequence_number\":3,\"item_id\":\"rs_1793128257333_hh09itvyb7n\",\"output_index\":0,\"content_index\":0,\"delta\":\"The user wants me to reply\"}\n\nevent: response.reasoning.delta\ndata: {\"type\":\"response.reasoning.delta\",\"sequence_number\":4,\"item_id\":\"rs_1793128257333_hh09itvyb7n\",\"output_index\":0,\"content_index\":0,\"delta\":\" with the single word \\\"ok\\\".\"}\n\nevent: response.reasoning.done\ndata: {\"type\":\"response.reasoning.done\",\"sequence_number\":5,\"item_id\":\"rs_1793128257333_hh09itvyb7n\",\"output_index\":0,\"content_index\":0,\"text\":\"The user wants me to reply with the single word \\\"ok\\\".\"}\n\nevent: response.output_item.done\ndata: {\"type\":\"response.output_item.done\",\"sequence_number\":6,\"output_index\":0,\"item\":{\"type\":\"reasoning\",\"id\":\"rs_1793128257333_hh09itvyb7n\",\"summary\":[],\"content\":[{\"type\":\"reasoning_text\",\"text\":\"The user wants me to reply with the single word \\\"ok\\\".\"}]}}\n\nevent: response.incomplete\ndata: {\"type\":\"response.incomplete\",\"sequence_number\":7,\"response\":{\"id\":\"gen_01M5ZCBN7RSSWFRVWFQMZ4BNHQ\",\"object\":\"response\",\"created_at\":1793128257,\"status\":\"incomplete\",\"completed_at\":null,\"incomplete_details\":{\"reason\":\"max_output_tokens\"},\"error\":null,\"output\":[{\"type\":\"reasoning\",\"id\":\"rs_1793128257333_hh09itvyb7n\",\"summary\":[],\"content\":[{\"type\":\"reasoning_text\",\"text\":\"The user wants me to reply with the single word \\\"ok\\\".\"}]}],\"usage\":{\"input_tokens\":53,\"output_tokens\":16,\"total_tokens\":69,\"input_tokens_details\":{\"cached_tokens\":0},\"output_tokens_details\":{\"reasoning_tokens\":15}},\"model\":\"reflection/beam:free\",\"instructions\":null,\"previous_response_id\":null,\"temperature\":1,\"top_p\":1,\"max_output_tokens\":16,\"presence_penalty\":0,\"frequency_penalty\":0,\"top_logprobs\":0,\"tools\":[],\"tool_choice\":\"auto\",\"parallel_tool_calls\":true,\"max_tool_calls\":null,\"text\":{\"format\":{\"type\":\"text\"}},\"truncation\":\"disabled\",\"reasoning\":null,\"store\":false,\"background\":false,\"service_tier\":\"auto\",\"metadata\":{},\"safety_identifier\":\"1479ee0c6a096d530ef222a768788e6c991ac4644c82783161906b488f8c6487\",\"prompt_cache_key\":\"prism-probe-resp-1\",\"prompt_cache_retention\":null}}\n\n"
+}

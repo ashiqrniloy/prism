@@ -198,10 +198,10 @@ export class RuntimeAgentSession implements Session {
     readonly value: ContextMeter;
   };
 
-  /** Host hook bus (roadmap §2.4); per-agent, shared across this agent's sessions. */
-  private readonly hookBusInstance: HookBus;
+  /** Host hook bus (roadmap §2.4); per-agent, shared across this agent's sessions. `reload()` swaps it. */
+  private hookBusInstance: HookBus;
   /** The same bus, bound so each handler's `context.session` is a view for its registering owner. */
-  private readonly boundHooks: HookBus;
+  private boundHooks: HookBus;
   /** Per-owner session views, built once so hook dispatch allocates none. */
   private readonly sessionViews = new Map<string, SessionContext>();
   /** Declared capabilities per package. An owner absent from it (`host`, `kernel`) is unrestricted. */
@@ -218,8 +218,8 @@ export class RuntimeAgentSession implements Session {
   private closing?: Promise<void>;
   /** Serializes appends, so a state `set` racing a run's own append cannot orphan either entry. */
   private appendTail: Promise<unknown> = Promise.resolve();
-  /** Slot registry (roadmap §2.5); direct assignments come from `AgentConfig.slots`. */
-  private readonly slotRegistry: SlotRegistry;
+  /** Slot registry (roadmap §2.5); direct assignments come from `AgentConfig.slots`. `reload()` swaps it. */
+  private slotRegistry: SlotRegistry;
   /** Re-entry guard for observe dispatch: an observer that throws on `hook.error` must not loop. */
   private observingHookError = false;
   /** Pending suspended run entry found on session resume (plan 149 Task 2 / Task 4). */
@@ -259,8 +259,18 @@ export class RuntimeAgentSession implements Session {
     return this.currentLeafId;
   }
 
-  /** Host hook bus for this agent (roadmap §2.4). */
+  /** Agent-internal: whether a run holds this session, so `agent.reload()` can refuse to swap mid-run. */
+  hasActiveRun(): boolean {
+    return this.activeRun !== undefined;
+  }
+
+  /** Host hook bus for this agent (roadmap §2.4). Re-binds after `agent.reload()` swaps the bus. */
   hooks(): HookBus {
+    const bus = tryAgentRuntime(this.agent)?.hooks;
+    if (bus && bus !== this.hookBusInstance) {
+      this.hookBusInstance = bus;
+      this.boundHooks = bus.bound((owner) => this.sessionContextFor(owner));
+    }
     return this.boundHooks;
   }
 
@@ -340,7 +350,7 @@ export class RuntimeAgentSession implements Session {
 
   /** Whether anything needs the branch read: package state, or a `session.opened` hook. */
   private needsOpening(): boolean {
-    return tryAgentRuntime(this.agent)?.packages.usesSessionState === true || this.hookBusInstance.has("session.opened");
+    return tryAgentRuntime(this.agent)?.packages.usesSessionState === true || this.hooks().has("session.opened");
   }
 
   private async openSession(): Promise<void> {
@@ -399,8 +409,10 @@ export class RuntimeAgentSession implements Session {
     );
   }
 
-  /** Slot registry for this agent (roadmap §2.5). */
+  /** Slot registry for this agent (roadmap §2.5). Re-binds after `agent.reload()` swaps the registry. */
   slots(): SlotRegistry {
+    const current = tryAgentRuntime(this.agent)?.slots;
+    if (current) this.slotRegistry = current;
     return this.slotRegistry;
   }
 
@@ -634,6 +646,8 @@ export class RuntimeAgentSession implements Session {
   }
 
   private async runInternal(input: AgentInput, options: ResolvedRunOptions, runId: string, resumed?: ActiveDurableRun): Promise<RunResult> {
+    // A reload swaps the package runtime; a run that starts mid-swap would see half of each generation.
+    if (tryAgentRuntime(this.agent)?.reloading) throw new Error("Agent is reloading; retry the run");
     // Only a session that needs its branch read waits: the rest start the run in the same tick, as before.
     if (this.needsOpening()) await this.ready();
     // Plan 177 Task 4: narrow before any event, then fail closed when the branch is outside the scope.
@@ -884,7 +898,7 @@ export class RuntimeAgentSession implements Session {
     const dispatchingError = redacted.type === "hook.error";
     if (dispatchingError) this.observingHookError = true;
     try {
-      this.boundHooks.observe(redacted.type, redacted);
+      this.hooks().observe(redacted.type, redacted);
     } finally {
       if (dispatchingError) this.observingHookError = false;
     }
@@ -1093,8 +1107,8 @@ export class RuntimeAgentSession implements Session {
     const entries = await this.entries();
     const secrets = options.secrets ?? [];
     // The `compaction` slot owns the implementation (roadmap §2.5); `CompactionOptions` only sizes it.
-    const compactor = this.slotRegistry.resolve("compaction", this.agent.config.slots?.compaction);
-    const owner = this.slotRegistry.ownerOf("compaction", this.agent.config.slots?.compaction);
+    const compactor = this.slots().resolve("compaction", this.agent.config.slots?.compaction);
+    const owner = this.slots().ownerOf("compaction", this.agent.config.slots?.compaction);
     const context = {
       sessionId: this.id,
       entries,

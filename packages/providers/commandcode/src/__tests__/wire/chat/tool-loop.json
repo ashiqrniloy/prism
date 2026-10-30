@@ -1,0 +1,40 @@
+{
+  "method": "POST",
+  "path": "/provider/v1/chat/completions",
+  "requestBody": {
+    "model": "minimax/minimax-m3.1-flash",
+    "messages": [
+      {
+        "role": "user",
+        "content": "What is the weather in Tokyo? Use the tool."
+      }
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "get_weather",
+          "description": "Get the current weather for a location.",
+          "parameters": {
+            "properties": {
+              "location": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "location"
+            ],
+            "type": "object"
+          }
+        }
+      }
+    ],
+    "stream": true,
+    "stream_options": {
+      "include_usage": true
+    }
+  },
+  "status": 200,
+  "contentType": "text/event-stream",
+  "responseBody": "data: {\"id\":\"gen_01M5ZDXPX7159TYJHEJQZXV5HX\",\"object\":\"chat.completion.chunk\",\"created\":1793129897,\"model\":\"reflection/beam\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\"},\"logprobs\":null,\"finish_reason\":null}],\"system_fingerprint\":\"fp_5ugpdzq6h1\"}\n\ndata: {\"id\":\"gen_01M5ZDXPX7159TYJHEJQZXV5HX\",\"object\":\"chat.completion.chunk\",\"created\":1793129897,\"model\":\"reflection/beam\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning\":\"The user wants to\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\"The user wants to\",\"format\":\"unknown\",\"index\":0}]},\"logprobs\":null,\"finish_reason\":null}],\"system_fingerprint\":\"fp_5ugpdzq6h1\"}\n\ndata: {\"id\":\"gen_01M5ZDXPX7159TYJHEJQZXV5HX\",\"object\":\"chat.completion.chunk\",\"created\":1793129897,\"model\":\"reflection/beam\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning\":\" know the weather in Tokyo and explicitly asked to\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\" know the weather in Tokyo and explicitly asked to\",\"format\":\"unknown\",\"index\":0}]},\"logprobs\":null,\"finish_reason\":null}],\"system_fingerprint\":\"fp_5ugpdzq6h1\"}\n\ndata: {\"id\":\"gen_01M5ZDXPX7159TYJHEJQZXV5HX\",\"object\":\"chat.completion.chunk\",\"created\":1793129897,\"model\":\"reflection/beam\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning\":\" use the tool. I should call the get_weather function\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\" use the tool. I should call the get_weather function\",\"format\":\"unknown\",\"index\":0}]},\"logprobs\":null,\"finish_reason\":null}],\"system_fingerprint\":\"fp_5ugpdzq6h1\"}\n\ndata: {\"id\":\"gen_01M5ZDXPX7159TYJHEJQZXV5HX\",\"object\":\"chat.completion.chunk\",\"created\":1793129897,\"model\":\"reflection/beam\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning\":\" with location \\\"Tokyo\\\".\",\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\" with location \\\"Tokyo\\\".\",\"format\":\"unknown\",\"index\":0}]},\"logprobs\":null,\"finish_reason\":null}],\"system_fingerprint\":\"fp_5ugpdzq6h1\"}\n\ndata: {\"id\":\"gen_01M5ZDXPX7159TYJHEJQZXV5HX\",\"object\":\"chat.completion.chunk\",\"created\":1793129897,\"model\":\"reflection/beam\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"call-14ebb999-9459-4a58-a41f-0a37a952810c\",\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"arguments\":\"\"}}]},\"logprobs\":null,\"finish_reason\":null}],\"system_fingerprint\":\"fp_5ugpdzq6h1\"}\n\ndata: {\"id\":\"gen_01M5ZDXPX7159TYJHEJQZXV5HX\",\"object\":\"chat.completion.chunk\",\"created\":1793129897,\"model\":\"reflection/beam\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"{\\\"location\\\": \\\"Tokyo\\\"}\"}}]},\"logprobs\":null,\"finish_reason\":null}],\"system_fingerprint\":\"fp_5ugpdzq6h1\"}\n\ndata: {\"id\":\"gen_01M5ZDXPX7159TYJHEJQZXV5HX\",\"object\":\"chat.completion.chunk\",\"created\":1793129897,\"model\":\"reflection/beam:free\",\"choices\":[{\"index\":0,\"delta\":{},\"logprobs\":null,\"finish_reason\":\"tool_calls\"}],\"usage\":{\"prompt_tokens\":99,\"completion_tokens\":52,\"total_tokens\":151,\"prompt_tokens_details\":{\"cached_tokens\":0,\"audio_tokens\":0,\"video_tokens\":0},\"completion_tokens_details\":{\"reasoning_tokens\":36,\"image_tokens\":0},\"cache_creation_input_tokens\":0},\"system_fingerprint\":\"fp_5ugpdzq6h1\"}\n\ndata: [DONE]\n\n"
+}

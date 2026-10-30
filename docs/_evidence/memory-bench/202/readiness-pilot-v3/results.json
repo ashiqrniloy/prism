@@ -1,0 +1,1464 @@
+{
+  "kind": "202-readiness-pilot-v3",
+  "manifestHash": "8d730486afd65780a4c272574615e19f8a920a68f925f22c98affe85b7682ed2",
+  "status": "completed_with_failures",
+  "startedAt": "2026-10-29T02:04:40.811Z",
+  "phase": "answers",
+  "continuation": null,
+  "calibration": "owner-waived; model-assisted, not human calibrated; free panel development-only",
+  "checkpointRoot": ".cache/memory-bench/audit/4.8-pilot-v3",
+  "priorUsage": {
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0,
+    "wireAttempts": 0,
+    "accountedInputTokens": 0,
+    "accountedOutputTokens": 0,
+    "usageMissingExchanges": 0
+  },
+  "priorTiming": {
+    "wallMs": 0
+  },
+  "cells": [
+    {
+      "id": "5:abstention:1",
+      "questionId": "5:abstention:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "abstention",
+      "config": "full",
+      "jobId": "full.5:abstention:1",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "5:abstention:1",
+      "questionId": "5:abstention:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "abstention",
+      "config": "lexical-topk",
+      "jobId": "lexical-topk.5:abstention:1",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "5:abstention:1",
+      "questionId": "5:abstention:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "abstention",
+      "config": "fabric-x",
+      "jobId": "fabric-x.5:abstention:1",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "5:abstention:1",
+      "questionId": "5:abstention:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "abstention",
+      "config": "fabric-x-tools",
+      "jobId": "fabric-x-tools.5:abstention:1",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "5:abstention:1",
+      "questionId": "5:abstention:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "abstention",
+      "config": "full-truncated",
+      "jobId": "full-truncated.5:abstention:1",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "outcome": "distinct_bounded_comparator_not_run",
+      "equivalentTo": null
+    },
+    {
+      "id": "3:contradiction_resolution:1",
+      "questionId": "3:contradiction_resolution:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "contradiction_resolution",
+      "config": "full",
+      "jobId": "full.3:contradiction_resolution:1",
+      "cluster": "beam-3",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "3:contradiction_resolution:1",
+      "questionId": "3:contradiction_resolution:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "contradiction_resolution",
+      "config": "lexical-topk",
+      "jobId": "lexical-topk.3:contradiction_resolution:1",
+      "cluster": "beam-3",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "3:contradiction_resolution:1",
+      "questionId": "3:contradiction_resolution:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "contradiction_resolution",
+      "config": "fabric-x",
+      "jobId": "fabric-x.3:contradiction_resolution:1",
+      "cluster": "beam-3",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "3:contradiction_resolution:1",
+      "questionId": "3:contradiction_resolution:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "contradiction_resolution",
+      "config": "fabric-x-tools",
+      "jobId": "fabric-x-tools.3:contradiction_resolution:1",
+      "cluster": "beam-3",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "3:contradiction_resolution:1",
+      "questionId": "3:contradiction_resolution:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "contradiction_resolution",
+      "config": "full-truncated",
+      "jobId": "full-truncated.3:contradiction_resolution:1",
+      "cluster": "beam-3",
+      "diagnosticOnly": false,
+      "outcome": "distinct_bounded_comparator_not_run",
+      "equivalentTo": null
+    },
+    {
+      "id": "5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "full",
+      "jobId": "full.5:event_ordering:0",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "lexical-topk",
+      "jobId": "lexical-topk.5:event_ordering:0",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "fabric-x",
+      "jobId": "fabric-x.5:event_ordering:0",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "fabric-x-tools",
+      "jobId": "fabric-x-tools.5:event_ordering:0",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "full-truncated",
+      "jobId": "full-truncated.5:event_ordering:0",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "outcome": "distinct_bounded_comparator_not_run",
+      "equivalentTo": null
+    },
+    {
+      "id": "5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "oracle",
+      "jobId": "oracle.5:event_ordering:0",
+      "cluster": "beam-5",
+      "diagnosticOnly": true,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "16:information_extraction:0",
+      "questionId": "16:information_extraction:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "information_extraction",
+      "config": "full",
+      "jobId": "full.16:information_extraction:0",
+      "cluster": "beam-16",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "16:information_extraction:0",
+      "questionId": "16:information_extraction:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "information_extraction",
+      "config": "lexical-topk",
+      "jobId": "lexical-topk.16:information_extraction:0",
+      "cluster": "beam-16",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "16:information_extraction:0",
+      "questionId": "16:information_extraction:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "information_extraction",
+      "config": "fabric-x",
+      "jobId": "fabric-x.16:information_extraction:0",
+      "cluster": "beam-16",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "16:information_extraction:0",
+      "questionId": "16:information_extraction:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "information_extraction",
+      "config": "fabric-x-tools",
+      "jobId": "fabric-x-tools.16:information_extraction:0",
+      "cluster": "beam-16",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "16:information_extraction:0",
+      "questionId": "16:information_extraction:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "information_extraction",
+      "config": "full-truncated",
+      "jobId": "full-truncated.16:information_extraction:0",
+      "cluster": "beam-16",
+      "diagnosticOnly": false,
+      "outcome": "distinct_bounded_comparator_not_run",
+      "equivalentTo": null
+    },
+    {
+      "id": "13:instruction_following:1",
+      "questionId": "13:instruction_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "instruction_following",
+      "config": "full",
+      "jobId": "full.13:instruction_following:1",
+      "cluster": "beam-13",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "13:instruction_following:1",
+      "questionId": "13:instruction_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "instruction_following",
+      "config": "lexical-topk",
+      "jobId": "lexical-topk.13:instruction_following:1",
+      "cluster": "beam-13",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "13:instruction_following:1",
+      "questionId": "13:instruction_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "instruction_following",
+      "config": "fabric-x",
+      "jobId": "fabric-x.13:instruction_following:1",
+      "cluster": "beam-13",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "13:instruction_following:1",
+      "questionId": "13:instruction_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "instruction_following",
+      "config": "fabric-x-tools",
+      "jobId": "fabric-x-tools.13:instruction_following:1",
+      "cluster": "beam-13",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "13:instruction_following:1",
+      "questionId": "13:instruction_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "instruction_following",
+      "config": "full-truncated",
+      "jobId": "full-truncated.13:instruction_following:1",
+      "cluster": "beam-13",
+      "diagnosticOnly": false,
+      "outcome": "distinct_bounded_comparator_not_run",
+      "equivalentTo": null
+    },
+    {
+      "id": "17:knowledge_update:1",
+      "questionId": "17:knowledge_update:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "knowledge_update",
+      "config": "full",
+      "jobId": "full.17:knowledge_update:1",
+      "cluster": "beam-17",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "17:knowledge_update:1",
+      "questionId": "17:knowledge_update:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "knowledge_update",
+      "config": "lexical-topk",
+      "jobId": "lexical-topk.17:knowledge_update:1",
+      "cluster": "beam-17",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "17:knowledge_update:1",
+      "questionId": "17:knowledge_update:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "knowledge_update",
+      "config": "fabric-x",
+      "jobId": "fabric-x.17:knowledge_update:1",
+      "cluster": "beam-17",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "17:knowledge_update:1",
+      "questionId": "17:knowledge_update:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "knowledge_update",
+      "config": "fabric-x-tools",
+      "jobId": "fabric-x-tools.17:knowledge_update:1",
+      "cluster": "beam-17",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "17:knowledge_update:1",
+      "questionId": "17:knowledge_update:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "knowledge_update",
+      "config": "full-truncated",
+      "jobId": "full-truncated.17:knowledge_update:1",
+      "cluster": "beam-17",
+      "diagnosticOnly": false,
+      "outcome": "distinct_bounded_comparator_not_run",
+      "equivalentTo": null
+    },
+    {
+      "id": "13:multi_session_reasoning:1",
+      "questionId": "13:multi_session_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "multi_session_reasoning",
+      "config": "full",
+      "jobId": "full.13:multi_session_reasoning:1",
+      "cluster": "beam-13",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "13:multi_session_reasoning:1",
+      "questionId": "13:multi_session_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "multi_session_reasoning",
+      "config": "lexical-topk",
+      "jobId": "lexical-topk.13:multi_session_reasoning:1",
+      "cluster": "beam-13",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "13:multi_session_reasoning:1",
+      "questionId": "13:multi_session_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "multi_session_reasoning",
+      "config": "fabric-x",
+      "jobId": "fabric-x.13:multi_session_reasoning:1",
+      "cluster": "beam-13",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "13:multi_session_reasoning:1",
+      "questionId": "13:multi_session_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "multi_session_reasoning",
+      "config": "fabric-x-tools",
+      "jobId": "fabric-x-tools.13:multi_session_reasoning:1",
+      "cluster": "beam-13",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "13:multi_session_reasoning:1",
+      "questionId": "13:multi_session_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "multi_session_reasoning",
+      "config": "full-truncated",
+      "jobId": "full-truncated.13:multi_session_reasoning:1",
+      "cluster": "beam-13",
+      "diagnosticOnly": false,
+      "outcome": "distinct_bounded_comparator_not_run",
+      "equivalentTo": null
+    },
+    {
+      "id": "10:preference_following:1",
+      "questionId": "10:preference_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "preference_following",
+      "config": "full",
+      "jobId": "full.10:preference_following:1",
+      "cluster": "beam-10",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "10:preference_following:1",
+      "questionId": "10:preference_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "preference_following",
+      "config": "lexical-topk",
+      "jobId": "lexical-topk.10:preference_following:1",
+      "cluster": "beam-10",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "10:preference_following:1",
+      "questionId": "10:preference_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "preference_following",
+      "config": "fabric-x",
+      "jobId": "fabric-x.10:preference_following:1",
+      "cluster": "beam-10",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "10:preference_following:1",
+      "questionId": "10:preference_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "preference_following",
+      "config": "fabric-x-tools",
+      "jobId": "fabric-x-tools.10:preference_following:1",
+      "cluster": "beam-10",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "10:preference_following:1",
+      "questionId": "10:preference_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "preference_following",
+      "config": "full-truncated",
+      "jobId": "full-truncated.10:preference_following:1",
+      "cluster": "beam-10",
+      "diagnosticOnly": false,
+      "outcome": "distinct_bounded_comparator_not_run",
+      "equivalentTo": null
+    },
+    {
+      "id": "10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "full",
+      "jobId": "full.10:summarization:0",
+      "cluster": "beam-10",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "lexical-topk",
+      "jobId": "lexical-topk.10:summarization:0",
+      "cluster": "beam-10",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "fabric-x",
+      "jobId": "fabric-x.10:summarization:0",
+      "cluster": "beam-10",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "fabric-x-tools",
+      "jobId": "fabric-x-tools.10:summarization:0",
+      "cluster": "beam-10",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "full-truncated",
+      "jobId": "full-truncated.10:summarization:0",
+      "cluster": "beam-10",
+      "diagnosticOnly": false,
+      "outcome": "distinct_bounded_comparator_not_run",
+      "equivalentTo": null
+    },
+    {
+      "id": "10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "oracle",
+      "jobId": "oracle.10:summarization:0",
+      "cluster": "beam-10",
+      "diagnosticOnly": true,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "19:temporal_reasoning:1",
+      "questionId": "19:temporal_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "temporal_reasoning",
+      "config": "full",
+      "jobId": "full.19:temporal_reasoning:1",
+      "cluster": "beam-19",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "19:temporal_reasoning:1",
+      "questionId": "19:temporal_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "temporal_reasoning",
+      "config": "lexical-topk",
+      "jobId": "lexical-topk.19:temporal_reasoning:1",
+      "cluster": "beam-19",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "19:temporal_reasoning:1",
+      "questionId": "19:temporal_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "temporal_reasoning",
+      "config": "fabric-x",
+      "jobId": "fabric-x.19:temporal_reasoning:1",
+      "cluster": "beam-19",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "19:temporal_reasoning:1",
+      "questionId": "19:temporal_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "temporal_reasoning",
+      "config": "fabric-x-tools",
+      "jobId": "fabric-x-tools.19:temporal_reasoning:1",
+      "cluster": "beam-19",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "19:temporal_reasoning:1",
+      "questionId": "19:temporal_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "temporal_reasoning",
+      "config": "full-truncated",
+      "jobId": "full-truncated.19:temporal_reasoning:1",
+      "cluster": "beam-19",
+      "diagnosticOnly": false,
+      "outcome": "distinct_bounded_comparator_not_run",
+      "equivalentTo": null
+    }
+  ],
+  "comparisons": [
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": null,
+      "intended": 10,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": "abstention",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": "contradiction_resolution",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": "event_ordering",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": "information_extraction",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": "instruction_following",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": "knowledge_update",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": "multi_session_reasoning",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": "preference_following",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": "summarization",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": "temporal_reasoning",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": null,
+      "intended": 10,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": "abstention",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": "contradiction_resolution",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": "event_ordering",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": "information_extraction",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": "instruction_following",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": "knowledge_update",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": "multi_session_reasoning",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": "preference_following",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": "summarization",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": "temporal_reasoning",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": null,
+      "intended": 10,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": "abstention",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": "contradiction_resolution",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": "event_ordering",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": "information_extraction",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": "instruction_following",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": "knowledge_update",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": "multi_session_reasoning",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": "preference_following",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": "summarization",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": "temporal_reasoning",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    }
+  ],
+  "modelConfiguration": {
+    "provider": "commandcode",
+    "model": "stealth/glyph-cluster:free",
+    "displayName": "Glyph Cluster",
+    "limits": {
+      "contextWindow": 256000
+    },
+    "compat": {
+      "thinkingFamily": "openai_reasoning",
+      "preserveThinking": true,
+      "route": "responses",
+      "pricing_source": "https://commandcode.ai/docs/resources/pricing-limits"
+    },
+    "capabilities": {
+      "input": [
+        "text"
+      ],
+      "output": [
+        "text"
+      ],
+      "reasoning": true,
+      "tools": true,
+      "streaming": true
+    },
+    "cache": {
+      "kind": "implicit"
+    },
+    "parameters": {
+      "temperature": 0,
+      "maxTokens": 8192
+    }
+  },
+  "inputCap": 254976,
+  "judgeConfigurations": {
+    "openrouter/dots-studio/dots-3-note-preview:free": {
+      "provider": "openrouter",
+      "model": "dots-studio/dots-3-note-preview:free",
+      "displayName": "Dots Studio: Dots3-Note Preview (free)",
+      "capabilities": {
+        "input": [
+          "text",
+          "image"
+        ],
+        "output": [
+          "text"
+        ],
+        "tools": true,
+        "reasoning": true,
+        "structuredOutput": "json_schema",
+        "streaming": true
+      },
+      "limits": {
+        "contextWindow": 512000,
+        "maxOutputTokens": 460800
+      },
+      "cost": {
+        "currency": "USD",
+        "input": 0,
+        "output": 0
+      },
+      "cache": {
+        "kind": "implicit"
+      },
+      "compat": {
+        "thinkingFamily": "openai_reasoning",
+        "preserveThinking": true
+      },
+      "parameters": {
+        "maxTokens": 4096,
+        "temperature": 0
+      }
+    },
+    "openrouter/cohere/north-mini-code:free": {
+      "provider": "openrouter",
+      "model": "cohere/north-mini-code:free",
+      "displayName": "Cohere: North Mini Code (free)",
+      "capabilities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ],
+        "tools": true,
+        "reasoning": true,
+        "structuredOutput": false,
+        "streaming": true
+      },
+      "limits": {
+        "contextWindow": 256000,
+        "maxOutputTokens": 64000
+      },
+      "cost": {
+        "currency": "USD",
+        "input": 0,
+        "output": 0
+      },
+      "cache": {
+        "kind": "implicit"
+      },
+      "compat": {
+        "thinkingFamily": "openai_reasoning",
+        "preserveThinking": true
+      },
+      "parameters": {
+        "maxTokens": 4096,
+        "temperature": 0
+      }
+    }
+  },
+  "usage": {
+    "inputTokens": 0,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0,
+    "outputTokens": 0,
+    "accountedInputTokens": 0,
+    "accountedOutputTokens": 0,
+    "usageMissingExchanges": 0,
+    "usageComplete": true,
+    "wireAttempts": 42
+  },
+  "timing": {
+    "wallMs": 18370,
+    "concurrency": 1,
+    "questions": {
+      "n": 42,
+      "wallMs": {
+        "p50": 230.4,
+        "p95": 554.6,
+        "mean": 424.9
+      }
+    },
+    "phases": {
+      "ingestion": {
+        "n": 0,
+        "wallMs": {
+          "p50": null,
+          "p95": null,
+          "mean": null
+        }
+      },
+      "restore": {
+        "n": 0,
+        "wallMs": {
+          "p50": null,
+          "p95": null,
+          "mean": null
+        }
+      },
+      "answer": {
+        "n": 0,
+        "wallMs": {
+          "p50": null,
+          "p95": null,
+          "mean": null
+        }
+      },
+      "evaluation": {
+        "n": 0,
+        "wallMs": {
+          "p50": null,
+          "p95": null,
+          "mean": null
+        }
+      }
+    },
+    "policy": {
+      "answer": "after ingestion, before grading, annotation, final background settlement and disposal",
+      "queueWaitIncluded": false,
+      "retriesAndBackoffIncluded": true
+    },
+    "roles": {
+      "solver": {
+        "calls": 42,
+        "firstByteMs": {
+          "p50": 26.7,
+          "p95": 103.1,
+          "mean": 45.1
+        },
+        "totalMs": {
+          "p50": 26.7,
+          "p95": 103.1,
+          "mean": 45.2
+        }
+      }
+    },
+    "calls": 42
+  },
+  "activeWallMs": 18370,
+  "accounting": {
+    "inputTokens": 0,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0,
+    "outputTokens": 0,
+    "accountedInputTokens": 0,
+    "accountedOutputTokens": 0,
+    "usageMissingExchanges": 0,
+    "usageComplete": true,
+    "wireAttempts": 42
+  },
+  "allocations": [
+    {
+      "provider": "commandcode",
+      "exchange": 1,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 2,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 3,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 4,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 5,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 6,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 7,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 8,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 9,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 10,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 11,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 12,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 13,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 14,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 15,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 16,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 17,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 18,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 19,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 20,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 21,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 22,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 23,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 24,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 25,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 26,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 27,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 28,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 29,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 30,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 31,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 32,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 33,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 34,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 35,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 36,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 37,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 38,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 39,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 40,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 41,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 42,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    }
+  ],
+  "finishedAt": "2026-10-29T02:04:59.182Z"
+}

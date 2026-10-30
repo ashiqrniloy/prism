@@ -1,0 +1,205 @@
+{
+  "seed": "prism-202-memory-bench-longmemeval-m",
+  "draw": "SHA-256(\"prism-202-memory-bench-longmemeval-m:\" + id), ascending inside each ability and partition",
+  "source": "https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/resolve/98d7416c24c778c2fee6e6f3006e7a073259d48f/longmemeval_m_cleaned.json",
+  "datasetSha256": "9d79e5524794a2e6900a3aa9cb7d9152c5a3e8319c9a87c25494ba1eacee495f",
+  "idSource": "longmemeval-s@98d7416c (same question ids and abilities; M extends the haystack)",
+  "strata": {
+    "multi-session": [
+      12,
+      6,
+      6
+    ],
+    "knowledge-update": [
+      8,
+      4,
+      4
+    ],
+    "temporal-reasoning": [
+      8,
+      4,
+      4
+    ],
+    "single-session-user": [
+      6,
+      3,
+      3
+    ],
+    "single-session-assistant": [
+      4,
+      2,
+      2
+    ],
+    "single-session-preference": [
+      4,
+      2,
+      2
+    ],
+    "abstention": [
+      8,
+      4,
+      4
+    ]
+  },
+  "part": "dev | heldout-a | heldout-b; heldout-b is reserved for the single remediation round",
+  "residualPool": {
+    "multi-session": 97,
+    "knowledge-update": 56,
+    "temporal-reasoning": 111,
+    "single-session-user": 52,
+    "single-session-assistant": 48,
+    "single-session-preference": 22,
+    "abstention": 14
+  },
+  "idsHash": "80f5ded49f8ebe8ad09948d879d048849c8a0d6a168f2a532acd6ad9dba4bab5",
+  "abilities": {
+    "dev": {
+      "multi-session": [
+        "9aaed6a3",
+        "gpt4_15e38248",
+        "gpt4_5501fe77",
+        "e831120c",
+        "6456829e",
+        "bb7c3b45",
+        "2311e44b",
+        "d851d5ba",
+        "7024f17c",
+        "88432d0a",
+        "eeda8a6d",
+        "ef66a6e5"
+      ],
+      "knowledge-update": [
+        "6071bd76",
+        "618f13b2",
+        "c6853660",
+        "9bbe84a2",
+        "89941a94",
+        "6aeb4375",
+        "22d2cb42",
+        "ba61f0b9"
+      ],
+      "temporal-reasoning": [
+        "gpt4_fa19884d",
+        "gpt4_1e4a8aeb",
+        "gpt4_78cf46a3",
+        "gpt4_21adecb5",
+        "gpt4_85da3956",
+        "gpt4_45189cb4",
+        "gpt4_93159ced",
+        "gpt4_7ca326fa"
+      ],
+      "single-session-user": [
+        "6b168ec8",
+        "b320f3f8",
+        "1e043500",
+        "36580ce8",
+        "faba32e5",
+        "e01b8e2f"
+      ],
+      "single-session-assistant": [
+        "8464fc84",
+        "fea54f57",
+        "1de5cff2",
+        "1568498a"
+      ],
+      "single-session-preference": [
+        "b6025781",
+        "d24813b1",
+        "1da05512",
+        "32260d93"
+      ],
+      "abstention": [
+        "2698e78f_abs",
+        "80ec1f4f_abs",
+        "19b5f2b3_abs",
+        "982b5123_abs",
+        "a96c20ee_abs",
+        "gpt4_70e84552_abs",
+        "ba358f49_abs",
+        "2133c1b5_abs"
+      ]
+    },
+    "heldout-a": {
+      "multi-session": [
+        "157a136e",
+        "edced276",
+        "00ca467f",
+        "d3ab962e",
+        "4adc0475",
+        "c4a1ceb8"
+      ],
+      "knowledge-update": [
+        "42ec0761",
+        "7401057b",
+        "26bdc477",
+        "184da446"
+      ],
+      "temporal-reasoning": [
+        "370a8ff4",
+        "gpt4_98f46fc6",
+        "gpt4_7a0daae1",
+        "gpt4_6ed717ea"
+      ],
+      "single-session-user": [
+        "311778f1",
+        "60d45044",
+        "8e9d538c"
+      ],
+      "single-session-assistant": [
+        "4baee567",
+        "a40e080f"
+      ],
+      "single-session-preference": [
+        "06f04340",
+        "54026fce"
+      ],
+      "abstention": [
+        "0ddfec37_abs",
+        "15745da0_abs",
+        "f4f1d8a4_abs",
+        "09ba9854_abs"
+      ]
+    },
+    "heldout-b": {
+      "multi-session": [
+        "a9f6b44c",
+        "60bf93ed",
+        "87f22b4a",
+        "77eafa52",
+        "60159905",
+        "1a8a66a6"
+      ],
+      "knowledge-update": [
+        "b01defab",
+        "5831f84d",
+        "2698e78f",
+        "18bc8abd"
+      ],
+      "temporal-reasoning": [
+        "9a707b81",
+        "gpt4_1a1dc16d",
+        "gpt4_a1b77f9c",
+        "b46e15ed"
+      ],
+      "single-session-user": [
+        "86b68151",
+        "58bf7951",
+        "118b2229"
+      ],
+      "single-session-assistant": [
+        "3e321797",
+        "1b9b7252"
+      ],
+      "single-session-preference": [
+        "b0479f84",
+        "505af2f5"
+      ],
+      "abstention": [
+        "f685340e_abs",
+        "gpt4_93159ced_abs",
+        "eeda8a6d_abs",
+        "gpt4_c27434e8_abs"
+      ]
+    }
+  }
+}

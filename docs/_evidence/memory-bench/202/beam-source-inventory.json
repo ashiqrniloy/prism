@@ -1,0 +1,432 @@
+{
+  "kind": "beam-development-source-inventory",
+  "generatedAt": "2026-10-28",
+  "suite": "beam-100k",
+  "subset": "dev",
+  "normalization": {
+    "version": "beam-source-annotations-v1",
+    "sourceHash": "034978f56e5f10463a4923debcb85c6e354aa1e3397b5faf584397e029090985"
+  },
+  "dataset": {
+    "file": "beam-100k.parquet",
+    "format": "parquet",
+    "parquetLiterals": [
+      "probing_questions"
+    ],
+    "bytes": 5429768,
+    "sha256": "c0519be25907005ba873c927c50877471d550873039d96c041554d0075a78ace",
+    "license": "CC BY-SA 4.0",
+    "url": "https://huggingface.co/datasets/Mohammadta/BEAM/resolve/3205395e897e7318c7b094ef4e6047b9b82dbb03/data/100K-00000-of-00001.parquet",
+    "licenseUrl": "https://huggingface.co/datasets/Mohammadta/BEAM/blob/3205395e897e7318c7b094ef4e6047b9b82dbb03/README.md"
+  },
+  "totals": {
+    "questions": 40,
+    "nonAbstention": 36,
+    "references": 120,
+    "resolved": 120,
+    "unknown": 0,
+    "rubrics": 40
+  },
+  "rows": [
+    {
+      "id": "5:abstention:1",
+      "ability": "abstention",
+      "references": 0,
+      "resolved": 0,
+      "unknown": 0,
+      "messageReferences": 0,
+      "roundReferences": 0,
+      "rubricPresent": true
+    },
+    {
+      "id": "9:abstention:1",
+      "ability": "abstention",
+      "references": 0,
+      "resolved": 0,
+      "unknown": 0,
+      "messageReferences": 0,
+      "roundReferences": 0,
+      "rubricPresent": true
+    },
+    {
+      "id": "10:abstention:0",
+      "ability": "abstention",
+      "references": 0,
+      "resolved": 0,
+      "unknown": 0,
+      "messageReferences": 0,
+      "roundReferences": 0,
+      "rubricPresent": true
+    },
+    {
+      "id": "20:abstention:1",
+      "ability": "abstention",
+      "references": 0,
+      "resolved": 0,
+      "unknown": 0,
+      "messageReferences": 0,
+      "roundReferences": 0,
+      "rubricPresent": true
+    },
+    {
+      "id": "8:contradiction_resolution:1",
+      "ability": "contradiction_resolution",
+      "references": 2,
+      "resolved": 2,
+      "unknown": 0,
+      "messageReferences": 2,
+      "roundReferences": 2,
+      "rubricPresent": true
+    },
+    {
+      "id": "3:contradiction_resolution:1",
+      "ability": "contradiction_resolution",
+      "references": 2,
+      "resolved": 2,
+      "unknown": 0,
+      "messageReferences": 2,
+      "roundReferences": 2,
+      "rubricPresent": true
+    },
+    {
+      "id": "7:contradiction_resolution:0",
+      "ability": "contradiction_resolution",
+      "references": 2,
+      "resolved": 2,
+      "unknown": 0,
+      "messageReferences": 2,
+      "roundReferences": 2,
+      "rubricPresent": true
+    },
+    {
+      "id": "9:contradiction_resolution:0",
+      "ability": "contradiction_resolution",
+      "references": 2,
+      "resolved": 2,
+      "unknown": 0,
+      "messageReferences": 2,
+      "roundReferences": 2,
+      "rubricPresent": true
+    },
+    {
+      "id": "13:event_ordering:0",
+      "ability": "event_ordering",
+      "references": 5,
+      "resolved": 5,
+      "unknown": 0,
+      "messageReferences": 5,
+      "roundReferences": 5,
+      "rubricPresent": true
+    },
+    {
+      "id": "5:event_ordering:0",
+      "ability": "event_ordering",
+      "references": 12,
+      "resolved": 12,
+      "unknown": 0,
+      "messageReferences": 12,
+      "roundReferences": 12,
+      "rubricPresent": true
+    },
+    {
+      "id": "1:event_ordering:1",
+      "ability": "event_ordering",
+      "references": 5,
+      "resolved": 5,
+      "unknown": 0,
+      "messageReferences": 4,
+      "roundReferences": 4,
+      "rubricPresent": true
+    },
+    {
+      "id": "1:event_ordering:0",
+      "ability": "event_ordering",
+      "references": 3,
+      "resolved": 3,
+      "unknown": 0,
+      "messageReferences": 3,
+      "roundReferences": 3,
+      "rubricPresent": true
+    },
+    {
+      "id": "16:information_extraction:0",
+      "ability": "information_extraction",
+      "references": 1,
+      "resolved": 1,
+      "unknown": 0,
+      "messageReferences": 1,
+      "roundReferences": 1,
+      "rubricPresent": true
+    },
+    {
+      "id": "16:information_extraction:1",
+      "ability": "information_extraction",
+      "references": 2,
+      "resolved": 2,
+      "unknown": 0,
+      "messageReferences": 2,
+      "roundReferences": 1,
+      "rubricPresent": true
+    },
+    {
+      "id": "9:information_extraction:0",
+      "ability": "information_extraction",
+      "references": 1,
+      "resolved": 1,
+      "unknown": 0,
+      "messageReferences": 1,
+      "roundReferences": 1,
+      "rubricPresent": true
+    },
+    {
+      "id": "19:information_extraction:0",
+      "ability": "information_extraction",
+      "references": 1,
+      "resolved": 1,
+      "unknown": 0,
+      "messageReferences": 1,
+      "roundReferences": 1,
+      "rubricPresent": true
+    },
+    {
+      "id": "18:instruction_following:0",
+      "ability": "instruction_following",
+      "references": 2,
+      "resolved": 2,
+      "unknown": 0,
+      "messageReferences": 2,
+      "roundReferences": 2,
+      "rubricPresent": true
+    },
+    {
+      "id": "9:instruction_following:1",
+      "ability": "instruction_following",
+      "references": 1,
+      "resolved": 1,
+      "unknown": 0,
+      "messageReferences": 1,
+      "roundReferences": 1,
+      "rubricPresent": true
+    },
+    {
+      "id": "13:instruction_following:1",
+      "ability": "instruction_following",
+      "references": 1,
+      "resolved": 1,
+      "unknown": 0,
+      "messageReferences": 1,
+      "roundReferences": 1,
+      "rubricPresent": true
+    },
+    {
+      "id": "8:instruction_following:1",
+      "ability": "instruction_following",
+      "references": 1,
+      "resolved": 1,
+      "unknown": 0,
+      "messageReferences": 1,
+      "roundReferences": 1,
+      "rubricPresent": true
+    },
+    {
+      "id": "4:knowledge_update:0",
+      "ability": "knowledge_update",
+      "references": 2,
+      "resolved": 2,
+      "unknown": 0,
+      "messageReferences": 2,
+      "roundReferences": 2,
+      "rubricPresent": true
+    },
+    {
+      "id": "7:knowledge_update:1",
+      "ability": "knowledge_update",
+      "references": 2,
+      "resolved": 2,
+      "unknown": 0,
+      "messageReferences": 2,
+      "roundReferences": 2,
+      "rubricPresent": true
+    },
+    {
+      "id": "2:knowledge_update:0",
+      "ability": "knowledge_update",
+      "references": 2,
+      "resolved": 2,
+      "unknown": 0,
+      "messageReferences": 2,
+      "roundReferences": 2,
+      "rubricPresent": true
+    },
+    {
+      "id": "17:knowledge_update:1",
+      "ability": "knowledge_update",
+      "references": 2,
+      "resolved": 2,
+      "unknown": 0,
+      "messageReferences": 2,
+      "roundReferences": 2,
+      "rubricPresent": true
+    },
+    {
+      "id": "6:multi_session_reasoning:1",
+      "ability": "multi_session_reasoning",
+      "references": 6,
+      "resolved": 6,
+      "unknown": 0,
+      "messageReferences": 6,
+      "roundReferences": 3,
+      "rubricPresent": true
+    },
+    {
+      "id": "2:multi_session_reasoning:0",
+      "ability": "multi_session_reasoning",
+      "references": 5,
+      "resolved": 5,
+      "unknown": 0,
+      "messageReferences": 5,
+      "roundReferences": 5,
+      "rubricPresent": true
+    },
+    {
+      "id": "9:multi_session_reasoning:1",
+      "ability": "multi_session_reasoning",
+      "references": 4,
+      "resolved": 4,
+      "unknown": 0,
+      "messageReferences": 4,
+      "roundReferences": 2,
+      "rubricPresent": true
+    },
+    {
+      "id": "13:multi_session_reasoning:1",
+      "ability": "multi_session_reasoning",
+      "references": 9,
+      "resolved": 9,
+      "unknown": 0,
+      "messageReferences": 9,
+      "roundReferences": 5,
+      "rubricPresent": true
+    },
+    {
+      "id": "10:preference_following:1",
+      "ability": "preference_following",
+      "references": 3,
+      "resolved": 3,
+      "unknown": 0,
+      "messageReferences": 3,
+      "roundReferences": 3,
+      "rubricPresent": true
+    },
+    {
+      "id": "11:preference_following:0",
+      "ability": "preference_following",
+      "references": 1,
+      "resolved": 1,
+      "unknown": 0,
+      "messageReferences": 1,
+      "roundReferences": 1,
+      "rubricPresent": true
+    },
+    {
+      "id": "18:preference_following:1",
+      "ability": "preference_following",
+      "references": 1,
+      "resolved": 1,
+      "unknown": 0,
+      "messageReferences": 1,
+      "roundReferences": 1,
+      "rubricPresent": true
+    },
+    {
+      "id": "14:preference_following:0",
+      "ability": "preference_following",
+      "references": 1,
+      "resolved": 1,
+      "unknown": 0,
+      "messageReferences": 1,
+      "roundReferences": 1,
+      "rubricPresent": true
+    },
+    {
+      "id": "10:summarization:0",
+      "ability": "summarization",
+      "references": 6,
+      "resolved": 6,
+      "unknown": 0,
+      "messageReferences": 6,
+      "roundReferences": 6,
+      "rubricPresent": true
+    },
+    {
+      "id": "17:summarization:0",
+      "ability": "summarization",
+      "references": 4,
+      "resolved": 4,
+      "unknown": 0,
+      "messageReferences": 4,
+      "roundReferences": 4,
+      "rubricPresent": true
+    },
+    {
+      "id": "1:summarization:1",
+      "ability": "summarization",
+      "references": 11,
+      "resolved": 11,
+      "unknown": 0,
+      "messageReferences": 11,
+      "roundReferences": 6,
+      "rubricPresent": true
+    },
+    {
+      "id": "8:summarization:1",
+      "ability": "summarization",
+      "references": 10,
+      "resolved": 10,
+      "unknown": 0,
+      "messageReferences": 10,
+      "roundReferences": 5,
+      "rubricPresent": true
+    },
+    {
+      "id": "18:temporal_reasoning:0",
+      "ability": "temporal_reasoning",
+      "references": 2,
+      "resolved": 2,
+      "unknown": 0,
+      "messageReferences": 2,
+      "roundReferences": 2,
+      "rubricPresent": true
+    },
+    {
+      "id": "19:temporal_reasoning:1",
+      "ability": "temporal_reasoning",
+      "references": 2,
+      "resolved": 2,
+      "unknown": 0,
+      "messageReferences": 2,
+      "roundReferences": 2,
+      "rubricPresent": true
+    },
+    {
+      "id": "14:temporal_reasoning:1",
+      "ability": "temporal_reasoning",
+      "references": 2,
+      "resolved": 2,
+      "unknown": 0,
+      "messageReferences": 1,
+      "roundReferences": 1,
+      "rubricPresent": true
+    },
+    {
+      "id": "17:temporal_reasoning:0",
+      "ability": "temporal_reasoning",
+      "references": 2,
+      "resolved": 2,
+      "unknown": 0,
+      "messageReferences": 2,
+      "roundReferences": 2,
+      "rubricPresent": true
+    }
+  ]
+}

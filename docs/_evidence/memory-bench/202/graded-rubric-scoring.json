@@ -1,0 +1,1164 @@
+{
+  "kind": "202-graded-rubric-scoring",
+  "date": "2026-10-28",
+  "diagnosticOnly": true,
+  "calibration": "owner-waived; model-assisted audit, not human calibration",
+  "subset": "dev",
+  "answerModel": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+  "judges": [
+    "openrouter/dots-studio/dots-3-note-preview:free",
+    "openrouter/cohere/north-mini-code:free"
+  ],
+  "gradedTemplateVersion": "f7ff5f9c24afd87f0a5e00bd168103019f6e7140d64031f3e5bec264043c24cb",
+  "binaryTemplateVersion": "e3883a2aa5910f76c3f6b377f1758fd4a57ca6dda1449cd86291abd0eea5f306",
+  "upstream": {
+    "repository": "https://github.com/mohammadtavakoli78/BEAM",
+    "commit": "b2da22eac88bb0874c64665f13457eb99835774a",
+    "files": [
+      "src/evaluation/compute_metrics.py",
+      "src/evaluation/report_results.py",
+      "src/prompts.py (unified_llm_judge_base_prompt)"
+    ],
+    "findings": [
+      "Each rubric point is judged separately on a 0 / 0.5 / 1.0 scale and the ability score is the mean over rubric points (llm_judge_score).",
+      "event_ordering also computes Kendall tau-b between rubric order and response order over the union of rubric items and response items, missing items tied last, normalised to (tau+1)/2 as tau_norm, and final_score = tau_norm x F1.",
+      "report_results.py aggregates event_ordering with tau_norm and every other ability with llm_judge_score; upstream's own final_score is computed but not reported."
+    ]
+  },
+  "registration": {
+    "primary": "graded score, mean across judges; summarization = mean of per-point credit, event_ordering = tau_norm x F1 over labelled items",
+    "secondary": "binary panel verdict, computed and reported unchanged",
+    "task18": "robustness-criteria.json and Task 18's frozen binary acceptance are unchanged",
+    "registeredBefore": "any Task 4.6 sizing or 4.7 pilot answer",
+    "disagreement": "spread above 0.2 between judges on one answer"
+  },
+  "deviations": [
+    "One judge call scores all rubric points (summarization) or maps the response's items to rubric numbers (event_ordering) instead of one call per point, to stay inside the free-model call ceiling; tau-b and F1 are computed locally from the mapping.",
+    "Upstream's NaN tau for a response naming no labelled event is the floor (0) here.",
+    "Ordering primary is upstream's tau_norm x F1 rather than the tau_norm that upstream's report prints, because tau_norm alone leaves omissions unpenalised."
+  ],
+  "limits": {
+    "wireAttempts": 400,
+    "inputTokens": 8000000,
+    "outputTokens": 700000,
+    "wallMs": 7200000,
+    "retries429": 4
+  },
+  "cumulativeUsage": {
+    "exchanges": 189,
+    "inputTokens": 370710,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0,
+    "outputTokens": 277570,
+    "costUsd": 0
+  },
+  "rejudge": [
+    {
+      "id": "13:event_ordering:0",
+      "ability": "event_ordering",
+      "config": "evidence-only (oracle)",
+      "graded": 1,
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 1,
+        "openrouter/cohere/north-mini-code:free": 1
+      },
+      "spread": 0,
+      "disagreement": false,
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "ordering": {
+        "openrouter/dots-studio/dots-3-note-preview:free": {
+          "tauNorm": 1,
+          "f1": 1,
+          "matched": 5
+        },
+        "openrouter/cohere/north-mini-code:free": {
+          "tauNorm": 1,
+          "f1": 1,
+          "matched": 5
+        }
+      }
+    },
+    {
+      "id": "13:event_ordering:0",
+      "ability": "event_ordering",
+      "config": "complete-history",
+      "graded": 0.1233,
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0.20000000000000004,
+        "openrouter/cohere/north-mini-code:free": 0.046666666666666676
+      },
+      "spread": 0.1533,
+      "disagreement": false,
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "ordering": {
+        "openrouter/dots-studio/dots-3-note-preview:free": {
+          "tauNorm": 0.5,
+          "f1": 0.4000000000000001,
+          "matched": 2
+        },
+        "openrouter/cohere/north-mini-code:free": {
+          "tauNorm": 0.23333333333333334,
+          "f1": 0.20000000000000004,
+          "matched": 1
+        }
+      }
+    },
+    {
+      "id": "5:event_ordering:0",
+      "ability": "event_ordering",
+      "config": "evidence-only (oracle)",
+      "graded": 0.5952,
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0.5952380952380952,
+        "openrouter/cohere/north-mini-code:free": 0.5952380952380952
+      },
+      "spread": 0,
+      "disagreement": false,
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "ordering": {
+        "openrouter/dots-studio/dots-3-note-preview:free": {
+          "tauNorm": 0.7142857142857143,
+          "f1": 0.8333333333333334,
+          "matched": 5
+        },
+        "openrouter/cohere/north-mini-code:free": {
+          "tauNorm": 0.7142857142857143,
+          "f1": 0.8333333333333334,
+          "matched": 5
+        }
+      }
+    },
+    {
+      "id": "5:event_ordering:0",
+      "ability": "event_ordering",
+      "config": "complete-history",
+      "graded": 0.2955,
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0.29545454545454547,
+        "openrouter/cohere/north-mini-code:free": 0.29545454545454547
+      },
+      "spread": 0,
+      "disagreement": false,
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "ordering": {
+        "openrouter/dots-studio/dots-3-note-preview:free": {
+          "tauNorm": 0.5909090909090909,
+          "f1": 0.5,
+          "matched": 3
+        },
+        "openrouter/cohere/north-mini-code:free": {
+          "tauNorm": 0.5909090909090909,
+          "f1": 0.5,
+          "matched": 3
+        }
+      }
+    },
+    {
+      "id": "1:event_ordering:1",
+      "ability": "event_ordering",
+      "config": "evidence-only (oracle)",
+      "graded": 1,
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 1,
+        "openrouter/cohere/north-mini-code:free": 1
+      },
+      "spread": 0,
+      "disagreement": false,
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "ordering": {
+        "openrouter/dots-studio/dots-3-note-preview:free": {
+          "tauNorm": 1,
+          "f1": 1,
+          "matched": 5
+        },
+        "openrouter/cohere/north-mini-code:free": {
+          "tauNorm": 1,
+          "f1": 1,
+          "matched": 5
+        }
+      }
+    },
+    {
+      "id": "1:event_ordering:1",
+      "ability": "event_ordering",
+      "config": "complete-history",
+      "graded": 0.21,
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0.195,
+        "openrouter/cohere/north-mini-code:free": 0.22499999999999998
+      },
+      "spread": 0.03,
+      "disagreement": false,
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "ordering": {
+        "openrouter/dots-studio/dots-3-note-preview:free": {
+          "tauNorm": 0.325,
+          "f1": 0.6,
+          "matched": 3
+        },
+        "openrouter/cohere/north-mini-code:free": {
+          "tauNorm": 0.375,
+          "f1": 0.6,
+          "matched": 3
+        }
+      }
+    },
+    {
+      "id": "1:event_ordering:0",
+      "ability": "event_ordering",
+      "config": "evidence-only (oracle)",
+      "graded": 1,
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 1,
+        "openrouter/cohere/north-mini-code:free": 1
+      },
+      "spread": 0,
+      "disagreement": false,
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "ordering": {
+        "openrouter/dots-studio/dots-3-note-preview:free": {
+          "tauNorm": 1,
+          "f1": 1,
+          "matched": 3
+        },
+        "openrouter/cohere/north-mini-code:free": {
+          "tauNorm": 1,
+          "f1": 1,
+          "matched": 3
+        }
+      }
+    },
+    {
+      "id": "1:event_ordering:0",
+      "ability": "event_ordering",
+      "config": "complete-history",
+      "graded": 0.1204,
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0.22222222222222224,
+        "openrouter/cohere/north-mini-code:free": 0.018518518518518524
+      },
+      "spread": 0.2037,
+      "disagreement": true,
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "ordering": {
+        "openrouter/dots-studio/dots-3-note-preview:free": {
+          "tauNorm": 0.33333333333333337,
+          "f1": 0.6666666666666666,
+          "matched": 2
+        },
+        "openrouter/cohere/north-mini-code:free": {
+          "tauNorm": 0.05555555555555558,
+          "f1": 0.3333333333333333,
+          "matched": 1
+        }
+      }
+    },
+    {
+      "id": "10:summarization:0",
+      "ability": "summarization",
+      "config": "evidence-only (oracle)",
+      "graded": 0.65,
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0.6,
+        "openrouter/cohere/north-mini-code:free": 0.7
+      },
+      "spread": 0.1,
+      "disagreement": false,
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      }
+    },
+    {
+      "id": "10:summarization:0",
+      "ability": "summarization",
+      "config": "complete-history",
+      "graded": 0.35,
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0.6,
+        "openrouter/cohere/north-mini-code:free": 0.1
+      },
+      "spread": 0.5,
+      "disagreement": true,
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      }
+    },
+    {
+      "id": "17:summarization:0",
+      "ability": "summarization",
+      "config": "evidence-only (oracle)",
+      "graded": 0.8,
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0.9,
+        "openrouter/cohere/north-mini-code:free": 0.7
+      },
+      "spread": 0.2,
+      "disagreement": true,
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      }
+    },
+    {
+      "id": "17:summarization:0",
+      "ability": "summarization",
+      "config": "complete-history",
+      "graded": 0.6,
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0.5,
+        "openrouter/cohere/north-mini-code:free": 0.7
+      },
+      "spread": 0.2,
+      "disagreement": false,
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      }
+    },
+    {
+      "id": "1:summarization:1",
+      "ability": "summarization",
+      "config": "evidence-only (oracle)",
+      "graded": 0.9,
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0.9,
+        "openrouter/cohere/north-mini-code:free": 0.9
+      },
+      "spread": 0,
+      "disagreement": false,
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      }
+    },
+    {
+      "id": "1:summarization:1",
+      "ability": "summarization",
+      "config": "complete-history",
+      "graded": 0.1,
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0.1,
+        "openrouter/cohere/north-mini-code:free": 0.1
+      },
+      "spread": 0,
+      "disagreement": false,
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      }
+    },
+    {
+      "id": "8:summarization:1",
+      "ability": "summarization",
+      "config": "evidence-only (oracle)",
+      "graded": 1,
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 1,
+        "openrouter/cohere/north-mini-code:free": 1
+      },
+      "spread": 0,
+      "disagreement": false,
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      }
+    },
+    {
+      "id": "8:summarization:1",
+      "ability": "summarization",
+      "config": "complete-history",
+      "graded": 0.45,
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0.5,
+        "openrouter/cohere/north-mini-code:free": 0.4
+      },
+      "spread": 0.1,
+      "disagreement": false,
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      }
+    }
+  ],
+  "perAbility": {
+    "event_ordering": {
+      "oracleCeiling": {
+        "n": 4,
+        "gradedMean": 0.8988,
+        "binaryPanelCorrect": 0,
+        "disagreements": 0
+      },
+      "completeHistory": {
+        "n": 4,
+        "gradedMean": 0.1873,
+        "binaryPanelCorrect": 0,
+        "disagreements": 1
+      }
+    },
+    "summarization": {
+      "oracleCeiling": {
+        "n": 4,
+        "gradedMean": 0.8375,
+        "binaryPanelCorrect": 2,
+        "disagreements": 1
+      },
+      "completeHistory": {
+        "n": 4,
+        "gradedMean": 0.375,
+        "binaryPanelCorrect": 0,
+        "disagreements": 1
+      }
+    }
+  },
+  "controls": [
+    {
+      "id": "13:event_ordering:0",
+      "variant": "gold",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 1,
+        "openrouter/cohere/north-mini-code:free": 1
+      },
+      "graded": 1,
+      "disagreement": false
+    },
+    {
+      "id": "13:event_ordering:0",
+      "variant": "minusOne",
+      "expected": {
+        "binary": "no",
+        "graded": 0.7111
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0.7111,
+        "openrouter/cohere/north-mini-code:free": 0.7111
+      },
+      "graded": 0.7111,
+      "disagreement": false
+    },
+    {
+      "id": "13:event_ordering:0",
+      "variant": "swap",
+      "expected": {
+        "binary": "no",
+        "graded": 0.9
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0.9,
+        "openrouter/cohere/north-mini-code:free": 0.9
+      },
+      "graded": 0.9,
+      "disagreement": false
+    },
+    {
+      "id": "13:event_ordering:0",
+      "variant": "reversed",
+      "expected": {
+        "binary": "no",
+        "graded": 0
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0,
+        "openrouter/cohere/north-mini-code:free": 0
+      },
+      "graded": 0,
+      "disagreement": false
+    },
+    {
+      "id": "13:event_ordering:0",
+      "variant": "paraphrase",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 1,
+        "openrouter/cohere/north-mini-code:free": 1
+      },
+      "graded": 1,
+      "disagreement": false
+    },
+    {
+      "id": "5:event_ordering:0",
+      "variant": "gold",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 1,
+        "openrouter/cohere/north-mini-code:free": 1
+      },
+      "graded": 1,
+      "disagreement": false
+    },
+    {
+      "id": "5:event_ordering:0",
+      "variant": "minusOne",
+      "expected": {
+        "binary": "no",
+        "graded": 0.7879
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0.7879,
+        "openrouter/cohere/north-mini-code:free": 0.5411
+      },
+      "graded": 0.6645,
+      "disagreement": true
+    },
+    {
+      "id": "5:event_ordering:0",
+      "variant": "swap",
+      "expected": {
+        "binary": "no",
+        "graded": 0.9333
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0.9333,
+        "openrouter/cohere/north-mini-code:free": 0.9333
+      },
+      "graded": 0.9333,
+      "disagreement": false
+    },
+    {
+      "id": "5:event_ordering:0",
+      "variant": "reversed",
+      "expected": {
+        "binary": "no",
+        "graded": 0
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0,
+        "openrouter/cohere/north-mini-code:free": 0
+      },
+      "graded": 0,
+      "disagreement": false
+    },
+    {
+      "id": "5:event_ordering:0",
+      "variant": "paraphrase",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 1,
+        "openrouter/cohere/north-mini-code:free": 1
+      },
+      "graded": 1,
+      "disagreement": false
+    },
+    {
+      "id": "1:event_ordering:1",
+      "variant": "gold",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 1,
+        "openrouter/cohere/north-mini-code:free": 1
+      },
+      "graded": 1,
+      "disagreement": false
+    },
+    {
+      "id": "1:event_ordering:1",
+      "variant": "minusOne",
+      "expected": {
+        "binary": "no",
+        "graded": 0.7111
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0.7111,
+        "openrouter/cohere/north-mini-code:free": 0.7111
+      },
+      "graded": 0.7111,
+      "disagreement": false
+    },
+    {
+      "id": "1:event_ordering:1",
+      "variant": "swap",
+      "expected": {
+        "binary": "no",
+        "graded": 0.9
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0.9,
+        "openrouter/cohere/north-mini-code:free": 0.9
+      },
+      "graded": 0.9,
+      "disagreement": false
+    },
+    {
+      "id": "1:event_ordering:1",
+      "variant": "reversed",
+      "expected": {
+        "binary": "no",
+        "graded": 0
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0,
+        "openrouter/cohere/north-mini-code:free": 0
+      },
+      "graded": 0,
+      "disagreement": false
+    },
+    {
+      "id": "1:event_ordering:1",
+      "variant": "paraphrase",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 1,
+        "openrouter/cohere/north-mini-code:free": 1
+      },
+      "graded": 1,
+      "disagreement": false
+    },
+    {
+      "id": "1:event_ordering:0",
+      "variant": "gold",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 1,
+        "openrouter/cohere/north-mini-code:free": 1
+      },
+      "graded": 1,
+      "disagreement": false
+    },
+    {
+      "id": "1:event_ordering:0",
+      "variant": "minusOne",
+      "expected": {
+        "binary": "no",
+        "graded": 0.5333
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0.5333,
+        "openrouter/cohere/north-mini-code:free": 0.5333
+      },
+      "graded": 0.5333,
+      "disagreement": false
+    },
+    {
+      "id": "1:event_ordering:0",
+      "variant": "swap",
+      "expected": {
+        "binary": "no",
+        "graded": 0.6667
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0.6667,
+        "openrouter/cohere/north-mini-code:free": 0.6667
+      },
+      "graded": 0.6667,
+      "disagreement": false
+    },
+    {
+      "id": "1:event_ordering:0",
+      "variant": "reversed",
+      "expected": {
+        "binary": "no",
+        "graded": 0
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0,
+        "openrouter/cohere/north-mini-code:free": 0
+      },
+      "graded": 0,
+      "disagreement": false
+    },
+    {
+      "id": "1:event_ordering:0",
+      "variant": "paraphrase",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 1,
+        "openrouter/cohere/north-mini-code:free": 1
+      },
+      "graded": 1,
+      "disagreement": false
+    },
+    {
+      "id": "10:summarization:0",
+      "variant": "gold",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 1,
+        "openrouter/cohere/north-mini-code:free": 1
+      },
+      "graded": 1,
+      "disagreement": false
+    },
+    {
+      "id": "10:summarization:0",
+      "variant": "minusOne",
+      "expected": {
+        "binary": "no",
+        "graded": 0.8
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0.8,
+        "openrouter/cohere/north-mini-code:free": 0.8
+      },
+      "graded": 0.8,
+      "disagreement": false
+    },
+    {
+      "id": "10:summarization:0",
+      "variant": "extra",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 1,
+        "openrouter/cohere/north-mini-code:free": 1
+      },
+      "graded": 1,
+      "disagreement": false
+    },
+    {
+      "id": "10:summarization:0",
+      "variant": "paraphrase",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 1,
+        "openrouter/cohere/north-mini-code:free": 1
+      },
+      "graded": 1,
+      "disagreement": false
+    },
+    {
+      "id": "17:summarization:0",
+      "variant": "gold",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 1,
+        "openrouter/cohere/north-mini-code:free": 1
+      },
+      "graded": 1,
+      "disagreement": false
+    },
+    {
+      "id": "17:summarization:0",
+      "variant": "minusOne",
+      "expected": {
+        "binary": "no",
+        "graded": 0.8
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0.8,
+        "openrouter/cohere/north-mini-code:free": 0.8
+      },
+      "graded": 0.8,
+      "disagreement": false
+    },
+    {
+      "id": "17:summarization:0",
+      "variant": "extra",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 1,
+        "openrouter/cohere/north-mini-code:free": 1
+      },
+      "graded": 1,
+      "disagreement": false
+    },
+    {
+      "id": "17:summarization:0",
+      "variant": "paraphrase",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 1,
+        "openrouter/cohere/north-mini-code:free": 1
+      },
+      "graded": 1,
+      "disagreement": false
+    },
+    {
+      "id": "1:summarization:1",
+      "variant": "gold",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 1,
+        "openrouter/cohere/north-mini-code:free": 1
+      },
+      "graded": 1,
+      "disagreement": false
+    },
+    {
+      "id": "1:summarization:1",
+      "variant": "minusOne",
+      "expected": {
+        "binary": "no",
+        "graded": 0.8
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0.8,
+        "openrouter/cohere/north-mini-code:free": 0.8
+      },
+      "graded": 0.8,
+      "disagreement": false
+    },
+    {
+      "id": "1:summarization:1",
+      "variant": "extra",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 1,
+        "openrouter/cohere/north-mini-code:free": 1
+      },
+      "graded": 1,
+      "disagreement": false
+    },
+    {
+      "id": "1:summarization:1",
+      "variant": "paraphrase",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 1,
+        "openrouter/cohere/north-mini-code:free": 1
+      },
+      "graded": 1,
+      "disagreement": false
+    },
+    {
+      "id": "8:summarization:1",
+      "variant": "gold",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 1,
+        "openrouter/cohere/north-mini-code:free": 0.9
+      },
+      "graded": 0.95,
+      "disagreement": false
+    },
+    {
+      "id": "8:summarization:1",
+      "variant": "minusOne",
+      "expected": {
+        "binary": "no",
+        "graded": 0.8
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0.8,
+        "openrouter/cohere/north-mini-code:free": 0.8
+      },
+      "graded": 0.8,
+      "disagreement": false
+    },
+    {
+      "id": "8:summarization:1",
+      "variant": "extra",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 1,
+        "openrouter/cohere/north-mini-code:free": 1
+      },
+      "graded": 1,
+      "disagreement": false
+    },
+    {
+      "id": "8:summarization:1",
+      "variant": "paraphrase",
+      "expected": {
+        "binary": "yes",
+        "graded": 1
+      },
+      "binary": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "judgeGraded": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 1,
+        "openrouter/cohere/north-mini-code:free": 1
+      },
+      "graded": 1,
+      "disagreement": false
+    }
+  ],
+  "controlMismatches": [
+    {
+      "id": "5:event_ordering:0",
+      "variant": "minusOne",
+      "judge": "openrouter/cohere/north-mini-code:free",
+      "metric": "graded",
+      "got": 0.5410727405360969,
+      "want": 0.7878787878787878
+    }
+  ],
+  "claimClassification": {
+    "method": "rule triage over the full conversation, ordering and flagged claims reviewed by hand",
+    "counts": {
+      "13:event_ordering:0": {
+        "supported-labelled": 2,
+        "correct-unlabelled": 2,
+        "unsupported": 1
+      },
+      "5:event_ordering:0": {
+        "supported-labelled": 3,
+        "correct-unlabelled": 3
+      },
+      "1:event_ordering:1": {
+        "correct-unlabelled": 5
+      },
+      "1:event_ordering:0": {
+        "correct-unlabelled": 3
+      },
+      "10:summarization:0": {
+        "supported-labelled": 4,
+        "correct-unlabelled": 20,
+        "synthesis": 9
+      },
+      "17:summarization:0": {
+        "synthesis": 14,
+        "correct-unlabelled": 20,
+        "supported-labelled": 2
+      },
+      "1:summarization:1": {
+        "synthesis": 19,
+        "correct-unlabelled": 29,
+        "supported-labelled": 11,
+        "unsupported": 3
+      },
+      "8:summarization:1": {
+        "supported-labelled": 15,
+        "correct-unlabelled": 48,
+        "synthesis": 14,
+        "unsupported": 1
+      }
+    },
+    "basis": {
+      "reviewed": 20,
+      "triage": 150,
+      "review-rule": 58
+    },
+    "supersessionRisk": 20,
+    "reviewed": 20
+  },
+  "reanswer": [
+    {
+      "id": "13:event_ordering:0",
+      "ability": "event_ordering",
+      "answerKey": "1e4e54dfee200828601e195a9aaccd73d56ad532c1f22e1cd7644e6a0934842c",
+      "outcome": "run_limit",
+      "empty": true
+    },
+    {
+      "id": "5:event_ordering:0",
+      "ability": "event_ordering",
+      "answerKey": "aa47566d9fe607fcaf990dd4217d7161a8d1ac292350f22afdc6d8a52e0bd57e",
+      "outcome": "run_limit",
+      "empty": true
+    }
+  ]
+}

@@ -26,6 +26,8 @@ export interface JsonSchema {
     readonly title?: string;
     /** The field holds a credential: only an `env:` or `keyring:` ref is accepted, never a literal. */
     readonly "x-prism-secret"?: boolean;
+    /** Documentation only: `contract` is frozen at API level 1, `tuning` may change in a minor version. Ignored by validation. */
+    readonly "x-prism-stability"?: "contract" | "tuning";
 }
 export type SchemaErrorRule = "type" | "enum" | "const" | "range" | "length" | "pattern" | "required" | "shape" | "unknown_key" | "secret" | "not_json";
 /** One violation. The message names the rule, never the value. */

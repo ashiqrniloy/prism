@@ -240,12 +240,7 @@ describe("extractor budget, reasoning level and truncation (plan 188.10 Task 5)"
     const existing = [{ id: "a1", scope: "project" as const, text: "Existing note." }];
     const segments = [{ id: "s1", goal: "Ship the extractor budget.", decision: "Cap at the model limit." }];
     const prompt = buildConsolidationExtractPrompt({ candidates, existing, segments, maxNotes: 48 });
-    const schema = consolidationExtractSchema({
-      candidateIds: candidates.map((_, index) => `c${index + 1}`),
-      existingIds: ["a1"],
-      segmentIds: ["s1"],
-      maxNotes: 48,
-    });
+    const schema = consolidationExtractSchema({ maxNotes: 48 });
     const bytes = (value: unknown): number => Buffer.byteLength(JSON.stringify(value));
     assert.deepEqual(
       {
@@ -255,7 +250,7 @@ describe("extractor budget, reasoning level and truncation (plan 188.10 Task 5)"
         candidates: bytes(prompt.candidates),
         segments: bytes(prompt.segments),
       },
-      { system: 3464, schema: 1619, existing: 55, candidates: 196, segments: 86 },
+      { system: 3464, schema: 1567, existing: 55, candidates: 196, segments: 86 },
     );
   });
 });

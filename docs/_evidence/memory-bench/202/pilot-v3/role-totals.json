@@ -1,0 +1,24 @@
+{
+  "manifestHash": "f1180a3d602eb174778cc18c2cb9145e9bafae08a74ef419c301170d9702d84e",
+  "totals": {
+    "product": {
+      "inputTokens": 1730792,
+      "outputTokens": 18487,
+      "cacheReadTokens": 397440,
+      "cacheWriteTokens": 0,
+      "wireAttempts": 59
+    },
+    "evaluation": {
+      "inputTokens": 84201,
+      "outputTokens": 154148,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "wireAttempts": 115
+    }
+  },
+  "costUsd": {
+    "product": 0,
+    "evaluation": 0
+  },
+  "note": "Declared OpenRouter :free routes only; checkpoint phases separate ingestion, answer and evaluation; no injection-utility annotation calls."
+}

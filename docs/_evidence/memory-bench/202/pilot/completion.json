@@ -1,0 +1,55 @@
+{
+  "manifestHash": "e8e97d0090e0cb52014e1c7ebd2cfb574b2d98b6a539f66a8c79b2d4a0e3bab1",
+  "limits": {
+    "wireAttempts": 48,
+    "inputTokens": 2000000,
+    "outputTokens": 100000,
+    "wallMs": 1800000,
+    "retries429": 0
+  },
+  "usage": {
+    "wireAttempts": 11,
+    "inputTokens": 232530,
+    "outputTokens": 2193
+  },
+  "results": [
+    {
+      "model": "opencode-go/beam-free",
+      "id": "19:temporal_reasoning:1",
+      "outcome": "run_limit",
+      "turns": 8,
+      "toolCalls": 8,
+      "recallCalls": 9,
+      "turnTrace": [
+        "memory.recall",
+        "memory.recall",
+        "memory.recall",
+        "memory.recall",
+        "memory.recall",
+        "memory.recall",
+        "memory.recall",
+        "memory.recall"
+      ],
+      "answerRetries": 0,
+      "usage": {
+        "inputTokens": 232530,
+        "cacheReadTokens": 54656,
+        "cacheWriteTokens": 0,
+        "outputTokens": 2193,
+        "wireAttempts": 8
+      }
+    },
+    {
+      "model": "opencode-go/minimax-m3",
+      "id": "19:temporal_reasoning:1",
+      "outcome": "execution_error",
+      "usage": {
+        "inputTokens": 0,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "outputTokens": 0,
+        "wireAttempts": 3
+      }
+    }
+  ]
+}

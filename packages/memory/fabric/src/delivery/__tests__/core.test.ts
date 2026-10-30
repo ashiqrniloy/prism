@@ -21,8 +21,8 @@ import { createMemoryVectorStore, type VectorStore } from "@arnilo/prism-memory-
 import { resolveLifecycleConfig } from "../../config.js";
 import { createFabricContext } from "../../context.js";
 import { createMemory, createMemoryFabric, createMemoryWorkingStore } from "../../index.js";
-import { resolvePromoteConfig } from "../../promote.js";
 import { createFabricLifecycle } from "../../lifecycle/index.js";
+import { resolvePromoteConfig } from "../../promote.js";
 import { encodeMemoryNoteMetadata, type MemoryNoteMetadata } from "../../types.js";
 import {
   type CreateFabricCoreOptions,
@@ -155,6 +155,8 @@ describe("pinned core (plan 188.5 Task 1)", () => {
     let content = (await coreBlock(pinnedHarness.projection))!.content;
     assert.ok(content.indexOf(strong.id) < content.indexOf(plain.id));
     await pinnedHarness.fabric.pin(plain.id);
+    assert.equal((await coreBlock(pinnedHarness.projection))!.content, content, "a pin waits for the next epoch");
+    pinnedHarness.projection.refresh();
     content = (await coreBlock(pinnedHarness.projection))!.content;
     assert.ok(content.indexOf(plain.id) < content.indexOf(strong.id), "a pin rebuilds the core");
 
@@ -247,6 +249,7 @@ describe("pinned core (plan 188.5 Task 1)", () => {
 
       await writeFile(file, "my own core notes\n");
       await made.fabric.remember({ kind: "fact", content: "billing uses stripe" });
+      made.projection.refresh();
       assert.match((await coreBlock(made.projection))!.content, /billing uses stripe/);
       const rewritten = await readFile(file, "utf8");
       assert.match(rewritten, /billing uses stripe/);

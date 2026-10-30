@@ -11,7 +11,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import type { ContextBlock, ContextDraft, HookContext, SessionEntry, ToolExecutionContext, ToolResult } from "@arnilo/prism";
+import type { ContextDraft, HookContext, SessionEntry, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { createHashEmbedder } from "@arnilo/prism-memory-core";
 import { createMarkdownMemoryStores } from "@arnilo/prism-memory-core/fabric";
 
@@ -45,14 +45,6 @@ const toolContext = { sessionId: "s", runId: "r", toolCallId: "t" } as ToolExecu
 
 function textOf(result: ToolResult): string {
   return (result.content ?? []).map((block) => (block.type === "text" ? block.text : "")).join("");
-}
-
-/** The untrusted envelope keys RAG stamps and the fabric reuses. */
-function assertUntrusted(block: ContextBlock | undefined): void {
-  assert.ok(block, "block is present");
-  assert.equal(block.metadata?.untrusted, true);
-  assert.equal(block.metadata?.inert, true);
-  assert.equal(block.metadata?.injectionCapable, true);
 }
 
 async function withMarkdownFabric(
@@ -179,12 +171,14 @@ describe("fabric provenance (plan 188.1 Task 6)", () => {
     await fabric.remember({ kind: "fact", content: "deploys use canaries" });
     const draft: ContextDraft = { messages: [userEntry("deploys use canaries").message!] };
     const built = await createFabricContext(memory, fabric.recall, { minSimilarity: 0 }).build(draft, hookContext("deploys use canaries"));
-    assertUntrusted((built.context ?? []).find((block) => block.metadata?.source === "fabric-working"));
     // The semantic block rides in the tail message's `contextBlocks`, which carry the envelope keys.
     const tail = built.messages.flatMap((message) => {
       const blocks = message.metadata?.contextBlocks;
       return Array.isArray(blocks) ? (blocks as Record<string, unknown>[]) : [];
     });
+    const working = tail.find((entry) => entry.source === "fabric-working");
+    assert.ok(working);
+    for (const key of ["untrusted", "inert", "injectionCapable"]) assert.equal(working[key], true);
     const semantic = tail.find((entry) => entry.source === "fabric-semantic");
     assert.ok(semantic, "the semantic tail block is present");
     assert.equal(semantic.untrusted, true);

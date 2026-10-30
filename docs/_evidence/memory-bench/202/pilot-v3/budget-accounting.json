@@ -1,0 +1,80 @@
+{
+  "kind": "202-pilot-budget-accounting",
+  "originalDeclaredLimits": {
+    "wireAttempts": 300,
+    "inputTokens": 8000000,
+    "outputTokens": 700000,
+    "activeAttemptMinutes": 120
+  },
+  "attempts": [
+    {
+      "attempt": "superseded-v1",
+      "startedAt": "2026-10-28T13:58:53.091Z",
+      "endedAt": "2026-10-28T14:18:48.355Z",
+      "journalStatus": "failed",
+      "usageComplete": false,
+      "reservation": 8500000,
+      "charge": 8500000,
+      "reportedInputTokens": 858242,
+      "reportedOutputTokens": 81736,
+      "exchanges": 72,
+      "missingUsageExchanges": 2
+    },
+    {
+      "attempt": "v2",
+      "startedAt": "2026-10-28T14:22:54.696Z",
+      "endedAt": "2026-10-28T14:37:32.799Z",
+      "journalStatus": "failed",
+      "usageComplete": false,
+      "reservation": 7641758,
+      "charge": 7641758,
+      "reportedInputTokens": 504867,
+      "reportedOutputTokens": 61817,
+      "exchanges": 53,
+      "missingUsageExchanges": 5
+    },
+    {
+      "attempt": "v3-continuation",
+      "startedAt": "2026-10-28T14:40:10.780Z",
+      "endedAt": "2026-10-28T15:18:18.497Z",
+      "journalStatus": "failed",
+      "usageComplete": false,
+      "reservation": 7136891,
+      "charge": 7136891,
+      "reportedInputTokens": 1300854,
+      "reportedOutputTokens": 102167,
+      "exchanges": 117,
+      "missingUsageExchanges": 4
+    },
+    {
+      "attempt": "scoring-completion",
+      "startedAt": "2026-10-28T18:52:37.126Z",
+      "endedAt": "2026-10-28T18:54:07.281Z",
+      "journalStatus": "completed",
+      "usageComplete": false,
+      "reservation": 750000,
+      "charge": 750000,
+      "reportedInputTokens": 9272,
+      "reportedOutputTokens": 8651,
+      "exchanges": 4,
+      "missingUsageExchanges": 0
+    }
+  ],
+  "totals": {
+    "wireAttempts": 246,
+    "reportedInputTokens": 2673235,
+    "reportedOutputTokens": 254371,
+    "missingUsageExchanges": 11,
+    "activeAttemptMinutes": 74.18721666666667,
+    "elapsedMinutesIncludingEngineeringAndProbe": 295.2365,
+    "reservationCharge": 24028649
+  },
+  "missingUsagePolicy": "Reported tokens are lower bounds. All incomplete attempts retain their full journal reservations; no refund or complete billing claim. The existing 250k request planning bound gives a sensitivity envelope, not recovered provider usage. Free route pricing is $0; no paid-model fallback. Historical subscription probe is separate in ../pilot/completion.json.",
+  "planningEnvelope": {
+    "inputTokens": 5423235,
+    "outputTokens": 344483,
+    "requestInputBound": 250000,
+    "requestOutputBound": 8192
+  },
+  "limitation": "The aggregate reservation charge exceeds the original token ceiling because incomplete attempts retain full allocations; measured lower bounds and the planning envelope must not be called a fully reconciled hard-token proof."
+}

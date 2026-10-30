@@ -1,0 +1,2127 @@
+{
+  "schema": "memory-prefix-probe-v1",
+  "fixture": 1,
+  "networkCalls": 0,
+  "productHash": "31b4c19ab7f955794f3161e798380e8660b826c14e3e925f0fb9875b227509f1",
+  "supportingSourceHash": "93f6d86f9ee51f8441f5f34d3ff2b41ccf8059b49576902c206cb686bf0df3f7",
+  "probeSha256": "f0ca01f780de02780ae6080566cfe4ff0fe7048acec72417af5e9cf84e87588e",
+  "provenance": [
+    {
+      "path": "packages/memory/fabric/src/context.ts",
+      "sha256": "61da9145b09481fbf679495dfd70a92915db9895d1b81155691d2aad3bf1912a"
+    },
+    {
+      "path": "packages/memory/fabric/src/create.ts",
+      "sha256": "5feed77efb88a7738804e0d3f7a9640c33d73c75852e0abd44754bbcfe8d065d"
+    },
+    {
+      "path": "src/ids.ts",
+      "sha256": "dc0aa6906d241369da11d4a2e4c364895f4627e935069c97feab8f35328e4158"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "exchange-archive",
+      "requests": [
+        {
+          "request": 1,
+          "turn": 1,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 4,
+          "priorTranscriptEnd": -1,
+          "changed": [],
+          "writes": []
+        },
+        {
+          "request": 2,
+          "turn": 2,
+          "prefixSha256": "ce9077f9c3dd6e1fc59672b05986698e9fe4aa13b05b73de80ca7e8a977143a8",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "0fdd3ccca3ef074194095e5127e055ddf8d566d21bce80146ff88657ae248772",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 611,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 6,
+          "priorTranscriptEnd": 5,
+          "changed": [
+            "prefix",
+            "fabric-directory"
+          ],
+          "writes": [
+            "fabric.lifecycle",
+            "fabric.exchange"
+          ]
+        },
+        {
+          "request": 3,
+          "turn": 3,
+          "prefixSha256": "2cd12b9ce51e3fa9d16e3c4a63e97d1d0a5ed8caeacdad0817ab30c28e44821c",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "ae0a723b7388647cf5646b3453c62d3d4fe2927eab41d4be287f71a10c28f823",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 618,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 8,
+          "priorTranscriptEnd": 7,
+          "changed": [
+            "prefix",
+            "fabric-directory"
+          ],
+          "writes": [
+            "fabric.lifecycle",
+            "fabric.exchange"
+          ]
+        },
+        {
+          "request": 4,
+          "turn": 4,
+          "prefixSha256": "92bdfb87d4cf6e6cb8dd69b107ee939f3427cf8e7ad6a391bbc6eab0396c9549",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "5c7c6b10997e9cfc81fad4c564993470d1291eba885885fd7803c2adafc0227b",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 625,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 10,
+          "priorTranscriptEnd": 9,
+          "changed": [
+            "prefix",
+            "fabric-directory"
+          ],
+          "writes": [
+            "fabric.lifecycle",
+            "fabric.exchange"
+          ]
+        },
+        {
+          "request": 5,
+          "turn": 5,
+          "prefixSha256": "ee5b51433657233b6af74af4facf0ffa6c2eca2c3ac4f8c03590f8e2871f4135",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "8dfea33e0c5fab8f855a2eb3715e55484eb02b7f19a8306affdd9aff08150395",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 632,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 12,
+          "priorTranscriptEnd": 11,
+          "changed": [
+            "prefix",
+            "fabric-directory"
+          ],
+          "writes": [
+            "fabric.lifecycle",
+            "fabric.exchange"
+          ]
+        },
+        {
+          "request": 6,
+          "turn": 6,
+          "prefixSha256": "8edb2bc00ffe90221f3e4b1017647ab4014509deabafdf25c73254cfb238f65c",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "63d7a014a68c7b528b78dd131029648682f448e8d81fb19c6d3510fdc6a92312",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 639,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 14,
+          "priorTranscriptEnd": 13,
+          "changed": [
+            "prefix",
+            "fabric-directory"
+          ],
+          "writes": [
+            "fabric.lifecycle",
+            "fabric.exchange"
+          ]
+        },
+        {
+          "request": 7,
+          "turn": 7,
+          "prefixSha256": "4994f5e58330a62db0de0dbf3208385959d6987e148dd136abc59e966fdb3609",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "99a482ee8a6c0f81b32c3b06f564d404d6ab67506d668a04b685fcc494a50f1f",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 646,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 16,
+          "priorTranscriptEnd": 15,
+          "changed": [
+            "prefix",
+            "fabric-directory"
+          ],
+          "writes": [
+            "fabric.lifecycle",
+            "fabric.exchange"
+          ]
+        },
+        {
+          "request": 8,
+          "turn": 8,
+          "prefixSha256": "ce152a2ea88e353923e08432af28e253bfea2abeac1b9bd0c59cd43b5b37ae18",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "01718a7e4066ec0a9c454a708055ef54bd7cffe6af011ffcaa9b911475b23b9b",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 653,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 18,
+          "priorTranscriptEnd": 17,
+          "changed": [
+            "prefix",
+            "fabric-directory"
+          ],
+          "writes": [
+            "fabric.lifecycle",
+            "fabric.exchange"
+          ]
+        },
+        {
+          "request": 9,
+          "turn": 9,
+          "prefixSha256": "b381df46234958e038c821448ac3aaa8a21b38c9322b5a378ce55639dd284bcc",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "cd2173d1981d995cf87267125496cff76ed4ac063a163d5cea4b97cb12dd606f",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 648,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 20,
+          "priorTranscriptEnd": 19,
+          "changed": [
+            "prefix",
+            "fabric-directory"
+          ],
+          "writes": [
+            "fabric.lifecycle",
+            "fabric.exchange"
+          ]
+        },
+        {
+          "request": 10,
+          "turn": 10,
+          "prefixSha256": "b381df46234958e038c821448ac3aaa8a21b38c9322b5a378ce55639dd284bcc",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "cd2173d1981d995cf87267125496cff76ed4ac063a163d5cea4b97cb12dd606f",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 648,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 22,
+          "priorTranscriptEnd": 21,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle",
+            "fabric.exchange"
+          ]
+        }
+      ],
+      "firstChanges": {
+        "prefix": {
+          "request": 2,
+          "turn": 2,
+          "writes": [
+            "fabric.lifecycle",
+            "fabric.exchange"
+          ]
+        },
+        "fabric-directory": {
+          "request": 2,
+          "turn": 2,
+          "writes": [
+            "fabric.lifecycle",
+            "fabric.exchange"
+          ]
+        }
+      },
+      "distinctPrefixes": 9,
+      "storedNotes": 11,
+      "archivedExchanges": 10,
+      "consolidationPasses": 0
+    },
+    {
+      "id": "cited-core",
+      "requests": [
+        {
+          "request": 1,
+          "turn": 1,
+          "prefixSha256": "a5750b76ec128c312716045b4f652a3a4e0891e6ed0527071df1d6b466082185",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "3f3b594876f4140c87bc9b06443b0da83bf71457f4a4642b6d307c4338a681d5",
+            "fabric-core": "77e40e4415d1c69b83176b7d502055852661950d73c1498f055f7bc7ace04e08"
+          },
+          "prefixBytes": 682,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 4,
+          "priorTranscriptEnd": -1,
+          "changed": [],
+          "writes": []
+        },
+        {
+          "request": 2,
+          "turn": 2,
+          "prefixSha256": "a5750b76ec128c312716045b4f652a3a4e0891e6ed0527071df1d6b466082185",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "3f3b594876f4140c87bc9b06443b0da83bf71457f4a4642b6d307c4338a681d5",
+            "fabric-core": "77e40e4415d1c69b83176b7d502055852661950d73c1498f055f7bc7ace04e08"
+          },
+          "prefixBytes": 682,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 6,
+          "priorTranscriptEnd": 5,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 3,
+          "turn": 2,
+          "prefixSha256": "a5750b76ec128c312716045b4f652a3a4e0891e6ed0527071df1d6b466082185",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "3f3b594876f4140c87bc9b06443b0da83bf71457f4a4642b6d307c4338a681d5",
+            "fabric-core": "77e40e4415d1c69b83176b7d502055852661950d73c1498f055f7bc7ace04e08"
+          },
+          "prefixBytes": 682,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 6,
+          "priorTranscriptEnd": 5,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle",
+            "memory.recall"
+          ]
+        },
+        {
+          "request": 4,
+          "turn": 3,
+          "prefixSha256": "051ea31588916083f9be536ba15dc1a859c854b9e48ebfa7eda465eff8d51ceb",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "3f3b594876f4140c87bc9b06443b0da83bf71457f4a4642b6d307c4338a681d5",
+            "fabric-core": "90704c2f3177702db86f982b6ecbb0c907b7ff53d4e7e3a843c1eb55d58630ff"
+          },
+          "prefixBytes": 682,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 10,
+          "priorTranscriptEnd": 9,
+          "changed": [
+            "prefix",
+            "fabric-core"
+          ],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 5,
+          "turn": 3,
+          "prefixSha256": "051ea31588916083f9be536ba15dc1a859c854b9e48ebfa7eda465eff8d51ceb",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "3f3b594876f4140c87bc9b06443b0da83bf71457f4a4642b6d307c4338a681d5",
+            "fabric-core": "90704c2f3177702db86f982b6ecbb0c907b7ff53d4e7e3a843c1eb55d58630ff"
+          },
+          "prefixBytes": 682,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 10,
+          "priorTranscriptEnd": 9,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle",
+            "memory.recall"
+          ]
+        },
+        {
+          "request": 6,
+          "turn": 4,
+          "prefixSha256": "051ea31588916083f9be536ba15dc1a859c854b9e48ebfa7eda465eff8d51ceb",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "3f3b594876f4140c87bc9b06443b0da83bf71457f4a4642b6d307c4338a681d5",
+            "fabric-core": "90704c2f3177702db86f982b6ecbb0c907b7ff53d4e7e3a843c1eb55d58630ff"
+          },
+          "prefixBytes": 682,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 14,
+          "priorTranscriptEnd": 13,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 7,
+          "turn": 4,
+          "prefixSha256": "051ea31588916083f9be536ba15dc1a859c854b9e48ebfa7eda465eff8d51ceb",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "3f3b594876f4140c87bc9b06443b0da83bf71457f4a4642b6d307c4338a681d5",
+            "fabric-core": "90704c2f3177702db86f982b6ecbb0c907b7ff53d4e7e3a843c1eb55d58630ff"
+          },
+          "prefixBytes": 682,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 14,
+          "priorTranscriptEnd": 13,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle",
+            "memory.recall"
+          ]
+        },
+        {
+          "request": 8,
+          "turn": 5,
+          "prefixSha256": "051ea31588916083f9be536ba15dc1a859c854b9e48ebfa7eda465eff8d51ceb",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "3f3b594876f4140c87bc9b06443b0da83bf71457f4a4642b6d307c4338a681d5",
+            "fabric-core": "90704c2f3177702db86f982b6ecbb0c907b7ff53d4e7e3a843c1eb55d58630ff"
+          },
+          "prefixBytes": 682,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 18,
+          "priorTranscriptEnd": 17,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 9,
+          "turn": 5,
+          "prefixSha256": "051ea31588916083f9be536ba15dc1a859c854b9e48ebfa7eda465eff8d51ceb",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "3f3b594876f4140c87bc9b06443b0da83bf71457f4a4642b6d307c4338a681d5",
+            "fabric-core": "90704c2f3177702db86f982b6ecbb0c907b7ff53d4e7e3a843c1eb55d58630ff"
+          },
+          "prefixBytes": 682,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 18,
+          "priorTranscriptEnd": 17,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle",
+            "memory.recall"
+          ]
+        },
+        {
+          "request": 10,
+          "turn": 6,
+          "prefixSha256": "051ea31588916083f9be536ba15dc1a859c854b9e48ebfa7eda465eff8d51ceb",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "3f3b594876f4140c87bc9b06443b0da83bf71457f4a4642b6d307c4338a681d5",
+            "fabric-core": "90704c2f3177702db86f982b6ecbb0c907b7ff53d4e7e3a843c1eb55d58630ff"
+          },
+          "prefixBytes": 682,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 22,
+          "priorTranscriptEnd": 21,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 11,
+          "turn": 6,
+          "prefixSha256": "051ea31588916083f9be536ba15dc1a859c854b9e48ebfa7eda465eff8d51ceb",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "3f3b594876f4140c87bc9b06443b0da83bf71457f4a4642b6d307c4338a681d5",
+            "fabric-core": "90704c2f3177702db86f982b6ecbb0c907b7ff53d4e7e3a843c1eb55d58630ff"
+          },
+          "prefixBytes": 682,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 22,
+          "priorTranscriptEnd": 21,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle",
+            "memory.recall"
+          ]
+        },
+        {
+          "request": 12,
+          "turn": 7,
+          "prefixSha256": "051ea31588916083f9be536ba15dc1a859c854b9e48ebfa7eda465eff8d51ceb",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "3f3b594876f4140c87bc9b06443b0da83bf71457f4a4642b6d307c4338a681d5",
+            "fabric-core": "90704c2f3177702db86f982b6ecbb0c907b7ff53d4e7e3a843c1eb55d58630ff"
+          },
+          "prefixBytes": 682,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 26,
+          "priorTranscriptEnd": 25,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 13,
+          "turn": 7,
+          "prefixSha256": "051ea31588916083f9be536ba15dc1a859c854b9e48ebfa7eda465eff8d51ceb",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "3f3b594876f4140c87bc9b06443b0da83bf71457f4a4642b6d307c4338a681d5",
+            "fabric-core": "90704c2f3177702db86f982b6ecbb0c907b7ff53d4e7e3a843c1eb55d58630ff"
+          },
+          "prefixBytes": 682,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 26,
+          "priorTranscriptEnd": 25,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle",
+            "memory.recall"
+          ]
+        },
+        {
+          "request": 14,
+          "turn": 8,
+          "prefixSha256": "051ea31588916083f9be536ba15dc1a859c854b9e48ebfa7eda465eff8d51ceb",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "3f3b594876f4140c87bc9b06443b0da83bf71457f4a4642b6d307c4338a681d5",
+            "fabric-core": "90704c2f3177702db86f982b6ecbb0c907b7ff53d4e7e3a843c1eb55d58630ff"
+          },
+          "prefixBytes": 682,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 30,
+          "priorTranscriptEnd": 29,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 15,
+          "turn": 8,
+          "prefixSha256": "051ea31588916083f9be536ba15dc1a859c854b9e48ebfa7eda465eff8d51ceb",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "3f3b594876f4140c87bc9b06443b0da83bf71457f4a4642b6d307c4338a681d5",
+            "fabric-core": "90704c2f3177702db86f982b6ecbb0c907b7ff53d4e7e3a843c1eb55d58630ff"
+          },
+          "prefixBytes": 682,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 30,
+          "priorTranscriptEnd": 29,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle",
+            "memory.recall"
+          ]
+        },
+        {
+          "request": 16,
+          "turn": 9,
+          "prefixSha256": "051ea31588916083f9be536ba15dc1a859c854b9e48ebfa7eda465eff8d51ceb",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "3f3b594876f4140c87bc9b06443b0da83bf71457f4a4642b6d307c4338a681d5",
+            "fabric-core": "90704c2f3177702db86f982b6ecbb0c907b7ff53d4e7e3a843c1eb55d58630ff"
+          },
+          "prefixBytes": 682,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 34,
+          "priorTranscriptEnd": 33,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 17,
+          "turn": 9,
+          "prefixSha256": "051ea31588916083f9be536ba15dc1a859c854b9e48ebfa7eda465eff8d51ceb",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "3f3b594876f4140c87bc9b06443b0da83bf71457f4a4642b6d307c4338a681d5",
+            "fabric-core": "90704c2f3177702db86f982b6ecbb0c907b7ff53d4e7e3a843c1eb55d58630ff"
+          },
+          "prefixBytes": 682,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 34,
+          "priorTranscriptEnd": 33,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle",
+            "memory.recall"
+          ]
+        },
+        {
+          "request": 18,
+          "turn": 10,
+          "prefixSha256": "051ea31588916083f9be536ba15dc1a859c854b9e48ebfa7eda465eff8d51ceb",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "3f3b594876f4140c87bc9b06443b0da83bf71457f4a4642b6d307c4338a681d5",
+            "fabric-core": "90704c2f3177702db86f982b6ecbb0c907b7ff53d4e7e3a843c1eb55d58630ff"
+          },
+          "prefixBytes": 682,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 38,
+          "priorTranscriptEnd": 37,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 19,
+          "turn": 10,
+          "prefixSha256": "051ea31588916083f9be536ba15dc1a859c854b9e48ebfa7eda465eff8d51ceb",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "3f3b594876f4140c87bc9b06443b0da83bf71457f4a4642b6d307c4338a681d5",
+            "fabric-core": "90704c2f3177702db86f982b6ecbb0c907b7ff53d4e7e3a843c1eb55d58630ff"
+          },
+          "prefixBytes": 682,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 38,
+          "priorTranscriptEnd": 37,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle",
+            "memory.recall"
+          ]
+        }
+      ],
+      "firstChanges": {
+        "prefix": {
+          "request": 4,
+          "turn": 3,
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        "fabric-core": {
+          "request": 4,
+          "turn": 3,
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        }
+      },
+      "distinctPrefixes": 2,
+      "storedNotes": 2,
+      "archivedExchanges": 0,
+      "consolidationPasses": 0,
+      "strengthBefore": 0,
+      "strengthAfterEachTurn": [
+        0,
+        0.34657359027997264,
+        0.34657359027997264,
+        0.34657359027997264,
+        0.34657359027997264,
+        0.34657359027997264,
+        0.34657359027997264,
+        0.34657359027997264,
+        0.34657359027997264,
+        0.34657359027997264
+      ],
+      "recallStartsAtTurn": 2
+    },
+    {
+      "id": "insert",
+      "requests": [
+        {
+          "request": 1,
+          "turn": 1,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 4,
+          "priorTranscriptEnd": -1,
+          "changed": [],
+          "writes": []
+        },
+        {
+          "request": 2,
+          "turn": 2,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 6,
+          "priorTranscriptEnd": 5,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 3,
+          "turn": 3,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 8,
+          "priorTranscriptEnd": 7,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 4,
+          "turn": 4,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 10,
+          "priorTranscriptEnd": 9,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 5,
+          "turn": 5,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 12,
+          "priorTranscriptEnd": 11,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 6,
+          "turn": 5,
+          "prefixSha256": "c7203ef021a4499df1947a6ee2c50c3caa084943aafb42dcfa12cdbc133b841e",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "23a88e64152b87099552afbfaee20991392ee7d82295c88cd4e37923ff1af670",
+            "fabric-core": "6481ccc7fffa1b2d234ffc549087fa389fff651195da4ce87d68ec4dd2a16cee"
+          },
+          "prefixBytes": 669,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 12,
+          "priorTranscriptEnd": 11,
+          "changed": [
+            "prefix",
+            "fabric-directory",
+            "fabric-core"
+          ],
+          "writes": [
+            "fabric.lifecycle",
+            "memory.insert"
+          ]
+        },
+        {
+          "request": 7,
+          "turn": 6,
+          "prefixSha256": "c7203ef021a4499df1947a6ee2c50c3caa084943aafb42dcfa12cdbc133b841e",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "23a88e64152b87099552afbfaee20991392ee7d82295c88cd4e37923ff1af670",
+            "fabric-core": "6481ccc7fffa1b2d234ffc549087fa389fff651195da4ce87d68ec4dd2a16cee"
+          },
+          "prefixBytes": 669,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 16,
+          "priorTranscriptEnd": 15,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 8,
+          "turn": 7,
+          "prefixSha256": "c7203ef021a4499df1947a6ee2c50c3caa084943aafb42dcfa12cdbc133b841e",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "23a88e64152b87099552afbfaee20991392ee7d82295c88cd4e37923ff1af670",
+            "fabric-core": "6481ccc7fffa1b2d234ffc549087fa389fff651195da4ce87d68ec4dd2a16cee"
+          },
+          "prefixBytes": 669,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 18,
+          "priorTranscriptEnd": 17,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 9,
+          "turn": 8,
+          "prefixSha256": "c7203ef021a4499df1947a6ee2c50c3caa084943aafb42dcfa12cdbc133b841e",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "23a88e64152b87099552afbfaee20991392ee7d82295c88cd4e37923ff1af670",
+            "fabric-core": "6481ccc7fffa1b2d234ffc549087fa389fff651195da4ce87d68ec4dd2a16cee"
+          },
+          "prefixBytes": 669,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 20,
+          "priorTranscriptEnd": 19,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 10,
+          "turn": 9,
+          "prefixSha256": "c7203ef021a4499df1947a6ee2c50c3caa084943aafb42dcfa12cdbc133b841e",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "23a88e64152b87099552afbfaee20991392ee7d82295c88cd4e37923ff1af670",
+            "fabric-core": "6481ccc7fffa1b2d234ffc549087fa389fff651195da4ce87d68ec4dd2a16cee"
+          },
+          "prefixBytes": 669,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 22,
+          "priorTranscriptEnd": 21,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 11,
+          "turn": 10,
+          "prefixSha256": "c7203ef021a4499df1947a6ee2c50c3caa084943aafb42dcfa12cdbc133b841e",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "23a88e64152b87099552afbfaee20991392ee7d82295c88cd4e37923ff1af670",
+            "fabric-core": "6481ccc7fffa1b2d234ffc549087fa389fff651195da4ce87d68ec4dd2a16cee"
+          },
+          "prefixBytes": 669,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 24,
+          "priorTranscriptEnd": 23,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        }
+      ],
+      "firstChanges": {
+        "prefix": {
+          "request": 6,
+          "turn": 5,
+          "writes": [
+            "fabric.lifecycle",
+            "memory.insert"
+          ]
+        },
+        "fabric-directory": {
+          "request": 6,
+          "turn": 5,
+          "writes": [
+            "fabric.lifecycle",
+            "memory.insert"
+          ]
+        },
+        "fabric-core": {
+          "request": 6,
+          "turn": 5,
+          "writes": [
+            "fabric.lifecycle",
+            "memory.insert"
+          ]
+        }
+      },
+      "distinctPrefixes": 2,
+      "storedNotes": 2,
+      "archivedExchanges": 0,
+      "consolidationPasses": 0
+    },
+    {
+      "id": "working-update",
+      "requests": [
+        {
+          "request": 1,
+          "turn": 1,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 4,
+          "priorTranscriptEnd": -1,
+          "changed": [],
+          "writes": []
+        },
+        {
+          "request": 2,
+          "turn": 2,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 6,
+          "priorTranscriptEnd": 5,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 3,
+          "turn": 3,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 8,
+          "priorTranscriptEnd": 7,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 4,
+          "turn": 4,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 10,
+          "priorTranscriptEnd": 9,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 5,
+          "turn": 5,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 12,
+          "priorTranscriptEnd": 11,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 6,
+          "turn": 5,
+          "prefixSha256": "484ae9380d5ca154d7eee645da896231fd12e120868acb9562e6bf26b63b5fc5",
+          "blocks": {
+            "fabric-working": "fb046f32d5d499b44e54a205fcb22c020c472c9ae83af38ab440a8bec3c55d14",
+            "fabric-directory": "2ea53544664224a956bec03ba7869644ec18a3dc938f002c4d83b43aaa6af8b8",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 857,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 12,
+          "priorTranscriptEnd": 11,
+          "changed": [
+            "prefix",
+            "fabric-working",
+            "fabric-directory"
+          ],
+          "writes": [
+            "fabric.lifecycle",
+            "memory.insert"
+          ]
+        },
+        {
+          "request": 7,
+          "turn": 6,
+          "prefixSha256": "484ae9380d5ca154d7eee645da896231fd12e120868acb9562e6bf26b63b5fc5",
+          "blocks": {
+            "fabric-working": "fb046f32d5d499b44e54a205fcb22c020c472c9ae83af38ab440a8bec3c55d14",
+            "fabric-directory": "2ea53544664224a956bec03ba7869644ec18a3dc938f002c4d83b43aaa6af8b8",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 857,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 16,
+          "priorTranscriptEnd": 15,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 8,
+          "turn": 7,
+          "prefixSha256": "484ae9380d5ca154d7eee645da896231fd12e120868acb9562e6bf26b63b5fc5",
+          "blocks": {
+            "fabric-working": "fb046f32d5d499b44e54a205fcb22c020c472c9ae83af38ab440a8bec3c55d14",
+            "fabric-directory": "2ea53544664224a956bec03ba7869644ec18a3dc938f002c4d83b43aaa6af8b8",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 857,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 18,
+          "priorTranscriptEnd": 17,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 9,
+          "turn": 8,
+          "prefixSha256": "484ae9380d5ca154d7eee645da896231fd12e120868acb9562e6bf26b63b5fc5",
+          "blocks": {
+            "fabric-working": "fb046f32d5d499b44e54a205fcb22c020c472c9ae83af38ab440a8bec3c55d14",
+            "fabric-directory": "2ea53544664224a956bec03ba7869644ec18a3dc938f002c4d83b43aaa6af8b8",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 857,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 20,
+          "priorTranscriptEnd": 19,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 10,
+          "turn": 9,
+          "prefixSha256": "484ae9380d5ca154d7eee645da896231fd12e120868acb9562e6bf26b63b5fc5",
+          "blocks": {
+            "fabric-working": "fb046f32d5d499b44e54a205fcb22c020c472c9ae83af38ab440a8bec3c55d14",
+            "fabric-directory": "2ea53544664224a956bec03ba7869644ec18a3dc938f002c4d83b43aaa6af8b8",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 857,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 22,
+          "priorTranscriptEnd": 21,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 11,
+          "turn": 10,
+          "prefixSha256": "484ae9380d5ca154d7eee645da896231fd12e120868acb9562e6bf26b63b5fc5",
+          "blocks": {
+            "fabric-working": "fb046f32d5d499b44e54a205fcb22c020c472c9ae83af38ab440a8bec3c55d14",
+            "fabric-directory": "2ea53544664224a956bec03ba7869644ec18a3dc938f002c4d83b43aaa6af8b8",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 857,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 24,
+          "priorTranscriptEnd": 23,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        }
+      ],
+      "firstChanges": {
+        "prefix": {
+          "request": 6,
+          "turn": 5,
+          "writes": [
+            "fabric.lifecycle",
+            "memory.insert"
+          ]
+        },
+        "fabric-working": {
+          "request": 6,
+          "turn": 5,
+          "writes": [
+            "fabric.lifecycle",
+            "memory.insert"
+          ]
+        },
+        "fabric-directory": {
+          "request": 6,
+          "turn": 5,
+          "writes": [
+            "fabric.lifecycle",
+            "memory.insert"
+          ]
+        }
+      },
+      "distinctPrefixes": 2,
+      "storedNotes": 1,
+      "archivedExchanges": 0,
+      "consolidationPasses": 0
+    },
+    {
+      "id": "background-promote",
+      "requests": [
+        {
+          "request": 1,
+          "turn": 1,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 4,
+          "priorTranscriptEnd": -1,
+          "changed": [],
+          "writes": []
+        },
+        {
+          "request": 2,
+          "turn": 2,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 6,
+          "priorTranscriptEnd": 5,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 3,
+          "turn": 3,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 8,
+          "priorTranscriptEnd": 7,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 4,
+          "turn": 4,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 10,
+          "priorTranscriptEnd": 9,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 5,
+          "turn": 5,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 12,
+          "priorTranscriptEnd": 11,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 6,
+          "turn": 6,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 14,
+          "priorTranscriptEnd": 13,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 7,
+          "turn": 7,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 16,
+          "priorTranscriptEnd": 15,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle",
+            "fabric.consolidate"
+          ]
+        },
+        {
+          "request": 8,
+          "turn": 8,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 18,
+          "priorTranscriptEnd": 17,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 9,
+          "turn": 9,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 20,
+          "priorTranscriptEnd": 19,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 10,
+          "turn": 10,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 22,
+          "priorTranscriptEnd": 21,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle",
+            "fabric.consolidate"
+          ]
+        }
+      ],
+      "firstChanges": {},
+      "distinctPrefixes": 1,
+      "storedNotes": 3,
+      "archivedExchanges": 0,
+      "consolidationPasses": 2
+    },
+    {
+      "id": "forget",
+      "requests": [
+        {
+          "request": 1,
+          "turn": 1,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 4,
+          "priorTranscriptEnd": -1,
+          "changed": [],
+          "writes": []
+        },
+        {
+          "request": 2,
+          "turn": 2,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 6,
+          "priorTranscriptEnd": 5,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 3,
+          "turn": 3,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 8,
+          "priorTranscriptEnd": 7,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 4,
+          "turn": 4,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 10,
+          "priorTranscriptEnd": 9,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 5,
+          "turn": 5,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 12,
+          "priorTranscriptEnd": 11,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 6,
+          "turn": 6,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 14,
+          "priorTranscriptEnd": 13,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 7,
+          "turn": 6,
+          "prefixSha256": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": null,
+            "fabric-core": null
+          },
+          "prefixBytes": 167,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 12,
+          "priorTranscriptEnd": 11,
+          "changed": [
+            "prefix",
+            "fabric-directory",
+            "fabric-core"
+          ],
+          "writes": [
+            "fabric.lifecycle",
+            "memory.forget"
+          ]
+        },
+        {
+          "request": 8,
+          "turn": 7,
+          "prefixSha256": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": null,
+            "fabric-core": null
+          },
+          "prefixBytes": 167,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 16,
+          "priorTranscriptEnd": 15,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 9,
+          "turn": 8,
+          "prefixSha256": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": null,
+            "fabric-core": null
+          },
+          "prefixBytes": 167,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 18,
+          "priorTranscriptEnd": 17,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 10,
+          "turn": 9,
+          "prefixSha256": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": null,
+            "fabric-core": null
+          },
+          "prefixBytes": 167,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 20,
+          "priorTranscriptEnd": 19,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 11,
+          "turn": 10,
+          "prefixSha256": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": null,
+            "fabric-core": null
+          },
+          "prefixBytes": 167,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 22,
+          "priorTranscriptEnd": 21,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        }
+      ],
+      "firstChanges": {
+        "prefix": {
+          "request": 7,
+          "turn": 6,
+          "writes": [
+            "fabric.lifecycle",
+            "memory.forget"
+          ]
+        },
+        "fabric-directory": {
+          "request": 7,
+          "turn": 6,
+          "writes": [
+            "fabric.lifecycle",
+            "memory.forget"
+          ]
+        },
+        "fabric-core": {
+          "request": 7,
+          "turn": 6,
+          "writes": [
+            "fabric.lifecycle",
+            "memory.forget"
+          ]
+        }
+      },
+      "distinctPrefixes": 2,
+      "storedNotes": 0,
+      "archivedExchanges": 0,
+      "consolidationPasses": 0,
+      "forgottenNoteVisibleOnLastRequest": false,
+      "forgottenNoteReadable": false
+    },
+    {
+      "id": "second-instance",
+      "requests": [
+        {
+          "request": 1,
+          "turn": 1,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 4,
+          "priorTranscriptEnd": -1,
+          "changed": [],
+          "writes": []
+        },
+        {
+          "request": 2,
+          "turn": 2,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 6,
+          "priorTranscriptEnd": 5,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 3,
+          "turn": 3,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 8,
+          "priorTranscriptEnd": 7,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 4,
+          "turn": 4,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 10,
+          "priorTranscriptEnd": 9,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 5,
+          "turn": 5,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 12,
+          "priorTranscriptEnd": 11,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle",
+            "second-instance.insert"
+          ]
+        },
+        {
+          "request": 6,
+          "turn": 6,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 14,
+          "priorTranscriptEnd": 13,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle",
+            "second-instance.forget"
+          ]
+        },
+        {
+          "request": 7,
+          "turn": 7,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 16,
+          "priorTranscriptEnd": 15,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 8,
+          "turn": 8,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 18,
+          "priorTranscriptEnd": 17,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 9,
+          "turn": 9,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 20,
+          "priorTranscriptEnd": 19,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        },
+        {
+          "request": 10,
+          "turn": 10,
+          "prefixSha256": "b0e05b36f62d43f5f9f2df95f41d47714d79fcb3ef266aef0df0d6170c9309f5",
+          "blocks": {
+            "fabric-working": "c2bdeb528872539a0a7d6542b483cf8e78ccf08dc2efef1183feed94f826da46",
+            "fabric-directory": "60e08d6ad4247e3ff291e46b4642c9346333b0b2818893d3a1f5d4c7c46d3a10",
+            "fabric-core": "ed6aed7e451e19adada4b47e0b0d04d6792256599e1abd501cf0b8365013a0f5"
+          },
+          "prefixBytes": 604,
+          "tailPresent": false,
+          "tailAfterTranscript": null,
+          "tailBeforeLatestUser": null,
+          "tailAfterPriorTranscript": null,
+          "tailIndices": [],
+          "latestUserIndex": 22,
+          "priorTranscriptEnd": 21,
+          "changed": [],
+          "writes": [
+            "fabric.lifecycle"
+          ]
+        }
+      ],
+      "firstChanges": {},
+      "distinctPrefixes": 1,
+      "storedNotes": 1,
+      "archivedExchanges": 0,
+      "consolidationPasses": 0,
+      "forgottenNoteVisibleOnLastRequest": true,
+      "forgottenNoteReadable": false
+    }
+  ],
+  "assumptions": {
+    "storageStrength": {
+      "coreOnlyCitationRecorded": false,
+      "increasesOnRecordedUse": true,
+      "deduplicatesWithinSession": true
+    },
+    "tail": {
+      "requests": 13,
+      "afterTranscript": false,
+      "beforeLatestUser": true,
+      "afterPriorTranscript": true
+    },
+    "extractor": {
+      "calls": 2,
+      "systemIdentical": true,
+      "toolsIdentical": false,
+      "samples": [
+        {
+          "systemSha256": "9f67d22544ac192b6008caf8717f267dbac88a49d487f734231441c2ad7d9c62",
+          "toolsSha256": "24baf27bd75b879b98750ed7cb188824891421031b6cdaf5e07381b6c54afaf3",
+          "withoutIdEnumsSha256": "676b79127b6022329b20e050287aa3daef68ad327a31c10986b99e0060c09a1c",
+          "encodedBytes": 5364,
+          "withoutIdEnumsBytes": 5350,
+          "estimatedTokens": 1341,
+          "withoutIdEnumsEstimatedTokens": 1338,
+          "encodedTokens": 1379,
+          "withoutIdEnumsEncodedTokens": 1374
+        },
+        {
+          "systemSha256": "9f67d22544ac192b6008caf8717f267dbac88a49d487f734231441c2ad7d9c62",
+          "toolsSha256": "fa534de4e676d0a0dd954ba3adb89b474a7ffc237661fd80e3c9ff152d32edd1",
+          "withoutIdEnumsSha256": "89d2a4817767e6e8bf090c30f1d421af281b7eabe5a68f3c658ae91162e12a25",
+          "encodedBytes": 5425,
+          "withoutIdEnumsBytes": 5382,
+          "estimatedTokens": 1357,
+          "withoutIdEnumsEstimatedTokens": 1346,
+          "encodedTokens": 1401,
+          "withoutIdEnumsEncodedTokens": 1384
+        }
+      ],
+      "tokenCountsMeasured": true,
+      "tokenizer": {
+        "sha256": "6c8aaa9a542084f2457eab775d4eeb51f92a70c0fd9de28d5edb0ddec3c08d30",
+        "libraryVersion": "0.23.2"
+      }
+    }
+  },
+  "tailCache": {
+    "sessionsClosed": 4,
+    "entriesBefore": 0,
+    "entriesAfterClose": 4,
+    "evicted": false
+  },
+  "sha256": "fe2e72999b7e25954b4b384f8192adde3b9dce32e5c43f2e6a0002b55f092347"
+}

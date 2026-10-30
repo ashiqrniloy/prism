@@ -32,7 +32,7 @@
       "name": "@arnilo/prism-providers",
       "range": "*",
       "reused": false,
-      "successor": "@arnilo/prism-provider-{hyper,laya,liquid,openai-codex,opencode-go,openrouter,typesafe} and @arnilo/prism/provider-kit",
+      "successor": "@arnilo/prism-provider-{commandcode,hyper,laya,liquid,openai-codex,opencode-go,openrouter,typesafe} and @arnilo/prism/provider-kit",
       "anchor": "#012-family-package-native-package-map",
       "message": "Legacy 0.12 package. Prism 0.13+: @arnilo/prism-provider-{hyper,laya,liquid,openai-codex,opencode-go,openrouter,typesafe} and @arnilo/prism/provider-kit. https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
     },

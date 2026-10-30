@@ -1,0 +1,38 @@
+{
+  "kind": "202-muse13-screen-owner-closure",
+  "status": "closed-by-owner",
+  "generatedAt": "2026-10-30T00:06:17.169Z",
+  "authorization": "I would like to finish this with the 23 cells. Is that possible?",
+  "acceptedCells": 23,
+  "originallyPlannedCells": 25,
+  "sourceManifestSha256": "6a2d6abf54549737270807cf80e351fac9a0240e645b64816b4b92a9dda91b4d",
+  "acceptedManifest": "docs/_evidence/memory-bench/202/muse13-screen-final/manifest.json",
+  "acceptedSummary": "docs/_evidence/memory-bench/202/muse13-screen-final/summary.json",
+  "report": "docs/_evidence/memory-bench/202/muse13-screen-final/README.md",
+  "proof": "docs/_evidence/memory-bench/202/muse13-screen-final/verification.json",
+  "screenComplete": true,
+  "baselineComplete": false,
+  "excluded": [
+    {
+      "jobId": "202-baseline.beam-1m.full-truncated.commandcode.meta/muse-spark-1.3-contributor",
+      "suite": "beam-1m",
+      "arm": "full-truncated",
+      "reason": "weekly quota interrupted scoring; partial results excluded",
+      "partialQuestions": 15,
+      "sourcePath": "/home/arn/Projects/prism/docs/_evidence/memory-bench/202/baseline/muse13-screen/report-202-baseline.beam-1m.full-truncated.commandcode.meta-muse-spark-1.3-contributor.json",
+      "sourceSha256": "2b9c17c1f7946319bc1009d86fbb88c13b8d61d9cccdbed3fb9f386aad1225f8",
+      "usedInComparisons": false
+    },
+    {
+      "jobId": "202-baseline.beam-1m.lexical-topk.commandcode.meta/muse-spark-1.3-contributor",
+      "suite": "beam-1m",
+      "arm": "lexical-topk",
+      "reason": "weekly quota stopped campaign before this cell started",
+      "partialQuestions": 0,
+      "sourcePath": null,
+      "sourceSha256": null,
+      "usedInComparisons": false
+    }
+  ],
+  "retainedCharge": 668089833
+}

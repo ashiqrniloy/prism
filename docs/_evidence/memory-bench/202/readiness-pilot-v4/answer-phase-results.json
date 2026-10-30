@@ -1,0 +1,2787 @@
+{
+  "kind": "202-readiness-pilot-v4",
+  "manifestHash": "b420299286c2c3f4fc0506159a0655138911c3dc983b08aed037f6ccc2b75547",
+  "status": "answers_completed",
+  "startedAt": "2026-10-29T05:03:20.374Z",
+  "phase": "answers",
+  "continuation": null,
+  "calibration": "owner-waived; model-assisted, not human calibrated; free panel development-only",
+  "checkpointRoot": ".cache/memory-bench/audit/4.8-pilot-v4",
+  "priorUsage": {
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0,
+    "wireAttempts": 0,
+    "accountedInputTokens": 0,
+    "accountedOutputTokens": 0,
+    "usageMissingExchanges": 0
+  },
+  "priorTiming": {
+    "wallMs": 0
+  },
+  "cells": [
+    {
+      "id": "5:abstention:1",
+      "questionId": "5:abstention:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "abstention",
+      "config": "full",
+      "jobId": "full.5:abstention:1",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 127344,
+        "outputTokens": 1460,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 6.3,
+        "answer": 48628.9
+      },
+      "outcome": "completed",
+      "answerKey": "05368d650647af4ef1e223ac68ba554a0f251bed348d16d81b2d4de4167b9722",
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 253951,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 238,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "8bb07ee6b953adcb14158d9fd8a80c76fa14bd7d55975382b78a603051412d72"
+      },
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 0,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "5:abstention:1",
+      "questionId": "5:abstention:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "abstention",
+      "config": "lexical-topk",
+      "jobId": "lexical-topk.5:abstention:1",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 4587,
+        "outputTokens": 466,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 21.5,
+        "answer": 10831.6
+      },
+      "outcome": "completed",
+      "answerKey": "d6b194e992d3ffd772f398827a4174f860dc9a91f0f6a3d7aa47d39ff61de96e",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 0,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "5:abstention:1",
+      "questionId": "5:abstention:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "abstention",
+      "config": "fabric-x",
+      "jobId": "fabric-x.5:abstention:1",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 4780,
+        "outputTokens": 377,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 261.6,
+        "answer": 8993.6
+      },
+      "outcome": "completed",
+      "answerKey": "0e554eec0c4a589eb42a14ec7a80e4aa036c526818ca0d7591e10e19f1b655ef",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 0,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "5:abstention:1",
+      "questionId": "5:abstention:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "abstention",
+      "config": "fabric-x-tools",
+      "jobId": "fabric-x-tools.5:abstention:1",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 69005,
+        "outputTokens": 1159,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 4
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 234,
+        "answer": 30367.3
+      },
+      "outcome": "completed",
+      "answerKey": "480a0973074276ed8e969b670bee74a786a96d0e78dc2977e50a7a50353cae2e",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 0,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "agentSteps": 4,
+      "toolCalls": 3,
+      "recallCalls": 3,
+      "answerRetries": 0,
+      "turnTrace": [
+        "memory.recall",
+        "memory.recall",
+        "memory.read"
+      ],
+      "truncated": false
+    },
+    {
+      "id": "5:abstention:1",
+      "questionId": "5:abstention:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "abstention",
+      "config": "full-truncated",
+      "jobId": "full-truncated.5:abstention:1",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "outcome": "equivalent_policy_repeat_not_run",
+      "equivalentTo": "full.5:abstention:1"
+    },
+    {
+      "id": "3:contradiction_resolution:1",
+      "questionId": "3:contradiction_resolution:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "contradiction_resolution",
+      "config": "full",
+      "jobId": "full.3:contradiction_resolution:1",
+      "cluster": "beam-3",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 122394,
+        "outputTokens": 859,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 4,
+        "answer": 23354.4
+      },
+      "outcome": "completed",
+      "answerKey": "277b2aefc2803ba2a6593da44ce956d407efe7b78935fe088176597cfc86ac47",
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 253951,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 194,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "3fadb9a39cf69186dd740e17419c8410fbfc39b12687f2f0fbfa7ba1447164ad"
+      },
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "3:contradiction_resolution:1",
+      "questionId": "3:contradiction_resolution:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "contradiction_resolution",
+      "config": "lexical-topk",
+      "jobId": "lexical-topk.3:contradiction_resolution:1",
+      "cluster": "beam-3",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 4045,
+        "outputTokens": 471,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 26.7,
+        "answer": 9263.1
+      },
+      "outcome": "completed",
+      "answerKey": "de455580ccc3d8a32b26169d52b05210409f18dc1641f3d8bb8833dca08370f5",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "3:contradiction_resolution:1",
+      "questionId": "3:contradiction_resolution:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "contradiction_resolution",
+      "config": "fabric-x",
+      "jobId": "fabric-x.3:contradiction_resolution:1",
+      "cluster": "beam-3",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 3544,
+        "outputTokens": 589,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 161,
+        "answer": 10953
+      },
+      "outcome": "completed",
+      "answerKey": "a5e78c7c8e4bbc61954a8512db1bfca32f537f9dda8e1ab9688d628f235eb139",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 1,
+        "selectedGold": 1,
+        "fineRounds": 2,
+        "fineSelected": 1
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "3:contradiction_resolution:1",
+      "questionId": "3:contradiction_resolution:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "contradiction_resolution",
+      "config": "fabric-x-tools",
+      "jobId": "fabric-x-tools.3:contradiction_resolution:1",
+      "cluster": "beam-3",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 4597,
+        "outputTokens": 243,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 175.2,
+        "answer": 6362.5
+      },
+      "outcome": "completed",
+      "answerKey": "517e4dde1b27b11c973b921c88307c4b15592b4221f45fba40344e6a1b6c029d",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 1,
+        "selectedGold": 1,
+        "fineRounds": 2,
+        "fineSelected": 1
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "3:contradiction_resolution:1",
+      "questionId": "3:contradiction_resolution:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "contradiction_resolution",
+      "config": "full-truncated",
+      "jobId": "full-truncated.3:contradiction_resolution:1",
+      "cluster": "beam-3",
+      "diagnosticOnly": false,
+      "outcome": "equivalent_policy_repeat_not_run",
+      "equivalentTo": "full.3:contradiction_resolution:1"
+    },
+    {
+      "id": "5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "full",
+      "jobId": "full.5:event_ordering:0",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 127354,
+        "outputTokens": 2134,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 4.3,
+        "answer": 50292.4
+      },
+      "outcome": "completed",
+      "answerKey": "e2a7e85f4cdeac6f3ca2777384b81ca8a0d42feb0912a46ae8e4bcf546bd607e",
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 253951,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 238,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "c9d4133e2c738d59c8d2dcc4d72afc167ece5fc2e3bdc8ed4717358e48a4b210"
+      },
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 12,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 12,
+        "fineSelected": 0
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "lexical-topk",
+      "jobId": "lexical-topk.5:event_ordering:0",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 4713,
+        "outputTokens": 745,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 24.9,
+        "answer": 17624.6
+      },
+      "outcome": "completed",
+      "answerKey": "5e7e6c3f7b0ceb182bdcb5e696f2938a87257aae4b4489f1e73bc97bfe7d3e8b",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 12,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 12,
+        "fineSelected": 0
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "fabric-x",
+      "jobId": "fabric-x.5:event_ordering:0",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 4993,
+        "outputTokens": 881,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 232.1,
+        "answer": 16105.9
+      },
+      "outcome": "completed",
+      "answerKey": "0ef388ad9cd5098cfdc8c18989891f1626ca4de1bf7d4ee80929e4f79149ac4a",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 12,
+        "candidateGold": 1,
+        "selectedGold": 1,
+        "fineRounds": 12,
+        "fineSelected": 1
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "fabric-x-tools",
+      "jobId": "fabric-x-tools.5:event_ordering:0",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 6037,
+        "outputTokens": 808,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 233.9,
+        "answer": 16675.9
+      },
+      "outcome": "completed",
+      "answerKey": "460d55642dcbe281e358724f6c69fc26e7855689fbc239aa241c3e9d5547f242",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 12,
+        "candidateGold": 1,
+        "selectedGold": 1,
+        "fineRounds": 12,
+        "fineSelected": 1
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "full-truncated",
+      "jobId": "full-truncated.5:event_ordering:0",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "outcome": "equivalent_policy_repeat_not_run",
+      "equivalentTo": "full.5:event_ordering:0"
+    },
+    {
+      "id": "5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "oracle",
+      "jobId": "oracle.5:event_ordering:0",
+      "cluster": "beam-5",
+      "diagnosticOnly": true,
+      "productUsage": {
+        "inputTokens": 10179,
+        "outputTokens": 829,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 1.4,
+        "answer": 19241.4
+      },
+      "outcome": "completed",
+      "answerKey": "a059f1f6f94200d54b87d26fdb0211685d8ce6724ddcbf8bd6be333360ee2dd1",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 12,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 12,
+        "fineSelected": 0
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "16:information_extraction:0",
+      "questionId": "16:information_extraction:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "information_extraction",
+      "config": "full",
+      "jobId": "full.16:information_extraction:0",
+      "cluster": "beam-16",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 140457,
+        "outputTokens": 235,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 5.6,
+        "answer": 15410.8
+      },
+      "outcome": "completed",
+      "answerKey": "4f0eda403b36df15a1301f831542dd7aff0bbcc95eeddac27577825e1e5392e6",
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 253951,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 322,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "3c946aa712a5c64402b3e411e093c97e340ddded4b4680c26b2c63e4bc7fbd09"
+      },
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "16:information_extraction:0",
+      "questionId": "16:information_extraction:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "information_extraction",
+      "config": "lexical-topk",
+      "jobId": "lexical-topk.16:information_extraction:0",
+      "cluster": "beam-16",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 3931,
+        "outputTokens": 278,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 35.7,
+        "answer": 6236.7
+      },
+      "outcome": "completed",
+      "answerKey": "2067b4d96683f141d5dbcda84833056c29b1dd38ab326ea9546a6f4318e9b7ce",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "16:information_extraction:0",
+      "questionId": "16:information_extraction:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "information_extraction",
+      "config": "fabric-x",
+      "jobId": "fabric-x.16:information_extraction:0",
+      "cluster": "beam-16",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 3842,
+        "outputTokens": 219,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 292.5,
+        "answer": 7090.3
+      },
+      "outcome": "completed",
+      "answerKey": "7b742c20ccbf61a04b5d0325205d4ac7e901a1bae143d3e0e1142a80cb7a2a93",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 1,
+        "selectedGold": 1,
+        "fineRounds": 1,
+        "fineSelected": 1
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "16:information_extraction:0",
+      "questionId": "16:information_extraction:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "information_extraction",
+      "config": "fabric-x-tools",
+      "jobId": "fabric-x-tools.16:information_extraction:0",
+      "cluster": "beam-16",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 4887,
+        "outputTokens": 134,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 259.8,
+        "answer": 3570.7
+      },
+      "outcome": "completed",
+      "answerKey": "8547217609f5aef29307b31eda7a17767476fb50a9c7fca61b1a36807e937d56",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 1,
+        "selectedGold": 1,
+        "fineRounds": 1,
+        "fineSelected": 1
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "16:information_extraction:0",
+      "questionId": "16:information_extraction:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "information_extraction",
+      "config": "full-truncated",
+      "jobId": "full-truncated.16:information_extraction:0",
+      "cluster": "beam-16",
+      "diagnosticOnly": false,
+      "outcome": "equivalent_policy_repeat_not_run",
+      "equivalentTo": "full.16:information_extraction:0"
+    },
+    {
+      "id": "13:instruction_following:1",
+      "questionId": "13:instruction_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "instruction_following",
+      "config": "full",
+      "jobId": "full.13:instruction_following:1",
+      "cluster": "beam-13",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 119056,
+        "outputTokens": 1209,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 5.7,
+        "answer": 27294.3
+      },
+      "outcome": "completed",
+      "answerKey": "50d9ae4baeb22897ec11171330223d95e39cf6efc9d1561fec9a72e6dc968623",
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 253951,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 310,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "def7999301c4c882af1bcd2b1f228a38e5ce506576e50f2bab10c5a40af46304"
+      },
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "13:instruction_following:1",
+      "questionId": "13:instruction_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "instruction_following",
+      "config": "lexical-topk",
+      "jobId": "lexical-topk.13:instruction_following:1",
+      "cluster": "beam-13",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 3373,
+        "outputTokens": 1077,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 30.8,
+        "answer": 21706.5
+      },
+      "outcome": "completed",
+      "answerKey": "f9f800a729766be2e0fb898e8246ab7f73f5c96b9b16c61f482d93d578afb87e",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "13:instruction_following:1",
+      "questionId": "13:instruction_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "instruction_following",
+      "config": "fabric-x",
+      "jobId": "fabric-x.13:instruction_following:1",
+      "cluster": "beam-13",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 3823,
+        "outputTokens": 1253,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 363.1,
+        "answer": 26484.4
+      },
+      "outcome": "completed",
+      "answerKey": "f3c34399e5249c0a89f7c609937fbe10dd16d9f55982efc08db02b854a913f7f",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "13:instruction_following:1",
+      "questionId": "13:instruction_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "instruction_following",
+      "config": "fabric-x-tools",
+      "jobId": "fabric-x-tools.13:instruction_following:1",
+      "cluster": "beam-13",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 12536,
+        "outputTokens": 604,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 2
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 341.8,
+        "answer": 16436.6
+      },
+      "outcome": "completed",
+      "answerKey": "9bdde57640504a4b31f72ab1512c0d856958bbb296da9a1b72c0b918e79151bd",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "agentSteps": 2,
+      "toolCalls": 1,
+      "recallCalls": 2,
+      "answerRetries": 0,
+      "turnTrace": [
+        "memory.recall"
+      ],
+      "truncated": false
+    },
+    {
+      "id": "13:instruction_following:1",
+      "questionId": "13:instruction_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "instruction_following",
+      "config": "full-truncated",
+      "jobId": "full-truncated.13:instruction_following:1",
+      "cluster": "beam-13",
+      "diagnosticOnly": false,
+      "outcome": "equivalent_policy_repeat_not_run",
+      "equivalentTo": "full.13:instruction_following:1"
+    },
+    {
+      "id": "17:knowledge_update:1",
+      "questionId": "17:knowledge_update:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "knowledge_update",
+      "config": "full",
+      "jobId": "full.17:knowledge_update:1",
+      "cluster": "beam-17",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 128370,
+        "outputTokens": 621,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 5.5,
+        "answer": 19027.4
+      },
+      "outcome": "completed",
+      "answerKey": "6cb147fae6c745b571ace151520f0be27b24f82dbbb0ca8f016e15cfe493bd07",
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 253951,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 286,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "7185d84f9b0d35f233dda232046ada7a399c41172680ac049d137700182731e5"
+      },
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "17:knowledge_update:1",
+      "questionId": "17:knowledge_update:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "knowledge_update",
+      "config": "lexical-topk",
+      "jobId": "lexical-topk.17:knowledge_update:1",
+      "cluster": "beam-17",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 3647,
+        "outputTokens": 626,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 33.3,
+        "answer": 11570
+      },
+      "outcome": "completed",
+      "answerKey": "652f04e19090e26419c920cd0a96bd833061f3a2d68ba0f97630b6dc6845df38",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "17:knowledge_update:1",
+      "questionId": "17:knowledge_update:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "knowledge_update",
+      "config": "fabric-x",
+      "jobId": "fabric-x.17:knowledge_update:1",
+      "cluster": "beam-17",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 3834,
+        "outputTokens": 930,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 329,
+        "answer": 16420.9
+      },
+      "outcome": "completed",
+      "answerKey": "d3d30a2d346f66d2b11831e62fcab032c620e8bf56fa79291271d545ea015fe1",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 1,
+        "selectedGold": 1,
+        "fineRounds": 2,
+        "fineSelected": 1
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "17:knowledge_update:1",
+      "questionId": "17:knowledge_update:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "knowledge_update",
+      "config": "fabric-x-tools",
+      "jobId": "fabric-x-tools.17:knowledge_update:1",
+      "cluster": "beam-17",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 16034,
+        "outputTokens": 1795,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 2
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 322.7,
+        "answer": 40416.7
+      },
+      "outcome": "completed",
+      "answerKey": "23a38fb55fc4ceab23310bb19649771c217af797cbbe64241c3d4aff95b47b31",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 2,
+        "selectedGold": 2,
+        "fineRounds": 2,
+        "fineSelected": 2
+      },
+      "agentSteps": 2,
+      "toolCalls": 1,
+      "recallCalls": 2,
+      "answerRetries": 0,
+      "turnTrace": [
+        "memory.recall"
+      ],
+      "truncated": false
+    },
+    {
+      "id": "17:knowledge_update:1",
+      "questionId": "17:knowledge_update:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "knowledge_update",
+      "config": "full-truncated",
+      "jobId": "full-truncated.17:knowledge_update:1",
+      "cluster": "beam-17",
+      "diagnosticOnly": false,
+      "outcome": "equivalent_policy_repeat_not_run",
+      "equivalentTo": "full.17:knowledge_update:1"
+    },
+    {
+      "id": "13:multi_session_reasoning:1",
+      "questionId": "13:multi_session_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "multi_session_reasoning",
+      "config": "full",
+      "jobId": "full.13:multi_session_reasoning:1",
+      "cluster": "beam-13",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 119075,
+        "outputTokens": 698,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 5.3,
+        "answer": 24037
+      },
+      "outcome": "completed",
+      "answerKey": "afc06e1d70ebdcdc16d5e2d88b8aa4566bfcc22a51c32bf8b32ddc3d44a4f429",
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 253951,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 310,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "65670e923da0cb95ebb6364d7d325c129175cac8bc30b09ccfdf87b52b133103"
+      },
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 5,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 5,
+        "fineSelected": 0
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "13:multi_session_reasoning:1",
+      "questionId": "13:multi_session_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "multi_session_reasoning",
+      "config": "lexical-topk",
+      "jobId": "lexical-topk.13:multi_session_reasoning:1",
+      "cluster": "beam-13",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 3694,
+        "outputTokens": 1062,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 33.6,
+        "answer": 31493.7
+      },
+      "outcome": "completed",
+      "answerKey": "b34ced6f68972213ad71a7a1be53656355f2c0027407c38b26020415e56681d4",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 5,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 5,
+        "fineSelected": 0
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "13:multi_session_reasoning:1",
+      "questionId": "13:multi_session_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "multi_session_reasoning",
+      "config": "fabric-x",
+      "jobId": "fabric-x.13:multi_session_reasoning:1",
+      "cluster": "beam-13",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 3292,
+        "outputTokens": 1240,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 386.2,
+        "answer": 22353
+      },
+      "outcome": "completed",
+      "answerKey": "a1cd676257192e24139f3be400331fa50beac8621a0ba0320eb2465318a31068",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 5,
+        "candidateGold": 2,
+        "selectedGold": 2,
+        "fineRounds": 5,
+        "fineSelected": 2
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "13:multi_session_reasoning:1",
+      "questionId": "13:multi_session_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "multi_session_reasoning",
+      "config": "fabric-x-tools",
+      "jobId": "fabric-x-tools.13:multi_session_reasoning:1",
+      "cluster": "beam-13",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 14844,
+        "outputTokens": 747,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 2
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 344.9,
+        "answer": 20832.3
+      },
+      "outcome": "completed",
+      "answerKey": "8f48f0198a68641c6f3b1330938b126dfddfc40cf7d2be1c26025753476dedeb",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 5,
+        "candidateGold": 2,
+        "selectedGold": 2,
+        "fineRounds": 5,
+        "fineSelected": 2
+      },
+      "agentSteps": 2,
+      "toolCalls": 1,
+      "recallCalls": 2,
+      "answerRetries": 0,
+      "turnTrace": [
+        "memory.recall"
+      ],
+      "truncated": false
+    },
+    {
+      "id": "13:multi_session_reasoning:1",
+      "questionId": "13:multi_session_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "multi_session_reasoning",
+      "config": "full-truncated",
+      "jobId": "full-truncated.13:multi_session_reasoning:1",
+      "cluster": "beam-13",
+      "diagnosticOnly": false,
+      "outcome": "equivalent_policy_repeat_not_run",
+      "equivalentTo": "full.13:multi_session_reasoning:1"
+    },
+    {
+      "id": "10:preference_following:1",
+      "questionId": "10:preference_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "preference_following",
+      "config": "full",
+      "jobId": "full.10:preference_following:1",
+      "cluster": "beam-10",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 150922,
+        "outputTokens": 1244,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 5.7,
+        "answer": 36166.6
+      },
+      "outcome": "completed",
+      "answerKey": "64bf9247933961e2790ba170a933961365980d1c9601b543affefd64558e7acb",
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 253951,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 344,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "28045f1ec9ded2d6080df66b7c464db2cfc62db5d7e19316d83f0304ec18d247"
+      },
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 3,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 3,
+        "fineSelected": 0
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "10:preference_following:1",
+      "questionId": "10:preference_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "preference_following",
+      "config": "lexical-topk",
+      "jobId": "lexical-topk.10:preference_following:1",
+      "cluster": "beam-10",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 3671,
+        "outputTokens": 1195,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 43.9,
+        "answer": 20303.2
+      },
+      "outcome": "completed",
+      "answerKey": "b91d6ddb643816d3820763f872a569c9a08b8ce4b770a7a8a284f2b8e0493c15",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 3,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 3,
+        "fineSelected": 0
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "10:preference_following:1",
+      "questionId": "10:preference_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "preference_following",
+      "config": "fabric-x",
+      "jobId": "fabric-x.10:preference_following:1",
+      "cluster": "beam-10",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 3706,
+        "outputTokens": 1244,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 349.6,
+        "answer": 21119.9
+      },
+      "outcome": "completed",
+      "answerKey": "21efc4cd7f4162acd27d79f30f07e8a995fada91a9791dff5734641396fee221",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 3,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 3,
+        "fineSelected": 0
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "10:preference_following:1",
+      "questionId": "10:preference_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "preference_following",
+      "config": "fabric-x-tools",
+      "jobId": "fabric-x-tools.10:preference_following:1",
+      "cluster": "beam-10",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 15783,
+        "outputTokens": 650,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 2
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 397.1,
+        "answer": 17745.2
+      },
+      "outcome": "completed",
+      "answerKey": "a4bbf867049494fa75bab471746edc4362e00b9c1f5d2961f08af3908f1b97a9",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 3,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 3,
+        "fineSelected": 0
+      },
+      "agentSteps": 2,
+      "toolCalls": 1,
+      "recallCalls": 2,
+      "answerRetries": 0,
+      "turnTrace": [
+        "memory.recall"
+      ],
+      "truncated": false
+    },
+    {
+      "id": "10:preference_following:1",
+      "questionId": "10:preference_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "preference_following",
+      "config": "full-truncated",
+      "jobId": "full-truncated.10:preference_following:1",
+      "cluster": "beam-10",
+      "diagnosticOnly": false,
+      "outcome": "equivalent_policy_repeat_not_run",
+      "equivalentTo": "full.10:preference_following:1"
+    },
+    {
+      "id": "10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "full",
+      "jobId": "full.10:summarization:0",
+      "cluster": "beam-10",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 150916,
+        "outputTokens": 1551,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 5.9,
+        "answer": 37948.2
+      },
+      "outcome": "completed",
+      "answerKey": "4885d09c42d9c958eb3073c1d4a2da12f4f00dc83ef6bfac2db1eee09b27928d",
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 253951,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 344,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "10a5437eeeaf88c808580fe1edf982c034c1bcedef612179a8e8624d205c7e12"
+      },
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 6,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 6,
+        "fineSelected": 0
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "lexical-topk",
+      "jobId": "lexical-topk.10:summarization:0",
+      "cluster": "beam-10",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 3684,
+        "outputTokens": 945,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 43.1,
+        "answer": 19060.7
+      },
+      "outcome": "completed",
+      "answerKey": "ec47bf1af7d8ad727b35e34ac1f799b62a266692ba5e6c17aba1b3ba0f3674ca",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 6,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 6,
+        "fineSelected": 0
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "fabric-x",
+      "jobId": "fabric-x.10:summarization:0",
+      "cluster": "beam-10",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 2806,
+        "outputTokens": 1311,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 329.8,
+        "answer": 31958.2
+      },
+      "outcome": "completed",
+      "answerKey": "21732a899c84f66e3e08c789529fc604dac42cb2d9565880310f1bf3a196beb2",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 6,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 6,
+        "fineSelected": 0
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "fabric-x-tools",
+      "jobId": "fabric-x-tools.10:summarization:0",
+      "cluster": "beam-10",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 13489,
+        "outputTokens": 842,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 2
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 358.7,
+        "answer": 19939.8
+      },
+      "outcome": "completed",
+      "answerKey": "b6eeace336560805c4c79a91aa3c2ea7ef99a4736acf29cdf839c6491ec91806",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 6,
+        "candidateGold": 1,
+        "selectedGold": 1,
+        "fineRounds": 6,
+        "fineSelected": 1
+      },
+      "agentSteps": 2,
+      "toolCalls": 1,
+      "recallCalls": 2,
+      "answerRetries": 0,
+      "turnTrace": [
+        "memory.recall"
+      ],
+      "truncated": false
+    },
+    {
+      "id": "10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "full-truncated",
+      "jobId": "full-truncated.10:summarization:0",
+      "cluster": "beam-10",
+      "diagnosticOnly": false,
+      "outcome": "equivalent_policy_repeat_not_run",
+      "equivalentTo": "full.10:summarization:0"
+    },
+    {
+      "id": "10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "oracle",
+      "jobId": "oracle.10:summarization:0",
+      "cluster": "beam-10",
+      "diagnosticOnly": true,
+      "productUsage": {
+        "inputTokens": 4207,
+        "outputTokens": 1249,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 1.4,
+        "answer": 26917.5
+      },
+      "outcome": "completed",
+      "answerKey": "f44b8ebf8a590702bcb2f86d7345cd84e90f0737904ef9c70b28ccaa95d5498e",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 6,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 6,
+        "fineSelected": 0
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "19:temporal_reasoning:1",
+      "questionId": "19:temporal_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "temporal_reasoning",
+      "config": "full",
+      "jobId": "full.19:temporal_reasoning:1",
+      "cluster": "beam-19",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 162389,
+        "outputTokens": 430,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 6.8,
+        "answer": 18350
+      },
+      "outcome": "completed",
+      "answerKey": "3d98aa91d643dbe0875ba24d730e64bb358c1e33b29b6184135e631757fa7510",
+      "contextEligibility": {
+        "policy": "complete-history",
+        "messageCap": 253951,
+        "completeHistory": true,
+        "eligible": true,
+        "sourceMessages": 328,
+        "removedSourceMessages": 0,
+        "removedMessages": 0,
+        "removedEstimatedTokens": 0,
+        "contextHash": "aeb2dfa7d7a48196f21350e468f59c5825d7b5593fb3b8a44bd6aca441724b6b"
+      },
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "19:temporal_reasoning:1",
+      "questionId": "19:temporal_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "temporal_reasoning",
+      "config": "lexical-topk",
+      "jobId": "lexical-topk.19:temporal_reasoning:1",
+      "cluster": "beam-19",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 3882,
+        "outputTokens": 312,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 49.7,
+        "answer": 6784.2
+      },
+      "outcome": "completed",
+      "answerKey": "f3f87d402f8bb2428b0e56e99e13c78b9477d402a2eefc85b06986d5ba4d3c62",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "19:temporal_reasoning:1",
+      "questionId": "19:temporal_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "temporal_reasoning",
+      "config": "fabric-x",
+      "jobId": "fabric-x.19:temporal_reasoning:1",
+      "cluster": "beam-19",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 3771,
+        "outputTokens": 809,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 432.2,
+        "answer": 15769.4
+      },
+      "outcome": "completed",
+      "answerKey": "637f40a9b2e3d1af198f1687568c85c5167c88a838769adf3997d9c59a06ff43",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 1,
+        "selectedGold": 1,
+        "fineRounds": 2,
+        "fineSelected": 1
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false
+    },
+    {
+      "id": "19:temporal_reasoning:1",
+      "questionId": "19:temporal_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "temporal_reasoning",
+      "config": "fabric-x-tools",
+      "jobId": "fabric-x-tools.19:temporal_reasoning:1",
+      "cluster": "beam-19",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 17004,
+        "outputTokens": 893,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 2
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 370.1,
+        "answer": 21824.2
+      },
+      "outcome": "completed",
+      "answerKey": "df9285c322242ff0bd810af00e757c7f6c3b79ec5109530eb989df8f789227c4",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 2,
+        "selectedGold": 2,
+        "fineRounds": 2,
+        "fineSelected": 2
+      },
+      "agentSteps": 2,
+      "toolCalls": 1,
+      "recallCalls": 2,
+      "answerRetries": 0,
+      "turnTrace": [
+        "memory.recall"
+      ],
+      "truncated": false
+    },
+    {
+      "id": "19:temporal_reasoning:1",
+      "questionId": "19:temporal_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "temporal_reasoning",
+      "config": "full-truncated",
+      "jobId": "full-truncated.19:temporal_reasoning:1",
+      "cluster": "beam-19",
+      "diagnosticOnly": false,
+      "outcome": "equivalent_policy_repeat_not_run",
+      "equivalentTo": "full.19:temporal_reasoning:1"
+    }
+  ],
+  "comparisons": [
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": null,
+      "intended": 10,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": "abstention",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": "contradiction_resolution",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": "event_ordering",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": "information_extraction",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": "instruction_following",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": "knowledge_update",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": "multi_session_reasoning",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": "preference_following",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": "summarization",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": "temporal_reasoning",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": null,
+      "intended": 10,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": "abstention",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": "contradiction_resolution",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": "event_ordering",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": "information_extraction",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": "instruction_following",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": "knowledge_update",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": "multi_session_reasoning",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": "preference_following",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": "summarization",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": "temporal_reasoning",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": null,
+      "intended": 10,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": "abstention",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": "contradiction_resolution",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": "event_ordering",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": "information_extraction",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": "instruction_following",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": "knowledge_update",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": "multi_session_reasoning",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": "preference_following",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": "summarization",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": "temporal_reasoning",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    }
+  ],
+  "modelConfiguration": {
+    "provider": "commandcode",
+    "model": "stealth/glyph-cluster:free",
+    "displayName": "Glyph Cluster",
+    "limits": {
+      "contextWindow": 256000
+    },
+    "compat": {
+      "thinkingFamily": "openai_reasoning",
+      "preserveThinking": true,
+      "route": "responses",
+      "pricing_source": "https://commandcode.ai/docs/resources/pricing-limits"
+    },
+    "capabilities": {
+      "input": [
+        "text"
+      ],
+      "output": [
+        "text"
+      ],
+      "reasoning": true,
+      "tools": true,
+      "streaming": true
+    },
+    "cache": {
+      "kind": "implicit"
+    },
+    "parameters": {
+      "temperature": 0,
+      "maxTokens": 8192
+    }
+  },
+  "inputCap": 254976,
+  "judgeConfigurations": {
+    "openrouter/dots-studio/dots-3-note-preview:free": {
+      "provider": "openrouter",
+      "model": "dots-studio/dots-3-note-preview:free",
+      "displayName": "Dots Studio: Dots3-Note Preview (free)",
+      "capabilities": {
+        "input": [
+          "text",
+          "image"
+        ],
+        "output": [
+          "text"
+        ],
+        "tools": true,
+        "reasoning": true,
+        "structuredOutput": "json_schema",
+        "streaming": true
+      },
+      "limits": {
+        "contextWindow": 512000,
+        "maxOutputTokens": 460800
+      },
+      "cost": {
+        "currency": "USD",
+        "input": 0,
+        "output": 0
+      },
+      "cache": {
+        "kind": "implicit"
+      },
+      "compat": {
+        "thinkingFamily": "openai_reasoning",
+        "preserveThinking": true
+      },
+      "parameters": {
+        "maxTokens": 4096,
+        "temperature": 0
+      }
+    },
+    "openrouter/cohere/north-mini-code:free": {
+      "provider": "openrouter",
+      "model": "cohere/north-mini-code:free",
+      "displayName": "Cohere: North Mini Code (free)",
+      "capabilities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ],
+        "tools": true,
+        "reasoning": true,
+        "structuredOutput": false,
+        "streaming": true
+      },
+      "limits": {
+        "contextWindow": 256000,
+        "maxOutputTokens": 64000
+      },
+      "cost": {
+        "currency": "USD",
+        "input": 0,
+        "output": 0
+      },
+      "cache": {
+        "kind": "implicit"
+      },
+      "compat": {
+        "thinkingFamily": "openai_reasoning",
+        "preserveThinking": true
+      },
+      "parameters": {
+        "maxTokens": 4096,
+        "temperature": 0
+      }
+    }
+  },
+  "usage": {
+    "inputTokens": 1614497,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0,
+    "outputTokens": 36424,
+    "accountedInputTokens": 1614497,
+    "accountedOutputTokens": 36424,
+    "usageMissingExchanges": 0,
+    "usageComplete": true,
+    "wireAttempts": 51
+  },
+  "timing": {
+    "wallMs": 880923,
+    "concurrency": 1,
+    "questions": {
+      "n": 42,
+      "wallMs": {
+        "p50": 19104.7,
+        "p95": 40799.4,
+        "mean": 20959.2
+      }
+    },
+    "phases": {
+      "ingestion": {
+        "n": 42,
+        "wallMs": {
+          "p50": 43.9,
+          "p95": 386.2,
+          "mean": 156.6
+        }
+      },
+      "restore": {
+        "n": 0,
+        "wallMs": {
+          "p50": null,
+          "p95": null,
+          "mean": null
+        }
+      },
+      "answer": {
+        "n": 42,
+        "wallMs": {
+          "p50": 19060.7,
+          "p95": 40416.7,
+          "mean": 20784.8
+        }
+      },
+      "evaluation": {
+        "n": 0,
+        "wallMs": {
+          "p50": null,
+          "p95": null,
+          "mean": null
+        }
+      }
+    },
+    "policy": {
+      "answer": "after ingestion, before grading, annotation, final background settlement and disposal",
+      "queueWaitIncluded": false,
+      "retriesAndBackoffIncluded": true
+    },
+    "roles": {
+      "solver": {
+        "calls": 51,
+        "firstByteMs": {
+          "p50": 13938.9,
+          "p95": 32797.8,
+          "mean": 14330.9
+        },
+        "totalMs": {
+          "p50": 16075.7,
+          "p95": 37928,
+          "mean": 17090.2
+        }
+      }
+    },
+    "calls": 51
+  },
+  "activeWallMs": 880923,
+  "accounting": {
+    "inputTokens": 1614497,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0,
+    "outputTokens": 36424,
+    "accountedInputTokens": 1614497,
+    "accountedOutputTokens": 36424,
+    "usageMissingExchanges": 0,
+    "usageComplete": true,
+    "wireAttempts": 51
+  },
+  "allocations": [
+    {
+      "provider": "commandcode",
+      "exchange": 1,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 2,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 3,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 4,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 5,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 6,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 7,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 8,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 9,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 10,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 11,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 12,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 13,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 14,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 15,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 16,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 17,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 18,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 19,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 20,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 21,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 22,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 23,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 24,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 25,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 26,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 27,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 28,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 29,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 30,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 31,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 32,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 33,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 34,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 35,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 36,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 37,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 38,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 39,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 40,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 41,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 42,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 43,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 44,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 45,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 46,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 47,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 48,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 49,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 50,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 51,
+      "inputBound": 256000,
+      "outputBound": 8192,
+      "phase": "answers"
+    }
+  ],
+  "finishedAt": "2026-10-29T05:18:01.297Z"
+}

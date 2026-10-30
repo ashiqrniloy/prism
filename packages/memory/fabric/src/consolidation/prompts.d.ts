@@ -56,11 +56,8 @@ export interface ConsolidationPromptInput {
 /** Candidate ids are positional (`c1`, `c2`, ...) so the extractor can only cite what it was shown. */
 export declare function candidateIds(candidates: readonly ConsolidationCandidate[]): readonly string[];
 export declare function buildConsolidationExtractPrompt(input: ConsolidationPromptInput): JsonObject;
-/** The tool parameters: one array of notes, bounded by the pass's candidate count. */
+/** Stable across sessions; the parser checks id membership and the pass's note bound. */
 export declare function consolidationExtractSchema(input: {
-    readonly candidateIds: readonly string[];
-    readonly existingIds?: readonly string[];
-    readonly segmentIds?: readonly string[];
     readonly maxNotes?: number;
 }): JsonObject;
 export declare const EXTRACTED_NOTE_KEYS: readonly string[];

@@ -51,6 +51,10 @@ export interface MemoryFabricToolDeps {
    * Read notes by id across every active scope, through the same consent, invalidation and redaction
    * filters as recall; without it a read falls back to this fabric's single `memory`.
    */
+  readonly navigateNotes?: (
+    request: { around?: string; session?: string; page?: number },
+    signal?: AbortSignal,
+  ) => Promise<readonly string[]>;
   readonly readNotes?: (ids: readonly string[], signal?: AbortSignal) => Promise<readonly MemoryVectorRecord[]>;
   /** The session's touched files, used to arm a `path` note's prior. */
   readonly touchedPaths?: (sessionId: string) => readonly string[];
@@ -113,6 +117,8 @@ interface ReadNote {
   readonly kind: MemoryNoteKind;
   readonly level?: MemoryNoteHit["level"];
   readonly status?: MemoryNoteHit["status"];
+  readonly session?: string;
+  readonly tRef?: string;
   readonly ingestedAt: string;
   readonly path: string;
   readonly tokenCount: number;
@@ -240,11 +246,14 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
         name: readName,
         kind: "read",
         description:
-          "Read one file inside the fabric memory directory, or notes by id. Pass exactly one of `path`, `id` or `ids` (1-8). Reading notes returns each one's full content with its id, kind, scope, date and path; an unknown or unreadable id is reported as not_found for that id alone. A file read is cut at the configured byte cap and flagged when truncated.",
+          "Read one file inside the fabric memory directory, or notes by id. Pass exactly one of `path`, `id`, `ids` (1-8), `around` (same-session ±2 exchanges), or `session` (8 exchanges per zero-based page). Reading notes returns each one's full content with its id, kind, scope, date and path; an unknown or unreadable id is reported as not_found for that id alone. A file read is cut at the configured byte cap and flagged when truncated.",
         parameters: {
           type: "object",
           properties: {
             path: { type: "string", description: "File to read, relative to the memory root." },
+            around: { type: "string", minLength: 1, description: "Exchange id whose same-session neighbours to read (±2)." },
+            session: { type: "string", minLength: 1, description: "Session id to page in reference-time order." },
+            page: { type: "integer", minimum: 0, description: "Zero-based session page (8 notes); defaults to 0." },
             id: { type: "string", description: "Note id to read in full." },
             ids: {
               type: "array",
@@ -256,12 +265,35 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
           },
         } as JsonObject,
         async execute(args, context) {
+          if ([args.path, args.id, args.ids, args.around, args.session].filter((value) => value !== undefined).length !== 1)
+            throw new MemoryValidationError("read accepts exactly one of path, id, ids, around or session");
+          if (
+            args.page !== undefined &&
+            (args.session === undefined ||
+              typeof args.page !== "number" ||
+              !Number.isSafeInteger(args.page) ||
+              args.page < 0 ||
+              args.page > Math.floor(Number.MAX_SAFE_INTEGER / 8))
+          )
+            throw new MemoryValidationError("page must be a non-negative safe session page");
+          let navigationIds: readonly string[] | undefined;
+          if (args.around !== undefined || args.session !== undefined) {
+            if (!indexedNotesAvailable()) return indexedNotesUnavailable(readName, context);
+            const value = args.around ?? args.session;
+            if (typeof value !== "string" || !value.trim()) throw new MemoryValidationError("around and session must be non-empty strings");
+            navigationIds =
+              (await deps.navigateNotes?.(
+                {
+                  ...(typeof args.around === "string" ? { around: args.around } : { session: value }),
+                  ...(typeof args.page === "number" ? { page: args.page } : {}),
+                },
+                context.signal,
+              )) ?? [];
+            if (!navigationIds.length) return fail(readName, context, "not_found", "No readable exchanges found.");
+          }
           if (args.ids !== undefined && !Array.isArray(args.ids)) throw new MemoryValidationError("ids must be an array of note ids");
-          const targets: readonly unknown[] | undefined = Array.isArray(args.ids)
-            ? args.ids
-            : typeof args.id === "string"
-              ? [args.id]
-              : undefined;
+          const targets: readonly unknown[] | undefined =
+            navigationIds ?? (Array.isArray(args.ids) ? args.ids : typeof args.id === "string" ? [args.id] : undefined);
           if (targets !== undefined) {
             if (typeof args.path === "string" || (typeof args.id === "string" && args.ids !== undefined))
               throw new MemoryValidationError("read accepts exactly one of path, id or ids");
@@ -303,6 +335,8 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
                 kind: metadata.kind,
                 ...(fields.level === undefined ? {} : { level: fields.level }),
                 ...(fields.status === undefined ? {} : { status: fields.status }),
+                ...(fields.session === undefined ? {} : { session: fields.session }),
+                ...(fields.tRef === undefined ? {} : { tRef: fields.tRef }),
                 ingestedAt: record.createdAt,
                 content: record.text,
                 tokenCount: estimateNoteTokens(record.text),
@@ -311,7 +345,7 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
             }
             const lines = notes.map(
               (note) =>
-                `${note.id} ${note.level ?? "project"} [${note.kind}] date=${note.ingestedAt.slice(0, 10)} path=${note.path}\n${note.content}`,
+                `${note.id} ${note.level ?? "project"} [${note.kind}] date=${(note.tRef ?? note.ingestedAt).slice(0, 10)}${note.session ? ` session=${note.session}` : ""} path=${note.path}\n${note.content}`,
             );
             for (const id of missing) lines.push(`${id} not_found`);
             return ok(readName, context, { found: notes.length > 0, notes, missing }, lines.join("\n\n"));
@@ -550,7 +584,7 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
         name: recallName,
         kind: "search",
         description:
-          "Recall fabric notes. Pass `query`, or `queries` with up to 4 phrasings (synonyms, aliases) fused into one ranked list. Returns ranked snippets with ids, scope, kind, dates, note paths, and the matched terms; each snippet is the densest matched window of its note. Defaults to every stored kind except working, and to 1,200 rendered tokens of output. Use memory.read with an id for a note in full.",
+          "Recall fabric notes. Pass `query`, or `queries` with up to 4 phrasings (synonyms, aliases) fused into one ranked list. Returns ranked snippets with ids, scope, kind, dates, note paths, and the matched terms; each snippet is the densest matched window of its note. Defaults to every stored kind except working, and to 1,200 rendered tokens of output. Use memory.read with an id for a note in full. For aggregation questions, issue two or three differently-worded queries.",
         parameters: {
           type: "object",
           properties: {
@@ -608,10 +642,13 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
           // Render before selecting: the budget counts what the model reads, header, path and snippet included.
           const rendered = new Map(
             ranked.map((hit) => {
-              const matched = lexicalMatches(queryTerms, lexicalTerms(hit.content));
+              const matched = lexicalMatches(
+                queryTerms,
+                lexicalTerms([hit.content, ...(hit.keywords ?? []), ...(hit.tags ?? []), hit.context ?? "", hit.path ?? ""].join("\n")),
+              );
               const flagged = hit.flags?.length ? ` [flagged: ${hit.flags.join(", ")}]` : "";
               const lifecycle = hit.status === "candidate" ? " (candidate)" : hit.status === "archived" ? " [archived]" : "";
-              const line = `${hit.id} ${hit.level ?? "project"} [${hit.kind}]${lifecycle}${flagged} path=${notePathOf(hit)} date=${hit.ingestedAt.slice(0, 10)} matched=[${matched.join(", ")}] ${queryExcerpt(hit.content, queryTerms, SNIPPET_CHARS)}`;
+              const line = `${hit.id} ${hit.level ?? "project"} [${hit.kind}]${lifecycle}${flagged} path=${notePathOf(hit)} date=${hit.ingestedAt.slice(0, 10)}${hit.session ? ` session=${hit.session}` : ""} matched=[${matched.join(", ")}] ${queryExcerpt(hit.content, queryTerms, SNIPPET_CHARS)}`;
               return [hit.id, line] as const;
             }),
           );
@@ -631,7 +668,17 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
           if (lines.length === 0) lines.push("no match in any kind");
           else if (top < 0.34) lines.push("Weak match: try synonyms, an alias, or other terms.");
           if (hits.length > 0) lines.push("Cite [id] for notes you use.");
-          return ok(recallName, context, { hits, explain: [] }, lines.join("\n"));
+          const matchedTerms = new Set(
+            hits.flatMap((hit) =>
+              lexicalMatches(
+                queryTerms,
+                lexicalTerms([hit.content, ...(hit.keywords ?? []), ...(hit.tags ?? []), hit.context ?? "", hit.path ?? ""].join("\n")),
+              ),
+            ),
+          );
+          const unmatchedTerms = [...queryTerms].filter((term) => !matchedTerms.has(term));
+          if (unmatchedTerms.length) lines.push(`Unmatched terms in returned notes: ${unmatchedTerms.join(", ")}. Try another phrasing.`);
+          return ok(recallName, context, { hits, explain: [], unmatchedTerms }, lines.join("\n"));
         },
       },
       {

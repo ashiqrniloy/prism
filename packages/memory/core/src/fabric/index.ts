@@ -643,6 +643,9 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
     async getShareGrant(scope, child, opts) {
       return sqlite.vectorStore.getShareGrant(scope, child, opts);
     },
+    async listBySession(scope, session, opts) {
+      return sqlite.vectorStore.listBySession(scope, session, opts);
+    },
     async scanMetadata(query: VectorScanMetadataQuery) {
       return sqlite.vectorStore.scanMetadata(query);
     },

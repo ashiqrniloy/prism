@@ -1,0 +1,2101 @@
+{
+  "schemaVersion": 1,
+  "kind": "202-baseline-summary",
+  "status": "executed",
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "analysisVersion": "202-paired-cluster-v1",
+  "inference": "descriptive only; item-weighted paired differences, whole-conversation bootstrap 95% CIs; marginal CI overlap is not a test",
+  "multiplicity": "Holm across every emitted overall, ability-binary and ability-graded test in this summary; CIs are pointwise, no acceptance verdict",
+  "reports": 3,
+  "cells": [
+    {
+      "suite": "beam-100k",
+      "model": "commandcode/meta/muse-spark-1.2-contributor",
+      "arm": "fabric-x",
+      "ineligibleQuestions": 0,
+      "unscoredQuestions": 0,
+      "inputTokens": 260453,
+      "cacheReadTokens": 9585,
+      "cacheWriteTokens": 0,
+      "outputTokens": 64903,
+      "costUsd": 0.047155,
+      "productCostUsd": 0.030767,
+      "productColdCostUsd": 0.030767,
+      "productWarmCostUsd": 0.030767,
+      "evaluationCostUsd": 0.016388,
+      "latencyMeanMs": 6792.8,
+      "ingestion": {
+        "n": 40,
+        "wallMs": {
+          "p50": 226.9,
+          "p95": 290.2,
+          "mean": 228.9
+        }
+      },
+      "evaluation": {
+        "n": 40,
+        "wallMs": {
+          "p50": 4122.9,
+          "p95": 19541.9,
+          "mean": 9233.9
+        }
+      },
+      "latencyMs": 6039.8,
+      "latencyP95Ms": 11714.2,
+      "attemptId": "202-baseline.beam-100k.passive-only.commandcode.meta/muse-spark-1.2-contributor@1",
+      "repeatOf": null,
+      "staged": true,
+      "n": 40,
+      "correct": 12,
+      "accuracy": 0.3,
+      "ci95": [
+        0.19047619047619047,
+        0.4166666666666667
+      ],
+      "stages": {
+        "abstention_error": 2,
+        "answer_gap": 1,
+        "partial_evidence": 9,
+        "candidate_gap": 15,
+        "run_limit": 1
+      },
+      "outcomes": {
+        "judged_correct": 12,
+        "judged_incorrect": 27,
+        "run_limit": 1,
+        "transport_setup_error": 0,
+        "comparator_ineligible": 0
+      },
+      "failureIdsByStage": {
+        "abstention_error": [
+          "9:abstention:1",
+          "20:abstention:1"
+        ],
+        "answer_gap": [
+          "8:contradiction_resolution:1"
+        ],
+        "partial_evidence": [
+          "3:contradiction_resolution:1",
+          "7:contradiction_resolution:0",
+          "9:contradiction_resolution:0",
+          "5:event_ordering:0",
+          "4:knowledge_update:0",
+          "17:knowledge_update:1",
+          "13:multi_session_reasoning:1",
+          "1:summarization:1",
+          "19:temporal_reasoning:1"
+        ],
+        "candidate_gap": [
+          "13:event_ordering:0",
+          "1:event_ordering:1",
+          "1:event_ordering:0",
+          "16:information_extraction:1",
+          "9:information_extraction:0",
+          "13:instruction_following:1",
+          "7:knowledge_update:1",
+          "6:multi_session_reasoning:1",
+          "2:multi_session_reasoning:0",
+          "9:multi_session_reasoning:1",
+          "10:preference_following:1",
+          "14:preference_following:0",
+          "10:summarization:0",
+          "17:summarization:0",
+          "8:summarization:1"
+        ],
+        "run_limit": [
+          "18:temporal_reasoning:0"
+        ]
+      },
+      "measuredStages": [
+        "abstention_error",
+        "candidate_gap",
+        "selection_gap",
+        "answer_gap",
+        "fine_selection_gap",
+        "partial_evidence"
+      ],
+      "attribution": {
+        "attributed": 27,
+        "unknown": 0,
+        "operational": 1,
+        "invalidComparator": 0,
+        "provenance": {
+          "source_chat_ids": 27,
+          "outcome": 1
+        },
+        "coverage": 0.9642857142857143
+      },
+      "failuresByAbility": {
+        "abstention": 2,
+        "contradiction_resolution": 4,
+        "event_ordering": 4,
+        "information_extraction": 2,
+        "instruction_following": 1,
+        "knowledge_update": 3,
+        "multi_session_reasoning": 4,
+        "preference_following": 2,
+        "summarization": 4,
+        "temporal_reasoning": 2
+      },
+      "byAbility": {
+        "abstention": {
+          "n": 4,
+          "correct": 2,
+          "gradedN": 0,
+          "accuracy": 0.5,
+          "gradedMean": null
+        },
+        "contradiction_resolution": {
+          "n": 4,
+          "correct": 0,
+          "gradedN": 0,
+          "accuracy": 0,
+          "gradedMean": null
+        },
+        "event_ordering": {
+          "n": 4,
+          "correct": 0,
+          "gradedN": 4,
+          "accuracy": 0,
+          "gradedMean": 0.07179487179487182
+        },
+        "information_extraction": {
+          "n": 4,
+          "correct": 2,
+          "gradedN": 0,
+          "accuracy": 0.5,
+          "gradedMean": null
+        },
+        "instruction_following": {
+          "n": 4,
+          "correct": 3,
+          "gradedN": 0,
+          "accuracy": 0.75,
+          "gradedMean": null
+        },
+        "knowledge_update": {
+          "n": 4,
+          "correct": 1,
+          "gradedN": 0,
+          "accuracy": 0.25,
+          "gradedMean": null
+        },
+        "multi_session_reasoning": {
+          "n": 4,
+          "correct": 0,
+          "gradedN": 0,
+          "accuracy": 0,
+          "gradedMean": null
+        },
+        "preference_following": {
+          "n": 4,
+          "correct": 2,
+          "gradedN": 0,
+          "accuracy": 0.5,
+          "gradedMean": null
+        },
+        "summarization": {
+          "n": 4,
+          "correct": 0,
+          "gradedN": 4,
+          "accuracy": 0,
+          "gradedMean": 0.2
+        },
+        "temporal_reasoning": {
+          "n": 4,
+          "correct": 2,
+          "gradedN": 0,
+          "accuracy": 0.5,
+          "gradedMean": null
+        }
+      },
+      "abilityRows": [
+        {
+          "ability": "abstention",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        {
+          "ability": "contradiction_resolution",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "event_ordering",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0,
+          "gradedN": 4,
+          "gradedMean": 0.07179487179487182,
+          "primaryMetric": "graded",
+          "screeningStatus": "not lever-discriminating at this sample"
+        },
+        {
+          "ability": "information_extraction",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        {
+          "ability": "instruction_following",
+          "n": 4,
+          "correct": 3,
+          "accuracy": 0.75
+        },
+        {
+          "ability": "knowledge_update",
+          "n": 4,
+          "correct": 1,
+          "accuracy": 0.25
+        },
+        {
+          "ability": "multi_session_reasoning",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "preference_following",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        {
+          "ability": "summarization",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0,
+          "gradedN": 4,
+          "gradedMean": 0.2,
+          "primaryMetric": "graded",
+          "screeningStatus": "not lever-discriminating at this sample"
+        },
+        {
+          "ability": "temporal_reasoning",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        }
+      ],
+      "failures": 28
+    },
+    {
+      "suite": "beam-100k",
+      "model": "commandcode/meta/muse-spark-1.2-contributor",
+      "arm": "fabric-x-tools",
+      "ineligibleQuestions": 0,
+      "unscoredQuestions": 0,
+      "inputTokens": 1702517,
+      "cacheReadTokens": 8797,
+      "cacheWriteTokens": 0,
+      "outputTokens": 70975,
+      "costUsd": 0.192044,
+      "productCostUsd": 0.176189,
+      "productColdCostUsd": 0.176189,
+      "productWarmCostUsd": 0.176189,
+      "evaluationCostUsd": 0.015855,
+      "latencyMeanMs": 12728,
+      "ingestion": {
+        "n": 40,
+        "wallMs": {
+          "p50": 238.3,
+          "p95": 320.3,
+          "mean": 245.7
+        }
+      },
+      "evaluation": {
+        "n": 40,
+        "wallMs": {
+          "p50": 4294.3,
+          "p95": 26764.3,
+          "mean": 8592.1
+        }
+      },
+      "latencyMs": 8161.1,
+      "latencyP95Ms": 28164.9,
+      "attemptId": "202-baseline.beam-100k.preset-r1.commandcode.meta/muse-spark-1.2-contributor@1",
+      "repeatOf": null,
+      "staged": true,
+      "n": 40,
+      "correct": 17,
+      "accuracy": 0.425,
+      "ci95": [
+        0.27906976744186046,
+        0.6
+      ],
+      "stages": {
+        "abstention_error": 2,
+        "answer_gap": 2,
+        "partial_evidence": 11,
+        "run_limit": 3,
+        "candidate_gap": 5
+      },
+      "outcomes": {
+        "judged_correct": 17,
+        "judged_incorrect": 20,
+        "run_limit": 3,
+        "transport_setup_error": 0,
+        "comparator_ineligible": 0
+      },
+      "failureIdsByStage": {
+        "abstention_error": [
+          "9:abstention:1",
+          "20:abstention:1"
+        ],
+        "answer_gap": [
+          "8:contradiction_resolution:1",
+          "17:knowledge_update:1"
+        ],
+        "partial_evidence": [
+          "3:contradiction_resolution:1",
+          "7:contradiction_resolution:0",
+          "9:contradiction_resolution:0",
+          "5:event_ordering:0",
+          "1:event_ordering:0",
+          "7:knowledge_update:1",
+          "2:multi_session_reasoning:0",
+          "13:multi_session_reasoning:1",
+          "10:summarization:0",
+          "17:summarization:0",
+          "1:summarization:1"
+        ],
+        "run_limit": [
+          "13:event_ordering:0",
+          "9:information_extraction:0",
+          "9:multi_session_reasoning:1"
+        ],
+        "candidate_gap": [
+          "1:event_ordering:1",
+          "6:multi_session_reasoning:1",
+          "10:preference_following:1",
+          "14:preference_following:0",
+          "8:summarization:1"
+        ]
+      },
+      "measuredStages": [
+        "abstention_error",
+        "candidate_gap",
+        "selection_gap",
+        "answer_gap",
+        "fine_selection_gap",
+        "partial_evidence"
+      ],
+      "attribution": {
+        "attributed": 20,
+        "unknown": 0,
+        "operational": 3,
+        "invalidComparator": 0,
+        "provenance": {
+          "source_chat_ids": 20,
+          "outcome": 3
+        },
+        "coverage": 0.8695652173913043
+      },
+      "failuresByAbility": {
+        "abstention": 2,
+        "contradiction_resolution": 4,
+        "event_ordering": 4,
+        "information_extraction": 1,
+        "knowledge_update": 2,
+        "multi_session_reasoning": 4,
+        "preference_following": 2,
+        "summarization": 4
+      },
+      "byAbility": {
+        "abstention": {
+          "n": 4,
+          "correct": 2,
+          "gradedN": 0,
+          "accuracy": 0.5,
+          "gradedMean": null
+        },
+        "contradiction_resolution": {
+          "n": 4,
+          "correct": 0,
+          "gradedN": 0,
+          "accuracy": 0,
+          "gradedMean": null
+        },
+        "event_ordering": {
+          "n": 4,
+          "correct": 0,
+          "gradedN": 3,
+          "accuracy": 0,
+          "gradedMean": 0.19478205128205128
+        },
+        "information_extraction": {
+          "n": 4,
+          "correct": 3,
+          "gradedN": 0,
+          "accuracy": 0.75,
+          "gradedMean": null
+        },
+        "instruction_following": {
+          "n": 4,
+          "correct": 4,
+          "gradedN": 0,
+          "accuracy": 1,
+          "gradedMean": null
+        },
+        "knowledge_update": {
+          "n": 4,
+          "correct": 2,
+          "gradedN": 0,
+          "accuracy": 0.5,
+          "gradedMean": null
+        },
+        "multi_session_reasoning": {
+          "n": 4,
+          "correct": 0,
+          "gradedN": 0,
+          "accuracy": 0,
+          "gradedMean": null
+        },
+        "preference_following": {
+          "n": 4,
+          "correct": 2,
+          "gradedN": 0,
+          "accuracy": 0.5,
+          "gradedMean": null
+        },
+        "summarization": {
+          "n": 4,
+          "correct": 0,
+          "gradedN": 4,
+          "accuracy": 0,
+          "gradedMean": 0.33749999999999997
+        },
+        "temporal_reasoning": {
+          "n": 4,
+          "correct": 4,
+          "gradedN": 0,
+          "accuracy": 1,
+          "gradedMean": null
+        }
+      },
+      "abilityRows": [
+        {
+          "ability": "abstention",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        {
+          "ability": "contradiction_resolution",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "event_ordering",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0,
+          "gradedN": 3,
+          "gradedMean": 0.19478205128205128,
+          "primaryMetric": "graded",
+          "screeningStatus": "not lever-discriminating at this sample"
+        },
+        {
+          "ability": "information_extraction",
+          "n": 4,
+          "correct": 3,
+          "accuracy": 0.75
+        },
+        {
+          "ability": "instruction_following",
+          "n": 4,
+          "correct": 4,
+          "accuracy": 1
+        },
+        {
+          "ability": "knowledge_update",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        {
+          "ability": "multi_session_reasoning",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "preference_following",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        {
+          "ability": "summarization",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0,
+          "gradedN": 4,
+          "gradedMean": 0.33749999999999997,
+          "primaryMetric": "graded",
+          "screeningStatus": "not lever-discriminating at this sample"
+        },
+        {
+          "ability": "temporal_reasoning",
+          "n": 4,
+          "correct": 4,
+          "accuracy": 1
+        }
+      ],
+      "failures": 23
+    },
+    {
+      "suite": "beam-100k",
+      "model": "commandcode/meta/muse-spark-1.2-contributor",
+      "arm": "full",
+      "ineligibleQuestions": 0,
+      "unscoredQuestions": 0,
+      "inputTokens": 5301023,
+      "cacheReadTokens": 9877,
+      "cacheWriteTokens": 0,
+      "outputTokens": 66056,
+      "costUsd": 0.551473,
+      "productCostUsd": 0.533979,
+      "productColdCostUsd": 0.533979,
+      "productWarmCostUsd": 0.020157,
+      "evaluationCostUsd": 0.017494,
+      "latencyMeanMs": 9633.7,
+      "ingestion": {
+        "n": 40,
+        "wallMs": {
+          "p50": 4.8,
+          "p95": 6.3,
+          "mean": 5
+        }
+      },
+      "evaluation": {
+        "n": 40,
+        "wallMs": {
+          "p50": 4478.8,
+          "p95": 27935.2,
+          "mean": 8413.2
+        }
+      },
+      "latencyMs": 8923.1,
+      "latencyP95Ms": 14645.3,
+      "attemptId": "202-baseline.beam-100k.full.commandcode.meta/muse-spark-1.2-contributor@1",
+      "completeHistoryEligible": 40,
+      "repeatOf": null,
+      "staged": true,
+      "n": 40,
+      "correct": 18,
+      "accuracy": 0.45,
+      "ci95": [
+        0.3076923076923077,
+        0.5813953488372093
+      ],
+      "stages": {
+        "abstention_error": 1,
+        "candidate_gap": 21
+      },
+      "outcomes": {
+        "judged_correct": 18,
+        "judged_incorrect": 22,
+        "run_limit": 0,
+        "transport_setup_error": 0,
+        "comparator_ineligible": 0
+      },
+      "failureIdsByStage": {
+        "abstention_error": [
+          "20:abstention:1"
+        ],
+        "candidate_gap": [
+          "8:contradiction_resolution:1",
+          "3:contradiction_resolution:1",
+          "7:contradiction_resolution:0",
+          "9:contradiction_resolution:0",
+          "13:event_ordering:0",
+          "5:event_ordering:0",
+          "1:event_ordering:1",
+          "1:event_ordering:0",
+          "16:information_extraction:1",
+          "18:instruction_following:0",
+          "13:instruction_following:1",
+          "6:multi_session_reasoning:1",
+          "2:multi_session_reasoning:0",
+          "9:multi_session_reasoning:1",
+          "13:multi_session_reasoning:1",
+          "10:preference_following:1",
+          "14:preference_following:0",
+          "10:summarization:0",
+          "17:summarization:0",
+          "1:summarization:1",
+          "8:summarization:1"
+        ]
+      },
+      "measuredStages": [
+        "abstention_error",
+        "candidate_gap",
+        "selection_gap",
+        "answer_gap",
+        "fine_selection_gap",
+        "partial_evidence"
+      ],
+      "attribution": {
+        "attributed": 22,
+        "unknown": 0,
+        "operational": 0,
+        "invalidComparator": 0,
+        "provenance": {
+          "source_chat_ids": 22
+        },
+        "coverage": 1
+      },
+      "failuresByAbility": {
+        "abstention": 1,
+        "contradiction_resolution": 4,
+        "event_ordering": 4,
+        "information_extraction": 1,
+        "instruction_following": 2,
+        "multi_session_reasoning": 4,
+        "preference_following": 2,
+        "summarization": 4
+      },
+      "byAbility": {
+        "abstention": {
+          "n": 4,
+          "correct": 3,
+          "gradedN": 0,
+          "accuracy": 0.75,
+          "gradedMean": null
+        },
+        "contradiction_resolution": {
+          "n": 4,
+          "correct": 0,
+          "gradedN": 0,
+          "accuracy": 0,
+          "gradedMean": null
+        },
+        "event_ordering": {
+          "n": 4,
+          "correct": 0,
+          "gradedN": 4,
+          "accuracy": 0,
+          "gradedMean": 0.28307182940516273
+        },
+        "information_extraction": {
+          "n": 4,
+          "correct": 3,
+          "gradedN": 0,
+          "accuracy": 0.75,
+          "gradedMean": null
+        },
+        "instruction_following": {
+          "n": 4,
+          "correct": 2,
+          "gradedN": 0,
+          "accuracy": 0.5,
+          "gradedMean": null
+        },
+        "knowledge_update": {
+          "n": 4,
+          "correct": 4,
+          "gradedN": 0,
+          "accuracy": 1,
+          "gradedMean": null
+        },
+        "multi_session_reasoning": {
+          "n": 4,
+          "correct": 0,
+          "gradedN": 0,
+          "accuracy": 0,
+          "gradedMean": null
+        },
+        "preference_following": {
+          "n": 4,
+          "correct": 2,
+          "gradedN": 0,
+          "accuracy": 0.5,
+          "gradedMean": null
+        },
+        "summarization": {
+          "n": 4,
+          "correct": 0,
+          "gradedN": 4,
+          "accuracy": 0,
+          "gradedMean": 0.525
+        },
+        "temporal_reasoning": {
+          "n": 4,
+          "correct": 4,
+          "gradedN": 0,
+          "accuracy": 1,
+          "gradedMean": null
+        }
+      },
+      "abilityRows": [
+        {
+          "ability": "abstention",
+          "n": 4,
+          "correct": 3,
+          "accuracy": 0.75
+        },
+        {
+          "ability": "contradiction_resolution",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "event_ordering",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0,
+          "gradedN": 4,
+          "gradedMean": 0.28307182940516273,
+          "primaryMetric": "graded",
+          "screeningStatus": "not lever-discriminating at this sample"
+        },
+        {
+          "ability": "information_extraction",
+          "n": 4,
+          "correct": 3,
+          "accuracy": 0.75
+        },
+        {
+          "ability": "instruction_following",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        {
+          "ability": "knowledge_update",
+          "n": 4,
+          "correct": 4,
+          "accuracy": 1
+        },
+        {
+          "ability": "multi_session_reasoning",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0
+        },
+        {
+          "ability": "preference_following",
+          "n": 4,
+          "correct": 2,
+          "accuracy": 0.5
+        },
+        {
+          "ability": "summarization",
+          "n": 4,
+          "correct": 0,
+          "accuracy": 0,
+          "gradedN": 4,
+          "gradedMean": 0.525,
+          "primaryMetric": "graded",
+          "screeningStatus": "not lever-discriminating at this sample"
+        },
+        {
+          "ability": "temporal_reasoning",
+          "n": 4,
+          "correct": 4,
+          "accuracy": 1
+        }
+      ],
+      "failures": 22
+    }
+  ],
+  "gaps": [
+    {
+      "suite": "beam-100k",
+      "model": "commandcode/meta/muse-spark-1.2-contributor",
+      "arm": "fabric-x-tools",
+      "comparator": "full",
+      "armAccuracy": 0.425,
+      "comparatorAccuracy": 0.45,
+      "diff": -0.025,
+      "ci95": [
+        -0.16335034013605434,
+        0.11764705882352941
+      ],
+      "p": 1,
+      "n": 40,
+      "clusters": 18,
+      "clusterUnit": "conversation",
+      "wins": 3,
+      "losses": 4,
+      "ties": 33,
+      "gap": -0.025,
+      "abilities": {
+        "abstention": {
+          "binary": {
+            "diff": -0.25,
+            "ci95": [
+              -0.75,
+              0
+            ],
+            "p": 1,
+            "n": 4,
+            "clusters": 4,
+            "clusterUnit": "conversation",
+            "wins": 0,
+            "losses": 1,
+            "ties": 3,
+            "pHolm": 1
+          }
+        },
+        "contradiction_resolution": {
+          "binary": {
+            "diff": 0,
+            "ci95": [
+              0,
+              0
+            ],
+            "p": 1,
+            "n": 4,
+            "clusters": 4,
+            "clusterUnit": "conversation",
+            "wins": 0,
+            "losses": 0,
+            "ties": 4,
+            "pHolm": 1
+          }
+        },
+        "event_ordering": {
+          "binary": {
+            "diff": 0,
+            "ci95": [
+              0,
+              0
+            ],
+            "p": 1,
+            "n": 4,
+            "clusters": 3,
+            "clusterUnit": "conversation",
+            "wins": 0,
+            "losses": 0,
+            "ties": 4,
+            "pHolm": 1
+          },
+          "graded": {
+            "diff": -0.1369852909436243,
+            "ci95": [
+              -0.37466666666666676,
+              0.0021944444444444433
+            ],
+            "p": 0.5,
+            "n": 4,
+            "clusters": 3,
+            "clusterUnit": "conversation",
+            "wins": 1,
+            "losses": 3,
+            "ties": 0,
+            "pHolm": 1
+          }
+        },
+        "information_extraction": {
+          "binary": {
+            "diff": 0,
+            "ci95": [
+              -1,
+              0.5
+            ],
+            "p": 1,
+            "n": 4,
+            "clusters": 3,
+            "clusterUnit": "conversation",
+            "wins": 1,
+            "losses": 1,
+            "ties": 2,
+            "pHolm": 1
+          }
+        },
+        "instruction_following": {
+          "binary": {
+            "diff": 0.5,
+            "ci95": [
+              0,
+              1
+            ],
+            "p": 0.5,
+            "n": 4,
+            "clusters": 4,
+            "clusterUnit": "conversation",
+            "wins": 2,
+            "losses": 0,
+            "ties": 2,
+            "pHolm": 1
+          }
+        },
+        "knowledge_update": {
+          "binary": {
+            "diff": -0.5,
+            "ci95": [
+              -1,
+              0
+            ],
+            "p": 0.5,
+            "n": 4,
+            "clusters": 4,
+            "clusterUnit": "conversation",
+            "wins": 0,
+            "losses": 2,
+            "ties": 2,
+            "pHolm": 1
+          }
+        },
+        "multi_session_reasoning": {
+          "binary": {
+            "diff": 0,
+            "ci95": [
+              0,
+              0
+            ],
+            "p": 1,
+            "n": 4,
+            "clusters": 4,
+            "clusterUnit": "conversation",
+            "wins": 0,
+            "losses": 0,
+            "ties": 4,
+            "pHolm": 1
+          }
+        },
+        "preference_following": {
+          "binary": {
+            "diff": 0,
+            "ci95": [
+              0,
+              0
+            ],
+            "p": 1,
+            "n": 4,
+            "clusters": 4,
+            "clusterUnit": "conversation",
+            "wins": 0,
+            "losses": 0,
+            "ties": 4,
+            "pHolm": 1
+          }
+        },
+        "summarization": {
+          "binary": {
+            "diff": 0,
+            "ci95": [
+              0,
+              0
+            ],
+            "p": 1,
+            "n": 4,
+            "clusters": 4,
+            "clusterUnit": "conversation",
+            "wins": 0,
+            "losses": 0,
+            "ties": 4,
+            "pHolm": 1
+          },
+          "graded": {
+            "diff": -0.1875,
+            "ci95": [
+              -0.475,
+              0.09999999999999999
+            ],
+            "p": 0.5,
+            "n": 4,
+            "clusters": 4,
+            "clusterUnit": "conversation",
+            "wins": 2,
+            "losses": 2,
+            "ties": 0,
+            "pHolm": 1
+          }
+        },
+        "temporal_reasoning": {
+          "binary": {
+            "diff": 0,
+            "ci95": [
+              0,
+              0
+            ],
+            "p": 1,
+            "n": 4,
+            "clusters": 4,
+            "clusterUnit": "conversation",
+            "wins": 0,
+            "losses": 0,
+            "ties": 4,
+            "pHolm": 1
+          }
+        }
+      },
+      "status": "paired-descriptive",
+      "analysisVersion": "202-paired-cluster-v1",
+      "pHolm": 1
+    },
+    {
+      "suite": "beam-100k",
+      "model": "commandcode/meta/muse-spark-1.2-contributor",
+      "arm": "fabric-x",
+      "comparator": "full",
+      "armAccuracy": 0.3,
+      "comparatorAccuracy": 0.45,
+      "diff": -0.15,
+      "ci95": [
+        -0.2608695652173913,
+        -0.047619047619047616
+      ],
+      "p": 0.0625,
+      "n": 40,
+      "clusters": 18,
+      "clusterUnit": "conversation",
+      "wins": 1,
+      "losses": 7,
+      "ties": 32,
+      "gap": -0.15,
+      "abilities": {
+        "abstention": {
+          "binary": {
+            "diff": -0.25,
+            "ci95": [
+              -0.75,
+              0
+            ],
+            "p": 1,
+            "n": 4,
+            "clusters": 4,
+            "clusterUnit": "conversation",
+            "wins": 0,
+            "losses": 1,
+            "ties": 3,
+            "pHolm": 1
+          }
+        },
+        "contradiction_resolution": {
+          "binary": {
+            "diff": 0,
+            "ci95": [
+              0,
+              0
+            ],
+            "p": 1,
+            "n": 4,
+            "clusters": 4,
+            "clusterUnit": "conversation",
+            "wins": 0,
+            "losses": 0,
+            "ties": 4,
+            "pHolm": 1
+          }
+        },
+        "event_ordering": {
+          "binary": {
+            "diff": 0,
+            "ci95": [
+              0,
+              0
+            ],
+            "p": 1,
+            "n": 4,
+            "clusters": 3,
+            "clusterUnit": "conversation",
+            "wins": 0,
+            "losses": 0,
+            "ties": 4,
+            "pHolm": 1
+          },
+          "graded": {
+            "diff": -0.21127695761029094,
+            "ci95": [
+              -0.24133333333333337,
+              -0.17766338599671927
+            ],
+            "p": 0.25,
+            "n": 4,
+            "clusters": 3,
+            "clusterUnit": "conversation",
+            "wins": 0,
+            "losses": 4,
+            "ties": 0,
+            "pHolm": 1
+          }
+        },
+        "information_extraction": {
+          "binary": {
+            "diff": -0.25,
+            "ci95": [
+              -1,
+              0
+            ],
+            "p": 1,
+            "n": 4,
+            "clusters": 3,
+            "clusterUnit": "conversation",
+            "wins": 0,
+            "losses": 1,
+            "ties": 3,
+            "pHolm": 1
+          }
+        },
+        "instruction_following": {
+          "binary": {
+            "diff": 0.25,
+            "ci95": [
+              0,
+              0.75
+            ],
+            "p": 1,
+            "n": 4,
+            "clusters": 4,
+            "clusterUnit": "conversation",
+            "wins": 1,
+            "losses": 0,
+            "ties": 3,
+            "pHolm": 1
+          }
+        },
+        "knowledge_update": {
+          "binary": {
+            "diff": -0.75,
+            "ci95": [
+              -1,
+              -0.25
+            ],
+            "p": 0.25,
+            "n": 4,
+            "clusters": 4,
+            "clusterUnit": "conversation",
+            "wins": 0,
+            "losses": 3,
+            "ties": 1,
+            "pHolm": 1
+          }
+        },
+        "multi_session_reasoning": {
+          "binary": {
+            "diff": 0,
+            "ci95": [
+              0,
+              0
+            ],
+            "p": 1,
+            "n": 4,
+            "clusters": 4,
+            "clusterUnit": "conversation",
+            "wins": 0,
+            "losses": 0,
+            "ties": 4,
+            "pHolm": 1
+          }
+        },
+        "preference_following": {
+          "binary": {
+            "diff": 0,
+            "ci95": [
+              0,
+              0
+            ],
+            "p": 1,
+            "n": 4,
+            "clusters": 4,
+            "clusterUnit": "conversation",
+            "wins": 0,
+            "losses": 0,
+            "ties": 4,
+            "pHolm": 1
+          }
+        },
+        "summarization": {
+          "binary": {
+            "diff": 0,
+            "ci95": [
+              0,
+              0
+            ],
+            "p": 1,
+            "n": 4,
+            "clusters": 4,
+            "clusterUnit": "conversation",
+            "wins": 0,
+            "losses": 0,
+            "ties": 4,
+            "pHolm": 1
+          },
+          "graded": {
+            "diff": -0.325,
+            "ci95": [
+              -0.55,
+              -0.09999999999999998
+            ],
+            "p": 0.125,
+            "n": 4,
+            "clusters": 4,
+            "clusterUnit": "conversation",
+            "wins": 0,
+            "losses": 4,
+            "ties": 0,
+            "pHolm": 1
+          }
+        },
+        "temporal_reasoning": {
+          "binary": {
+            "diff": -0.5,
+            "ci95": [
+              -1,
+              0
+            ],
+            "p": 0.5,
+            "n": 4,
+            "clusters": 4,
+            "clusterUnit": "conversation",
+            "wins": 0,
+            "losses": 2,
+            "ties": 2,
+            "pHolm": 1
+          }
+        }
+      },
+      "status": "paired-descriptive",
+      "analysisVersion": "202-paired-cluster-v1",
+      "pHolm": 1
+    }
+  ],
+  "productMeasurements": [
+    {
+      "suite": "beam-100k",
+      "model": "commandcode/meta/muse-spark-1.2-contributor",
+      "arm": "fabric-x-tools",
+      "comparator": "full",
+      "cost": {
+        "ratio": 15.758913250714967,
+        "met": false,
+        "basis": "product warm-cache-adjusted input USD per question"
+      },
+      "latency": {
+        "ratio": 1.923135750035848,
+        "met": true,
+        "basis": "product answer p95"
+      }
+    },
+    {
+      "suite": "beam-100k",
+      "model": "commandcode/meta/muse-spark-1.2-contributor",
+      "arm": "fabric-x",
+      "comparator": "full",
+      "cost": {
+        "ratio": 2.0451858913250716,
+        "met": false,
+        "basis": "product warm-cache-adjusted input USD per question"
+      },
+      "latency": {
+        "ratio": 0.799860706165118,
+        "met": true,
+        "basis": "product answer p95"
+      }
+    }
+  ],
+  "levers": [
+    {
+      "task": 5,
+      "stages": [
+        "candidate_gap"
+      ],
+      "candidateFailures": 15,
+      "failureOccurrences": 20,
+      "sharedFailures": 5,
+      "bestShare": 0.5357142857142857,
+      "bestCell": {
+        "suite": "beam-100k",
+        "model": "commandcode/meta/muse-spark-1.2-contributor",
+        "arm": "fabric-x"
+      },
+      "decisions": [
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x-tools",
+          "counts": 5,
+          "total": 23,
+          "share": 0.21739130434782608,
+          "needed": true,
+          "attribution": {
+            "attributed": 20,
+            "unknown": 0,
+            "operational": 3,
+            "invalidComparator": 0,
+            "provenance": {
+              "source_chat_ids": 20,
+              "outcome": 3
+            },
+            "coverage": 0.8695652173913043
+          },
+          "measured": true
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x",
+          "counts": 15,
+          "total": 28,
+          "share": 0.5357142857142857,
+          "needed": true,
+          "attribution": {
+            "attributed": 27,
+            "unknown": 0,
+            "operational": 1,
+            "invalidComparator": 0,
+            "provenance": {
+              "source_chat_ids": 27,
+              "outcome": 1
+            },
+            "coverage": 0.9642857142857143
+          },
+          "measured": true
+        }
+      ],
+      "screeningLimits": [
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x-tools",
+          "ability": "event_ordering",
+          "status": "not lever-discriminating at this sample"
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x-tools",
+          "ability": "summarization",
+          "status": "not lever-discriminating at this sample"
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x",
+          "ability": "event_ordering",
+          "status": "not lever-discriminating at this sample"
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x",
+          "ability": "summarization",
+          "status": "not lever-discriminating at this sample"
+        }
+      ],
+      "status": "needed",
+      "needed": true
+    },
+    {
+      "task": 8,
+      "stages": [
+        "partial_evidence"
+      ],
+      "candidateFailures": 14,
+      "failureOccurrences": 20,
+      "sharedFailures": 6,
+      "bestShare": 0.4782608695652174,
+      "bestCell": {
+        "suite": "beam-100k",
+        "model": "commandcode/meta/muse-spark-1.2-contributor",
+        "arm": "fabric-x-tools"
+      },
+      "decisions": [
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x-tools",
+          "counts": 11,
+          "total": 23,
+          "share": 0.4782608695652174,
+          "needed": true,
+          "attribution": {
+            "attributed": 20,
+            "unknown": 0,
+            "operational": 3,
+            "invalidComparator": 0,
+            "provenance": {
+              "source_chat_ids": 20,
+              "outcome": 3
+            },
+            "coverage": 0.8695652173913043
+          },
+          "measured": true
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x",
+          "counts": 9,
+          "total": 28,
+          "share": 0.32142857142857145,
+          "needed": true,
+          "attribution": {
+            "attributed": 27,
+            "unknown": 0,
+            "operational": 1,
+            "invalidComparator": 0,
+            "provenance": {
+              "source_chat_ids": 27,
+              "outcome": 1
+            },
+            "coverage": 0.9642857142857143
+          },
+          "measured": true
+        }
+      ],
+      "screeningLimits": [
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x-tools",
+          "ability": "event_ordering",
+          "status": "not lever-discriminating at this sample"
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x-tools",
+          "ability": "summarization",
+          "status": "not lever-discriminating at this sample"
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x",
+          "ability": "event_ordering",
+          "status": "not lever-discriminating at this sample"
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x",
+          "ability": "summarization",
+          "status": "not lever-discriminating at this sample"
+        }
+      ],
+      "status": "needed",
+      "needed": true
+    },
+    {
+      "task": 9,
+      "stages": [
+        "answer_gap",
+        "abstention_error"
+      ],
+      "candidateFailures": 4,
+      "failureOccurrences": 7,
+      "sharedFailures": 3,
+      "bestShare": 0.17391304347826086,
+      "bestCell": {
+        "suite": "beam-100k",
+        "model": "commandcode/meta/muse-spark-1.2-contributor",
+        "arm": "fabric-x-tools"
+      },
+      "decisions": [
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x-tools",
+          "counts": 4,
+          "total": 23,
+          "share": 0.17391304347826086,
+          "needed": true,
+          "attribution": {
+            "attributed": 20,
+            "unknown": 0,
+            "operational": 3,
+            "invalidComparator": 0,
+            "provenance": {
+              "source_chat_ids": 20,
+              "outcome": 3
+            },
+            "coverage": 0.8695652173913043
+          },
+          "measured": true
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x",
+          "counts": 3,
+          "total": 28,
+          "share": 0.10714285714285714,
+          "needed": true,
+          "attribution": {
+            "attributed": 27,
+            "unknown": 0,
+            "operational": 1,
+            "invalidComparator": 0,
+            "provenance": {
+              "source_chat_ids": 27,
+              "outcome": 1
+            },
+            "coverage": 0.9642857142857143
+          },
+          "measured": true
+        }
+      ],
+      "screeningLimits": [
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x-tools",
+          "ability": "event_ordering",
+          "status": "not lever-discriminating at this sample"
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x-tools",
+          "ability": "summarization",
+          "status": "not lever-discriminating at this sample"
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x",
+          "ability": "event_ordering",
+          "status": "not lever-discriminating at this sample"
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x",
+          "ability": "summarization",
+          "status": "not lever-discriminating at this sample"
+        }
+      ],
+      "status": "needed",
+      "needed": true
+    },
+    {
+      "task": 6,
+      "stages": [
+        "temporal_gap"
+      ],
+      "candidateFailures": 0,
+      "failureOccurrences": 0,
+      "sharedFailures": 0,
+      "bestShare": 0,
+      "bestCell": null,
+      "decisions": [
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x-tools",
+          "counts": 0,
+          "total": 23,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 20,
+            "unknown": 0,
+            "operational": 3,
+            "invalidComparator": 0,
+            "provenance": {
+              "source_chat_ids": 20,
+              "outcome": 3
+            },
+            "coverage": 0.8695652173913043
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x",
+          "counts": 0,
+          "total": 28,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 27,
+            "unknown": 0,
+            "operational": 1,
+            "invalidComparator": 0,
+            "provenance": {
+              "source_chat_ids": 27,
+              "outcome": 1
+            },
+            "coverage": 0.9642857142857143
+          },
+          "measured": false
+        }
+      ],
+      "screeningLimits": [
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x-tools",
+          "ability": "event_ordering",
+          "status": "not lever-discriminating at this sample"
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x-tools",
+          "ability": "summarization",
+          "status": "not lever-discriminating at this sample"
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x",
+          "ability": "event_ordering",
+          "status": "not lever-discriminating at this sample"
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x",
+          "ability": "summarization",
+          "status": "not lever-discriminating at this sample"
+        }
+      ],
+      "status": "unmeasurable",
+      "needed": false
+    },
+    {
+      "task": 7,
+      "stages": [
+        "supersession_gap"
+      ],
+      "candidateFailures": 0,
+      "failureOccurrences": 0,
+      "sharedFailures": 0,
+      "bestShare": 0,
+      "bestCell": null,
+      "decisions": [
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x-tools",
+          "counts": 0,
+          "total": 23,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 20,
+            "unknown": 0,
+            "operational": 3,
+            "invalidComparator": 0,
+            "provenance": {
+              "source_chat_ids": 20,
+              "outcome": 3
+            },
+            "coverage": 0.8695652173913043
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x",
+          "counts": 0,
+          "total": 28,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 27,
+            "unknown": 0,
+            "operational": 1,
+            "invalidComparator": 0,
+            "provenance": {
+              "source_chat_ids": 27,
+              "outcome": 1
+            },
+            "coverage": 0.9642857142857143
+          },
+          "measured": false
+        }
+      ],
+      "screeningLimits": [
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x-tools",
+          "ability": "event_ordering",
+          "status": "not lever-discriminating at this sample"
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x-tools",
+          "ability": "summarization",
+          "status": "not lever-discriminating at this sample"
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x",
+          "ability": "event_ordering",
+          "status": "not lever-discriminating at this sample"
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x",
+          "ability": "summarization",
+          "status": "not lever-discriminating at this sample"
+        }
+      ],
+      "status": "unmeasurable",
+      "needed": false
+    },
+    {
+      "task": 10,
+      "stages": [
+        "tool_protocol_gap"
+      ],
+      "candidateFailures": 0,
+      "failureOccurrences": 0,
+      "sharedFailures": 0,
+      "bestShare": 0,
+      "bestCell": null,
+      "decisions": [
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x-tools",
+          "counts": 0,
+          "total": 23,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 20,
+            "unknown": 0,
+            "operational": 3,
+            "invalidComparator": 0,
+            "provenance": {
+              "source_chat_ids": 20,
+              "outcome": 3
+            },
+            "coverage": 0.8695652173913043
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x",
+          "counts": 0,
+          "total": 28,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 27,
+            "unknown": 0,
+            "operational": 1,
+            "invalidComparator": 0,
+            "provenance": {
+              "source_chat_ids": 27,
+              "outcome": 1
+            },
+            "coverage": 0.9642857142857143
+          },
+          "measured": false
+        }
+      ],
+      "screeningLimits": [
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x-tools",
+          "ability": "event_ordering",
+          "status": "not lever-discriminating at this sample"
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x-tools",
+          "ability": "summarization",
+          "status": "not lever-discriminating at this sample"
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x",
+          "ability": "event_ordering",
+          "status": "not lever-discriminating at this sample"
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x",
+          "ability": "summarization",
+          "status": "not lever-discriminating at this sample"
+        }
+      ],
+      "status": "unmeasurable",
+      "needed": false
+    },
+    {
+      "task": 13,
+      "stages": [
+        "fine_selection_gap"
+      ],
+      "candidateFailures": 0,
+      "failureOccurrences": 0,
+      "sharedFailures": 0,
+      "bestShare": 0,
+      "bestCell": null,
+      "decisions": [
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x-tools",
+          "counts": 0,
+          "total": 23,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 20,
+            "unknown": 0,
+            "operational": 3,
+            "invalidComparator": 0,
+            "provenance": {
+              "source_chat_ids": 20,
+              "outcome": 3
+            },
+            "coverage": 0.8695652173913043
+          },
+          "measured": true
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x",
+          "counts": 0,
+          "total": 28,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 27,
+            "unknown": 0,
+            "operational": 1,
+            "invalidComparator": 0,
+            "provenance": {
+              "source_chat_ids": 27,
+              "outcome": 1
+            },
+            "coverage": 0.9642857142857143
+          },
+          "measured": true
+        }
+      ],
+      "screeningLimits": [
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x-tools",
+          "ability": "event_ordering",
+          "status": "not lever-discriminating at this sample"
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x-tools",
+          "ability": "summarization",
+          "status": "not lever-discriminating at this sample"
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x",
+          "ability": "event_ordering",
+          "status": "not lever-discriminating at this sample"
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x",
+          "ability": "summarization",
+          "status": "not lever-discriminating at this sample"
+        }
+      ],
+      "status": "insufficient-evidence",
+      "needed": false
+    },
+    {
+      "task": 16,
+      "stages": [
+        "capacity_gap"
+      ],
+      "candidateFailures": 0,
+      "failureOccurrences": 0,
+      "sharedFailures": 0,
+      "bestShare": 0,
+      "bestCell": null,
+      "decisions": [
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x-tools",
+          "counts": 0,
+          "total": 23,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 20,
+            "unknown": 0,
+            "operational": 3,
+            "invalidComparator": 0,
+            "provenance": {
+              "source_chat_ids": 20,
+              "outcome": 3
+            },
+            "coverage": 0.8695652173913043
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x",
+          "counts": 0,
+          "total": 28,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 27,
+            "unknown": 0,
+            "operational": 1,
+            "invalidComparator": 0,
+            "provenance": {
+              "source_chat_ids": 27,
+              "outcome": 1
+            },
+            "coverage": 0.9642857142857143
+          },
+          "measured": false
+        }
+      ],
+      "screeningLimits": [
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x-tools",
+          "ability": "event_ordering",
+          "status": "not lever-discriminating at this sample"
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x-tools",
+          "ability": "summarization",
+          "status": "not lever-discriminating at this sample"
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x",
+          "ability": "event_ordering",
+          "status": "not lever-discriminating at this sample"
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x",
+          "ability": "summarization",
+          "status": "not lever-discriminating at this sample"
+        }
+      ],
+      "status": "unmeasurable",
+      "needed": false
+    },
+    {
+      "task": 17,
+      "stages": [
+        "extraction_gap"
+      ],
+      "candidateFailures": 0,
+      "failureOccurrences": 0,
+      "sharedFailures": 0,
+      "bestShare": 0,
+      "bestCell": null,
+      "decisions": [
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x-tools",
+          "counts": 0,
+          "total": 23,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 20,
+            "unknown": 0,
+            "operational": 3,
+            "invalidComparator": 0,
+            "provenance": {
+              "source_chat_ids": 20,
+              "outcome": 3
+            },
+            "coverage": 0.8695652173913043
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x",
+          "counts": 0,
+          "total": 28,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 27,
+            "unknown": 0,
+            "operational": 1,
+            "invalidComparator": 0,
+            "provenance": {
+              "source_chat_ids": 27,
+              "outcome": 1
+            },
+            "coverage": 0.9642857142857143
+          },
+          "measured": false
+        }
+      ],
+      "screeningLimits": [
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x-tools",
+          "ability": "event_ordering",
+          "status": "not lever-discriminating at this sample"
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x-tools",
+          "ability": "summarization",
+          "status": "not lever-discriminating at this sample"
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x",
+          "ability": "event_ordering",
+          "status": "not lever-discriminating at this sample"
+        },
+        {
+          "suite": "beam-100k",
+          "model": "commandcode/meta/muse-spark-1.2-contributor",
+          "arm": "fabric-x",
+          "ability": "summarization",
+          "status": "not lever-discriminating at this sample"
+        }
+      ],
+      "status": "unmeasurable",
+      "needed": false
+    }
+  ],
+  "coverage": {
+    "completedCells": 3,
+    "requiredCells": 75
+  },
+  "screenComplete": false,
+  "baselineComplete": false,
+  "campaignStatus": "stopped-by-owner",
+  "usageLimitations": []
+}

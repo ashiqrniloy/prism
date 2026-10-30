@@ -1,0 +1,12 @@
+{
+  "kind": "202-owner-closure-resume-guard",
+  "status": "passed",
+  "generatedAt": "2026-10-30T00:08:11.782Z",
+  "readinessStatus": "closed-by-owner",
+  "blocker": "screen-closed-by-owner",
+  "executable": false,
+  "journalBytesUnchanged": true,
+  "attemptsCreated": 0,
+  "liveRequests": 0,
+  "journalSha256": "a09c4a49cb1602031d0009bd9119984cbdcbd4588485a97075f426dd8b8b3c21"
+}

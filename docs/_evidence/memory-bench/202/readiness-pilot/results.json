@@ -1,0 +1,1284 @@
+{
+  "kind": "202-readiness-pilot-v1",
+  "manifestHash": "13277a917acbaca163fbdd8236202757557d253a9b9dbe128fe7dd2c62f4fd83",
+  "status": "aborted-harness-defect",
+  "calibration": "owner-waived; model-assisted, not human calibrated; free panel development-only",
+  "checkpointRoot": ".cache/memory-bench/audit/4.8-pilot",
+  "priorUsage": {
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0,
+    "wireAttempts": 0,
+    "accountedInputTokens": 0,
+    "accountedOutputTokens": 0,
+    "usageMissingExchanges": 0
+  },
+  "priorTiming": {
+    "wallMs": 0
+  },
+  "cells": [
+    {
+      "id": "5:abstention:1",
+      "questionId": "5:abstention:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "abstention",
+      "config": "full",
+      "jobId": "full.5:abstention:1",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "5:abstention:1",
+      "questionId": "5:abstention:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "abstention",
+      "config": "lexical-topk",
+      "jobId": "lexical-topk.5:abstention:1",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "5:abstention:1",
+      "questionId": "5:abstention:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "abstention",
+      "config": "fabric-x",
+      "jobId": "fabric-x.5:abstention:1",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 248.4,
+        "answer": 2763.9,
+        "evaluation": 16128.7
+      },
+      "outcome": "completed",
+      "answerKey": "3ee48257e683199c19687d36b0dcb81b695bf6b15120246dd69136f1c5d935bb",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 0,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "gradedJudges": {},
+      "correct": true,
+      "evaluationUsage": {
+        "inputTokens": 607,
+        "outputTokens": 1203,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 2
+      },
+      "evaluationCostUsd": 0
+    },
+    {
+      "id": "5:abstention:1",
+      "questionId": "5:abstention:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "abstention",
+      "config": "fabric-x-tools",
+      "jobId": "fabric-x-tools.5:abstention:1",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 4
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 222.7,
+        "answer": 8670.5,
+        "evaluation": 13947.4
+      },
+      "outcome": "completed",
+      "answerKey": "c50f2f84b9886d596e030778db6cad4ff9e4d0ea3d3e62749bdd866c7140fc4b",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 0,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "agentSteps": 4,
+      "toolCalls": 3,
+      "recallCalls": 4,
+      "answerRetries": 0,
+      "turnTrace": [
+        "memory.recall",
+        "memory.recall",
+        "memory.recall"
+      ],
+      "truncated": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "gradedJudges": {},
+      "correct": false,
+      "evaluationUsage": {
+        "inputTokens": 1056,
+        "outputTokens": 737,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 2
+      },
+      "evaluationCostUsd": 0
+    },
+    {
+      "id": "5:abstention:1",
+      "questionId": "5:abstention:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "abstention",
+      "config": "full-truncated",
+      "jobId": "full-truncated.5:abstention:1",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "outcome": "distinct_bounded_comparator_not_run",
+      "equivalentTo": null
+    },
+    {
+      "id": "3:contradiction_resolution:1",
+      "questionId": "3:contradiction_resolution:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "contradiction_resolution",
+      "config": "full",
+      "jobId": "full.3:contradiction_resolution:1",
+      "cluster": "beam-3",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "3:contradiction_resolution:1",
+      "questionId": "3:contradiction_resolution:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "contradiction_resolution",
+      "config": "lexical-topk",
+      "jobId": "lexical-topk.3:contradiction_resolution:1",
+      "cluster": "beam-3",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "3:contradiction_resolution:1",
+      "questionId": "3:contradiction_resolution:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "contradiction_resolution",
+      "config": "fabric-x",
+      "jobId": "fabric-x.3:contradiction_resolution:1",
+      "cluster": "beam-3",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 194,
+        "answer": 1654.1,
+        "evaluation": 20806
+      },
+      "outcome": "completed",
+      "answerKey": "6a61e01f5575c10f3e616636f13d7972023da6d0b8bb4125d26b2228a6b82f0a",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 1,
+        "selectedGold": 1,
+        "fineRounds": 2,
+        "fineSelected": 1
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "gradedJudges": {},
+      "correct": false,
+      "evaluationUsage": {
+        "inputTokens": 661,
+        "outputTokens": 1481,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 2
+      },
+      "evaluationCostUsd": 0
+    },
+    {
+      "id": "3:contradiction_resolution:1",
+      "questionId": "3:contradiction_resolution:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "contradiction_resolution",
+      "config": "fabric-x-tools",
+      "jobId": "fabric-x-tools.3:contradiction_resolution:1",
+      "cluster": "beam-3",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 2
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 154.8,
+        "answer": 4258.2,
+        "evaluation": 13299.3
+      },
+      "outcome": "completed",
+      "answerKey": "73db9302c18da44b8dd66160b7162e974109e907de11c539a3655011ea128ddd",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 1,
+        "selectedGold": 1,
+        "fineRounds": 2,
+        "fineSelected": 1
+      },
+      "agentSteps": 2,
+      "toolCalls": 1,
+      "recallCalls": 2,
+      "answerRetries": 0,
+      "turnTrace": [
+        "memory.recall"
+      ],
+      "truncated": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "gradedJudges": {},
+      "correct": false,
+      "evaluationUsage": {
+        "inputTokens": 635,
+        "outputTokens": 1054,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 2
+      },
+      "evaluationCostUsd": 0
+    },
+    {
+      "id": "3:contradiction_resolution:1",
+      "questionId": "3:contradiction_resolution:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "contradiction_resolution",
+      "config": "full-truncated",
+      "jobId": "full-truncated.3:contradiction_resolution:1",
+      "cluster": "beam-3",
+      "diagnosticOnly": false,
+      "outcome": "distinct_bounded_comparator_not_run",
+      "equivalentTo": null
+    },
+    {
+      "id": "5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "full",
+      "jobId": "full.5:event_ordering:0",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "lexical-topk",
+      "jobId": "lexical-topk.5:event_ordering:0",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "fabric-x",
+      "jobId": "fabric-x.5:event_ordering:0",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 209,
+        "answer": 2774.3,
+        "evaluation": 24881.5
+      },
+      "outcome": "completed",
+      "answerKey": "9437daabfc5b5b8a633fa4ae257bd55291df88841f959e10e48228dafbfffaa3",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 12,
+        "candidateGold": 1,
+        "selectedGold": 1,
+        "fineRounds": 12,
+        "fineSelected": 1
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "gradedJudges": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0,
+        "openrouter/cohere/north-mini-code:free": 0
+      },
+      "correct": false,
+      "graded": 0,
+      "spread": 0,
+      "disagreement": false,
+      "evaluationUsage": {
+        "inputTokens": 1307,
+        "outputTokens": 1520,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 4
+      },
+      "evaluationCostUsd": 0
+    },
+    {
+      "id": "5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "fabric-x-tools",
+      "jobId": "fabric-x-tools.5:event_ordering:0",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 8
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 223.8,
+        "answer": 28487,
+        "evaluation": 0
+      },
+      "outcome": "run_limit",
+      "answerKey": "a00887f1b4805e1cf087672cc1b4f3bee2ff5a147a8894a10abd6e61b896e842",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 12,
+        "candidateGold": 6,
+        "selectedGold": 6,
+        "fineRounds": 12,
+        "fineSelected": 6
+      },
+      "agentSteps": 8,
+      "toolCalls": 8,
+      "recallCalls": 6,
+      "answerRetries": 0,
+      "turnTrace": [
+        "memory.recall",
+        "memory.recall",
+        "memory.view",
+        "memory.read",
+        "memory.recall",
+        "memory.recall",
+        "memory.read",
+        "memory.recall"
+      ],
+      "truncated": false,
+      "correct": false,
+      "graded": 0,
+      "evaluationUsage": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 0
+      },
+      "evaluationCostUsd": 0
+    },
+    {
+      "id": "5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "full-truncated",
+      "jobId": "full-truncated.5:event_ordering:0",
+      "cluster": "beam-5",
+      "diagnosticOnly": false,
+      "outcome": "distinct_bounded_comparator_not_run",
+      "equivalentTo": null
+    },
+    {
+      "id": "5:event_ordering:0",
+      "questionId": "5:event_ordering:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "event_ordering",
+      "config": "oracle",
+      "jobId": "oracle.5:event_ordering:0",
+      "cluster": "beam-5",
+      "diagnosticOnly": true,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "16:information_extraction:0",
+      "questionId": "16:information_extraction:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "information_extraction",
+      "config": "full",
+      "jobId": "full.16:information_extraction:0",
+      "cluster": "beam-16",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "16:information_extraction:0",
+      "questionId": "16:information_extraction:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "information_extraction",
+      "config": "lexical-topk",
+      "jobId": "lexical-topk.16:information_extraction:0",
+      "cluster": "beam-16",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "16:information_extraction:0",
+      "questionId": "16:information_extraction:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "information_extraction",
+      "config": "fabric-x",
+      "jobId": "fabric-x.16:information_extraction:0",
+      "cluster": "beam-16",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 1
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 280.7,
+        "answer": 1375.9,
+        "evaluation": 9963.4
+      },
+      "outcome": "completed",
+      "answerKey": "bdcdf4f34041a3fd8a93b42fb352b5f1f4c1eb0489da33d682a8ca41ef25456e",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 1,
+        "selectedGold": 1,
+        "fineRounds": 1,
+        "fineSelected": 1
+      },
+      "agentSteps": 1,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "answerRetries": 0,
+      "turnTrace": [],
+      "truncated": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "gradedJudges": {},
+      "correct": true,
+      "evaluationUsage": {
+        "inputTokens": 419,
+        "outputTokens": 938,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 2
+      },
+      "evaluationCostUsd": 0
+    },
+    {
+      "id": "16:information_extraction:0",
+      "questionId": "16:information_extraction:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "information_extraction",
+      "config": "fabric-x-tools",
+      "jobId": "fabric-x-tools.16:information_extraction:0",
+      "cluster": "beam-16",
+      "diagnosticOnly": false,
+      "productUsage": {
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 2
+      },
+      "productCostUsd": 0,
+      "phaseTiming": {
+        "ingestion": 277.1,
+        "answer": 2889.3,
+        "evaluation": 10660.9
+      },
+      "outcome": "completed",
+      "answerKey": "c941abd7e1b935aa6cd13852a358cf884602eb37175c81a07be6ca25752cac5d",
+      "evidenceCounts": {
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": 1,
+        "selectedGold": 1,
+        "fineRounds": 1,
+        "fineSelected": 1
+      },
+      "agentSteps": 2,
+      "toolCalls": 1,
+      "recallCalls": 2,
+      "answerRetries": 0,
+      "turnTrace": [
+        "memory.recall"
+      ],
+      "truncated": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "gradedJudges": {},
+      "correct": true,
+      "evaluationUsage": {
+        "inputTokens": 396,
+        "outputTokens": 1149,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "wireAttempts": 2
+      },
+      "evaluationCostUsd": 0
+    },
+    {
+      "id": "16:information_extraction:0",
+      "questionId": "16:information_extraction:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "information_extraction",
+      "config": "full-truncated",
+      "jobId": "full-truncated.16:information_extraction:0",
+      "cluster": "beam-16",
+      "diagnosticOnly": false,
+      "outcome": "distinct_bounded_comparator_not_run",
+      "equivalentTo": null
+    },
+    {
+      "id": "13:instruction_following:1",
+      "questionId": "13:instruction_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "instruction_following",
+      "config": "full",
+      "jobId": "full.13:instruction_following:1",
+      "cluster": "beam-13",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "13:instruction_following:1",
+      "questionId": "13:instruction_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "instruction_following",
+      "config": "lexical-topk",
+      "jobId": "lexical-topk.13:instruction_following:1",
+      "cluster": "beam-13",
+      "diagnosticOnly": false,
+      "outcome": "error",
+      "failureCode": "execution_error"
+    },
+    {
+      "id": "fabric-x.13:instruction_following:1",
+      "questionId": "13:instruction_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "instruction_following",
+      "config": "fabric-x",
+      "outcome": "not_started"
+    },
+    {
+      "id": "fabric-x-tools.13:instruction_following:1",
+      "questionId": "13:instruction_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "instruction_following",
+      "config": "fabric-x-tools",
+      "outcome": "not_started"
+    },
+    {
+      "id": "full-truncated.13:instruction_following:1",
+      "questionId": "13:instruction_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "instruction_following",
+      "config": "full-truncated",
+      "outcome": "not_started"
+    },
+    {
+      "id": "full.17:knowledge_update:1",
+      "questionId": "17:knowledge_update:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "knowledge_update",
+      "config": "full",
+      "outcome": "not_started"
+    },
+    {
+      "id": "lexical-topk.17:knowledge_update:1",
+      "questionId": "17:knowledge_update:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "knowledge_update",
+      "config": "lexical-topk",
+      "outcome": "not_started"
+    },
+    {
+      "id": "fabric-x.17:knowledge_update:1",
+      "questionId": "17:knowledge_update:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "knowledge_update",
+      "config": "fabric-x",
+      "outcome": "not_started"
+    },
+    {
+      "id": "fabric-x-tools.17:knowledge_update:1",
+      "questionId": "17:knowledge_update:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "knowledge_update",
+      "config": "fabric-x-tools",
+      "outcome": "not_started"
+    },
+    {
+      "id": "full-truncated.17:knowledge_update:1",
+      "questionId": "17:knowledge_update:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "knowledge_update",
+      "config": "full-truncated",
+      "outcome": "not_started"
+    },
+    {
+      "id": "full.13:multi_session_reasoning:1",
+      "questionId": "13:multi_session_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "multi_session_reasoning",
+      "config": "full",
+      "outcome": "not_started"
+    },
+    {
+      "id": "lexical-topk.13:multi_session_reasoning:1",
+      "questionId": "13:multi_session_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "multi_session_reasoning",
+      "config": "lexical-topk",
+      "outcome": "not_started"
+    },
+    {
+      "id": "fabric-x.13:multi_session_reasoning:1",
+      "questionId": "13:multi_session_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "multi_session_reasoning",
+      "config": "fabric-x",
+      "outcome": "not_started"
+    },
+    {
+      "id": "fabric-x-tools.13:multi_session_reasoning:1",
+      "questionId": "13:multi_session_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "multi_session_reasoning",
+      "config": "fabric-x-tools",
+      "outcome": "not_started"
+    },
+    {
+      "id": "full-truncated.13:multi_session_reasoning:1",
+      "questionId": "13:multi_session_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "multi_session_reasoning",
+      "config": "full-truncated",
+      "outcome": "not_started"
+    },
+    {
+      "id": "full.10:preference_following:1",
+      "questionId": "10:preference_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "preference_following",
+      "config": "full",
+      "outcome": "not_started"
+    },
+    {
+      "id": "lexical-topk.10:preference_following:1",
+      "questionId": "10:preference_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "preference_following",
+      "config": "lexical-topk",
+      "outcome": "not_started"
+    },
+    {
+      "id": "fabric-x.10:preference_following:1",
+      "questionId": "10:preference_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "preference_following",
+      "config": "fabric-x",
+      "outcome": "not_started"
+    },
+    {
+      "id": "fabric-x-tools.10:preference_following:1",
+      "questionId": "10:preference_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "preference_following",
+      "config": "fabric-x-tools",
+      "outcome": "not_started"
+    },
+    {
+      "id": "full-truncated.10:preference_following:1",
+      "questionId": "10:preference_following:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "preference_following",
+      "config": "full-truncated",
+      "outcome": "not_started"
+    },
+    {
+      "id": "full.10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "full",
+      "outcome": "not_started"
+    },
+    {
+      "id": "lexical-topk.10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "lexical-topk",
+      "outcome": "not_started"
+    },
+    {
+      "id": "fabric-x.10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "fabric-x",
+      "outcome": "not_started"
+    },
+    {
+      "id": "fabric-x-tools.10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "fabric-x-tools",
+      "outcome": "not_started"
+    },
+    {
+      "id": "full-truncated.10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "full-truncated",
+      "outcome": "not_started"
+    },
+    {
+      "id": "oracle.10:summarization:0",
+      "questionId": "10:summarization:0",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "summarization",
+      "config": "oracle",
+      "outcome": "not_started"
+    },
+    {
+      "id": "full.19:temporal_reasoning:1",
+      "questionId": "19:temporal_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "temporal_reasoning",
+      "config": "full",
+      "outcome": "not_started"
+    },
+    {
+      "id": "lexical-topk.19:temporal_reasoning:1",
+      "questionId": "19:temporal_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "temporal_reasoning",
+      "config": "lexical-topk",
+      "outcome": "not_started"
+    },
+    {
+      "id": "fabric-x.19:temporal_reasoning:1",
+      "questionId": "19:temporal_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "temporal_reasoning",
+      "config": "fabric-x",
+      "outcome": "not_started"
+    },
+    {
+      "id": "fabric-x-tools.19:temporal_reasoning:1",
+      "questionId": "19:temporal_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "temporal_reasoning",
+      "config": "fabric-x-tools",
+      "outcome": "not_started"
+    },
+    {
+      "id": "full-truncated.19:temporal_reasoning:1",
+      "questionId": "19:temporal_reasoning:1",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": "temporal_reasoning",
+      "config": "full-truncated",
+      "outcome": "not_started"
+    }
+  ],
+  "comparisons": [
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": null,
+      "intended": 10,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": "abstention",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": "contradiction_resolution",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": "event_ordering",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": "information_extraction",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "lexical-topk",
+      "ability": "instruction_following",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": null,
+      "intended": 10,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": "abstention",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": "contradiction_resolution",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": "event_ordering",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": "information_extraction",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x",
+      "ability": "instruction_following",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": null,
+      "intended": 10,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": "abstention",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": "contradiction_resolution",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": "event_ordering",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": "information_extraction",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    },
+    {
+      "comparator": "full",
+      "config": "fabric-x-tools",
+      "ability": "instruction_following",
+      "intended": 1,
+      "descriptiveOnly": true,
+      "status": "incomplete"
+    }
+  ],
+  "modelConfiguration": {
+    "provider": "commandcode",
+    "model": "reflection/beam:free",
+    "displayName": "Beam 1.0",
+    "limits": {
+      "contextWindow": 1048576
+    },
+    "compat": {
+      "thinkingFamily": "reasoning_effort",
+      "preserveThinking": true,
+      "route": "openai",
+      "pricing_source": "https://commandcode.ai/docs/resources/pricing-limits"
+    },
+    "capabilities": {
+      "input": [
+        "text"
+      ],
+      "output": [
+        "text"
+      ],
+      "reasoning": true,
+      "tools": true,
+      "streaming": true
+    },
+    "cache": {
+      "kind": "implicit"
+    },
+    "parameters": {
+      "temperature": 0,
+      "maxTokens": 8192
+    }
+  },
+  "inputCap": 1047552,
+  "judgeConfigurations": {
+    "openrouter/dots-studio/dots-3-note-preview:free": {
+      "provider": "openrouter",
+      "model": "dots-studio/dots-3-note-preview:free",
+      "displayName": "Dots Studio: Dots3-Note Preview (free)",
+      "capabilities": {
+        "input": [
+          "text",
+          "image"
+        ],
+        "output": [
+          "text"
+        ],
+        "tools": true,
+        "reasoning": true,
+        "structuredOutput": "json_schema",
+        "streaming": true
+      },
+      "limits": {
+        "contextWindow": 512000,
+        "maxOutputTokens": 460800
+      },
+      "cost": {
+        "currency": "USD",
+        "input": 0,
+        "output": 0
+      },
+      "cache": {
+        "kind": "implicit"
+      },
+      "compat": {
+        "thinkingFamily": "openai_reasoning",
+        "preserveThinking": true
+      },
+      "parameters": {
+        "maxTokens": 4096,
+        "temperature": 0
+      }
+    },
+    "openrouter/cohere/north-mini-code:free": {
+      "provider": "openrouter",
+      "model": "cohere/north-mini-code:free",
+      "displayName": "Cohere: North Mini Code (free)",
+      "capabilities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ],
+        "tools": true,
+        "reasoning": true,
+        "structuredOutput": false,
+        "streaming": true
+      },
+      "limits": {
+        "contextWindow": 256000,
+        "maxOutputTokens": 64000
+      },
+      "cost": {
+        "currency": "USD",
+        "input": 0,
+        "output": 0
+      },
+      "cache": {
+        "kind": "implicit"
+      },
+      "compat": {
+        "thinkingFamily": "openai_reasoning",
+        "preserveThinking": true
+      },
+      "parameters": {
+        "maxTokens": 4096,
+        "temperature": 0
+      }
+    }
+  },
+  "usage": {
+    "inputTokens": 5081,
+    "outputTokens": 8082,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0,
+    "wireAttempts": 47,
+    "accountedInputTokens": 5081,
+    "accountedOutputTokens": 8082,
+    "usageMissingExchanges": 0
+  },
+  "timing": {
+    "wallMs": 180579,
+    "concurrency": 1,
+    "questions": {
+      "n": 19,
+      "wallMs": {
+        "p50": 2250.6,
+        "p95": 28714.6,
+        "mean": 9439
+      }
+    },
+    "phases": {
+      "ingestion": {
+        "n": 8,
+        "wallMs": {
+          "p50": 222.7,
+          "p95": 280.7,
+          "mean": 226.3
+        }
+      },
+      "restore": {
+        "n": 0,
+        "wallMs": {
+          "p50": null,
+          "p95": null,
+          "mean": null
+        }
+      },
+      "answer": {
+        "n": 8,
+        "wallMs": {
+          "p50": 2774.3,
+          "p95": 28487,
+          "mean": 6609.2
+        }
+      },
+      "evaluation": {
+        "n": 8,
+        "wallMs": {
+          "p50": 13299.3,
+          "p95": 24881.5,
+          "mean": 13710.9
+        }
+      }
+    },
+    "policy": {
+      "answer": "after ingestion, before grading, annotation, final background settlement and disposal",
+      "queueWaitIncluded": false,
+      "retriesAndBackoffIncluded": true
+    },
+    "roles": {
+      "judge": {
+        "calls": 16,
+        "firstByteMs": {
+          "p50": 6756.2,
+          "p95": 10583.8,
+          "mean": 6854.8
+        },
+        "totalMs": {
+          "p50": 6756.2,
+          "p95": 10583.8,
+          "mean": 6854.8
+        }
+      },
+      "solver": {
+        "calls": 31,
+        "firstByteMs": {
+          "p50": 1712.5,
+          "p95": 4419.9,
+          "mean": 2037.6
+        },
+        "totalMs": {
+          "p50": 1744.9,
+          "p95": 4568.8,
+          "mean": 2146.5
+        }
+      }
+    },
+    "calls": 47
+  },
+  "disposition": "Stopped after systematic HTTP 400 on imported plain assistant history: Beam requires reasoning_content even when that history has no thinking block. Full allocation retained; no score reused."
+}

@@ -1,0 +1,49 @@
+{
+  "kind": "202-muse-spark-1-3-contributor-paid-admission-probe",
+  "ref": "commandcode/meta/muse-spark-1.3-contributor",
+  "limits": {
+    "wireAttempts": 1,
+    "inputTokens": 4000000,
+    "outputTokens": 12000,
+    "wallMs": 180000,
+    "retries429": 0
+  },
+  "startedAt": "2026-10-29T12:33:36.816Z",
+  "campaignChanged": false,
+  "status": "passed",
+  "toolCalls": 0,
+  "result": {
+    "status": "completed",
+    "nonempty": true,
+    "error": null
+  },
+  "usage": {
+    "inputTokens": 12,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0,
+    "outputTokens": 183,
+    "accountedInputTokens": 12,
+    "accountedOutputTokens": 183,
+    "usageMissingExchanges": 0,
+    "usageComplete": true,
+    "wireAttempts": 1
+  },
+  "allocations": [
+    {
+      "provider": "commandcode",
+      "exchange": 1,
+      "inputBound": 1048576,
+      "outputBound": 256
+    }
+  ],
+  "protectedArtifactsUnchanged": true,
+  "finishedAt": "2026-10-29T12:33:40.834Z",
+  "pricing": {
+    "source": "https://commandcode.ai/docs/resources/pricing-limits",
+    "inputPerMillionUsd": 0.1,
+    "outputPerMillionUsd": 0.2,
+    "cacheReadPerMillionUsd": 0.002
+  },
+  "estimatedListCostUsd": 3.7800000000000004e-05,
+  "scope": "One paid admission request only; tool calls, imported history and baseline campaign not tested or changed."
+}

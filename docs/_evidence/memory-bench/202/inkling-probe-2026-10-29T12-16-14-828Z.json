@@ -1,0 +1,75 @@
+{
+  "kind": "202-inkling-free-admission-probe",
+  "ref": "openrouter/thinkingmachines/inkling:free",
+  "limits": {
+    "wireAttempts": 1,
+    "inputTokens": 2000000,
+    "outputTokens": 4096,
+    "wallMs": 120000,
+    "retries429": 0
+  },
+  "startedAt": "2026-10-29T12:16:14.828Z",
+  "campaignChanged": false,
+  "prompt": "synthetic OK control",
+  "tests": [
+    {
+      "name": "simple-generation",
+      "status": "failed",
+      "passed": false,
+      "nonempty": false,
+      "errorCode": 403,
+      "errorMessage": "OpenRouter request failed: 403 {\"error\":{\"message\":\"thinkingmachines/inkling:free is only available on agentic harnesses. Try plugging it into a coding agent or productivity app listed on https://openrouter.ai/apps\",\"code\":403,\"metadata\":{\"routing_funnel\":[{\"step\":\"Initial Endpoints\",\"endpoint_count\":1}],\"failed_routing_step\":\"Gate Free Endpoints by Agentic Harness\"}}}"
+    }
+  ],
+  "status": "blocked",
+  "model": {
+    "limits": {
+      "contextWindow": 1048576,
+      "maxOutputTokens": 262144
+    },
+    "cost": {
+      "currency": "USD",
+      "input": 0,
+      "output": 0
+    },
+    "compat": {
+      "thinkingFamily": "openai_reasoning",
+      "preserveThinking": true
+    },
+    "capabilities": {
+      "input": [
+        "text",
+        "image",
+        "audio"
+      ],
+      "output": [
+        "text"
+      ],
+      "tools": true,
+      "reasoning": true,
+      "structuredOutput": false,
+      "streaming": true
+    }
+  },
+  "usage": {
+    "inputTokens": 0,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0,
+    "outputTokens": 0,
+    "accountedInputTokens": 0,
+    "accountedOutputTokens": 0,
+    "usageMissingExchanges": 0,
+    "usageComplete": true,
+    "wireAttempts": 1
+  },
+  "allocations": [
+    {
+      "provider": "openrouter",
+      "exchange": 1,
+      "inputBound": 1048576,
+      "outputBound": 2048
+    }
+  ],
+  "protectedArtifactsUnchanged": true,
+  "finishedAt": "2026-10-29T12:16:16.668Z"
+}

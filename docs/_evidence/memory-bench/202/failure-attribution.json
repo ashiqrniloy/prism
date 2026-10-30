@@ -1,0 +1,1390 @@
+{
+  "kind": "202-failure-attribution-correction",
+  "schemaVersion": 1,
+  "protocol": "outcome-first-product-levers-v2",
+  "date": "2026-10-28",
+  "status": "historical-exploratory-only",
+  "threshold": 0.05,
+  "limitation": "Saved diagnoses predate validated BEAM labels. Only outcomes and product eligibility are corrected here; stage-only causes remain historical heuristics. Corrected-protocol attribution requires new compatible reports with evidenceCounts. Missing stages cannot close tasks. Candidate counts are not causal recoveries. No product acceptance or final lever decision follows from this artifact.",
+  "sources": [
+    {
+      "file": "docs/_evidence/memory-bench/202/baseline/report-202-baseline.beam-100k.full-truncated.opencode-go.beam-free.json",
+      "sha256": "560f594c0d1ef086949066e94c57790b7f9522be97658cacfc612d5493212eb9",
+      "status": "completed"
+    },
+    {
+      "file": "docs/_evidence/memory-bench/202/baseline/report-202-baseline.beam-100k.full.opencode-go.beam-free.json",
+      "sha256": "ad821e44cd82d7a89dc8defd037d73cd3c1e3d7884910f0f0fedf5ea1e8fbf47",
+      "status": "completed"
+    },
+    {
+      "file": "docs/_evidence/memory-bench/202/baseline/report-202-baseline.beam-100k.full.opencode-go.minimax-m3.json",
+      "sha256": "2df0e9588dcdeab0b07ebf231f5d60cff4028bb0f4355ed75f834c25c24fbc3f",
+      "status": "failed"
+    },
+    {
+      "file": "docs/_evidence/memory-bench/202/baseline/report-202-baseline.beam-100k.lexical-topk.opencode-go.beam-free.json",
+      "sha256": "5a2a3c6f9e9b20d27eea9097e46b4a572e79ac2e3af9942b87f6df2f66bebc8a",
+      "status": "completed"
+    },
+    {
+      "file": "docs/_evidence/memory-bench/202/baseline/report-202-baseline.beam-100k.passive-only.opencode-go.beam-free-2.json",
+      "sha256": "dcb680be194a2fb2459efe78a7465d785961bbe3507f03e92dd68b9bee1618d6",
+      "status": "completed"
+    },
+    {
+      "file": "docs/_evidence/memory-bench/202/baseline/report-202-baseline.beam-100k.passive-only.opencode-go.beam-free.json",
+      "sha256": "714abfa005cb3092926b2121a0c23f1b5ea6ed73438a9c11ff07fd036a0c27cf",
+      "status": "running"
+    },
+    {
+      "file": "docs/_evidence/memory-bench/202/baseline/report-202-baseline.beam-100k.passive-only.opencode-go.minimax-m3.json",
+      "sha256": "03d55ea494e54938648cb4f1feb9aeb93f77ee118ef44ec51c5c50d08f33a0c4",
+      "status": "completed"
+    },
+    {
+      "file": "docs/_evidence/memory-bench/202/baseline/report-202-baseline.beam-100k.preset-r1.opencode-go.beam-free.json",
+      "sha256": "b5dc4337a54d1040cd4cee53c1d9085be0778fddd5cde9f1bb7901b774479901",
+      "status": "completed"
+    },
+    {
+      "file": "docs/_evidence/memory-bench/202/baseline/report-202-baseline.beam-100k.preset-r1.opencode-go.minimax-m3.json",
+      "sha256": "c8437965e1701294d6819a3ae109550048844c740ffb717cb7f6a0b0217de20e",
+      "status": "completed"
+    }
+  ],
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "cells": [
+    {
+      "suite": "beam-100k",
+      "model": "opencode-go/beam-free",
+      "arm": "fabric-x",
+      "n": 40,
+      "failures": 31,
+      "outcomes": {
+        "judged_correct": 9,
+        "judged_incorrect": 31,
+        "run_limit": 0,
+        "transport_setup_error": 0,
+        "comparator_ineligible": 0
+      },
+      "stages": {
+        "abstention_error": 3,
+        "gold_unknown": 25,
+        "candidate_gap": 2,
+        "answer_gap": 1
+      },
+      "failureIdsByStage": {
+        "abstention_error": [
+          "5:abstention:1",
+          "9:abstention:1",
+          "20:abstention:1"
+        ],
+        "gold_unknown": [
+          "8:contradiction_resolution:1",
+          "3:contradiction_resolution:1",
+          "7:contradiction_resolution:0",
+          "9:contradiction_resolution:0",
+          "13:event_ordering:0",
+          "5:event_ordering:0",
+          "1:event_ordering:1",
+          "1:event_ordering:0",
+          "16:information_extraction:1",
+          "9:information_extraction:0",
+          "18:instruction_following:0",
+          "13:instruction_following:1",
+          "17:knowledge_update:1",
+          "6:multi_session_reasoning:1",
+          "2:multi_session_reasoning:0",
+          "9:multi_session_reasoning:1",
+          "13:multi_session_reasoning:1",
+          "10:preference_following:1",
+          "18:preference_following:1",
+          "10:summarization:0",
+          "17:summarization:0",
+          "1:summarization:1",
+          "8:summarization:1",
+          "18:temporal_reasoning:0",
+          "19:temporal_reasoning:1"
+        ],
+        "candidate_gap": [
+          "4:knowledge_update:0",
+          "7:knowledge_update:1"
+        ],
+        "answer_gap": [
+          "2:knowledge_update:0"
+        ]
+      },
+      "attribution": {
+        "attributed": 6,
+        "unknown": 25,
+        "operational": 0,
+        "invalidComparator": 0,
+        "provenance": {
+          "historical_heuristic": 31
+        },
+        "coverage": 0.1935483870967742
+      },
+      "measuredStages": []
+    },
+    {
+      "suite": "beam-100k",
+      "model": "opencode-go/beam-free",
+      "arm": "fabric-x-tools",
+      "n": 40,
+      "failures": 26,
+      "outcomes": {
+        "judged_correct": 14,
+        "judged_incorrect": 18,
+        "run_limit": 8,
+        "transport_setup_error": 0,
+        "comparator_ineligible": 0
+      },
+      "stages": {
+        "run_limit": 8,
+        "abstention_error": 1,
+        "gold_unknown": 16,
+        "answer_gap": 1
+      },
+      "failureIdsByStage": {
+        "run_limit": [
+          "5:abstention:1",
+          "9:abstention:1",
+          "5:event_ordering:0",
+          "10:preference_following:1",
+          "10:summarization:0",
+          "17:summarization:0",
+          "8:summarization:1",
+          "19:temporal_reasoning:1"
+        ],
+        "abstention_error": [
+          "20:abstention:1"
+        ],
+        "gold_unknown": [
+          "8:contradiction_resolution:1",
+          "3:contradiction_resolution:1",
+          "7:contradiction_resolution:0",
+          "13:event_ordering:0",
+          "1:event_ordering:1",
+          "1:event_ordering:0",
+          "9:information_extraction:0",
+          "18:instruction_following:0",
+          "9:instruction_following:1",
+          "13:instruction_following:1",
+          "17:knowledge_update:1",
+          "6:multi_session_reasoning:1",
+          "2:multi_session_reasoning:0",
+          "13:multi_session_reasoning:1",
+          "18:preference_following:1",
+          "1:summarization:1"
+        ],
+        "answer_gap": [
+          "2:knowledge_update:0"
+        ]
+      },
+      "attribution": {
+        "attributed": 2,
+        "unknown": 16,
+        "operational": 8,
+        "invalidComparator": 0,
+        "provenance": {
+          "outcome": 8,
+          "historical_heuristic": 18
+        },
+        "coverage": 0.07692307692307693
+      },
+      "measuredStages": []
+    },
+    {
+      "suite": "beam-100k",
+      "model": "opencode-go/beam-free",
+      "arm": "full",
+      "n": 40,
+      "failures": 26,
+      "outcomes": {
+        "judged_correct": 14,
+        "judged_incorrect": 26,
+        "run_limit": 0,
+        "transport_setup_error": 0,
+        "comparator_ineligible": 0
+      },
+      "stages": {
+        "gold_unknown": 26
+      },
+      "failureIdsByStage": {
+        "gold_unknown": [
+          "3:contradiction_resolution:1",
+          "7:contradiction_resolution:0",
+          "9:contradiction_resolution:0",
+          "13:event_ordering:0",
+          "5:event_ordering:0",
+          "1:event_ordering:1",
+          "1:event_ordering:0",
+          "16:information_extraction:0",
+          "9:information_extraction:0",
+          "19:information_extraction:0",
+          "18:instruction_following:0",
+          "9:instruction_following:1",
+          "13:instruction_following:1",
+          "17:knowledge_update:1",
+          "6:multi_session_reasoning:1",
+          "2:multi_session_reasoning:0",
+          "9:multi_session_reasoning:1",
+          "13:multi_session_reasoning:1",
+          "10:preference_following:1",
+          "18:preference_following:1",
+          "10:summarization:0",
+          "17:summarization:0",
+          "1:summarization:1",
+          "8:summarization:1",
+          "18:temporal_reasoning:0",
+          "19:temporal_reasoning:1"
+        ]
+      },
+      "attribution": {
+        "attributed": 0,
+        "unknown": 26,
+        "operational": 0,
+        "invalidComparator": 0,
+        "provenance": {
+          "historical_heuristic": 26
+        },
+        "coverage": 0
+      },
+      "measuredStages": []
+    },
+    {
+      "suite": "beam-100k",
+      "model": "opencode-go/beam-free",
+      "arm": "full-truncated",
+      "n": 40,
+      "failures": 23,
+      "outcomes": {
+        "judged_correct": 17,
+        "judged_incorrect": 23,
+        "run_limit": 0,
+        "transport_setup_error": 0,
+        "comparator_ineligible": 0
+      },
+      "stages": {
+        "abstention_error": 1,
+        "gold_unknown": 22
+      },
+      "failureIdsByStage": {
+        "abstention_error": [
+          "20:abstention:1"
+        ],
+        "gold_unknown": [
+          "8:contradiction_resolution:1",
+          "3:contradiction_resolution:1",
+          "13:event_ordering:0",
+          "5:event_ordering:0",
+          "1:event_ordering:1",
+          "1:event_ordering:0",
+          "9:information_extraction:0",
+          "19:information_extraction:0",
+          "18:instruction_following:0",
+          "9:instruction_following:1",
+          "13:instruction_following:1",
+          "6:multi_session_reasoning:1",
+          "2:multi_session_reasoning:0",
+          "9:multi_session_reasoning:1",
+          "13:multi_session_reasoning:1",
+          "10:preference_following:1",
+          "18:preference_following:1",
+          "10:summarization:0",
+          "17:summarization:0",
+          "1:summarization:1",
+          "18:temporal_reasoning:0",
+          "19:temporal_reasoning:1"
+        ]
+      },
+      "attribution": {
+        "attributed": 1,
+        "unknown": 22,
+        "operational": 0,
+        "invalidComparator": 0,
+        "provenance": {
+          "historical_heuristic": 23
+        },
+        "coverage": 0.043478260869565216
+      },
+      "measuredStages": []
+    },
+    {
+      "suite": "beam-100k",
+      "model": "opencode-go/beam-free",
+      "arm": "lexical-topk",
+      "n": 40,
+      "failures": 27,
+      "outcomes": {
+        "judged_correct": 13,
+        "judged_incorrect": 27,
+        "run_limit": 0,
+        "transport_setup_error": 0,
+        "comparator_ineligible": 0
+      },
+      "stages": {
+        "gold_unknown": 25,
+        "candidate_gap": 2
+      },
+      "failureIdsByStage": {
+        "gold_unknown": [
+          "3:contradiction_resolution:1",
+          "7:contradiction_resolution:0",
+          "9:contradiction_resolution:0",
+          "13:event_ordering:0",
+          "5:event_ordering:0",
+          "1:event_ordering:1",
+          "1:event_ordering:0",
+          "16:information_extraction:1",
+          "9:information_extraction:0",
+          "18:instruction_following:0",
+          "9:instruction_following:1",
+          "8:instruction_following:1",
+          "17:knowledge_update:1",
+          "6:multi_session_reasoning:1",
+          "2:multi_session_reasoning:0",
+          "9:multi_session_reasoning:1",
+          "13:multi_session_reasoning:1",
+          "10:preference_following:1",
+          "18:preference_following:1",
+          "10:summarization:0",
+          "17:summarization:0",
+          "1:summarization:1",
+          "8:summarization:1",
+          "18:temporal_reasoning:0",
+          "19:temporal_reasoning:1"
+        ],
+        "candidate_gap": [
+          "4:knowledge_update:0",
+          "7:knowledge_update:1"
+        ]
+      },
+      "attribution": {
+        "attributed": 2,
+        "unknown": 25,
+        "operational": 0,
+        "invalidComparator": 0,
+        "provenance": {
+          "historical_heuristic": 27
+        },
+        "coverage": 0.07407407407407407
+      },
+      "measuredStages": []
+    },
+    {
+      "suite": "beam-100k",
+      "model": "opencode-go/minimax-m3",
+      "arm": "fabric-x",
+      "n": 40,
+      "failures": 26,
+      "outcomes": {
+        "judged_correct": 14,
+        "judged_incorrect": 26,
+        "run_limit": 0,
+        "transport_setup_error": 0,
+        "comparator_ineligible": 0
+      },
+      "stages": {
+        "abstention_error": 1,
+        "gold_unknown": 23,
+        "candidate_gap": 2
+      },
+      "failureIdsByStage": {
+        "abstention_error": [
+          "20:abstention:1"
+        ],
+        "gold_unknown": [
+          "8:contradiction_resolution:1",
+          "3:contradiction_resolution:1",
+          "7:contradiction_resolution:0",
+          "9:contradiction_resolution:0",
+          "13:event_ordering:0",
+          "5:event_ordering:0",
+          "1:event_ordering:1",
+          "1:event_ordering:0",
+          "9:information_extraction:0",
+          "18:instruction_following:0",
+          "17:knowledge_update:1",
+          "6:multi_session_reasoning:1",
+          "2:multi_session_reasoning:0",
+          "9:multi_session_reasoning:1",
+          "13:multi_session_reasoning:1",
+          "10:preference_following:1",
+          "18:preference_following:1",
+          "10:summarization:0",
+          "17:summarization:0",
+          "1:summarization:1",
+          "8:summarization:1",
+          "18:temporal_reasoning:0",
+          "19:temporal_reasoning:1"
+        ],
+        "candidate_gap": [
+          "4:knowledge_update:0",
+          "7:knowledge_update:1"
+        ]
+      },
+      "attribution": {
+        "attributed": 3,
+        "unknown": 23,
+        "operational": 0,
+        "invalidComparator": 0,
+        "provenance": {
+          "historical_heuristic": 26
+        },
+        "coverage": 0.11538461538461539
+      },
+      "measuredStages": []
+    },
+    {
+      "suite": "beam-100k",
+      "model": "opencode-go/minimax-m3",
+      "arm": "fabric-x-tools",
+      "n": 40,
+      "failures": 23,
+      "outcomes": {
+        "judged_correct": 17,
+        "judged_incorrect": 22,
+        "run_limit": 1,
+        "transport_setup_error": 0,
+        "comparator_ineligible": 0
+      },
+      "stages": {
+        "abstention_error": 2,
+        "gold_unknown": 18,
+        "candidate_gap": 2,
+        "run_limit": 1
+      },
+      "failureIdsByStage": {
+        "abstention_error": [
+          "9:abstention:1",
+          "20:abstention:1"
+        ],
+        "gold_unknown": [
+          "8:contradiction_resolution:1",
+          "3:contradiction_resolution:1",
+          "7:contradiction_resolution:0",
+          "9:contradiction_resolution:0",
+          "13:event_ordering:0",
+          "5:event_ordering:0",
+          "1:event_ordering:1",
+          "1:event_ordering:0",
+          "18:instruction_following:0",
+          "17:knowledge_update:1",
+          "6:multi_session_reasoning:1",
+          "9:multi_session_reasoning:1",
+          "10:preference_following:1",
+          "18:preference_following:1",
+          "10:summarization:0",
+          "17:summarization:0",
+          "1:summarization:1",
+          "8:summarization:1"
+        ],
+        "candidate_gap": [
+          "4:knowledge_update:0",
+          "7:knowledge_update:1"
+        ],
+        "run_limit": [
+          "19:temporal_reasoning:1"
+        ]
+      },
+      "attribution": {
+        "attributed": 4,
+        "unknown": 18,
+        "operational": 1,
+        "invalidComparator": 0,
+        "provenance": {
+          "historical_heuristic": 22,
+          "outcome": 1
+        },
+        "coverage": 0.17391304347826086
+      },
+      "measuredStages": []
+    }
+  ],
+  "levers": [
+    {
+      "task": 9,
+      "stages": [
+        "answer_gap",
+        "abstention_error"
+      ],
+      "candidateFailures": 6,
+      "failureOccurrences": 9,
+      "sharedFailures": 3,
+      "bestShare": 0.12903225806451613,
+      "bestCell": {
+        "suite": "beam-100k",
+        "model": "opencode-go/beam-free",
+        "arm": "fabric-x"
+      },
+      "decisions": [
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/beam-free",
+          "arm": "fabric-x",
+          "counts": 4,
+          "total": 31,
+          "share": 0.12903225806451613,
+          "needed": true,
+          "attribution": {
+            "attributed": 6,
+            "unknown": 25,
+            "operational": 0,
+            "invalidComparator": 0,
+            "provenance": {
+              "historical_heuristic": 31
+            },
+            "coverage": 0.1935483870967742
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/minimax-m3",
+          "arm": "fabric-x",
+          "counts": 1,
+          "total": 26,
+          "share": 0.038461538461538464,
+          "needed": false,
+          "attribution": {
+            "attributed": 3,
+            "unknown": 23,
+            "operational": 0,
+            "invalidComparator": 0,
+            "provenance": {
+              "historical_heuristic": 26
+            },
+            "coverage": 0.11538461538461539
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/beam-free",
+          "arm": "fabric-x-tools",
+          "counts": 2,
+          "total": 26,
+          "share": 0.07692307692307693,
+          "needed": true,
+          "attribution": {
+            "attributed": 2,
+            "unknown": 16,
+            "operational": 8,
+            "invalidComparator": 0,
+            "provenance": {
+              "outcome": 8,
+              "historical_heuristic": 18
+            },
+            "coverage": 0.07692307692307693
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/minimax-m3",
+          "arm": "fabric-x-tools",
+          "counts": 2,
+          "total": 23,
+          "share": 0.08695652173913043,
+          "needed": true,
+          "attribution": {
+            "attributed": 4,
+            "unknown": 18,
+            "operational": 1,
+            "invalidComparator": 0,
+            "provenance": {
+              "historical_heuristic": 22,
+              "outcome": 1
+            },
+            "coverage": 0.17391304347826086
+          },
+          "measured": false
+        }
+      ],
+      "status": "needed",
+      "needed": true
+    },
+    {
+      "task": 5,
+      "stages": [
+        "candidate_gap"
+      ],
+      "candidateFailures": 4,
+      "failureOccurrences": 6,
+      "sharedFailures": 2,
+      "bestShare": 0.08695652173913043,
+      "bestCell": {
+        "suite": "beam-100k",
+        "model": "opencode-go/minimax-m3",
+        "arm": "fabric-x-tools"
+      },
+      "decisions": [
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/beam-free",
+          "arm": "fabric-x",
+          "counts": 2,
+          "total": 31,
+          "share": 0.06451612903225806,
+          "needed": true,
+          "attribution": {
+            "attributed": 6,
+            "unknown": 25,
+            "operational": 0,
+            "invalidComparator": 0,
+            "provenance": {
+              "historical_heuristic": 31
+            },
+            "coverage": 0.1935483870967742
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/minimax-m3",
+          "arm": "fabric-x",
+          "counts": 2,
+          "total": 26,
+          "share": 0.07692307692307693,
+          "needed": true,
+          "attribution": {
+            "attributed": 3,
+            "unknown": 23,
+            "operational": 0,
+            "invalidComparator": 0,
+            "provenance": {
+              "historical_heuristic": 26
+            },
+            "coverage": 0.11538461538461539
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/beam-free",
+          "arm": "fabric-x-tools",
+          "counts": 0,
+          "total": 26,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 2,
+            "unknown": 16,
+            "operational": 8,
+            "invalidComparator": 0,
+            "provenance": {
+              "outcome": 8,
+              "historical_heuristic": 18
+            },
+            "coverage": 0.07692307692307693
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/minimax-m3",
+          "arm": "fabric-x-tools",
+          "counts": 2,
+          "total": 23,
+          "share": 0.08695652173913043,
+          "needed": true,
+          "attribution": {
+            "attributed": 4,
+            "unknown": 18,
+            "operational": 1,
+            "invalidComparator": 0,
+            "provenance": {
+              "historical_heuristic": 22,
+              "outcome": 1
+            },
+            "coverage": 0.17391304347826086
+          },
+          "measured": false
+        }
+      ],
+      "status": "needed",
+      "needed": true
+    },
+    {
+      "task": 6,
+      "stages": [
+        "temporal_gap"
+      ],
+      "candidateFailures": 0,
+      "failureOccurrences": 0,
+      "sharedFailures": 0,
+      "bestShare": 0,
+      "bestCell": null,
+      "decisions": [
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/beam-free",
+          "arm": "fabric-x",
+          "counts": 0,
+          "total": 31,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 6,
+            "unknown": 25,
+            "operational": 0,
+            "invalidComparator": 0,
+            "provenance": {
+              "historical_heuristic": 31
+            },
+            "coverage": 0.1935483870967742
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/minimax-m3",
+          "arm": "fabric-x",
+          "counts": 0,
+          "total": 26,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 3,
+            "unknown": 23,
+            "operational": 0,
+            "invalidComparator": 0,
+            "provenance": {
+              "historical_heuristic": 26
+            },
+            "coverage": 0.11538461538461539
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/beam-free",
+          "arm": "fabric-x-tools",
+          "counts": 0,
+          "total": 26,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 2,
+            "unknown": 16,
+            "operational": 8,
+            "invalidComparator": 0,
+            "provenance": {
+              "outcome": 8,
+              "historical_heuristic": 18
+            },
+            "coverage": 0.07692307692307693
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/minimax-m3",
+          "arm": "fabric-x-tools",
+          "counts": 0,
+          "total": 23,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 4,
+            "unknown": 18,
+            "operational": 1,
+            "invalidComparator": 0,
+            "provenance": {
+              "historical_heuristic": 22,
+              "outcome": 1
+            },
+            "coverage": 0.17391304347826086
+          },
+          "measured": false
+        }
+      ],
+      "status": "unmeasurable",
+      "needed": false
+    },
+    {
+      "task": 7,
+      "stages": [
+        "supersession_gap"
+      ],
+      "candidateFailures": 0,
+      "failureOccurrences": 0,
+      "sharedFailures": 0,
+      "bestShare": 0,
+      "bestCell": null,
+      "decisions": [
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/beam-free",
+          "arm": "fabric-x",
+          "counts": 0,
+          "total": 31,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 6,
+            "unknown": 25,
+            "operational": 0,
+            "invalidComparator": 0,
+            "provenance": {
+              "historical_heuristic": 31
+            },
+            "coverage": 0.1935483870967742
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/minimax-m3",
+          "arm": "fabric-x",
+          "counts": 0,
+          "total": 26,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 3,
+            "unknown": 23,
+            "operational": 0,
+            "invalidComparator": 0,
+            "provenance": {
+              "historical_heuristic": 26
+            },
+            "coverage": 0.11538461538461539
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/beam-free",
+          "arm": "fabric-x-tools",
+          "counts": 0,
+          "total": 26,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 2,
+            "unknown": 16,
+            "operational": 8,
+            "invalidComparator": 0,
+            "provenance": {
+              "outcome": 8,
+              "historical_heuristic": 18
+            },
+            "coverage": 0.07692307692307693
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/minimax-m3",
+          "arm": "fabric-x-tools",
+          "counts": 0,
+          "total": 23,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 4,
+            "unknown": 18,
+            "operational": 1,
+            "invalidComparator": 0,
+            "provenance": {
+              "historical_heuristic": 22,
+              "outcome": 1
+            },
+            "coverage": 0.17391304347826086
+          },
+          "measured": false
+        }
+      ],
+      "status": "unmeasurable",
+      "needed": false
+    },
+    {
+      "task": 8,
+      "stages": [
+        "partial_evidence"
+      ],
+      "candidateFailures": 0,
+      "failureOccurrences": 0,
+      "sharedFailures": 0,
+      "bestShare": 0,
+      "bestCell": null,
+      "decisions": [
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/beam-free",
+          "arm": "fabric-x",
+          "counts": 0,
+          "total": 31,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 6,
+            "unknown": 25,
+            "operational": 0,
+            "invalidComparator": 0,
+            "provenance": {
+              "historical_heuristic": 31
+            },
+            "coverage": 0.1935483870967742
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/minimax-m3",
+          "arm": "fabric-x",
+          "counts": 0,
+          "total": 26,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 3,
+            "unknown": 23,
+            "operational": 0,
+            "invalidComparator": 0,
+            "provenance": {
+              "historical_heuristic": 26
+            },
+            "coverage": 0.11538461538461539
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/beam-free",
+          "arm": "fabric-x-tools",
+          "counts": 0,
+          "total": 26,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 2,
+            "unknown": 16,
+            "operational": 8,
+            "invalidComparator": 0,
+            "provenance": {
+              "outcome": 8,
+              "historical_heuristic": 18
+            },
+            "coverage": 0.07692307692307693
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/minimax-m3",
+          "arm": "fabric-x-tools",
+          "counts": 0,
+          "total": 23,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 4,
+            "unknown": 18,
+            "operational": 1,
+            "invalidComparator": 0,
+            "provenance": {
+              "historical_heuristic": 22,
+              "outcome": 1
+            },
+            "coverage": 0.17391304347826086
+          },
+          "measured": false
+        }
+      ],
+      "status": "insufficient-evidence",
+      "needed": false
+    },
+    {
+      "task": 10,
+      "stages": [
+        "tool_protocol_gap"
+      ],
+      "candidateFailures": 0,
+      "failureOccurrences": 0,
+      "sharedFailures": 0,
+      "bestShare": 0,
+      "bestCell": null,
+      "decisions": [
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/beam-free",
+          "arm": "fabric-x",
+          "counts": 0,
+          "total": 31,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 6,
+            "unknown": 25,
+            "operational": 0,
+            "invalidComparator": 0,
+            "provenance": {
+              "historical_heuristic": 31
+            },
+            "coverage": 0.1935483870967742
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/minimax-m3",
+          "arm": "fabric-x",
+          "counts": 0,
+          "total": 26,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 3,
+            "unknown": 23,
+            "operational": 0,
+            "invalidComparator": 0,
+            "provenance": {
+              "historical_heuristic": 26
+            },
+            "coverage": 0.11538461538461539
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/beam-free",
+          "arm": "fabric-x-tools",
+          "counts": 0,
+          "total": 26,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 2,
+            "unknown": 16,
+            "operational": 8,
+            "invalidComparator": 0,
+            "provenance": {
+              "outcome": 8,
+              "historical_heuristic": 18
+            },
+            "coverage": 0.07692307692307693
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/minimax-m3",
+          "arm": "fabric-x-tools",
+          "counts": 0,
+          "total": 23,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 4,
+            "unknown": 18,
+            "operational": 1,
+            "invalidComparator": 0,
+            "provenance": {
+              "historical_heuristic": 22,
+              "outcome": 1
+            },
+            "coverage": 0.17391304347826086
+          },
+          "measured": false
+        }
+      ],
+      "status": "unmeasurable",
+      "needed": false
+    },
+    {
+      "task": 13,
+      "stages": [
+        "fine_selection_gap"
+      ],
+      "candidateFailures": 0,
+      "failureOccurrences": 0,
+      "sharedFailures": 0,
+      "bestShare": 0,
+      "bestCell": null,
+      "decisions": [
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/beam-free",
+          "arm": "fabric-x",
+          "counts": 0,
+          "total": 31,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 6,
+            "unknown": 25,
+            "operational": 0,
+            "invalidComparator": 0,
+            "provenance": {
+              "historical_heuristic": 31
+            },
+            "coverage": 0.1935483870967742
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/minimax-m3",
+          "arm": "fabric-x",
+          "counts": 0,
+          "total": 26,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 3,
+            "unknown": 23,
+            "operational": 0,
+            "invalidComparator": 0,
+            "provenance": {
+              "historical_heuristic": 26
+            },
+            "coverage": 0.11538461538461539
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/beam-free",
+          "arm": "fabric-x-tools",
+          "counts": 0,
+          "total": 26,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 2,
+            "unknown": 16,
+            "operational": 8,
+            "invalidComparator": 0,
+            "provenance": {
+              "outcome": 8,
+              "historical_heuristic": 18
+            },
+            "coverage": 0.07692307692307693
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/minimax-m3",
+          "arm": "fabric-x-tools",
+          "counts": 0,
+          "total": 23,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 4,
+            "unknown": 18,
+            "operational": 1,
+            "invalidComparator": 0,
+            "provenance": {
+              "historical_heuristic": 22,
+              "outcome": 1
+            },
+            "coverage": 0.17391304347826086
+          },
+          "measured": false
+        }
+      ],
+      "status": "insufficient-evidence",
+      "needed": false
+    },
+    {
+      "task": 16,
+      "stages": [
+        "capacity_gap"
+      ],
+      "candidateFailures": 0,
+      "failureOccurrences": 0,
+      "sharedFailures": 0,
+      "bestShare": 0,
+      "bestCell": null,
+      "decisions": [
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/beam-free",
+          "arm": "fabric-x",
+          "counts": 0,
+          "total": 31,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 6,
+            "unknown": 25,
+            "operational": 0,
+            "invalidComparator": 0,
+            "provenance": {
+              "historical_heuristic": 31
+            },
+            "coverage": 0.1935483870967742
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/minimax-m3",
+          "arm": "fabric-x",
+          "counts": 0,
+          "total": 26,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 3,
+            "unknown": 23,
+            "operational": 0,
+            "invalidComparator": 0,
+            "provenance": {
+              "historical_heuristic": 26
+            },
+            "coverage": 0.11538461538461539
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/beam-free",
+          "arm": "fabric-x-tools",
+          "counts": 0,
+          "total": 26,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 2,
+            "unknown": 16,
+            "operational": 8,
+            "invalidComparator": 0,
+            "provenance": {
+              "outcome": 8,
+              "historical_heuristic": 18
+            },
+            "coverage": 0.07692307692307693
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/minimax-m3",
+          "arm": "fabric-x-tools",
+          "counts": 0,
+          "total": 23,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 4,
+            "unknown": 18,
+            "operational": 1,
+            "invalidComparator": 0,
+            "provenance": {
+              "historical_heuristic": 22,
+              "outcome": 1
+            },
+            "coverage": 0.17391304347826086
+          },
+          "measured": false
+        }
+      ],
+      "status": "unmeasurable",
+      "needed": false
+    },
+    {
+      "task": 17,
+      "stages": [
+        "extraction_gap"
+      ],
+      "candidateFailures": 0,
+      "failureOccurrences": 0,
+      "sharedFailures": 0,
+      "bestShare": 0,
+      "bestCell": null,
+      "decisions": [
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/beam-free",
+          "arm": "fabric-x",
+          "counts": 0,
+          "total": 31,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 6,
+            "unknown": 25,
+            "operational": 0,
+            "invalidComparator": 0,
+            "provenance": {
+              "historical_heuristic": 31
+            },
+            "coverage": 0.1935483870967742
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/minimax-m3",
+          "arm": "fabric-x",
+          "counts": 0,
+          "total": 26,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 3,
+            "unknown": 23,
+            "operational": 0,
+            "invalidComparator": 0,
+            "provenance": {
+              "historical_heuristic": 26
+            },
+            "coverage": 0.11538461538461539
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/beam-free",
+          "arm": "fabric-x-tools",
+          "counts": 0,
+          "total": 26,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 2,
+            "unknown": 16,
+            "operational": 8,
+            "invalidComparator": 0,
+            "provenance": {
+              "outcome": 8,
+              "historical_heuristic": 18
+            },
+            "coverage": 0.07692307692307693
+          },
+          "measured": false
+        },
+        {
+          "suite": "beam-100k",
+          "model": "opencode-go/minimax-m3",
+          "arm": "fabric-x-tools",
+          "counts": 0,
+          "total": 23,
+          "share": 0,
+          "needed": false,
+          "attribution": {
+            "attributed": 4,
+            "unknown": 18,
+            "operational": 1,
+            "invalidComparator": 0,
+            "provenance": {
+              "historical_heuristic": 22,
+              "outcome": 1
+            },
+            "coverage": 0.17391304347826086
+          },
+          "measured": false
+        }
+      ],
+      "status": "unmeasurable",
+      "needed": false
+    }
+  ]
+}

@@ -1,3 +1,9 @@
+> Current Task 4 screen is **closed by owner with 23 accepted completed cells** (2026-10-30). The original 25-cell Muse 1.3 draw stays preserved. BEAM-1M full-truncated (15 partial questions) and lexical-topk are excluded from the final analysis. Accepted artifacts: `docs/_evidence/memory-bench/202/muse13-screen-final/`; closure: `muse13-screen-closure.json`. `screenComplete` in the accepted manifest means 23/23 accepted cells, not 25/25 original coverage or full Task 4 completion. A closure blocks refreshed readiness and further automatic model calls. Missing usage reservations remain held; the broader multi-model baseline is deferred. Older run instructions below are historical and must not override the owner closure.
+
+> Current Task 4 execution scope (2026-10-29): owner stopped the 75-cell campaign and selected a **25-cell Muse Spark 1.3 Contributor development screen**: five frozen suites × five configurations, MiniMax M3.1 Flash + GLM 5.3 Flash judges unchanged. Its separate journal is `.cache/memory-bench/202-muse13-screen/journal.json`; reports go to `baseline/muse13-screen/`. The stopped campaign retains its completed/partial reports and all charges, including the interrupted attempt's full reservation. Completing this screen sets `screenComplete`, never `baselineComplete`; cross-model confirmation and full Task 4 remain deferred. Older model-set notes below are historical.
+
+> Current Task 4 panel (2026-10-29): owner-selected Command Code MiniMax M3.1 Flash + GLM 5.3 Flash. The MiniMax free route returned HTTP 403 (free window ended); paid judges are authorized. `--readiness-v6 --score-only` runs from `.cache/memory-bench/frozen-panel-v6/` and uses all 42 immutable Muse v5 answers, without regeneration. `graded.mjs --commandcode-panel-controls` checks the new panel against eight development rubrics, 36 existing borderline/paraphrase variants plus eight wrong-answer controls; no new answers or paraphrases. Historical Lightning scores stay preserved but cannot be reused under the changed panel: the old all-phase reports have no answer checkpoints. Broad jobs use `--free-product-only --bounded-wire` for free answerers with paid judges, and a separate `202-commandcode-panel-baseline` journal. Global `--free-only` still rejects every paid route. Only a current source-matched readiness pass permits the broad campaign.
+
 # Memory benchmark (0.13.0)
 
 This opt-in runner measures Prism on pinned public datasets. It never runs as a
@@ -35,6 +41,109 @@ The benchmark-only Python requirements are PyArrow 23.0.1 for the pinned Parquet
 artifact and NLTK 3.9.2 for LoCoMo's Porter-stemmed F1. No corpus downloads are
 needed. No kernel or memory package depends on either library.
 
+## Measurement repair protocol
+
+New runs use `product-phases-delivery-v3`; old answer/reuse fingerprints are incompatible. The owner-closed 23-cell screen stays closed, and its report bytes and scores remain historical evidence.
+
+MemoryAgentBench is explicitly a `fact-list` source. Product-ingestion arms write each original source line as a distinct typed `fact` through `createMemoryFabric().remember`, preserving source ids, order and synthetic `tRef` dates, with deterministic ids and no model call, extraction or fabricated assistant replies. Its recorded ingestion is `product-source-facts-v1`, and its resolved injection kinds explicitly include facts. This corpus adapter is an override of the conversational preset, so its future results cannot be presented as an unchanged exchange-only preset. Trust refusals are counted. Conversation archives continue to require completed user/assistant pairs; an unsupported user-only corpus or unexplained empty archive stops before answering and is never scored as 0% quality.
+
+Ingestion reports record source-message counts, eligible exchanges or imported facts, refusals, unpaired messages and actual persisted source coverage. Product snapshots retain `ingest-report.json` and the note-to-round index. Missing proof, changed source identity or changed persisted coverage refuses reuse.
+
+Evidence accounting maps message annotations to round ids for every suite, including LoCoMo. Unresolved annotations make completeness/fine rates unavailable. The private observer records ranked valid candidates before top-k/budget selection, separately from returned ids. Public candidate counts include direct reads; selected counts include only ids actually present in a model request. `memory.read` works by id or a complete indexed OKF note path; directory listings are not evidence. Non-fabric candidate observations are unavailable. These metrics measure **round presence**, not survival of every labelled sentence inside an excerpt. Exact private requests permit that finer audit. Failed retry attempts remain in the trace but do not credit the final attempt's evidence. Explicit and automatic recall calls are reported separately.
+
+Every answer in `--phase all` or `--phase answer` is cached **before judging**, with a verdict-free checkpoint. A judge failure preserves it, and `--phase all --resume <report>` scores a pending conversational answer without regenerating it. Coding tasks retain their existing workspace-based regeneration/grading path. Run-limit answers retain their disposition. Failed answer attempts retain a separate diagnostic key. Private cache entries contain answers, query/options/ranks, tool-call ids and arguments, tool results/excerpts, exact agent provider-view messages/context and retry-attempt ids. Files are atomically replaced with mode `0600` under the gitignored answer cache (default `.cache/memory-bench/answers`); this adds local disk writes and can retain a full context per turn, but no model requests. Public JSON/Markdown contains keys, ids, hashes and counts, never these texts. Keep `--answers-dir` private and outside committed evidence.
+
+The offline regressions are `timeout 90 bun test scripts/memory-bench/measurement-repairs.test.mjs`. Repaired evidence does not retroactively change historical scores or authorize a new live campaign.
+
+## Offline memory-prefix probe (plan 202 Task 4.11)
+
+```sh
+timeout 120 bun scripts/memory-bench/prefix-probe.mjs --out docs/_evidence/memory-bench/202/cache-stability/offline-baseline.json
+timeout 120 bun test scripts/memory-bench/prefix-probe.test.mjs
+```
+
+Runs seven ten-turn sessions through `createAgent`, `mockProvider`, real fabric tools,
+background consolidation and disposable SQLite stores. A second connection exercises writes
+and forgetting outside the package's in-process caches. A further four sessions measure the
+private tail-map size after close and force passive delivery with core disabled. Reports contain
+hashes, counts, request/turn indices and verdicts only. Temporary stores are removed in `finally`;
+the probe reads no credentials and blocks `fetch`.
+
+Run it in a fresh Bun process. Process-local loader observation exposes the existing tail map
+without changing its entries; fixed clock/nonce inputs make actual context hashes repeatable.
+Package files remain untouched. `writes` names the intervening settled write paths and explicit
+tool/external operations; a completed lifecycle task can be a no-op. A changed cache key does
+not necessarily produce different prefix bytes (promoted candidates, for example, stay out of core).
+
+Exact token counts are optional: set `PRISM_PREFIX_PROBE_PYTHON` to an existing Python executable
+with Hugging Face `tokenizers`, and `PRISM_PREFIX_PROBE_TOKENIZER` to an already cached
+`tokenizer.json`. Nothing is downloaded or installed. Evidence records the tokenizer SHA-256,
+library version and actual encoded system-plus-tools sizes before/after removing id enums.
+Without these variables, `encodedTokens` is null; the separately labelled chars/4 estimates
+must not decide a provider's cache threshold. These are JSON projection counts, excluding a
+vendor's chat template. The payload's `sha256` hashes compact JSON with that field omitted;
+the evidence README also pins the pretty-printed file's SHA-256.
+
+See [baseline findings](../../docs/_evidence/memory-bench/202/cache-stability/README.md).
+This command measures existing behavior; it does not enable a campaign or repair caching.
+
+## Cache-stability pin, equivalence and cache probe (plan 202 Task 4.15)
+
+Three offline pieces and one live, informational one make the cache-stable product (Tasks 4.11-4.14) a
+precondition of every further paid run.
+
+```sh
+# Equivalence attestation: the same answer paths on a pre-change worktree and on this tree, twice each.
+git worktree add --detach .cache/memory-bench/202/cache-stability-base <pre-change commit>
+timeout 600 bun scripts/memory-bench/prefix-probe.mjs --equivalence --base .cache/memory-bench/202/cache-stability-base \
+  --out docs/_evidence/memory-bench/202/cache-stability/equivalence.json [--keep-text <private dir>]
+# Pin: run the 4.12-4.14 prefix suite and bind it, with the equivalence file, to the current product hash.
+timeout 900 bun scripts/memory-bench/audit/readiness.mjs --cache-stability
+# Live, informational; only under gate 2 (once per development-screen answer route) or gate 3 (once per acceptance route).
+timeout 900 bun scripts/memory-bench/cache-probe.mjs --model <provider/model> --turns 12 \
+  --out docs/_evidence/memory-bench/202/<campaign evidence>/cache-probe.<route>.json
+```
+
+**Equivalence.** `--equivalence` replays every synthetic-fixture question on the `preset-r1` (`fabric-x-tools`)
+and `passive-only` (`fabric-x`) answer paths with a mock provider and hashes every answer-phase provider request.
+`equivalence-preload.mjs` pins kernel-minted ids and the clock so two captures are byte-identical; each tree is
+captured twice and the run refuses if either tree differs from itself. `--base` must be a separate git worktree:
+the command gives it its own `node_modules` (relative workspace links, so it never resolves the base's packages
+through this tree) and overlays this tree's `scripts/memory-bench`, so only the product differs; the file records
+both harness hashes and refuses unequal ones. Per request it hashes the system messages, tools, context, transcript
+and tail separately, and records where the tail sits, so a differing request names the layer that moved. If every
+request is identical the 23-cell screen stays the comparison base. If any differs, the file lists the differing
+arms in `rerunArms` with `mergeWithPreChangeCells: false`: those cells are rerun under gate 2 with their budget
+stated there and are never mixed with pre-change cells. `--keep-text` writes the request text to a private
+directory for diagnosis; the report itself holds hashes and counts only.
+
+**Pin.** `readiness.mjs --cache-stability` runs `prefix-stability.test.ts` and `prefix-probe.test.mjs` and writes
+`cache-stability/record.json`: the suite result (the ten named 4.12-4.14 tests must be among the passing ones),
+the fabric product hash (`PREFIX_PRODUCT_PATHS`, the hash every manifest carries) and the SHA-256 of
+`equivalence.json`. `runCampaign` calls `assertCacheStabilityPin(manifest)` right after the manifest is built, so a
+campaign of any mode is refused with a named blocker (`cache-stability-record-missing`, `-suite-failed`,
+`-product-changed`, `-equivalence-missing`, `-manifest-unpinned`) when the product changed after the record, the
+equivalence file was edited, or a manifest carries another product hash. Re-run both commands after any change to
+`packages/memory/fabric/src`.
+
+**Cache probe.** One scripted 12-turn `conversational` session through the wire proxy on one route, at most 12
+wire attempts (the bound is enforced in the fetch hook, retries included). A second memory instance over the same
+SQLite store makes an additive insert before turn 4 (the cache must survive it) and a forget of the core note before
+turn 9 (the one request that may miss). The writes are host-side because a live model cannot be scripted to call the
+tools; that is also the cross-process case Task 4.14 revalidates. Per request it reports `inputTokens`,
+`cacheReadTokens`, `cacheWriteTokens`, the cache-read share and the cacheable-prefix share (bytes the request body
+shares with the previous one). `status` is `as-expected` when every request after the first reads from the cache
+except the forget request, which should read less than its predecessor. The campaign summary lists any
+`cache-probe.*.json` in its evidence directory under `cacheStability` with `informational: true`; it is never a
+criterion. Fixture text only; the report holds numbers and body hashes.
+
+**Write-side accounting.** The wire proxy logs the affinity key a route sent (`x-session-id`, `session_id`,
+`x-client-request-id`, `x-opencode-session` or `prompt_cache_key`). `roleUsage` moves product exchanges whose key
+starts with the extractor's `prism-fabric-extract` into a separate `product-extract` role, so the screens report the
+extractor's `cacheReadTokens` apart from answers. The registered cost criterion still counts every product-side
+call: `productMeasurementVerdict` adds `product-extract` to `product`. `robustness-criteria.json` and its hash are
+unchanged; a test pins the hash.
+
 ## Pinned data and draw
 
 `datasets.mjs` records immutable revisions, byte sizes, SHA-256 hashes, license
@@ -63,6 +172,415 @@ colon, and id. MAB ids for the draw use the Python tuple spelling `(row, index)`
 `--subset all` bypasses the release draw. It can cost substantially more.
 `--max-questions N` is an explicitly partial diagnostic, never a full baseline.
 
+## Robustness suite and frozen partitions (plan 202 Task 2)
+
+`robustness-criteria.json` holds the pre-registered definitions of **better than
+full context** and **robust**, the owner decisions, and the suite list. Every later
+report and campaign manifest pins `criteriaHash` (SHA-256 of the canonical JSON), so
+no campaign can be scored against a changed definition.
+
+Pinned suites (all pins are URL + byte size + SHA-256 + licence, verified
+2026-10-27):
+
+| Suite | Source | Licence | Role |
+| --- | --- | --- | --- |
+| `longmemeval-m` | `xiaowu0162/longmemeval-cleaned@98d7416c`, 2,737,100,077 bytes | MIT | beyond-window |
+| `beam-100k` / `beam-500k` / `beam-1m` | `Mohammadta/BEAM@3205395e` | CC BY-SA 4.0 | in-window / optional / beyond-window |
+| `beam-10m` | `Mohammadta/BEAM-10M@9b209619`, two parquet parts | CC BY-SA 4.0 | optional, not drawn |
+| `locomo` | already pinned | CC BY-NC 4.0 | in-window, noncommercial accepted |
+| `memoryagentbench-cr` | already pinned | MIT | in-window |
+| `memorycode` | `CohereLabsCommunity/memorycode@32d888b1` | Apache-2.0 | coding, latest instruction |
+| `coding-longitudinal` | project-owned generator, 12 personas | none | coding lifecycle |
+| `vibemembench`, `dreambench-swe` | already pinned | Apache-2.0 | coding, licence-gated |
+
+`statemembench` is **unavailable** (no released dataset or code as of 2026-10-27);
+state tracking is mapped to `memoryagentbench-cr`, LongMemEval-M knowledge-update and
+BEAM-1M contradiction_resolution.
+
+BEAM normalization `beam-source-annotations-v1` preserves each message's original
+`sourceId` alongside its normalized id. Question-only `sourceAnnotations` retain
+`source_chat_ids` (lists or keyed groups), validated mappings and rubrics for
+private grading diagnostics. A missing or ambiguous id stays unresolved; mapping
+never guesses a message position or crosses a plan. Resolved ids enter the existing
+`evidence` path and are graded as rounds. Annotated BEAM evidence does not fall
+back to answer-text matches; incomplete annotations cannot claim all required
+evidence was retrieved. Gold metadata never enters ingestion, retrieval queries,
+or product-arm prompts.
+
+BEAM reports pin the normalization version and adapter source hash in both resume
+and reuse fingerprints. Pre-annotation checkpoints must be rerun under this protocol.
+The original seven exploratory cells are preserved byte-for-byte with their
+manifest, summaries, hashes and protocol provenance in
+[`exploratory-original-2026-10-28`](../../docs/_evidence/memory-bench/202/exploratory-original-2026-10-28/PROVENANCE.md).
+They remain exploratory evidence and cannot support corrected-protocol acceptance
+or final lever decisions. The text-free development annotation inventory is
+[`beam-source-inventory.json`](../../docs/_evidence/memory-bench/202/beam-source-inventory.json).
+
+Each drawn suite has `robustness-<suite>.json` holding three disjoint, stratified
+partitions: `dev`, `heldout-a` and `heldout-b`. The draw reads ids and ability labels
+only and orders ids by `SHA-256("prism-202-memory-bench-<suite>:" + id)`. Every
+ability, including abstention and preference, has items in both held-out partitions.
+`heldout-b` exists only for the single remediation round after a Task 18 miss.
+The diagnostic entry points refuse `heldout-a`/`heldout-b`, and `selectQuestions`
+fails closed on an id the dataset does not contain.
+
+LongMemEval-M keeps LongMemEval-S's question ids and ability labels and only extends
+the haystack, so its draw is taken from the pinned S ids without downloading 2.7 GB.
+When the M file is cached, `verifyLongMemEvalMItems` re-checks every id and ability
+before a run. LongMemEval-S is development-only from now on.
+
+Render a draw (reads only `id` and `ability`):
+
+```sh
+timeout 900 bun scripts/memory-bench/robustness-draw.mjs              # all downloadable suites
+timeout 1800 bun test scripts/memory-bench/robustness.test.mjs        # frozen-draw and criteria checks
+timeout 900 bun scripts/memory-bench/run.mjs --suite beam-100k --subset dev --config preset-r1 ...
+```
+
+A larger JSON array is read incrementally (`parseJsonArrayIncremental`), so
+LongMemEval-M never goes through `JSON.parse` on the whole file. Parquet decoding
+still needs benchmark-only `pyarrow==23.0.1` (`PRISM_MEMORY_BENCH_PYTHON`); the
+buffer and timeout now cover the 1M/10M tracks.
+
+## Measurement (plan 202 Task 3)
+
+A scored live arm needs a judge panel, not one judge: `--judges <ref>,<ref>[,<ref>]`
+with at least two **model families** (family is read from the model name, so two
+resellers of one family do not count) and never the answer model. Verdicts are
+combined by majority; a tie is incorrect. Every result keeps its per-judge verdicts
+(`judgeVerdicts`), and `summarize` reports per-judge agreement and pairwise
+Cohen's κ plus Fleiss' κ for three or more judges. `compareJudges(a, b)` reports the
+paired arm difference under each judge separately (ids both arms and that judge
+scored), so the panel's majority is never the only view.
+
+Human calibration is a separate, local artifact. Build a balanced 150-item review
+page, label it in a browser, then derive the audit:
+
+```sh
+timeout 600 bun scripts/memory-bench/audit/build.mjs --report <answer-phase report> --out .cache/memory-bench/audit/run1
+# open review.html, label every item, download judge-audit-labels.json
+timeout 600 bun scripts/memory-bench/audit/calibrate.mjs --report <scored report> --labels judge-audit-labels.json --output .cache/memory-bench/judge-audit.json
+timeout 7200 bun scripts/memory-bench/run.mjs --suite beam-100k --subset dev --config fabric-x --judges hyper/qwen3.7-plus,opencode-go/mimo-v2.5 --judge-audit .cache/memory-bench/judge-audit.json ...
+```
+
+The review page and the answer cache hold text; the labels file holds ids and
+verdicts only, `--judge-audit` drops every judge below κ 0.8, and fewer than two
+remaining judges fails the run. The owner still has to label the 150 items; until
+that audit exists, a live report records `judgeCalibration: null` and must not be
+used for the BFC gate. The owner waived the human labels for plan 202 (2026-10-27):
+baseline reports keep `judgeCalibration: null`, and any BFC claim is labelled
+**not human-calibrated**. An optional third-model proxy may label the same 150 ids,
+but it is not human κ.
+
+### Development baseline (plan 202 Task 4)
+
+**Muse Contributor continuation (owner decision 2026-10-29):** the owner authorized
+`commandcode/meta/muse-spark-1.3-contributor` for Task 4. The separately frozen
+`--readiness-v5` pilot uses the same ten development ids, 52 dispositions, judges,
+8192-token output cap and eight-turn stop as v4. Existing v4 and broad Lightning
+results remain intact. Run `PRISM_MEMORY_BENCH_PYTHON=.cache/memory-bench/python/bin/python3
+timeout 60 bun scripts/memory-bench/audit/pilot.mjs --readiness-v5 --freeze`, then
+`PRISM_MEMORY_BENCH_PYTHON=.cache/memory-bench/python/bin/python3 timeout 14400 bun
+scripts/memory-bench/audit/pilot.mjs --readiness-v5 --answers-only`.
+Answers are retained privately and the existing free panel scores those same
+checkpoints with `--score-only`; no judge calls occur in the answer phase.
+The completed v5 answers use the exact scoring scripts preserved at
+`.cache/memory-bench/frozen-muse-v5`. After successful original-panel admission,
+score from that directory with
+`PRISM_MEMORY_BENCH_PYTHON=.cache/memory-bench/python/bin/python3 timeout 14400 bun scripts/memory-bench/audit/pilot.mjs --readiness-v5 --score-only`.
+Its shared SDK/product and copied harness must pass the original hashes; no
+source-pin exception or answer regeneration is allowed. Keep this snapshot and
+the original cache/journal intact while scoring is pending.
+The declaration holds one reservation across phases, caps execution at four
+active hours, allows 24 elapsed hours to cover the observed daily reset, and
+retains the 300-call / 50M-input / 1M-output bounds. At the checked official rates
+($0.10 input / $0.20 output / $0.002 cache-read per million), the uncached
+input/output ceiling is $5.20; measured costs use reported cache usage.
+This authorizes only the named paid answer route, with the existing free judges;
+no other paid model or fallback is selected. Passing answer generation alone does
+not establish broad readiness, scored baseline completion or a lever verdict.
+
+**Task 4.8 readiness:** the authoritative verdict is
+[`readiness.json`](../../docs/_evidence/memory-bench/202/readiness.json).
+Recheck with `timeout 180 bun scripts/memory-bench/audit/readiness.mjs`.
+The gate now requires a fresh accounted Muse pilot, successful authorized model/tool and
+judge-control probes, unexpired operational evidence, source-matched green
+checks, and a bounded frozen manifest. `campaign.mjs --baseline-202
+--parallel-arms 1` loads that manifest and refuses missing/stale evidence.
+It uses a separate journal, retains historical reservation debt, applies each
+job's wall cap, and stops on unavailable quota without assuming a future reset.
+
+The selected answer routes are paid Command Code `meta/muse-spark-1.3-contributor`, plus
+OpenRouter `nvidia/nemotron-3.5-lightning:free` and
+`nvidia/nemotron-3-ultra-550b-a55b:free`. Judges are OpenRouter Dots Note Preview
+and Cohere North Mini Code, both `:free`. All arms use temperature zero, 8192
+output tokens, provider-default reasoning and the unchanged eight-turn stop.
+Injection-utility annotation calls are off for this development screen, matching
+the pilot; source-id evidence attribution remains on. Task 18 keeps its own
+frozen annotation requirement.
+Only the named Muse route may be paid. Its `--bounded-wire` flag enforces the
+same per-physical-request context/output reservations as free routes, retaining
+unknown usage. `--free-only` still refuses unknown/paid routes for the other models, and
+`--max-output-tokens 8192` pins the answer cap in run/checkpoint identity.
+Muse uses Responses. The new `.cache/memory-bench/202-muse-baseline/journal.json`
+carries the original campaign's spend once, plus the new pilot charge. Four
+byte-pinned completed Lightning cells are retained without new reservations;
+the interrupted lexical cell resumes its 25 saved results and charges only new
+reported usage. Old report paths are never overwritten: new reports go under
+`docs/_evidence/memory-bench/202/baseline/muse-campaign/`. Aggregation follows the
+selected manifest and journal, excluding unrelated historical directory entries.
+Retention verifies the original shared product/proxy identity, frozen draws,
+grading/pairing rules, unchanged analysis function bodies/dependencies, generation,
+input caps and report bytes. An orchestration hash change does not authorize
+changing a statistical rule or reusing a different cell.
+Beam
+passes native tool follow-ups on Chat after the reasoning-replay fix, but still
+rejects imported assistant history without nonempty reasoning traces; that
+upstream limitation excludes it from this raw-history baseline. The local wire proxy disables Bun's ten-second idle cutoff; caller/run deadlines still apply. Wire accounting
+reads Responses terminal usage and logs failed transports. Admission includes
+in-flight allocations; unknown calls keep their full declared context/output
+bounds rather than freeing budget from missing measurements.
+
+Freeze a separate replacement pilot with `timeout 180 env
+PRISM_MEMORY_BENCH_PYTHON=.cache/memory-bench/python/bin/python bun
+scripts/memory-bench/audit/pilot.mjs --readiness-v3 --freeze`, then run it with
+`timeout 14500 env PRISM_MEMORY_BENCH_PYTHON=.cache/memory-bench/python/bin/python
+bun scripts/memory-bench/audit/pilot.mjs --readiness-v3 --answers-only`.
+Score only those checkpoints with the same command and `--score-only` after
+free admission is verified. Both phases retain one journal attempt/reservation;
+scoring refuses missing answers and subtracts all prior calls, tokens and active
+wall time. The v3 declaration is eight hours overall including the announced
+quota wait and four active execution hours; the earlier four-hour attempts
+remain unchanged.
+Its 52 dispositions, 300-attempt / 50M-input / 1M-output / declared wall-time limits,
+private checkpoints and free-only configuration are fixed before calls. No old
+answer/score is reused. The original pilot's missing usage, reservation debt and
+elapsed overrun remain historical deviations; no refund or retrospective pass.
+All seven historical broad cells still require rerunning. Broad Task 4 stays
+unchecked until the entire baseline and lever report finish. No BFC/Robust,
+acceptance, small-model or default claim follows from these readiness checks.
+The historical configuration and quota notes below are retained for provenance;
+readiness supersedes their estimates and resume instructions.
+
+
+Task 4.6 registers paired reporting and prospective sizing in
+[`paired-analysis-sizing.md`](../../docs/_evidence/memory-bench/202/paired-analysis-sizing.md)
+and its JSON companion. Reproduce it without provider calls:
+
+```sh
+timeout 60 bun scripts/memory-bench/paired-sizing.mjs
+```
+
+Baseline gaps join unique question ids and matching conversation clusters/abilities.
+Missing, duplicate, unscored or mismatched pairs produce `incomplete`, with no gap;
+operational failures retain their end-to-end zero. Reports show candidate minus
+comparator, whole-conversation bootstrap 95% CIs, wins/losses, independent cluster
+counts and Holm p-values across all emitted overall, ability-binary and
+ability-graded tests in that summary. CIs are pointwise. Overlapping marginal CIs
+are not a significance test. Equivalent complete-history comparator repeats are
+still counted once. Missing provenance is labelled historical; mismatched pins
+are refused. New checkpoint/reuse fingerprints include the analysis revision
+and binary/graded template versions; manifests pin source hashes, frozen dataset
+bytes/draws, normalization and context policy.
+
+Task 4 is descriptive screening. Ordering and summarization use the registered
+graded primary alongside binary secondary; oracle scores only bound the sizing
+exercise and never enter product gaps or lever rankings. Their development draws
+contain only 3 and 4 independent conversations. Even an ideal paired improvement
+cannot reach two-sided .05 with the registered sign-flip analysis, so both are
+**not lever-discriminating at this sample**. Do not silently use these zeros to
+open or close a lever; retain descriptive scores and failure-stage evidence.
+
+Task 18 retains binary scoring and the 3-point non-inferiority margin. Sizing
+declares H0: candidate-comparator <= -.03, true difference 0, one-sided alpha .025
+and target power .8. Its sensitivity grid varies discordance (.1/.25/.5) and
+within-conversation paired-difference ICC (0/.5/1), using the frozen cluster
+sizes rather than independent-arm `powerForDiff`. Every grid row is underpowered
+at current supply; the claim stays unresolved. Repeats add no independent
+histories. These are normal planning approximations, not acceptance verdicts;
+small-cluster coverage and LongMemEval haystack cluster counts still need checking
+before acceptance. BFC is a conjunction of required rows; selectable subset
+claims require prospective multiplicity registration. Criteria and old evidence
+stay frozen. Tasks 4.7 and 4.8 still control the pilot and broad resumption.
+
+`campaign.mjs --plan 202-baseline --manifest` (or `baseline.mjs --manifest`) writes
+the gate pack to `docs/_evidence/memory-bench/202/baseline/`: the owner gate text,
+the pre-registered `criteriaHash`, product and harness hashes, 75 jobs (5 suites ×
+3 models × 5 arms), per-job token reservations and per-suite wall-time caps. The
+jobs are `preset-r1` (`fabric-x-tools`), `passive-only` (`fabric-x`), `full`,
+`full-truncated` and `lexical-topk` on every `dev` partition.
+
+Answerers are `opencode-go/beam-free` (200k context, free on the subscription),
+`opencode-go/minimax-m3` (1M) and `opencode-go/mimo-v2.5` (1M); judges are
+`opencode-go/qwen3.7-plus` and `opencode-go/kimi-k3` — two families, neither an
+answer model, neither sharing a family with one, both plain-text. Everything runs
+on the owner's OpenCode Go subscription, so the USD figure in the manifest is the
+list-price equivalent, not a charge; a cross-provider claim is out of reach for
+this grid and stays a Task 18 criterion.
+
+**Why not the OpenRouter free models or Hyper.** They were in the gate pack of 2026-10-27 and
+are not any more: the key hit `free-models-per-day-high-balance` (1000 free requests
+per day, `x-ratelimit-remaining: 0`, reset 2026-10-29), so every arm failed at its
+first answer with `MemoryBenchAnswerError:429`. The 2026-10-27 runs are archived
+under `docs/_evidence/memory-bench/202/baseline-openrouter-2026-10-28/` and are not
+evidence: they ran a different model set. Hyper ran out of credits mid-grid
+(`402 Payment Required` on every answer and judge call), so
+`docs/_evidence/memory-bench/202/baseline-hyper-exhausted-2026-10-28/` is archived
+for the same reason.
+
+**Tool names on the wire.** The fabric registers dotted tool names (`memory.recall`), which OpenAI
+rejects as a function name; `createRoutedProvider` encodes them per request (`memory.recall` →
+`memory_recall`) and decodes the model's call back, so a fabric arm runs on any Chat endpoint. A
+dotted name failing with `400 invalid_value tools0.function.name` means a route is calling a codec
+directly without the shared `toolNames` map.
+
+**Gateway quotas are the real budget.** Hyper allows 1000 requests/hour and 10 000/day per judge
+model, and the free answer pools are shared and rate-limited. The harness honors a gateway's
+`retry_after_ms` hint (up to 8 attempts, then the cell fails) and the campaign's per-job attempt
+limit is 8, because an earlier attempt may have been spent on a quota window rather than on the arm.
+Full judging volume is 5 suites × 40 questions × 5 arms × 3 answer models × 2 judges = 6000 calls
+(3000 per judge model), so at least three hours of wall time is quota-bound before any answer cost.
+The harness also paces judge calls per model (`PRISM_MEMORY_BENCH_JUDGE_RATE`, default 450/hour) so a
+burst cannot spend an hourly window on 429s instead of verdicts.
+
+**A 4xx that names an input problem is not retried.** `campaign.mjs:permanentFailure` classifies
+`context length`, `invalid_request`/`unsupported` and `model_not_found` as `failed-permanent`: the
+attempt keeps its report and the journal records the cause (`context-exceeds-model`,
+`unsupported-by-provider`, `model-unavailable`), and the job is never re-run. Quota (`429`) and
+transport (5xx) failures stay retryable.
+
+**Billing is subscription, not per token.** The manifest records token totals to
+size plan quotas and `maxInputTokens` reservations; the USD figure is list-price
+equivalent for comparison only. Wall time is capped per job (6 h BEAM-100K/LoCoMo,
+6 h MemoryAgentBench, 48 h BEAM-1M, 144 h LongMemEval-M) and measured by the first
+real write arm, never assumed zero.
+
+After the arms finish, place each report as `report-<job-id>.json` beside the
+manifest and run `baseline.mjs --aggregate`; it writes per-cell accuracy/CI/stage
+counts, comparator gaps and the lever table. Only `fabric-x-tools` (preset-r1)
+and `fabric-x` (passive-only) can open a product lever. The unchanged 5% rule
+uses **all unique product failures within each suite × model × arm** as its
+denominator, including run limits, transport/setup errors and unknown evidence.
+Comparator failures never contribute. Each decision names that cell and reports
+attribution coverage, unknown/operational counts and label provenance.
+
+Outcomes take precedence over diagnoses: `run_limit`, `transport_setup_error`
+and `comparator_ineligible` remain distinct from judged incorrect answers.
+Validated source annotations and unresolved-reference counts accompany evidence
+counts; heuristics and historical stage-only evidence are labelled separately.
+Recall visibility is a heuristic for stage attribution: the answer path does not
+measure a separate candidate ranking or prove that recalled text was used.
+No source/gold/answer text enters the derived stage report. Diagnostics and
+restaging refuse held-out partitions. Resume/reuse fingerprints include the
+updated attribution measurement version, so old checkpoints cannot bypass it.
+
+A stage identifies a candidate lever, never a promised recovery. Within-cell ids
+are deduplicated; conflicting duplicate outcomes/diagnoses remain unknown.
+`candidateFailures` counts unique suite/model/question combinations across
+eligible arms; `failureOccurrences` and `sharedFailures` expose overlap. These
+counts also overlap between levers and must not be summed as unique recoveries.
+Unknown or missing stage measurements yield `insufficient-evidence`; a stage
+that the classifier cannot measure stays `unmeasurable`. Neither closes a task.
+The judge audit (150 human labels) is required before a BFC verdict.
+
+The [Task 4.4 correction](../../docs/_evidence/memory-bench/202/failure-attribution.md)
+recomputes saved outcomes and product-only counts offline. Historical labels
+remain heuristic and cannot establish final corrected-protocol lever decisions;
+original exploratory files and scores are preserved.
+
+## Replay, accounting, and limits
+
+### Paired development comparison manifest (plan 202 Task 5.2)
+
+`timeout 120 bun scripts/memory-bench/task5-comparison.mjs --manifest` freezes the
+paired development comparison without making a provider call. It writes the
+text-free [manifest](../../docs/_evidence/memory-bench/202/task5/development-comparison-manifest.json)
+and its readable summary, both pinned by `manifestHash`;
+`assertTask5ComparisonManifest` refuses product/cohort drift, held-out ids or
+content, and cells whose budgets or evidence protocol differ.
+
+The treatment is the product only. One control cell per development suite runs
+`preset-r1` (`fabric-x-tools`) from a revision-1 git worktree that carries the
+unchanged current harness; the candidate cell runs the same harness on the
+current product. Both roles share the frozen development question ids, the
+repaired note-to-round mapping, one free answer model, two free plain-text
+judges, `maxInputTokens`, 8192 output tokens, eight turns, serial concurrency and
+wall caps. `--answers-dir` and `--judge-cache-dir` keep the roles' answer and
+judge checkpoints separate, so a control answer can never be reused as the
+candidate's; write-side snapshots are already keyed by product hash.
+
+The candidate-gap numerator/denominator, the 50% halving rule, zero-gap baseline
+handling, failure/missingness treatment, the 0.03 ability non-regression margin
+and the paired cluster analysis are hashed into `criteriaHash` before any
+outcome exists. Changing them after the freeze is refused, not re-scored.
+
+`timeout 120 bun scripts/memory-bench/task5-comparison.mjs --gate --text "<owner approval>" --approved-at <date>`
+records the owner gate as [owner-gate.json](../../docs/_evidence/memory-bench/202/task5/owner-gate.json)
+after re-auditing the frozen manifest. It binds `manifestHash`, the campaign
+journal identity, the 10-cell scope and the caps; `assertTask5OwnerGate` refuses
+an unapproved gate, a changed manifest/journal, a paid estimate or any route that
+is not a free OpenRouter `:free` model. The owner restriction for Task 5 is free
+OpenRouter products only, with no paid fallback. Task 5.4 executes only under a
+passing gate.
+
+`timeout 518400 bun scripts/memory-bench/campaign.mjs --task5` executes the
+gated proposal. Do not narrow the cohort or swap models without a new manifest
+and gate.
+
+### Control r2: arms differ only in the product paths
+
+The candidate is a commit, not the working tree. The control is a derived overlay
+commit `r2`: the candidate tree with `TASK5_PRODUCT_PATHS` replaced by the bytes
+from `TASK5_CONTROL_PRODUCT_SOURCE` (`5c2570df`, the closed screen's revision-1
+commit). `task5ControlRevision(candidate)` builds it in a temporary git index with
+fixed author/committer metadata, so the same inputs always produce the same sha;
+`ensureTask5ControlRef` points `refs/heads/task5-control-r2` at it, and
+`prepareTask5Control` checks out that sha, never a branch tip or a dirty tree.
+The control product hash must still be `ad25add4…` and the fabric-only hash
+`57aa47d9…`.
+
+Fail-closed checks before any cell runs (`preflightTask5`):
+
+- no uncommitted path outside `.cache/` (a dirty tree could enter the candidate arm);
+- the working-tree product hash equals the pinned candidate commit's product hash;
+- the overlay recomputes to the pinned control revision, and `git diff --name-only`
+  between the arms lists only paths under `TASK5_PRODUCT_PATHS`;
+- commits after the candidate pin touch only `docs/_evidence/memory-bench/202/task5/`
+  or the plan; anything else requires a re-freeze and a new gate;
+- the control worktree `HEAD` is the pinned r2, its harness is byte-identical to
+  the frozen harness, and `bun test --concurrency=1 packages/memory/fabric
+  packages/memory/core` plus `bun run typecheck` pass inside it.
+
+The serial test flag is deliberate: those suites share temp state across files and
+flake in parallel. Preflight is local only — it makes no provider call.
+
+### Calls: a measured estimate, one shared free pacer, daily quota halts
+
+The campaign's `expectedPhysicalCalls` is a measured rate, not the per-question turn
+cap: the frozen `preset-r1` `beam-100k` report for the same free answer family records
+3.175 solver and 2.25 judge calls per question (`labelInjections: "off"`, so no
+injection-label calls), so 420 question-runs estimate 2,289 calls with a high end of
+2,625 at the slower `beam-free` solver rate. The 16,800 hard cap does not move.
+
+`:free` routes are one account-wide pool (20 requests/minute, 1,000/day once 10 credits
+have been purchased), so the solver, the product's workers and both judges call a single
+`createFreeRoutePace` instance (`state.pace` plus each judge's `pace`), never one pacer
+per role. `PRISM_MEMORY_BENCH_FREE_PACE_PER_MINUTE` overrides the 20; a value above 20 is
+refused. Paid routes keep the per-model `PRISM_MEMORY_BENCH_JUDGE_RATE` pacer.
+
+A daily free-model 429 (`free-models-per-day*`) is classified by the diagnostic harness's
+own `rateLimitDisposition`, so there is one 429 classifier in the tree. The campaign
+writes the attempt as `quota-daily`, halts the journal with `status: "quota-daily"` and
+`resumeAfter` (next UTC midnight, or `PRISM_MEMORY_BENCH_DAILY_RESET_HOUR_UTC`), and
+returns without the 15-minute pause. That attempt does not count against the job's two
+attempts: rerunning the same command resumes the cell from its answer and judge
+checkpoints, so no completed answer is requested twice.
+
+Preflight reads `GET https://openrouter.ai/api/v1/key`, records the reduced tier
+(`paidTier`, `dailyFreeRequests`, remaining/used credits — never the key) to
+`docs/_evidence/memory-bench/202/task5/free-key.json`, and refuses to start below the
+1,000-requests/day tier.
+
 ## Replay, accounting, and limits
 
 Source messages are linked session entries with stable source-derived ids, original role, source id,
@@ -74,10 +592,24 @@ and appends no synthetic user instruction. The runner waits for each
 worker before ingesting the next chunk. It never supplies gold answers during
 replay. Each question has a fresh agent/session and memory state.
 
-`full` retains the whole haystack, trimming oldest complete dialogue turns when
-the estimated model input cap is exceeded, and records `truncated: true`. The cap
-comes from the existing provider catalog and `resolveInputCap`; prompt and tool
-headroom is reserved. Character-based estimates govern trimming only. Request and
+`full` qualifies as complete history only when the rendered request removes no
+source messages. An oversized history produces an unscored `comparator_ineligible`
+row before the answer provider call; it also skips judging in split answer/judge
+runs. `full-truncated` explicitly drops oldest complete dialogue turns to fit.
+Both use the same selection implementation, preserving system blocks and the
+question. Reports record `comparatorContext` (effective input cap, safe model
+configuration and policy) and per-question `contextEligibility` (message cap,
+source/message removal counts, estimated tokens removed, completeness and a
+context hash). The cap comes from the existing provider catalog and
+`resolveInputCap`; output reservations stay in place, with another 1,024 tokens
+plus rendered context blocks reserved before message selection. Character-based
+estimates govern selection; they do not prove provider tokenization or delivery.
+A provider context refusal remains an error, never evidence of complete delivery.
+Baseline full-context gaps require proven completeness on every scored row and no
+unscored/ineligible questions. Historical rows without this evidence are unproven.
+When both arms render identical contexts for every question on the same model
+configuration, the baseline marks `full-truncated` as `repeatOf: "full"` and omits
+its independent comparator gap. This is a repeat, not a truncation treatment. Request and
 response byte caps remain Prism's defaults. The benchmark owns a separate total
 wire token ceiling, so the ordinary 40k-input/50k-total per-run policy caps are
 disabled for this opt-in harness. Provider calls and multi-call background worker passes have ten-minute deadlines; the input-token ceiling remains the cost bound. The benchmark transport uses Prism’s existing transient-error retry policy with three attempts for all model calls, including workers. It also retries the observed empty SSE gateway error (`HTTP 400`, `event: error` / `data: {}`); ordinary validation errors are never retried. `calls.gatewayRetries` and wire exchanges include this overhead; memory-package logic stays unchanged.
@@ -510,12 +1042,43 @@ Caches live under `.cache/` (gitignored) with mode `0600`:
   `calls.judgeCacheHits`; a changed template, judge model, generation or answer is a miss. The
   template version is a hash of `judge-prompts.json`, so editing a prompt invalidates every verdict.
 
-Every report now carries a `timing` block: `wallMs`, `questions.wallMs` p50/p95, `concurrency`, and
-`roles` for `solver`, `judge`, `injection-label` and the consolidation workers (`observer`,
-`reflector`, `dropper`, `decider`), each with call count and p50/p95/mean total time and time to
-first byte. Solver calls stream, so their two numbers differ; a non-streaming judge call reports the
-same value for both. The rendered `.md` repeats this as one line. Timings are milliseconds and
-counts only — no prompt, question or answer text.
+Every report carries campaign `timing.wallMs`, end-to-end `questions.wallMs`, concurrency,
+per-call `roles`, and per-question `phaseTiming` with independently measured phase summaries:
+
+- `ingestion`: cold setup and history ingestion, including extraction/OM workers. A seeded store
+  records `restore` instead; its original ingestion time and cost are not remeasured.
+- `answer`: after ingestion, immediately before the question run, through the final answer,
+  including tools, transport retries, rate-limit backoff and answer retries. Final background
+  settlement, disposal, scoring and injection labels happen after this interval.
+- `evaluation`: post-answer grading and injection annotation, including judge pacing and retries.
+  Annotation is enabled by default and makes one additional judge call per injected item;
+  `--label-injections off` disables it. A judge-cache hit makes no grading call.
+
+Each phase publishes its own **p50, p95 and mean** in milliseconds, with a sample count. No
+percentile is subtracted from another. Pool queue wait is excluded; concurrency and the judge
+calls/hour setting are recorded in `measurementPolicy`. Split judging keeps the saved ingestion
+and answer timings. Historical reports without phase measurements show `n/a`, never a relabelled
+wall-time estimate. The new measurement version invalidates older resume/reuse fingerprints.
+
+Live product and evaluation traffic use isolated wire logs, including when they share a provider
+or model. `roleUsage` reconciles product + evaluation + unknown historical usage to campaign token
+and exchange totals. The existing token ceiling and journal still consume **all** traffic. Each
+route uses its own model price; missing rates or successful exchanges missing usage produce an
+unknown cost. Mixed-model product routes without wire model identity remain unpriced.
+
+Product cost reports measured billing, cold input repriced at uncached rates, and warm
+cache-adjusted billing. The warm `full` simulation prices all input as cache reads (a favourable
+cached-prefix assumption); other arms use reported cache reads/writes. `inputCold`/`inputWarm`
+exclude output for the registered input-cost-per-question criterion. Evaluation cost and total
+campaign cost remain visible separately. Seeded read runs exclude their separately executed
+write-side cost and cannot establish a cost pass alone. Zero subscription prices remain zero USD,
+but a zero or unknown comparator denominator cannot establish a relative cost pass.
+
+Baseline evidence labels answer p50/p95/mean separately from ingestion and evaluation. Its
+registered measurement comparison consumes matched product input cost per question and answer
+p95 only, under the criteria file's thresholds; historical, incomplete-usage or ineligible full
+comparators cannot supply a pass. Timing and role accounting carry counts, durations and billing
+numbers only; prompt, question, answer and credential text stays out.
 
 ## Paid campaign cycle (188.9 Task 4)
 
@@ -1295,3 +1858,212 @@ not a live capacity or production-default verdict. Archive regret counts a later
 probe whose needed fact is archived and is **not** supplied by an active recalled
 copy. Widening and duplicate retirement with an accessible replacement are not
 loss. The regression also retains a genuine later-needed archived-fact case.
+
+### Plan 202 Task 4.5: zero-score ability diagnostics
+
+`audit/zero-score.mjs` restricts the audit to the four frozen BEAM-100K development
+`event_ordering` ids and four `summarization` ids. It first checks each declared
+judge with the gold answer and a deliberately incorrect negative control, then
+runs source auditing and checkpointed `oracle` (labelled evidence only) and
+eligible `full` answers through the existing replay and panel machinery.
+
+BEAM source rubrics now reach judging as untrusted JSON alongside the reference
+answer. Ordering requires the requested item count and chronology; summaries
+require rubric coverage while accepting paraphrases. Rubrics never enter normal
+answer generation. The prompt-template hash changes, invalidating old verdict
+cache identities. Original exploratory reports are preserved.
+
+The declared ceiling is 160 wire attempts, 5 million input tokens, 300,000 output
+tokens and 60 minutes, serial execution. Token checks use reconciled wire usage
+before each attempt, so the final in-flight response may cross a token ceiling.
+A transient free-pool `429` (an upstream shared pool is busy) is **not** quota
+exhaustion: it is retried four times with backoff and still counted as a wire
+attempt. Only the free-per-day cap stops the diagnostic immediately. Neither
+path buys a replacement provider or expands the question set. Private
+source/gold/answer text and checkpoints stay under `.cache/memory-bench/audit/4.5/`;
+the committed summary contains ids, counts, dispositions and findings. The
+owner-authorized OpenRouter free-model retry uses
+`nvidia/nemotron-3-ultra-550b-a55b:free` for answers and
+`dots-studio/dots-3-note-preview:free` plus `cohere/north-mini-code:free`
+for cross-family judging. These replace the quota-exhausted OpenCode models;
+prior verdicts are not reused across model identities. The answer model is run
+with thinking disabled: with it enabled every complete-history answer spent the
+output budget on reasoning and returned no answer, which cannot be graded. Run:
+
+```sh
+timeout 3600 env PRISM_MEMORY_BENCH_PYTHON=.cache/memory-bench/python/bin/python \
+  bun scripts/memory-bench/audit/zero-score.mjs
+```
+
+`oracle` reports and reports carrying `diagnosticOnly: true` are excluded from
+baseline cells, lever rankings and product comparisons. Diagnostic full-history
+answers cannot establish product acceptance. These eight questions span six
+conversation clusters; repeated arms do not increase that count. The owner's
+human-calibration waiver remains explicit: model-assisted auditing is not human
+calibration. Diagnostic outcomes and the superseded subscription quota blocker
+are in `docs/_evidence/memory-bench/202/zero-score-abilities.{json,md}`: gold and
+wrong-answer controls pass on both judges, a faithful paraphrase of the gold
+answer is accepted under both rubric forms, evidence-only answers score 2/8 and
+complete-history answers 0/8 with the rejections inspected. Grading is not
+inverted, so the abilities stay in the target, but the binary resolution cannot
+attribute those zeros to the answer model or the product (Task 4.5.1 below), and
+this free panel is development-only and never evidence for acceptance.
+
+### Plan 202 Task 4.5.1: graded rubric scoring
+
+Binary BEAM grading requires every rubric point and, with two judges, both must
+agree, so an answer covering four of five points scores the same as one covering
+none. The upstream protocol (BEAM `src/evaluation/compute_metrics.py` and
+`report_results.py` at commit `b2da22eac88bb0874c64665f13457eb99835774a`) is graded:
+each rubric point is judged separately as 0 / 0.5 / 1 and the ability score is the
+mean (`llm_judge_score`); `event_ordering` also computes Kendall tau-b between the
+rubric order and the response order over the union of both lists, missing items
+tied last, normalised to `(tau + 1) / 2` (`tau_norm`), and `final_score = tau_norm x F1`.
+Upstream's report prints `tau_norm` for ordering and `llm_judge_score` for the rest.
+
+Registered **before** any Task 4.6 sizing or 4.7 pilot answer:
+
+- **Primary Task 4 screening and lever-ranking metric for `summarization` and
+  `event_ordering`:** the graded score, the **mean across judges** (not the binary
+  AND/majority rule). Summarization is the mean per-point credit. Ordering is
+  `tau_norm x F1` over the labelled items, because `tau_norm` alone leaves omissions
+  unpenalised (a perfectly ordered four of five items scores 1.0). A response that
+  names no labelled event takes the floor (upstream's tau is NaN there). The panel
+  reports a per-answer `gradedSpread` and a disagreement flag when judges differ by
+  more than 0.2.
+- **Secondary:** the binary panel verdict, computed and reported unchanged.
+- **Task 18 is untouched.** `robustness-criteria.json` and the frozen binary
+  acceptance metric do not change; a test pins `robustnessCriteriaHash()`. Moving
+  Task 18 onto the graded score would be a separate, versioned, owner-decided
+  amendment made before any held-out run, never a retroactive reclassification.
+
+Deviations from upstream, stated plainly: one judge call scores all rubric points
+(summarization) or maps the response's items to rubric numbers (ordering) instead of
+one call per point, to fit the free-model call ceiling; tau-b and F1 are then computed
+locally. Judge input stays untrusted JSON. Graded templates live under `graded` in
+`judge-prompts.json`, outside `prompts`, so `JUDGE_TEMPLATE_VERSION` and every binary
+cache key are unchanged; graded verdicts use their own key kind and version.
+`run.mjs` adds `graded`, `gradedSpread`, `gradedDisagreement` and `gradedJudges` to
+BEAM rubric rows (not in offline mode); reports and baseline ability rows show the graded
+mean beside binary accuracy.
+
+`audit/graded.mjs` runs the 4.5.1 diagnostics on the same eight development ids.
+Declared ceiling: 400 wire attempts, 8 million input tokens, 700,000 output tokens, two
+hours, serial, OpenRouter free panel only, $0. Re-judging reuses the 4.5 answer
+checkpoints with no new answers; gold variants, source text, answers and judge outputs stay
+under `.cache/memory-bench/audit/4.5.1/`.
+
+```sh
+export PRISM_MEMORY_BENCH_PYTHON=.cache/memory-bench/python/bin/python
+timeout 7200 bun scripts/memory-bench/audit/graded.mjs            # re-judge, borderline controls
+timeout 7200 bun scripts/memory-bench/audit/graded.mjs --reanswer # optional thinking re-answer
+bun scripts/memory-bench/audit/graded.mjs --dossiers             # claim candidates over the full source
+bun scripts/memory-bench/audit/graded.mjs --classify             # counts from the private review
+bun scripts/memory-bench/audit/graded.mjs --evidence             # text-free committed evidence
+```
+
+Borderline controls are built locally from each question's own rubric: the gold answer,
+gold minus one rubric point, for ordering one adjacent swap and the full reversal, for
+summaries gold plus a correct extra sentence from a labelled message, and a model-written
+paraphrase of the gold answer for all eight ids. Binary must accept the gold, extra and
+paraphrase variants and reject every degraded one; the graded score must track the closed-form
+expectation within 0.2 (`(k-1)/k` for summaries, the ordering metric itself for ordering).
+The complete-history claim review classifies every claim against the **whole**
+conversation, not the labelled evidence (`supported-labelled`, `correct-unlabelled`,
+`contradicted`, `superseded`, `unsupported`, plus `synthesis` for a line with no checkable
+specific): numbers and names are searched across all messages, the closest messages are
+listed with their label status, and ordering and every flagged claim were read by hand. It
+cannot find a semantic contradiction that shares no number or name with the source, so a
+`contradicted` or `superseded` count of zero means none were found in what was read, not that
+none exist. Model-assisted review is never human calibration; the owner's waiver stands.
+Results are in `docs/_evidence/memory-bench/202/graded-rubric-scoring.{json,md}`.
+
+### Plan 202 Task 4.7: bounded corrected pilot
+
+The completed diagnostic is in
+[`pilot-v3/README.md`](../../docs/_evidence/memory-bench/202/pilot-v3/README.md).
+It accounts for all 52 requested cells: 40 product/comparator cells, two
+rubric-oracle ceilings and ten equivalent-policy full-truncated dispositions.
+All ten full-history requests are eligible; no source messages were removed.
+`final-results.json` contains the scored rows and paired differences;
+`evidence-coverage.json` distinguishes selected comparator history from delivered
+memory ids. Oracle rows never enter comparisons or lever rankings.
+
+`audit/pilot.mjs` is a fixed development-only entry point over the existing
+replay, journal, checkpoint, panel, timing and paired-statistics machinery. It
+cannot start the broad campaign. Its ten ids cover every BEAM ability once,
+preferring five historical run-limit ids. This completion-enriched screen is
+descriptive, not an unbiased development accuracy estimate. Seven independent
+conversations overall and one per ability cannot establish a lever effect.
+Ordering and summary rows report graded scores as primary, binary as secondary;
+Task 4.6's screening limits and the owner's human-calibration waiver remain.
+
+The primary configuration is Nemotron with reasoning disabled, temperature zero,
+8,192 output tokens and the unchanged eight-turn stop. It is a bounded diagnostic
+configuration, not the product/acceptance configuration. Both judge families are
+free development-only routes. Source annotations/rubrics reach evaluation only;
+injection-utility annotation calls are disabled. No prompt, product setting,
+turn budget, provider replacement or broad-grid expansion was made.
+
+The original allowance was 300 wire attempts, 8M input, 700K output tokens and two
+hours, serial. V1 stopped on a judge SSE 502 and exposed a cleanup error. V2 reran
+all primary cells after fixes; v3 preserves eleven validated v2 rows and completes
+the remaining cells after another judge-stream loss. Every continuation manifest
+reduces the remaining allowance and pins prior results. A final judge-only
+supplement scores the same saved full-summary answer; its offline join preserves
+failed-call cost and rejects another checkpoint. Both old outcomes remain public.
+
+Historical execution commands (already-frozen/attempted identities refuse a new
+live execution; `--compose` is local and makes no model call):
+
+```sh
+timeout 60 env PRISM_MEMORY_BENCH_PYTHON=.cache/memory-bench/python/bin/python bun scripts/memory-bench/audit/pilot.mjs --freeze
+timeout 5200 env PRISM_MEMORY_BENCH_PYTHON=.cache/memory-bench/python/bin/python bun scripts/memory-bench/audit/pilot.mjs
+timeout 60 env PRISM_MEMORY_BENCH_PYTHON=.cache/memory-bench/python/bin/python bun scripts/memory-bench/audit/pilot-rejudge.mjs --freeze
+timeout 1800 env PRISM_MEMORY_BENCH_PYTHON=.cache/memory-bench/python/bin/python bun scripts/memory-bench/audit/pilot-rejudge.mjs
+timeout 30 bun scripts/memory-bench/audit/pilot-rejudge.mjs --compose
+```
+
+Source hashes describe the frozen executions. Subsequent test/docs/offline-join
+changes require Task 4.8 to refresh provenance before any broad run; changing a
+product/answer/scoring input is refused by the continuation guard. Private text,
+answers and bounded provider traces stay under `.cache/memory-bench/audit/4.7*`.
+V2/v3 traces keep at most 16 turns, the last 16 messages per request, 4,096
+characters per message/event and 64 non-text events per turn, preserving tool
+calls and stop reasons when text streams are long. Public reports contain ids,
+counts, hashes and scores only.
+
+Including v1, primary work used 246 attempts, 2,673,235 reported input and 254,371
+reported output tokens over 74.2 active attempt minutes. Eleven exchanges lack
+usage: totals are lower bounds, all incomplete journal reservations remain
+charged, and no fully reconciled hard-token or billing proof is claimed. The
+aggregate primary reservation charge is 24,028,649. The existing 250k/request
+planning envelope stays below the numeric token allowance but cannot replace
+provider usage. Elapsed time including engineering, probing and the continuation
+pause was 295.2 minutes, an explicit deviation from one uninterrupted two-hour
+pilot. See `budget-accounting.json`; the $0 role cost is free-route pricing.
+
+The separately frozen subscription completion probe reproduced Beam's eight-turn
+loop with repeated identical recall arguments and result/hit feedback visible in
+later model requests. Its genuine run limit stays a failure. MiniMax's current
+probe is blocked by its monthly quota; its historical eight-turn/21-call trace
+is preserved without inventing a current diagnosis. The probe used 11 of its 48
+attempts, under separate 2M-input/100K-output/30-minute limits, with no paid
+fallback. The original eight-versus-one failures out of forty remain exploratory.
+
+Harness repairs count passive retrieval once plus every explicit recall, retry
+transient SSE judge 500/502/504 within the existing attempt ceiling, dispose
+judge agents correctly and preserve bounded non-text trace events. A current
+ordering model call exceeded the advertised four-query limit, received the
+validation error, corrected its arguments and completed: product/tool-use
+behavior is measured, not tuned here. Task 4.7 is complete; missing usage,
+elapsed time, quota availability and frozen broad-run provenance remain Task
+4.8 handoff items. The broad baseline remains paused.
+
+Development candidate-gap diagnostics use `evidenceCounts.toolSurfacing`: each needed
+round records whether any successful `memory.recall` or `memory.read` result returned it
+across the agent's queries. Failed answer attempts are cleared before retries. Hidden
+recall candidates and passive injection do not count as tool results. The retrieval
+diagnostic reports `toolSurfacingSummary`; its question-only rankings remain ablations.
+Older reports without tool-result instrumentation have unknown surfacing (`null`),
+not zero candidate gaps. Held-out partitions remain prohibited in these diagnostics.

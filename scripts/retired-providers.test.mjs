@@ -16,7 +16,6 @@ const RETIRED_PROVIDERS = [
   "azure",
   "bedrock",
   "clinepass",
-  "commandcode",
   "deepseek",
   "google",
   "kimi",

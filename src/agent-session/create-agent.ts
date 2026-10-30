@@ -16,7 +16,7 @@ import { AgentDisposedError } from "../contracts.js";
 import { inspectAgent } from "../agent/inspect.js";
 import { createHookBus } from "../hooks/index.js";
 import { mergeManifestSlots } from "../packages/define.js";
-import { loadPackages } from "../packages/loader.js";
+import { type LoadedPackages, loadPackages } from "../packages/loader.js";
 import { createSlotDefaults, createSlotRegistry } from "../slots/index.js";
 import { registerSkillCatalog } from "../skills-catalog.js";
 import { KERNEL_VERSION } from "../version.js";
@@ -26,7 +26,7 @@ import { createSessionIndex, narrowScope } from "../agent/sessions.js";
 import { skillInfos, toolInfos } from "../agent/views.js";
 import { EventSubscriber } from "./event-subscriber.js";
 import { randomId } from "./helpers.js";
-import { type AgentRuntime, agentSkillSource, agentToolList, registerAgentRuntime } from "./runtime-registry.js";
+import { type AgentRuntime, registerAgentRuntime, skillSourceFor, toolListFor } from "./runtime-registry.js";
 import { RuntimeAgentSession } from "./session.js";
 
 export { agentRuntime, tryAgentRuntime, type AgentRuntime } from "./runtime-registry.js";
@@ -98,48 +98,68 @@ export async function createAgentWith(input: AgentConfig, internals: CreateAgent
 
   // Values `credentials.resolve` returned: the bus and the loader redact them from here on.
   const secrets: string[] = [];
+  const readSkillDir = internals.readSkillDir ?? readSkillDirectory;
+  // `createAgent` and `reload()` assemble through this one view: `skills.list()` during setup sees the
+  // host's own config, never the packages being replaced.
+  const registryView: { config: ResolvedAgentConfig; packages: LoadedPackages | undefined } = { config, packages: undefined };
+  const assemblePackages = async (baseConfig: ResolvedAgentConfig, bus: ReturnType<typeof createHookBus>, slotRegistry: ReturnType<typeof createSlotRegistry>) => {
+    // `skills.dirs` reads through the same reader as `PackageAPI.skills.addDir`, on every assembly.
+    const resolved = await resolveHostSkillDirs(baseConfig, readSkillDir);
+    // A manifest instance may assign slots to its package; `AgentConfig.slots` wins per slot.
+    const manifestSlots = mergeManifestSlots(resolved.packages ?? [], resolved.slots);
+    const nextConfig = manifestSlots === resolved.slots ? resolved : { ...resolved, ...(manifestSlots ? { slots: manifestSlots } : {}) };
+    registryView.config = nextConfig;
+    registryView.packages = undefined;
+    // Loading is host code: a throwing package or host registrar fails assembly closed, and a failed load
+    // has already unwound everything it registered. `AgentConfig.hooks` is the inline `host` package.
+    const loaded = await loadPackages({
+      inputs: baseConfig.packages ?? [],
+      packageConfig: baseConfig.packageConfig,
+      hostHooks: baseConfig.hooks,
+      slotAssignments: nextConfig.slots,
+      bus,
+      slots: slotRegistry,
+      host: baseConfig.host,
+      redactor: baseConfig.redactor,
+      kernelVersion: internals.kernelVersion ?? KERNEL_VERSION,
+      hostConfig: nextConfig,
+      secrets,
+      readSkillDir,
+      fetch: internals.fetch,
+      emitAgentEvent: (event) => emitAgentEvent(event),
+      registry: { tools: () => toolListFor(registryView.config, registryView.packages), skills: () => skillSourceFor(registryView.config, registryView.packages) },
+    });
+    return { config: nextConfig, packages: loaded };
+  };
+  const assertLoop = (nextConfig: ResolvedAgentConfig, slotRegistry: ReturnType<typeof createSlotRegistry>): void => {
+    // Resolved on every assembly: a missing model and an unknown `runModel` fail closed, and a slot conflict
+    // surfaces now. The loop is the only object that can say it never needs a model.
+    const loop = slotRegistry.resolve("loop", nextConfig.slots?.loop);
+    if (loop.runModel !== undefined && loop.runModel !== "passthrough" && loop.runModel !== "none") {
+      throw new ModelError("invalid_run_model_mode", `Loop "${loop.name}" declares an unknown runModel; use "passthrough" or "none"`);
+    }
+    if (nextConfig.model === undefined && loop.usesModel !== false) {
+      throw new ModelError("model_required", `AgentConfig.model is required unless the loop "${loop.name}" declares usesModel: false`);
+    }
+  };
   const hooks = createHookBus({ onEvent: (event) => sink?.(event), secrets });
   const slots = createSlotRegistry(createSlotDefaults());
   registerSkillCatalog(hooks.registrar("kernel"));
-  const readSkillDir = internals.readSkillDir ?? readSkillDirectory;
-  // `skills.dirs` reads through the same reader as `PackageAPI.skills.addDir`, once per agent.
-  const resolved = await resolveHostSkillDirs(config, readSkillDir);
-  // A manifest instance may assign slots to its package; `AgentConfig.slots` wins per slot.
-  const manifestSlots = mergeManifestSlots(resolved.packages ?? [], resolved.slots);
-  const effective = manifestSlots === resolved.slots ? resolved : { ...resolved, ...(manifestSlots ? { slots: manifestSlots } : {}) };
-  // Loading is host code: a throwing package or host registrar fails agent creation closed, and a
-  // failed load has already unwound everything it registered. `AgentConfig.hooks` is the inline
-  // package `host`, loaded after every listed package.
-  const packages = await loadPackages({
-    inputs: config.packages ?? [],
-    packageConfig: config.packageConfig,
-    hostHooks: config.hooks,
-    slotAssignments: effective.slots,
-    bus: hooks,
-    slots,
-    host: config.host,
-    redactor: config.redactor,
-    kernelVersion: internals.kernelVersion ?? KERNEL_VERSION,
-    hostConfig: effective,
-    secrets,
-    readSkillDir,
-    fetch: internals.fetch,
-    emitAgentEvent: (event) => emitAgentEvent(event),
-    // Read only after setup, when `agent` below exists and its runtime is registered.
-    registry: { tools: () => agentToolList(agent), skills: () => agentSkillSource(agent) },
-  });
-  // Resolved here, not only per run: a missing model and an unknown `runModel` fail creation closed, and a
-  // slot conflict surfaces now. The loop is the only object that can say it never needs a model.
-  const loop = slots.resolve("loop", effective.slots?.loop);
-  if (loop.runModel !== undefined && loop.runModel !== "passthrough" && loop.runModel !== "none") {
-    throw new ModelError("invalid_run_model_mode", `Loop "${loop.name}" declares an unknown runModel; use "passthrough" or "none"`);
-  }
-  if (effective.model === undefined && loop.usesModel !== false) {
-    throw new ModelError("model_required", `AgentConfig.model is required unless the loop "${loop.name}" declares usesModel: false`);
-  }
+  const initial = await assemblePackages(config, hooks, slots);
+  const effective = initial.config;
+  const packages = initial.packages;
+  registryView.config = effective;
+  registryView.packages = packages;
+  assertLoop(effective, slots);
+  let currentConfig = effective;
+  let currentPackages = packages;
+  let currentHooks = hooks;
+  let currentSlots = slots;
   const agentId = effective.id ?? effective.name ?? randomId("agent");
   let disposed = false;
   let disposing: Promise<void> | undefined;
+  let reloading: Promise<void> | undefined;
+  let runtime: AgentRuntime | undefined;
   // Plan 177 Task 5: open sessions, so `dispose()` can abort their runs and close them.
   const openSessions = new Set<RuntimeAgentSession>();
   // Computed on first read and not rebuilt per access; a disposed agent exposes nothing.
@@ -147,7 +167,9 @@ export async function createAgentWith(input: AgentConfig, internals: CreateAgent
   let skillView: ReturnType<typeof skillInfos> | undefined;
   const agent: Agent = {
     id: agentId,
-    config: effective,
+    get config() {
+      return currentConfig;
+    },
     get tools() {
       if (disposed) return Object.freeze([]);
       return (toolView ??= toolInfos(agent));
@@ -156,11 +178,11 @@ export async function createAgentWith(input: AgentConfig, internals: CreateAgent
       if (disposed) return Object.freeze([]);
       return (skillView ??= skillInfos(agent));
     },
-    sessions: createSessionIndex(() => slots.resolve("store", effective.slots?.store), { ownership: effective.ownership }),
+    sessions: createSessionIndex(() => currentSlots.resolve("store", currentConfig.slots?.store), { ownership: effective.ownership }),
     models: createModelIndex({
       configured: effective.model,
-      packages: () => packages,
-      redactor: () => packages.redactor(effective.redactor),
+      packages: () => currentPackages,
+      redactor: () => currentPackages.redactor(currentConfig.redactor),
     }),
     async session(options?: SessionOptions) {
       if (disposed) throw new AgentDisposedError();
@@ -169,7 +191,7 @@ export async function createAgentWith(input: AgentConfig, internals: CreateAgent
           'Session options no longer accept "store"; configure the store slot on the agent via AgentConfig.slots.store instead',
         );
       }
-      const resolvedStore = slots.resolve("store", effective.slots?.store);
+      const resolvedStore = currentSlots.resolve("store", currentConfig.slots?.store);
       // Plan 177 Task 4: the session's scope narrows the agent's; a conflicting field throws before any read.
       const sessionScope = narrowScope(effective.ownership, options?.ownership, "Session");
       // Plan 177 Task 5: register before the open, so a dispose that starts mid-open still closes it.
@@ -209,40 +231,99 @@ export async function createAgentWith(input: AgentConfig, internals: CreateAgent
       return subscriber;
     },
     commands: {
-      list: () => packages.commands().map(({ name, description, package: owner }) => ({ name, description, package: owner })),
+      list: () => currentPackages.commands().map(({ name, description, package: owner }) => ({ name, description, package: owner })),
       async run(name, args, options = {}) {
         if (disposed) throw new AgentDisposedError();
-        const owner = packages.commands().find((entry) => entry.name === name)?.package;
+        const owner = currentPackages.commands().find((entry) => entry.name === name)?.package;
         const session = options.session;
         const own = session instanceof RuntimeAgentSession ? session : undefined;
         // A command may read package state, so the session reads its branch first.
         await own?.ready();
         // The command sees the session as its own package does: `background` is capability-checked.
         const view = own && owner !== undefined ? own.sessionContextFor(owner) : undefined;
-        return packages.runCommand(name, args, { ...(view ? { session: view } : {}), agent });
+        return currentPackages.runCommand(name, args, { ...(view ? { session: view } : {}), agent });
       },
+    },
+    async reload() {
+      if (disposed) throw new AgentDisposedError();
+      // Package teardown closes resources a run may be using; a live run must finish first.
+      if ([...openSessions].some((session) => session.hasActiveRun())) {
+        throw new Error("Cannot reload while a session run is active");
+      }
+      // One reload at a time; concurrent callers await the same attempt. A failed attempt leaves the
+      // committed bus, slots, packages, and config untouched.
+      reloading ??= (async () => {
+        if (runtime) runtime.reloading = true;
+        const previous = { config: registryView.config, packages: registryView.packages };
+        const nextHooks = createHookBus({ onEvent: (event) => sink?.(event), secrets });
+        registerSkillCatalog(nextHooks.registrar("kernel"));
+        const nextSlots = createSlotRegistry(createSlotDefaults());
+        let assembled: Awaited<ReturnType<typeof assemblePackages>>;
+        try {
+          assembled = await assemblePackages(config, nextHooks, nextSlots);
+          assertLoop(assembled.config, nextSlots);
+        } catch (error) {
+          registryView.config = previous.config;
+          registryView.packages = previous.packages;
+          throw error;
+        }
+        if (disposed) {
+          await assembled.packages.dispose();
+          registryView.config = previous.config;
+          registryView.packages = previous.packages;
+          throw new AgentDisposedError();
+        }
+        if ([...openSessions].some((session) => session.hasActiveRun())) {
+          await assembled.packages.dispose();
+          registryView.config = previous.config;
+          registryView.packages = previous.packages;
+          throw new Error("Cannot reload while a session run is active");
+        }
+        // Retire the old bus last: a run that started before this point keeps the hooks it loaded.
+        await currentPackages.dispose();
+        currentHooks = nextHooks;
+        currentSlots = nextSlots;
+        currentPackages = assembled.packages;
+        currentConfig = assembled.config;
+        registryView.config = currentConfig;
+        registryView.packages = currentPackages;
+        if (runtime) {
+          runtime.hooks = currentHooks;
+          runtime.slots = currentSlots;
+          runtime.packages = currentPackages;
+        }
+        // Both views are per-agent caches; the next read rebuilds them from the new package set.
+        toolView = undefined;
+        skillView = undefined;
+      })().finally(() => {
+        if (runtime) runtime.reloading = false;
+        reloading = undefined;
+      });
+      await reloading;
     },
     dispose: async () => {
       // Idempotent: the first call owns the unwind, a second awaits it. `disposed` flips synchronously.
       disposing ??= (async () => {
         disposed = true;
+        // A reload in flight either commits first or unwinds itself once it sees `disposed`.
+        await reloading?.catch(() => undefined);
         // Abort first, so no tool runs after this point even if a loop ignores its signal.
         for (const session of [...openSessions]) session.abort(agentDisposedAbort());
         for (const session of [...openSessions]) await session.close();
         // The kernel's own catalog registration goes too, so a disposed agent carries no hooks.
-        hooks.removeOwner("kernel");
-        await packages.dispose();
+        currentHooks.removeOwner("kernel");
+        await currentPackages.dispose();
         // `agent.subscribe()` ends with the agent.
         for (const subscriber of [...agentSubscribers]) subscriber.close();
       })();
       await disposing;
     },
-    inspect: () => inspectAgent(agent, { config: effective, packages, hooks, slots }),
+    inspect: () => inspectAgent(agent, { config: currentConfig, packages: currentPackages, hooks: currentHooks, slots: currentSlots }),
   };
-  const runtime: AgentRuntime = {
-    hooks,
-    slots,
-    packages,
+  runtime = {
+    hooks: currentHooks,
+    slots: currentSlots,
+    packages: currentPackages,
     openSessions,
     setEventSink(next) {
       sink = next;

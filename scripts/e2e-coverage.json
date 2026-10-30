@@ -716,6 +716,17 @@
         "mode": ""
       }
     },
+    "@arnilo/prism-provider-commandcode": {
+      ".": {
+        "suites": [
+          "packages/providers/commandcode/src/__tests__/commandcode.test.ts",
+          "packages/providers/commandcode/src/__tests__/live-agent.test.ts",
+          "packages/providers/commandcode/src/__tests__/live.test.ts",
+          "packages/providers/commandcode/src/__tests__/package.test.ts"
+        ],
+        "mode": ""
+      }
+    },
     "@arnilo/prism-provider-openrouter": {
       ".": {
         "suites": [

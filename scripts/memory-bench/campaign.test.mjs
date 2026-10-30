@@ -5,9 +5,29 @@ import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { historicalVariants, memoryConfigs } from "./ablations.mjs";
-import { buildManifest, campaignJobs, reservation, writeManifest } from "./campaign.mjs";
-import { openJournal, reserveAttempt, saveJournal } from "./journal.mjs";
+import {
+  buildManifest,
+  campaignJobs,
+  dailyFreeQuotaFailure,
+  failureHttpStatus,
+  isBudgetQuotaCause,
+  nextDailyReset,
+  reservation,
+  writeManifest,
+} from "./campaign.mjs";
+import { openJournal, reserveAttempt, saveJournal, TERMINAL_ATTEMPT_STATUSES } from "./journal.mjs";
+import { createAnswerCache } from "./judge.mjs";
 import { variantProvenance } from "./variants.mjs";
+
+test("resumed_campaign_charges_only_new_measured_usage_and_keeps_unknown_reservations", async () => {
+  const { incrementalAttemptUsage } = await import("./campaign.mjs");
+  const prior = { inputTokens: 100, outputTokens: 10, cacheReadTokens: 20, usageComplete: true };
+  const report = { inputTokens: 140, outputTokens: 17, cacheReadTokens: 25, usageComplete: true };
+  assert.deepEqual(incrementalAttemptUsage(report, prior), { inputTokens: 40, outputTokens: 7, cacheReadTokens: 5, usageComplete: true });
+  assert.equal(incrementalAttemptUsage({ ...report, usageComplete: false }, prior).usageComplete, false);
+  assert.equal(incrementalAttemptUsage(report, { ...prior, usageComplete: false }).usageComplete, false);
+  assert.throws(() => incrementalAttemptUsage({ ...report, inputTokens: 90 }, prior), /cumulative usage/);
+});
 
 test("campaign_preflights_each_actual_arm_and_reserves_unknown_usage", async () => {
   const jobs = campaignJobs();
@@ -43,6 +63,53 @@ test("dry_manifest_does_not_reset_spend_or_start_provider", async () => {
   const before = await readFile(journalPath, "utf8");
   await writeManifest(manifestPath);
   assert.equal(await readFile(journalPath, "utf8"), before, "a dry run never rewrites an active journal");
+});
+
+// --- Plan 202 Task 5.4.3: daily free quota halts resumably -------------------------------------
+
+test("daily_free_quota_halts_resumable_without_consuming_attempt", async () => {
+  const daily = {
+    status: "failed",
+    failure: {
+      code: "MemoryBenchAnswerError:429",
+      message: "MemoryBenchAnswerError:429",
+      cause: { code: "429", message: "OpenRouter request failed: 429 error:message:Rate limit exceeded: free-models-per-day" },
+    },
+  };
+  assert.equal(failureHttpStatus(daily), 429);
+  assert.ok(dailyFreeQuotaFailure(daily), "a daily free-model 429 is the account budget, not an arm failure");
+  const perMinute = {
+    ...daily,
+    failure: { ...daily.failure, cause: { code: "429", message: "Rate limit exceeded: free-models-per-min" } },
+  };
+  assert.equal(dailyFreeQuotaFailure(perMinute), null, "a per-minute 429 stays the transient retry path");
+  const badRequest = { ...daily, failure: { code: "MemoryBenchAnswerError:400", cause: { code: "400", message: "free-models-per-day" } } };
+  assert.equal(dailyFreeQuotaFailure(badRequest), null, "only 429 carries a quota verdict");
+  assert.equal(dailyFreeQuotaFailure({ status: "completed" }), null);
+  assert.equal(isBudgetQuotaCause("quota-daily"), true);
+  assert.equal(isBudgetQuotaCause("quota-window"), true);
+  assert.equal(isBudgetQuotaCause("failed"), false);
+  assert.ok(TERMINAL_ATTEMPT_STATUSES.includes("quota-daily"), "the halt is a terminal attempt status the journal accepts");
+  // Two daily halts must not exhaust the job's two attempts: the rerun is still allowed.
+  const attempts = Array.from({ length: 2 }, () => ({ jobId: "cell", cause: "quota-daily" }));
+  assert.equal(attempts.filter((attempt) => !isBudgetQuotaCause(attempt.cause)).length, 0);
+  assert.equal(nextDailyReset(new Date("2026-10-31T12:00:00Z")).toISOString(), "2026-11-01T00:00:00.000Z");
+  assert.equal(nextDailyReset(new Date("2026-11-01T00:00:00Z")).toISOString(), "2026-11-02T00:00:00.000Z");
+});
+
+test("resume_after_daily_halt_regenerates_no_answer", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "prism-task5-resume-"));
+  const keyOf = (protocolHash, id) => ({ protocolHash, id });
+  const before = createAnswerCache({ root: dir });
+  const key = before.key(keyOf("protocol-a", "q1"));
+  await before.write(key, { answer: "the cached answer", injections: [] });
+  // The halt keeps the cell's answers directory, so the rerun resolves the same checkpoint and does
+  // not ask the provider again.
+  const after = createAnswerCache({ root: dir });
+  assert.equal(after.key(keyOf("protocol-a", "q1")), key, "the checkpoint identity survives a restart");
+  assert.equal((await after.read(key))?.answer, "the cached answer");
+  assert.equal(await after.read(after.key(keyOf("protocol-b", "q1"))), null, "a changed protocol is a miss, never a silent reuse");
+  assert.equal(await after.read(after.key(keyOf("protocol-a", "q2"))), null);
 });
 
 // --- Plan 188.9 Task 4: fast campaign ------------------------------------------------------
@@ -133,4 +200,32 @@ test("parallel_pool_still_runs_a_single_job_at_a_time_when_asked", async () => {
     return {};
   });
   assert.equal(peak, 1);
+});
+
+test("cache_probe_rows_are_listed_beside_the_verdict_without_the_per_request_body", async () => {
+  const { cacheProbeRows } = await import("./campaign.mjs");
+  const { mkdtemp, writeFile } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const dir = await mkdtemp(join(tmpdir(), "prism-probe-rows-"));
+  assert.deepEqual(await cacheProbeRows(join(dir, "missing")), []);
+  await writeFile(
+    join(dir, "cache-probe.commandcode-muse.json"),
+    JSON.stringify({
+      route: "commandcode/muse",
+      status: "as-expected",
+      requests: 12,
+      requestsReadingCache: 11,
+      expectedBreakRequest: 9,
+      breakReadsLess: true,
+      unexpectedMisses: [],
+      perRequest: [{ bodySha256: "x" }],
+    }),
+  );
+  await writeFile(join(dir, "report.json"), "{}");
+  const rows = await cacheProbeRows(dir);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].informational, true);
+  assert.equal(rows[0].route, "commandcode/muse");
+  assert.equal("perRequest" in rows[0], false);
 });

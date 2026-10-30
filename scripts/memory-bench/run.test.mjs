@@ -8,24 +8,85 @@ import { providerPackage } from "@arnilo/prism/provider-kit";
 import { loadDataset, MemoryBenchDatasetError, normalizeDataset, selectQuestions } from "./datasets.mjs";
 import {
   causalSessions,
+  causeChainText,
   extractEvidence,
   gradeEvidence,
+  isRateLimitedStreamFailure,
+  isTransportFailure,
   isTruncatedStreamFailure,
   mockProvider,
   replay,
   retrievalStage,
+  retryAfterMs,
   sessionRounds,
+  stageFromCounts,
 } from "./replay.mjs";
 import { summarize } from "./report.mjs";
 import { CEILING_GRID, ceilingCells, ceilingScan, deliveryMetrics, restageReport } from "./retrieval-diagnostics.mjs";
-import { askJudge, isRetryableJudgeFailure, missingUsageCount, questionFailureDisposition, runBench } from "./run.mjs";
+import { askJudge, createFreeRoutePace, createJudgePacer, isRetryableJudgeFailure, missingUsageCount, questionFailureDisposition, runBench } from "./run.mjs";
+
+test("paid_bounded_wire_is_explicit_and_cannot_resume_unbounded_checkpoints", async () => {
+  const { parseArgs, protocolFingerprint } = await import("./run.mjs");
+  assert.equal(parseArgs(["--bounded-wire"]).boundedWire, true);
+  const report = { suite: "beam-100k", config: "full", provider: "commandcode", model: "meta/muse-spark-1.3-contributor" };
+  assert.equal(protocolFingerprint(report), protocolFingerprint({ ...report, boundedWire: false }));
+  assert.notEqual(protocolFingerprint(report), protocolFingerprint({ ...report, boundedWire: true }));
+});
+
+test("wrapped_wire_reservation_refusal_is_a_token_ceiling_not_an_answer_failure", () => {
+  const error = new Error("MemoryBenchAnswerError:failed", { cause: new Error("MemoryBenchTokenCeiling") });
+  assert.equal(questionFailureDisposition({ error, budget: false }), "token-ceiling");
+  assert.equal(questionFailureDisposition({ error: new Error("answer failed", { cause: new Error("provider unavailable") }) }), "failed");
+});
+
 import { compare, mcnemar } from "./stats.mjs";
 import subsets from "./subsets.json" with { type: "json" };
 
 test("malformed_judge_answers_are_retried_but_a_real_verdict_is_not", () => {
+  for (const code of [500, 502, 504]) {
+    assert.equal(isRetryableJudgeFailure(new Error(`MemoryBenchJudgeError:${code}`, { cause: { failureClass: "transient" } })), true);
+  }
   assert.equal(isRetryableJudgeFailure(new Error("MemoryBenchJudgeError: invalid verdict JSON")), true);
   assert.equal(isRetryableJudgeFailure(new Error("Chat stream ended without completion evidence")), true);
+  assert.equal(
+    isRetryableJudgeFailure(new Error("MemoryBenchJudgeError:429", { cause: { message: "retry_after_ms82000 rate_limit_error" } })),
+    true,
+  );
+  assert.equal(isRetryableJudgeFailure(new Error("MemoryBenchJudgeError:401", { cause: { failureClass: "auth" } })), false);
   assert.equal(isRetryableJudgeFailure(new Error("MemoryBenchTokenCeiling")), false);
+});
+
+test("judge_retries_transient_sse_502_with_a_fresh_session", async () => {
+  let sessions = 0,
+    closed = 0;
+  const calls = { judge: 0, judgeAttempts: 0 };
+  const result = await askJudge({
+    agent: {
+      async session() {
+        const attempt = ++sessions;
+        return {
+          async run() {
+            return attempt === 1
+              ? { status: "failed", error: { code: 502, failureClass: "transient" } }
+              : { status: "completed", text: "yes" };
+          },
+          async close() {
+            closed++;
+          },
+        };
+      },
+    },
+    prompt: "control",
+    labels: ["yes", "no"],
+    textMode: true,
+    account: async () => {},
+    ceilingReached: () => false,
+    calls,
+    backoffMs: () => 0,
+  });
+  assert.equal(result, "yes");
+  assert.equal(calls.judgeAttempts, 2);
+  assert.equal(closed, 2);
 });
 
 test("duplicate_haystack_session_ids_are_disambiguated", () => {
@@ -74,6 +135,25 @@ test("truncated_stream_is_retried_but_a_real_failure_is_not", () => {
   assert.equal(isTruncatedStreamFailure({ status: "failed", error: { message: "HTTP 400 bad request" } }), false);
 });
 
+test("gateway_quota_answers_are_retried_with_the_gateway_hint", () => {
+  const limited = {
+    status: "failed",
+    error: { code: "429", message: "Hyper request failed: 429 retry_after_ms82000 rate_limit_error" },
+  };
+  assert.equal(isRateLimitedStreamFailure(limited), true);
+  assert.equal(isRateLimitedStreamFailure({ status: "completed", error: undefined }), false);
+  assert.equal(isRateLimitedStreamFailure({ status: "failed", error: { message: "HTTP 400 bad request" } }), false);
+  assert.equal(retryAfterMs(limited.error.message), 82_000);
+  assert.equal(retryAfterMs('Hyper request failed: 429 retry_after_ms=115000 {"error":{}}'), 115_000);
+  assert.equal(retryAfterMs("retry_after_ms: 300"), 300);
+  const nested = new Error("MemoryBenchJudgeError:429", {
+    cause: { name: "Error", message: "opencode-go request failed", cause: { message: "retry_after_ms5000 rate_limit_error" } },
+  });
+  assert.match(causeChainText(nested), /retry_after_ms5000/);
+  assert.equal(retryAfterMs(causeChainText(nested)), 5_000);
+  assert.equal(retryAfterMs("no hint here"), undefined);
+});
+
 function benchState() {
   return {
     phase: "ingest",
@@ -86,6 +166,66 @@ function benchState() {
     ceilingReached: () => false,
   };
 }
+
+test("beam_gold_metadata_never_enters_product_context", async () => {
+  const [question] = normalizeDataset(
+    [
+      {
+        conversation_id: "privacy",
+        chat: [
+          [
+            { id: "PRIVATE_SOURCE_ID", role: "user", content: "The project color is cobalt.", time_anchor: "March 15, 2024" },
+            { id: "reply", role: "assistant", content: "I will use cobalt.", time_anchor: "March 15, 2024" },
+          ],
+        ],
+        probing_questions: {
+          information_extraction: [
+            {
+              question: "What color is the project?",
+              answer: "PRIVATE_GOLD",
+              source_chat_ids: ["PRIVATE_SOURCE_ID"],
+              rubric: "PRIVATE_RUBRIC",
+            },
+          ],
+        },
+      },
+    ],
+    "beam-100k",
+  );
+  assert.equal(question.sourceAnnotations.rubric, "PRIVATE_RUBRIC");
+  for (const config of ["full", "full-truncated", "lexical-topk", "fabric-x", "fabric-x-tools"]) {
+    const state = benchState();
+    const requests = [];
+    const base = mockProvider(state);
+    const provider = {
+      id: "mock",
+      async *generate(request) {
+        requests.push(JSON.stringify(request));
+        yield* base.generate(request);
+      },
+    };
+    await replay(
+      question,
+      { config, suite: "beam-100k", modelConfig: { provider: "mock", model: "m" }, inputCap: 128000 },
+      [provider],
+      state,
+    );
+    assert.ok(requests.length > 0);
+    assert.doesNotMatch(requests.join("\n"), /PRIVATE_SOURCE_ID|PRIVATE_GOLD|PRIVATE_RUBRIC|sourceAnnotations|source_chat_ids/);
+  }
+});
+
+test("normalization_change_invalidates_old_checkpoint_reuse", async () => {
+  const { protocolFingerprint, runPathFingerprint, reuseSource } = await import("./run.mjs");
+  const report = await runBench({ offline: true, maxQuestions: 1 });
+  const old = { ...report, suite: "beam-100k" };
+  const current = { ...old, normalization: { version: "beam-source-annotations-v1", sourceHash: "new-adapter-hash" } };
+  const ids = old.results.map((row) => row.id);
+  old.runPathFingerprint = await runPathFingerprint(old, { ids, inputCap: old.inputCap });
+  old.status = "completed";
+  assert.notEqual(protocolFingerprint(old), protocolFingerprint(current));
+  await assert.rejects(reuseSource({ report: current, sourcePath: old, ids }), /run-path fingerprint differs/);
+});
 
 const retryQuestion = {
   id: "retry-question",
@@ -124,6 +264,40 @@ function truncatingProvider(state, onAnswer, onIngest) {
   };
 }
 
+test("passive_recall_counter_keeps_every_explicit_call_across_turns", async () => {
+  let calls = 0;
+  const result = await replay(
+    {
+      ...retryQuestion,
+      sessions: retryQuestion.sessions.map((s) => ({
+        ...s,
+        messages: [...s.messages, { id: "reply", role: "assistant", text: "I will use cobalt." }],
+      })),
+    },
+    {
+      config: "fabric-x-tools",
+      suite: "longmemeval-s",
+      inputCap: 128000,
+      modelConfig: { provider: "mock", model: "m" },
+    },
+    [
+      {
+        id: "mock",
+        async *generate() {
+          if (calls++ < 3) yield providerToolCall(toolCallContent(`r${calls}`, "memory.recall", { query: "color" }));
+          else yield providerTextDelta("cobalt");
+          yield providerDone();
+        },
+      },
+    ],
+    benchState(),
+  );
+  assert.equal(result.toolCalls, 3);
+  assert.equal(result.evidenceCounts.toolSurfacing.candidateGap, false);
+  assert.ok(result.evidenceCounts.toolSurfacing.rounds.every((round) => round.surfaced));
+  assert.equal(result.recallCalls, 4, "one passive query plus three explicit recalls");
+});
+
 test("truncated_answer_retry_sees_identical_clean_history", async () => {
   const state = benchState();
   const seen = [];
@@ -140,6 +314,35 @@ test("truncated_answer_retry_sees_identical_clean_history", async () => {
   assert.ok(seen[1].includes("The project color is cobalt."), "the retry sees the original source history");
   assert.equal(result.answer, "cobalt");
 });
+
+test("two_rate_limited_answers_fork_from_the_forked_session_leaf", async () => {
+  // The OpenRouter free pool rate-limits mid-stream; the second retry used to fork at the original
+  // session's leaf, which the forked session never stored ("Unknown session leaf").
+  const state = benchState();
+  const base = mockProvider(state);
+  let answers = 0;
+  const provider = {
+    id: "mock",
+    async *generate(request) {
+      const names = request.tools?.map((tool) => tool.name) ?? [];
+      const worker = names.some((name) => ["record_observation", "record_reflection", "drop_observations"].includes(name));
+      if (!worker && answers < 2) {
+        answers++;
+        yield providerError(new Error("Chat stream ended without completion evidence ([DONE]: missing, finish_reason: missing)"));
+        return;
+      }
+      yield* base.generate(request);
+    },
+  };
+  const result = await replay(
+    retryQuestion,
+    { config: "full", suite: "longmemeval-s", modelConfig: { provider: "mock", model: "m" }, inputCap: 128000 },
+    [provider],
+    state,
+  );
+  assert.equal(result.answerRetries, 2, "both rate-limited answers were retried");
+  assert.equal(result.answer, "cobalt");
+}, 30_000);
 
 test("retry_ingests_once_and_accounts_all_attempts", async () => {
   const state = benchState();
@@ -184,7 +387,13 @@ test("retry_does_not_duplicate_om_workers_or_promotions", async () => {
   );
   const result = await replay(
     retryQuestion,
-    { config: "om", suite: "longmemeval-s", offline: true, modelConfig: { provider: "mock", model: "m" }, inputCap: 128000 },
+    {
+      config: "om",
+      suite: "longmemeval-s",
+      offline: true,
+      modelConfig: { provider: "mock", model: "m", limits: { contextWindow: 128_000, maxOutputTokens: 1024 } },
+      inputCap: 128000,
+    },
     [provider],
     state,
   );
@@ -275,6 +484,7 @@ test("run_limit_answer_is_scored_wrong_and_arm_continues", async () => {
     assert.ok(report.results.length > 1);
     const row = report.results[0];
     assert.equal(row.outcome, "run_limit");
+    assert.equal(row.stage, "run_limit");
     assert.equal(row.correct, false);
     assert.equal(row.answerRetries, 0);
     assert.equal(requests, 8, "run_limit_is_not_retried: exactly the standard turn allowance");
@@ -289,6 +499,58 @@ test("run_limit_answer_is_scored_wrong_and_arm_continues", async () => {
     assert.equal(summarize({ results: [] }).runLimitRate, 0);
   } finally {
     spy.mockRestore();
+  }
+});
+
+test("judge_waits_the_gateway_retry_hint_before_reasking", async () => {
+  let requests = 0;
+  const provider = {
+    id: "mock",
+    async *generate() {
+      requests++;
+      yield providerError(
+        Object.assign(new Error("Hyper request failed: 429 retry_after_ms300 rate_limit_error"), {
+          code: "429",
+          failureClass: "rate_limited",
+        }),
+      );
+    },
+  };
+  const agent = await createAgent({
+    model: { provider: "mock", model: "m", capabilities: { structuredOutput: "json_schema" } },
+    compaction: false,
+    retry: false,
+    packages: [providerPackage("test-judge-quota", [provider])],
+    limits: { maxTurns: 1, maxInputTokens: null, maxTotalTokens: null, maxWallTimeMs: 60_000 },
+  });
+  const calls = { judge: 0, judgeAttempts: 0 };
+  const waits = [];
+  const started = performance.now();
+  try {
+    await assert.rejects(
+      askJudge({
+        agent,
+        prompt: "Judge this answer.",
+        labels: ["yes", "no"],
+        account: async () => {},
+        ceilingReached: () => false,
+        calls,
+        backoffMs: (attempt, error) => {
+          waits.push(retryAfterMs(error?.cause?.message, error?.message));
+          return 20;
+        },
+      }),
+      /MemoryBenchJudgeError:429/,
+    );
+    assert.equal(requests, 8, "the gateway hint is retried up to the attempt cap");
+    assert.deepEqual(
+      waits,
+      Array.from({ length: 7 }, () => 300),
+      "every backoff sees the gateway's retry_after_ms",
+    );
+    assert.ok(performance.now() - started < 5_000, "the test must not wait for the real hint");
+  } finally {
+    await agent.dispose();
   }
 });
 
@@ -583,11 +845,22 @@ test("judge_json_protocol_preserves_strict_enum_validation", async () => {
     assert.throws(() => judgeOutput(text, ["used", "irrelevant"]), /JudgeError/);
   assert.deepEqual(judgeProviderOptions(["yes", "no"]).structuredOutput.schema.properties.verdict.enum, ["yes", "no"]);
 });
+test("plain_text_judges_accept_one_label_and_extract_wrapped_verdicts", async () => {
+  const { judgeTextOutput } = await import("./judge.mjs");
+  assert.equal(judgeTextOutput(" YES.\n", ["yes", "no"]), "yes");
+  assert.equal(judgeTextOutput('{"verdict":"no"}', ["yes", "no"]), "no");
+  assert.equal(judgeTextOutput("Yes, the response is correct.", ["yes", "no"]), "yes");
+  assert.throws(() => judgeTextOutput("maybe", ["yes", "no"]), /JudgeError/);
+});
 test("memory_bench_rejects_unknown_flags_and_invalid_limits", async () => {
   const { parseArgs } = await import("./run.mjs");
   assert.throws(() => parseArgs(["--max-input-tokens", "NaN"]), /Arguments/);
   assert.throws(() => parseArgs(["--unknown"]), /Arguments/);
   assert.equal(parseArgs(["--max-input-tokens", "1"]).maxInputTokens, 1);
+  // Paired arms need separate checkpoint roots, otherwise a control answer is reused as the candidate.
+  const paired = parseArgs(["--answers-dir", ".cache/a", "--judge-cache-dir", ".cache/j"]);
+  assert.equal(paired.answersDir, ".cache/a");
+  assert.equal(paired.judgeCacheDir, ".cache/j");
 });
 test("memory_bench_dataset_protocols_preserve_roles_dates_and_adversarial_gold", async () => {
   const { normalizeDataset, isoDate } = await import("./datasets.mjs");
@@ -1382,7 +1655,10 @@ test("delivery_diagnostic_mirrors_shipped_injection_rule", async () => {
         { messages: [user.message] },
         context,
       );
-      const rendered = draft.messages[0].content.map((block) => block.text ?? "").join("\n");
+      const rendered = draft.messages
+        .at(-1)
+        .content.map((block) => block.text ?? "")
+        .join("\n");
       const mirrored = selectInjection(candidates, "question", budgetTokens);
       // Delivery is chronological, so compare the selected set and then that both agree on the order.
       assert.deepEqual(
@@ -1589,7 +1865,13 @@ test("full_and_memory_arms_render_the_same_dated_question", async () => {
     };
     await replay(
       retryQuestion,
-      { config, offline: true, embeddings: "mock/embeddings", modelConfig: { provider: "mock", model: "m" }, inputCap: 128000 },
+      {
+        config,
+        offline: true,
+        embeddings: "mock/embeddings",
+        modelConfig: { provider: "mock", model: "m", limits: { contextWindow: 128_000, maxOutputTokens: 1024 } },
+        inputCap: 128000,
+      },
       [provider],
       state,
     );
@@ -1719,6 +2001,8 @@ test("answer_phase_makes_no_judge_call_and_judge_phase_resumes_it", async () => 
   const base = { offline: true, answersDir: dirs.answersDir, judgeCacheDir: dirs.judgeCacheDir };
   const answers = await runBench({ ...base, phase: "answer", output: join(dirs.root, "answers.json") });
   assert.equal(answers.status, "answers");
+  assert.equal(answers.timing.phases.answer.n, 14);
+  assert.equal(answers.timing.phases.evaluation.n, 0);
   assert.equal(answers.calls.judge, 0, "the answer phase must not pay for a judge");
   assert.equal(answers.results.length, 14, "the synthetic fixture has 14 questions");
   assert.ok(answers.results.every((row) => row.outcome === "answered" && row.correct === undefined && row.answerKey));
@@ -1736,6 +2020,8 @@ test("answer_phase_makes_no_judge_call_and_judge_phase_resumes_it", async () => 
   assert.ok(judged.calls.judge > 0);
   assert.equal(judged.turns, 0, "the judge phase must not replay a question");
   assert.equal(judged.timing.roles.solver, undefined);
+  assert.deepEqual(judged.timing.phases.answer, answers.timing.phases.answer);
+  assert.equal(judged.timing.phases.evaluation.n, 14);
   assert.ok(judged.results.every((row) => typeof row.correct === "boolean"));
 });
 
@@ -1905,6 +2191,8 @@ test("write_side_snapshot_round_trips_and_keys_every_input", async () => {
   assert.ok((await stat(join(snapshot, "notes"))).isDirectory());
 
   const seeded = await runBench({ offline: true, config: "fabric", maxQuestions: 1, seedSnapshot: dir });
+  assert.equal(seeded.timing.phases.ingestion.n, 0);
+  assert.equal(seeded.timing.phases.restore.n, 1);
   assert.equal(seeded.status, produced.status);
   assert.equal(seeded.results.length, 1);
   // The read side reads the ingester's store: the same note files are present after seeding.
@@ -2618,4 +2906,188 @@ test("defaults_match_pre_registered_grid_choice", async () => {
   const s = (row) => abilities.reduce((sum, ability) => sum + row.byAbility[ability].allNeededVisible, 0);
   assert.ok(s(cell(4000, 8, 0.2)) < s(cell(4000, 12, 0.2)));
   assert.ok(cell(6000, 12, 0.2).tokensMean > cell(4000, 12, 0.2).tokensMean * 1.3);
+});
+
+test("judge_pacer_spaces_calls_to_the_hourly_quota", async () => {
+  let clock = 0;
+  const slept = [];
+  const pace = createJudgePacer({
+    perHour: 3600,
+    now: () => clock,
+    sleep: async (ms) => {
+      slept.push(ms);
+      clock += ms;
+    },
+  });
+  await pace();
+  await pace();
+  await pace();
+  assert.deepEqual(slept, [1000, 1000], "one second apart at 3600/hour, the first call is free");
+  const off = createJudgePacer({ perHour: 0 });
+  await off();
+  await off();
+  assert.equal(slept.length, 2, "disabled pacing never sleeps");
+});
+
+test("free_route_pacer_is_shared_across_solver_and_judges", async () => {
+  let clock = 0;
+  const slept = [];
+  // One instance is handed to the solver (state.pace) and to both judges (judgePace), so 20 calls
+  // per minute is an account-wide budget, not 20 per role.
+  const pace = createFreeRoutePace({
+    perMinute: 20,
+    sleep: async (ms) => {
+      slept.push(ms);
+      clock += ms;
+    },
+    now: () => clock,
+  });
+  await pace();
+  await pace();
+  await pace();
+  assert.deepEqual(slept, [3000, 3000], "three calls across roles are spaced 3s apart at 20/min");
+  assert.throws(() => createFreeRoutePace({ perMinute: 25, freeOnly: true }), /at most 20 requests per minute/);
+  assert.equal(createFreeRoutePace({ perMinute: "", freeOnly: false }), null, "paid routes keep the per-model pacer");
+  assert.equal(typeof createFreeRoutePace({ perMinute: "", freeOnly: true, sleep: async () => {} }), "function", "free routes default to 20/min");
+});
+
+test("a_dropped_socket_is_retried_for_both_answers_and_judges", async () => {
+  const dropped = { status: "failed", error: { code: "ECONNRESET", message: "socket hang up" } };
+  assert.equal(isTransportFailure(dropped), true);
+  assert.equal(isTransportFailure({ status: "completed" }), false);
+  assert.equal(isTransportFailure({ status: "failed", error: { code: "ERR_PRISM_RUN_LIMIT", message: "ECONNRESET" } }), false);
+  assert.equal(isRetryableJudgeFailure(new Error("MemoryBenchJudgeError:ECONNRESET")), true);
+  assert.equal(isRetryableJudgeFailure(new Error("MemoryBenchJudgeError:23", { cause: { name: "TimeoutError" } })), true);
+  assert.equal(isRetryableJudgeFailure(new Error("MemoryBenchJudgeError:model_unavailable")), false);
+});
+
+test("full_rejects_oversized_history_before_provider_and_bounded_arm_reports_it", async () => {
+  const question = {
+    ...retryQuestion,
+    sessions: [
+      {
+        ...retryQuestion.sessions[0],
+        messages: [
+          { id: "large", role: "user", text: "x".repeat(16000) },
+          { id: "reply", role: "assistant", text: "Okay." },
+        ],
+      },
+    ],
+  };
+  for (const config of ["full", "full-truncated"]) {
+    const state = benchState();
+    let calls = 0;
+    const base = mockProvider(state);
+    const provider = {
+      id: "mock",
+      async *generate(request) {
+        calls++;
+        yield* base.generate(request);
+      },
+    };
+    const result = await replay(
+      question,
+      {
+        config,
+        suite: "longmemeval-s",
+        modelConfig: { provider: "mock", model: "m" },
+        inputCap: 2000,
+      },
+      [provider],
+      state,
+    );
+    assert.equal(result.contextEligibility.completeHistory, false);
+    assert.equal(result.contextEligibility.removedSourceMessages, 2);
+    assert.equal(result.truncated, true);
+    if (config === "full") {
+      assert.equal(calls, 0);
+      assert.equal(result.outcome, "comparator_ineligible");
+      assert.equal(result.answer, undefined);
+    } else {
+      assert.equal(calls, 1);
+      assert.equal(result.contextEligibility.eligible, true);
+    }
+  }
+});
+
+test("comparator_policy_invalidates_old_resume_and_reports_eligibility", async () => {
+  const { protocolFingerprint } = await import("./run.mjs");
+  const report = await runBench({ offline: true, config: "full", maxQuestions: 1 });
+  assert.equal(report.comparatorContext.effectiveInputCap, report.inputCap);
+  assert.equal(report.comparatorContext.requestHeadroomTokens, 1024);
+  assert.equal(report.comparatorEligibility.completeHistoryQuestions, 1);
+  const old = { ...report };
+  delete old.comparatorPolicyVersion;
+  old.protocolHash = protocolFingerprint(old);
+  assert.notEqual(protocolFingerprint(old), protocolFingerprint(report));
+  await assert.rejects(runBench({ offline: true, config: "full", maxQuestions: 1, resume: old }), /MemoryBenchResumeMismatch/);
+  const rejected = summarize({
+    ...report,
+    results: [
+      {
+        id: "q",
+        ability: "x",
+        truncated: true,
+        outcome: "comparator_ineligible",
+        contextEligibility: { eligible: false, completeHistory: false },
+      },
+    ],
+  });
+  assert.equal(rejected.abilities.x.accuracy, null);
+  assert.equal(rejected.comparatorEligibility.ineligibleQuestions, 1);
+});
+
+test("analysis_revision_refuses_incompatible_prior_cells", async () => {
+  const { protocolFingerprint, runPathFingerprint, reuseSource } = await import("./run.mjs");
+  const current = await runBench({ offline: true, config: "full", maxQuestions: 1 });
+  const prior = { ...current, status: "completed" };
+  delete prior.analysisVersion;
+  const ids = current.results.map((row) => row.id);
+  prior.protocolHash = protocolFingerprint(prior);
+  prior.runPathFingerprint = await runPathFingerprint(prior, { ids, inputCap: prior.inputCap });
+  assert.notEqual(protocolFingerprint(prior), protocolFingerprint(current));
+  await assert.rejects(runBench({ offline: true, config: "full", maxQuestions: 1, resume: prior }), /MemoryBenchResumeMismatch/);
+  await assert.rejects(reuseSource({ report: current, sourcePath: prior, ids }), /run-path fingerprint differs/);
+});
+
+test("run_limit_is_not_relabelled_as_abstention_or_retrieval_failure", () => {
+  for (const ability of ["abstention", "temporal"]) {
+    assert.equal(stageFromCounts({ correct: false, outcome: "run_limit", ability, goldRounds: 2 }), "run_limit");
+  }
+  assert.equal(stageFromCounts({ correct: false, outcome: "error", goldRounds: 2 }), "transport_setup_error");
+  assert.equal(stageFromCounts({ correct: false, outcome: "comparator_ineligible", goldRounds: 2 }), "comparator_ineligible");
+  assert.equal(stageFromCounts({ correct: false, goldRounds: 2, unknownSourceReferences: 1 }), "gold_unknown");
+  assert.equal(stageFromCounts({ correct: false, ability: "abstention", goldRounds: 0 }), "abstention_error");
+});
+
+test("restage_preserves_outcomes_and_refuses_heldout", () => {
+  const row = { id: "q", answerCorrect: false, stage: "candidate_gap", outcome: "run_limit", goldRounds: 2 };
+  assert.equal(restageReport({ subset: "dev", rows: [row] }).rows[0].stage, "run_limit");
+  assert.throws(() => restageReport({ subset: "heldout-a", rows: [row] }), /held-out/);
+  assert.equal(
+    stageFromCounts({ correct: false, goldRounds: 1, candidateGold: 1, selectedGold: 1, unknownSourceReferences: 1 }),
+    "gold_unknown",
+  );
+});
+
+test("free_only_benchmark_routes_reject_unknown_and_paid_prices", async () => {
+  const { isFreeBenchmarkModel } = await import("./run.mjs");
+  assert.equal(isFreeBenchmarkModel({ provider: "openrouter", model: "vendor/model:free", cost: { input: 0, output: 0 } }), true);
+  assert.equal(isFreeBenchmarkModel({ provider: "openrouter", model: "vendor/model:free", cost: { input: 1, output: 0 } }), false);
+  assert.equal(isFreeBenchmarkModel({ provider: "openrouter", model: "vendor/model:free" }), false);
+  assert.equal(isFreeBenchmarkModel({ provider: "commandcode", model: "reflection/beam:free" }), true);
+  assert.equal(isFreeBenchmarkModel({ provider: "commandcode", model: "poolside/laguna-s-2.1-free" }), true);
+  assert.equal(isFreeBenchmarkModel({ provider: "commandcode", model: "gpt-5.6-luna" }), false);
+  assert.equal(isFreeBenchmarkModel({ provider: "hyper", model: "free" }), false);
+});
+
+test("free_product_only_keeps_paid_panel_separate_and_pins_answer_billing", async () => {
+  const { parseArgs, protocolFingerprint, runPathFingerprint } = await import("./run.mjs");
+  const parsed = parseArgs(["--free-product-only", "--bounded-wire"]);
+  assert.equal(parsed.freeProductOnly, true);
+  assert.equal(parsed.freeOnly, undefined);
+  assert.equal(parsed.boundedWire, true);
+  const report = { suite: "beam-100k", provider: "openrouter", model: "answer:free", freeOnly: false, boundedWire: true };
+  assert.notEqual(protocolFingerprint(report), protocolFingerprint({ ...report, freeProductOnly: true }));
+  assert.notEqual(await runPathFingerprint(report), await runPathFingerprint({ ...report, freeProductOnly: true }));
 });

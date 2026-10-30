@@ -1,0 +1,133 @@
+{
+  "kind": "202-laguna-compatibility-probe",
+  "ref": "commandcode/poolside/laguna-s-2.1-free",
+  "limits": {
+    "wireAttempts": 7,
+    "inputTokens": 4000000,
+    "outputTokens": 50000,
+    "wallMs": 600000,
+    "retries429": 0
+  },
+  "startedAt": "2026-10-29T11:43:48.582Z",
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 2048,
+    "reasoning": "provider default",
+    "maxTurns": 8
+  },
+  "cases": [
+    "imported-assistant-history",
+    "one-frozen-development-complete-history",
+    "tool-call-and-result",
+    "follow-up-and-stop"
+  ],
+  "routeOverride": "openai",
+  "benchmarkScoring": false,
+  "scope": "diagnostic only; no held-out request, judge call, campaign model change or baseline resumption",
+  "tests": [
+    {
+      "name": "imported-assistant-history",
+      "status": "failed",
+      "passed": false,
+      "wallMs": 1077,
+      "nonempty": false,
+      "errorCode": null,
+      "errorMessage": "ZeroScoreRateLimited"
+    },
+    {
+      "name": "development-complete-history",
+      "status": "failed",
+      "passed": false,
+      "wallMs": 1528,
+      "nonempty": false,
+      "errorCode": "ERR_PRISM_RUN_LIMIT",
+      "errorMessage": "Run limit exceeded: maxInputTokens"
+    },
+    {
+      "name": "tool-call-and-result",
+      "status": "failed",
+      "passed": false,
+      "wallMs": 603,
+      "nonempty": false,
+      "errorCode": null,
+      "errorMessage": "ZeroScoreRateLimited"
+    },
+    {
+      "name": "follow-up-and-stop",
+      "status": "failed",
+      "passed": false,
+      "wallMs": 523,
+      "nonempty": false,
+      "errorCode": null,
+      "errorMessage": "ZeroScoreRateLimited"
+    }
+  ],
+  "status": "failed",
+  "model": {
+    "limits": {
+      "contextWindow": 256000
+    },
+    "compat": {
+      "thinkingFamily": "openai_reasoning",
+      "preserveThinking": true,
+      "route": "openai",
+      "pricing_source": "https://commandcode.ai/docs/resources/pricing-limits"
+    },
+    "inputCap": 254976,
+    "freeRoute": true
+  },
+  "history": {
+    "suite": "beam-100k",
+    "subset": "dev",
+    "id": "5:abstention:1",
+    "sourceMessages": 238,
+    "sourceAssistantMessages": 119,
+    "removedSourceMessages": 0,
+    "annotationsSent": false
+  },
+  "toolCalls": 0,
+  "failure": {
+    "name": "AssertionError",
+    "code": "ERR_ASSERTION"
+  },
+  "usage": {
+    "inputTokens": 0,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0,
+    "outputTokens": 0,
+    "accountedInputTokens": 0,
+    "accountedOutputTokens": 0,
+    "usageMissingExchanges": 0,
+    "usageComplete": true,
+    "wireAttempts": 4
+  },
+  "allocations": [
+    {
+      "provider": "commandcode",
+      "exchange": 1,
+      "inputBound": 256000,
+      "outputBound": 2048
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 2,
+      "inputBound": 256000,
+      "outputBound": 2048
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 3,
+      "inputBound": 256000,
+      "outputBound": 2048
+    },
+    {
+      "provider": "commandcode",
+      "exchange": 4,
+      "inputBound": 256000,
+      "outputBound": 2048
+    }
+  ],
+  "protectedArtifactsUnchanged": true,
+  "finishedAt": "2026-10-29T11:43:52.730Z",
+  "wallMs": 4148
+}

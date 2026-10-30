@@ -1,0 +1,15 @@
+{
+  "kind": "pinned-development-source-check",
+  "locomo": {
+    "questions": 60,
+    "allFineGoldIdsAreRoundIds": true,
+    "unresolvedReferences": 0
+  },
+  "mab": {
+    "questions": 20,
+    "sourceMessageInstances": 118778,
+    "allSourcesExplicitFactLists": true,
+    "maxLineCharacters": 122
+  },
+  "liveRequests": 0
+}

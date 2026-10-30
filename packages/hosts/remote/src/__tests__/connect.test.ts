@@ -189,6 +189,7 @@ describe("connectAgent", () => {
     const { build } = gatedAgent({ gate: false, ui });
     const { proxy } = await connectProxy(await build(), ui);
     const session = await proxy.session();
+    await expect(proxy.reload()).rejects.toMatchObject({ code: "remote_unsupported" });
     await expect(session.fork()).rejects.toMatchObject({ code: "remote_unsupported" });
     await expect(session.checkout()).rejects.toMatchObject({ code: "remote_unsupported" });
     await expect(session.compact()).rejects.toMatchObject({ code: "remote_unsupported" });

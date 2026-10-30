@@ -1,38 +1,4 @@
-import { registerMemoryFabricContext } from "./provider.js";
-import { parseMemoryNoteMetadata } from "./types.js";
-import { createMemoryFabric } from "./create.js";
-import { createFabricContext } from "./context.js";
-import { noteMemoryWrite } from "./directory.js";
-import { fuseRankings } from "@arnilo/prism-memory-core";
-import {
-  type ContextDraft,
-  type HookContext,
-  type HookRegistrar,
-  type JsonObject,
-  type Message,
-  resolveRedactor,
-  withContextBlocks,
-} from "@arnilo/prism";
-import { embedBatched } from "@arnilo/prism-memory-core";
-import { MemoryAbortError, MemoryLimitError, MemoryScopeError, MemoryValidationError } from "@arnilo/prism-memory-core";
-import {
-  DEFAULT_MEMORY_RETENTION_BATCH,
-  estimateTokens,
-  HARD_MEMORY_RETENTION_BATCH_CAP,
-  resolveMemoryLimits,
-} from "@arnilo/prism-memory-core";
-import {
-  collectInvalidationIds,
-  explainRecord,
-  HARD_INVALIDATION_BATCH,
-  indexInvalidations,
-  recordBlocked,
-  shareGrantAllows,
-  stampLineage,
-  toInvalidationEvent,
-} from "@arnilo/prism-memory-core";
-import { validateAgainstJsonSchema } from "@arnilo/prism-memory-core";
-import { deriveEntryImportance, RECALL_OVERSAMPLE, rerankRecallHits, resolveRecallScoring } from "@arnilo/prism-memory-core";
+import { type ContextDraft, type HookContext, type HookRegistrar, type JsonObject, type Message, resolveRedactor } from "@arnilo/prism";
 import type {
   CreateMemoryOptions,
   ExportMemoryOptions,
@@ -69,14 +35,41 @@ import {
   assertSameScope,
   assertTextLimit,
   byteLengthOfJson,
-  latestUserText,
+  collectInvalidationIds,
+  createMemoryVectorStore,
+  DEFAULT_MEMORY_RETENTION_BATCH,
+  deriveEntryImportance,
+  embedBatched,
+  explainRecord,
+  fuseRankings,
+  HARD_INVALIDATION_BATCH,
+  HARD_MEMORY_RETENTION_BATCH_CAP,
+  indexInvalidations,
+  MemoryAbortError,
+  MemoryLimitError,
+  MemoryScopeError,
+  MemoryValidationError,
   mergeJsonObjects,
+  RECALL_OVERSAMPLE,
+  recordBlocked,
   redactJson,
   renderTemplate,
   requireNonEmptyString,
   requireScope,
+  rerankRecallHits,
+  resolveMemoryLimits,
+  resolveRecallScoring,
+  selectAdjacentRecords,
+  shareGrantAllows,
+  stampLineage,
+  toInvalidationEvent,
+  validateAgainstJsonSchema,
 } from "@arnilo/prism-memory-core";
-import { createMemoryVectorStore, selectAdjacentRecords } from "@arnilo/prism-memory-core";
+import { createFabricContext } from "./context.js";
+import { createMemoryFabric } from "./create.js";
+import { noteMemoryRetraction, noteMemoryWrite } from "./directory.js";
+import { registerMemoryFabricContext } from "./provider.js";
+import { parseMemoryNoteMetadata } from "./types.js";
 import { createMemoryWorkingStore, validateWorkingValue } from "./working-memory.js";
 
 export function createMemory(options: CreateMemoryOptions): Memory {
@@ -99,7 +92,10 @@ export function createMemory(options: CreateMemoryOptions): Memory {
 
   function embeddingKey(text: string, metadata?: JsonObject): string {
     const note = parseMemoryNoteMetadata(metadata);
-    const key = redactJson([text, ...(note?.keywords ?? []), ...(note?.tags ?? []), note?.context ?? ""].filter(Boolean).join("\n"), redactor);
+    const key = redactJson(
+      [text, ...(note?.keywords ?? []), ...(note?.tags ?? []), note?.context ?? ""].filter(Boolean).join("\n"),
+      redactor,
+    );
     assertTextLimit(key, limits.maxEntryTextChars, "embedding key");
     return key;
   }
@@ -135,10 +131,12 @@ export function createMemory(options: CreateMemoryOptions): Memory {
       ...(hold ? { hold: true as const } : {}),
       ...(markOptions.supersedesId ? { supersedesId: markOptions.supersedesId } : {}),
     }));
+    noteMemoryRetraction(memory);
     for (let offset = 0; offset < entries.length; offset += HARD_INVALIDATION_BATCH) {
       await vectorStore.invalidate(threadScope, entries.slice(offset, offset + HARD_INVALIDATION_BATCH), {
         signal: markOptions.signal,
       });
+      noteMemoryRetraction(memory);
     }
     await options.onInvalidate?.(toInvalidationEvent(markedReason, ids, hold));
     return ids;
@@ -191,10 +189,15 @@ export function createMemory(options: CreateMemoryOptions): Memory {
 
     const texts = entries.map((entry) => redactJson(entry.text, redactor));
     const vectors = embeddingActive()
-      ? await embedBatched(embedder!, entries.map((entry, index) => embeddingKey(texts[index]!, entry.metadata)), limits.embedBatchSize, {
-          signal,
-          maxDimensions: limits.maxVectorDimensions,
-        })
+      ? await embedBatched(
+          embedder!,
+          entries.map((entry, index) => embeddingKey(texts[index]!, entry.metadata)),
+          limits.embedBatchSize,
+          {
+            signal,
+            maxDimensions: limits.maxVectorDimensions,
+          },
+        )
       : entries.map(() => [] as readonly number[]);
 
     const records: MemoryVectorRecord[] = entries.map((entry, index) => {
@@ -244,7 +247,8 @@ export function createMemory(options: CreateMemoryOptions): Memory {
     assertNotAborted(recallOptions.signal);
     const q = requireNonEmptyString(query, "query");
     const floor = recallOptions.minSimilarity;
-    if (floor !== undefined && (!Number.isFinite(floor) || floor < -1 || floor > 1)) throw new MemoryValidationError("minSimilarity must be in [-1,1]");
+    if (floor !== undefined && (!Number.isFinite(floor) || floor < -1 || floor > 1))
+      throw new MemoryValidationError("minSimilarity must be in [-1,1]");
     const boundedTopK = resolveMemoryLimits({
       topK: recallOptions.topK ?? limits.topK,
     }).topK;
@@ -253,10 +257,12 @@ export function createMemory(options: CreateMemoryOptions): Memory {
     }).messageRange;
 
     const embedding = embeddingActive()
-      ? (await embedBatched(embedder!, [redactJson(q, redactor)], limits.embedBatchSize, {
-          signal: recallOptions.signal,
-          maxDimensions: limits.maxVectorDimensions,
-        }))[0]
+      ? (
+          await embedBatched(embedder!, [redactJson(q, redactor)], limits.embedBatchSize, {
+            signal: recallOptions.signal,
+            maxDimensions: limits.maxVectorDimensions,
+          })
+        )[0]
       : undefined;
     const lexicalOnly = embedding === undefined;
 
@@ -303,28 +309,36 @@ export function createMemory(options: CreateMemoryOptions): Memory {
     if (lexicalOnly) {
       // Lexical-only: the store's coverage is the [0,1] similarity, and store order breaks ties.
       candidates = candidates.map((hit) => ({ ...hit, score: hit.coverage ?? hit.score, retrieval: "lexical" as const }));
-      if (floor !== undefined) candidates = candidates.filter(hit => hit.score >= floor);
+      if (floor !== undefined) candidates = candidates.filter((hit) => hit.score >= floor);
     } else {
       const lexical = vectorStore.lexicalQuery
         ? await vectorStore.lexicalQuery({ ...threadScope, text: q, topK: fetchK, signal: recallOptions.signal })
         : [];
-      const vectorScores = new Map(candidates.map(hit => [hitKey(hit), hit.score]));
-      const vectors = candidates.filter(hit => floor === undefined || hit.score >= floor).map(hit => ({ ...hit, similarity: hit.score }));
-      const words = lexical.filter(hit => {
+      const vectorScores = new Map(candidates.map((hit) => [hitKey(hit), hit.score]));
+      const vectors = candidates
+        .filter((hit) => floor === undefined || hit.score >= floor)
+        .map((hit) => ({ ...hit, similarity: hit.score }));
+      const words = lexical.filter((hit) => {
         const cosine = vectorScores.get(hitKey(hit));
         if (cosine !== undefined) return floor === undefined || cosine >= floor;
         return (hit.coverage ?? 0) > 0;
       });
-      candidates = fuseRankings([{ hits: vectors, leg: "vector" }, { hits: words, leg: "lexical" }])
-        .map(({ hit, score, retrieval }) => ({ ...hit, score, retrieval }));
+      candidates = fuseRankings([
+        { hits: vectors, leg: "vector" },
+        { hits: words, leg: "lexical" },
+      ]).map(({ hit, score, retrieval }) => ({ ...hit, score, retrieval }));
     }
-    const components = new Map(candidates.map(hit => [hitKey(hit), hit.similarity]));
-    const ranked = (scoring ? rerankRecallHits(candidates, scoring).map(hit => {
-      if (lexicalOnly) return hit;
-      const { similarity: _rrf, ...rest } = hit;
-      const similarity = components.get(hitKey(hit));
-      return similarity === undefined ? rest : { ...rest, similarity };
-    }) : candidates).slice(0, boundedTopK);
+    const components = new Map(candidates.map((hit) => [hitKey(hit), hit.similarity]));
+    const ranked = (
+      scoring
+        ? rerankRecallHits(candidates, scoring).map((hit) => {
+            if (lexicalOnly) return hit;
+            const { similarity: _rrf, ...rest } = hit;
+            const similarity = components.get(hitKey(hit));
+            return similarity === undefined ? rest : { ...rest, similarity };
+          })
+        : candidates
+    ).slice(0, boundedTopK);
 
     let adjacent: MemoryVectorRecord[] = [];
     if (boundedRange > 0) {
@@ -364,13 +378,22 @@ export function createMemory(options: CreateMemoryOptions): Memory {
     const scope = threadScopeOrThrow();
     assertNotAborted(getOptions.signal);
     if (ids.length > 1000) throw new MemoryLimitError("get ids exceeds 1000");
-    const selected = [...new Set(ids.map(id => requireNonEmptyString(id, "entryId")))];
+    const selected = [...new Set(ids.map((id) => requireNonEmptyString(id, "entryId")))];
     if (!selected.length) return [];
     if (!vectorStore.getByIds) throw new MemoryScopeError("operation requires a getByIds-capable vector store");
     const records = await vectorStore.getByIds(scope, selected, getOptions);
     const invalidations = await loadInvalidations(scope, getOptions.signal);
-    return records.filter(record => record.tenantId === scope.tenantId && record.resourceId === scope.resourceId && record.threadId === scope.threadId && selected.includes(record.id) &&
-      !recordBlocked(record, invalidations) && isInjectable(record, options.requireConsent ?? false)).map(record => redactJson(record, redactor));
+    return records
+      .filter(
+        (record) =>
+          record.tenantId === scope.tenantId &&
+          record.resourceId === scope.resourceId &&
+          record.threadId === scope.threadId &&
+          selected.includes(record.id) &&
+          !recordBlocked(record, invalidations) &&
+          isInjectable(record, options.requireConsent ?? false),
+      )
+      .map((record) => redactJson(record, redactor));
   }
 
   async function countByKind(query: MemoryDirectoryQuery = {}): Promise<Readonly<Record<string, number>>> {
@@ -413,7 +436,23 @@ export function createMemory(options: CreateMemoryOptions): Memory {
     const existing = await findEntry(threadScope, id);
     const invalidations = await loadInvalidations(threadScope, patchOptions.signal);
     if (!existing || existing.consent?.visible === false || recordBlocked(existing, invalidations)) return false;
-    await vectorStore.upsert([{ ...existing, metadata: mutate(existing.metadata ?? {}) }], { signal: patchOptions.signal });
+    const previous = parseMemoryNoteMetadata(existing.metadata);
+    const wasActive =
+      previous !== undefined && (existing.metadata?.status ?? "verified") === "verified" && (previous.flags?.length ?? 0) === 0;
+    const metadata = mutate(existing.metadata ?? {});
+    const note = parseMemoryNoteMetadata(metadata);
+    // Lifecycle/evidence patches stay additive; removals and unparseable replacements fail closed.
+    const retracts =
+      wasActive &&
+      ((metadata.status ?? "verified") !== "verified" ||
+        note === undefined ||
+        note.validTo !== previous?.validTo ||
+        (note.flags?.length ?? 0) > 0);
+    try {
+      await vectorStore.upsert([{ ...existing, metadata }], { signal: patchOptions.signal });
+    } finally {
+      if (retracts) noteMemoryRetraction(memory);
+    }
     noteMemoryWrite(memory);
     return true;
   }
@@ -432,7 +471,11 @@ export function createMemory(options: CreateMemoryOptions): Memory {
       ...existing,
       consent: normalizeConsent(consentInput, existing.consent, new Date().toISOString()),
     };
-    await vectorStore.upsert([updated], { signal: consentOptions.signal });
+    try {
+      await vectorStore.upsert([updated], { signal: consentOptions.signal });
+    } finally {
+      if (updated.consent?.visible === false) noteMemoryRetraction(memory);
+    }
     noteMemoryWrite(memory);
     if (updated.consent?.visible === false) {
       // Revocation blocks recall but is not a legal hold: an explicit forget must still be able to purge it.
@@ -466,17 +509,23 @@ export function createMemory(options: CreateMemoryOptions): Memory {
     if (!existing) throw new MemoryValidationError(`memory entry ${id} not found`);
     const redactedText = redactJson(nextText, redactor);
     const embedding = embeddingActive()
-      ? (await embedBatched(embedder!, [embeddingKey(redactedText, existing.metadata)], limits.embedBatchSize, {
-          signal: correctOptions.signal,
-          maxDimensions: limits.maxVectorDimensions,
-        }))[0]!
+      ? (
+          await embedBatched(embedder!, [embeddingKey(redactedText, existing.metadata)], limits.embedBatchSize, {
+            signal: correctOptions.signal,
+            maxDimensions: limits.maxVectorDimensions,
+          })
+        )[0]!
       : existing.embedding;
     const updated: MemoryVectorRecord = { ...existing, text: redactedText, embedding };
     const payloadBytes = Buffer.byteLength(JSON.stringify(updated), "utf8");
     if (payloadBytes > limits.maxPayloadBytes) {
       throw new MemoryLimitError(`memory entry ${id} exceeds payload byte limit`);
     }
-    await vectorStore.upsert([updated], { signal: correctOptions.signal });
+    try {
+      await vectorStore.upsert([updated], { signal: correctOptions.signal });
+    } finally {
+      noteMemoryRetraction(memory);
+    }
     await markInvalidated(threadScope, [id], "corrected", { supersedesId: id, signal: correctOptions.signal });
     noteMemoryWrite(memory);
     return redactJson(updated, redactor);
@@ -489,7 +538,7 @@ export function createMemory(options: CreateMemoryOptions): Memory {
     try {
       return await forgetEntries(filter, forgetOptions);
     } finally {
-      noteMemoryWrite(memory);
+      noteMemoryRetraction(memory);
     }
   }
 
@@ -609,7 +658,14 @@ export function createMemory(options: CreateMemoryOptions): Memory {
       }
     }
     const ids = [...expired];
-    const deleted = ids.length > 0 ? await vectorStore.delete({ ...threadScope, ids }, { signal: retentionOptions.signal }) : 0;
+    let deleted = 0;
+    if (ids.length > 0) {
+      try {
+        deleted = await vectorStore.delete({ ...threadScope, ids }, { signal: retentionOptions.signal });
+      } finally {
+        noteMemoryRetraction(memory);
+      }
+    }
     if (deleted > 0) noteMemoryWrite(memory);
     return { deleted, scanned };
   }
@@ -694,13 +750,21 @@ export function createMemory(options: CreateMemoryOptions): Memory {
   let projection: ReturnType<typeof createFabricContext> | undefined;
   let projectionKey: string | undefined;
   let projectionQuery: MemoryContextProviderOptions["query"];
-  function contextBlocks(draft: ContextDraft, context: HookContext, providerOptions: MemoryContextProviderOptions = {}): Promise<ContextDraft> {
+  function contextBlocks(
+    draft: ContextDraft,
+    context: HookContext,
+    providerOptions: MemoryContextProviderOptions = {},
+  ): Promise<ContextDraft> {
     const key = JSON.stringify(providerOptions);
     if (!projection || projectionKey !== key || projectionQuery !== providerOptions.query) {
       projectionKey = key;
       projectionQuery = providerOptions.query;
-      projection = createFabricContext(memory, createMemoryFabric({ memory, consolidate: false }).recall,
-        providerOptions.includeSemantic === true ? { topK: providerOptions.topK } : false, providerOptions);
+      projection = createFabricContext(
+        memory,
+        createMemoryFabric({ memory, consolidate: false }).recall,
+        providerOptions.includeSemantic === true ? { topK: providerOptions.topK } : false,
+        providerOptions,
+      );
     }
     return projection.build(draft, context);
   }

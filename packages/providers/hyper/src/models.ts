@@ -168,10 +168,10 @@ export function mapHyperModel(entry: HyperModelEntry, options: { readonly provid
       tools: true,
       streaming: true,
     },
-    limits: {
-      contextWindow: typeof entry.context_window === "number" ? entry.context_window : heuristics.limits.contextWindow,
-      maxOutputTokens: typeof entry.max_output_tokens === "number" ? entry.max_output_tokens : heuristics.limits.maxOutputTokens,
-    },
+    limits: clampOutputToWindow(
+      typeof entry.context_window === "number" ? entry.context_window : heuristics.limits.contextWindow,
+      typeof entry.max_output_tokens === "number" ? entry.max_output_tokens : heuristics.limits.maxOutputTokens,
+    ),
     cost: costFromHyperPricing(pricing),
     compat: {
       route,
@@ -180,6 +180,16 @@ export function mapHyperModel(entry: HyperModelEntry, options: { readonly provid
       ...(defaultEffort ? { reasoning_effort: defaultEffort } : {}),
     },
   });
+}
+
+/**
+ * Some catalog entries report `max_output_tokens` equal to the whole context window (minimax-m3 says
+ * 512k/512k). A caller that subtracts the output budget from the window then has no input space, so
+ * the output limit is capped at a quarter of the window instead of trusting the contradiction.
+ */
+function clampOutputToWindow(contextWindow: number, maxOutputTokens: number): { contextWindow: number; maxOutputTokens: number } {
+  if (!(maxOutputTokens > 0) || !(contextWindow > 0) || maxOutputTokens < contextWindow) return { contextWindow, maxOutputTokens };
+  return { contextWindow, maxOutputTokens: Math.max(1024, Math.floor(contextWindow / 4)) };
 }
 
 export function costFromHyperPricing(pricing: HyperModelEntry["pricing"]): ModelCost | undefined {
@@ -437,7 +447,7 @@ export const hyperModels = FEATURED.map((entry) =>
 ) as readonly ModelConfig[];
 
 /** Fallback metadata for discovery entries not in the featured snapshot. */
-function heuristicsForHyperModel(id: string): { readonly limits: NonNullable<ModelConfig["limits"]> } {
+function heuristicsForHyperModel(id: string): { readonly limits: { readonly contextWindow: number; readonly maxOutputTokens: number } } {
   const lower = id.toLowerCase();
   if (lower.startsWith("deepseek-") || lower.startsWith("qwen")) {
     return { limits: { contextWindow: 1_000_000, maxOutputTokens: 128_000 } };

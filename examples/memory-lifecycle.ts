@@ -256,6 +256,8 @@ const deliverySession = await deliveryAgent.session({ id: "delivery-demo", creat
 try {
   await deliverySession.run("remember the package manager");
   await deliverySession.run("remember the suite command");
+  // The preference reaches pinned core at the next epoch; inserts leave the current prefix stable.
+  await deliverySession.compact();
   await deliverySession.run("read the memory plan");
   for (let turn = 0; turn < 10; turn += 1) await deliverySession.run(`turn ${turn}`);
 
@@ -271,7 +273,7 @@ try {
     session: deliverySession,
   })) as { ok: boolean; path: string };
 
-  if (!/Core memory \(user\): \[[0-9a-f]{12}\] Prefers bun over npm/.test(prefix(requests[1]!))) throw new Error("core block missing");
+  if (!/Core memory \(user\): \[[0-9a-f]{12}\] Prefers bun over npm/.test(prefix(requests[4]!))) throw new Error("core block missing");
   if (quiet.length !== 10 || new Set(quiet.map(prefix)).size !== 1) throw new Error("prefix not byte-identical across quiet turns");
   if (!JSON.stringify(cueBlock).includes("path procedure (for packages/memory/**)")) throw new Error("path cue missing");
   if (requests.filter((request) => JSON.stringify(request).includes("path procedure (for packages/memory/**)")).length !== 1) {

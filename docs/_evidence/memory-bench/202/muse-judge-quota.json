@@ -1,0 +1,11 @@
+{
+  "kind": "202-muse-original-panel-quota",
+  "checkedAt": "2026-10-29T14:00:35.745Z",
+  "dailyRequests": {
+    "used": 1293,
+    "limit": 1000,
+    "remaining": 0
+  },
+  "source": "GET https://openrouter.ai/api/v1/key",
+  "generationRequests": 0
+}

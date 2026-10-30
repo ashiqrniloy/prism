@@ -1,0 +1,26 @@
+{
+  "kind": "202-muse-campaign-verification",
+  "generatedAt": "2026-10-29T13:43:49.545Z",
+  "status": "passed",
+  "harnessHash": "f15deacb7069722a23345829c21fd8743c543ec99eb75d42d9f1c9c21d7c275e",
+  "checks": [
+    {
+      "command": "PRISM_MEMORY_BENCH_PYTHON=.cache/memory-bench/python/bin/python3 timeout 900 bun test --timeout=0 scripts/memory-bench",
+      "result": "352 pass / 1 Vibe official-image environment skip / 0 fail",
+      "log": ".cache/memory-bench/muse-campaign-tests-source-matched.log"
+    },
+    {
+      "command": "timeout 180 bun run typecheck",
+      "result": "pass",
+      "log": ".cache/memory-bench/muse-campaign-typecheck-final.log"
+    },
+    {
+      "command": "Biome affected harness files",
+      "result": "pass; one inherited unused test parameter warning"
+    }
+  ],
+  "negativeAdmission": "muse-paid-wire-bound-v3.json: token-ceiling refusal before any solver/judge physical request",
+  "retention": "Four original completed cells and partial lexical report pinned by source bytes and run-path fingerprints; incomplete usage reservations retained",
+  "scope": "Benchmark orchestration and tests only; no SDK/product changes in this continuation",
+  "liveReadiness": "not-ready: paid answers saved, original judge quota exhausted; no broad campaign launched"
+}

@@ -1,0 +1,51 @@
+{
+  "kind": "202-cache-stability-record",
+  "version": 1,
+  "status": "passed",
+  "productHash": "f82ed5c9eb1a27c4db5b6ec3f6b9c79a593c28f988b80205656ad75df99396e7",
+  "suite": {
+    "files": [
+      "packages/memory/fabric/src/__tests__/prefix-stability.test.ts",
+      "scripts/memory-bench/prefix-probe.test.mjs"
+    ],
+    "pass": 29,
+    "fail": 0,
+    "skip": 0,
+    "passed": [
+      "prefix_probe_detects_a_seeded_prefix_change",
+      "prefix_probe_is_deterministic",
+      "prefix_probe_report_carries_no_note_text",
+      "equivalence_mismatch_lists_arms_to_rerun_and_never_merges_cells",
+      "answer_path_capture_is_deterministic_and_holds_hashes_only",
+      "fabric_prefix_is_identical_across_ten_turns_without_writes",
+      "fabric_prefix_survives_insert_and_lifecycle_writes",
+      "forget_breaks_the_epoch_on_the_next_request",
+      "revoke_breaks_the_epoch_on_the_next_request",
+      "correct_breaks_the_epoch_on_the_next_request",
+      "archive_breaks_the_epoch_on_the_next_request",
+      "retire_breaks_the_epoch_on_the_next_request",
+      "validity_breaks_the_epoch_on_the_next_request",
+      "flags_breaks_the_epoch_on_the_next_request",
+      "retention_breaks_the_epoch_on_the_next_request",
+      "new_session_and_refresh_see_writes_from_another_memory_instance",
+      "epoch_snapshot_is_evicted_on_session_closed",
+      "working_memory_update_reaches_the_tail_not_the_prefix",
+      "conversational_prefix_passes_provider_visible_conformance",
+      "compaction_completed_starts_a_new_epoch_with_new_notes",
+      "single_turn_answer_path_context_bytes_unchanged",
+      "imported_tombstones_break_an_existing_epoch",
+      "working_tail_follows_the_transcript_across_first_and_second_turns_and_tool_updates",
+      "candidate_inserts_and_evidence_patches_stay_reachable_without_retracting",
+      "tail_cache_is_evicted_on_session_closed",
+      "another_instances_forget_leaves_the_prefix_on_the_next_request",
+      "another_instances_additive_write_keeps_the_prefix_pinned",
+      "revalidation_failure_drops_the_core_block_instead_of_resending_it",
+      "revalidation_abort_propagates"
+    ]
+  },
+  "equivalence": {
+    "file": "equivalence.json",
+    "sha256": "7b9c53f25eeb3d132bb544cf196892e9bfd6ab5fac7749516581f4d588e93659",
+    "status": "different"
+  }
+}

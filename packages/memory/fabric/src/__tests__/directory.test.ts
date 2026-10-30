@@ -1,18 +1,18 @@
+import { afterAll as after, describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll as after, describe, it } from "bun:test";
 import type { ContextDraft, HookContext, JsonObject, ToolExecutionContext } from "@arnilo/prism";
 import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
 import { createFabricContext } from "../context.js";
 import {
   createFabricDirectory,
+  type FabricDirectoryHandle,
   pageFabricDirectory,
+  type ResolvedFabricDirectoryOptions,
   renderFabricDirectory,
   resolveFabricDirectoryOptions,
-  type FabricDirectoryHandle,
-  type ResolvedFabricDirectoryOptions,
 } from "../directory.js";
 import { createFabricFileJail } from "../files.js";
 import { createMemory, createMemoryFabric, createMemoryWorkingStore } from "../index.js";
@@ -54,7 +54,10 @@ describe("memory directory", () => {
     const candidate = await fabric.remember({ kind: "procedure", content: "candidate procedure", tags: ["candidate"] });
     await memory.setConsent(revoked.id, { visible: false });
     const row = await memory.getEntry(candidate.id);
-    await memory.remember({ entries: [{ id: candidate.id, text: row!.text, metadata: { ...row!.metadata, status: "candidate" } }] }, { wait: true });
+    await memory.remember(
+      { entries: [{ id: candidate.id, text: row!.text, metadata: { ...row!.metadata, status: "candidate" } }] },
+      { wait: true },
+    );
     const snapshot = await directory.snapshot();
     assert.deepEqual(snapshot.counts, { fact: 2 });
     assert.deepEqual(snapshot.topics, [
@@ -80,7 +83,14 @@ describe("memory directory", () => {
       return original(query);
     };
     const seen = new Set<string>();
-    for (let turn = 0; turn < 10; turn += 1) seen.add((await directoryText(memory, directory))!.content);
+    const projection = createFabricContext(
+      memory,
+      async () => ({ hits: [], explain: [] }),
+      false,
+      {},
+      { source: directory, options: defaults },
+    );
+    for (let turn = 0; turn < 10; turn += 1) seen.add(String((await projection.build(draft, hook)).context?.[0]?.content));
     assert.equal(seen.size, 1);
     assert.equal(queries, 1, "ten turns without a write run one aggregate query");
   });
@@ -120,7 +130,11 @@ describe("memory directory", () => {
   it("directory_capped_at_max_tokens", async () => {
     const { memory, fabric, directory } = harness();
     for (let index = 0; index < 20; index += 1) {
-      await fabric.remember({ kind: "fact", content: `fact ${index}`, tags: [`a-rather-long-topic-name-${String(index).padStart(2, "0")}`] });
+      await fabric.remember({
+        kind: "fact",
+        content: `fact ${index}`,
+        tags: [`a-rather-long-topic-name-${String(index).padStart(2, "0")}`],
+      });
     }
     const wide = { maxTopics: 20, maxFiles: 10, maxTokens: 40 };
     const block = await directoryText(memory, directory, wide);
@@ -144,7 +158,14 @@ describe("memory directory", () => {
     const root = await mkdtemp(join(tmpdir(), "fabric-directory-"));
     tempDirs.push(root);
     await mkdir(join(root, "notes"), { recursive: true });
-    for (const [path, age] of [["notes/deploy.md", 300], ["notes/billing.md", 100], ["top.md", 200], [".hidden.md", 1], ["store.sqlite", 1], ["store.sqlite-wal", 1]] as const) {
+    for (const [path, age] of [
+      ["notes/deploy.md", 300],
+      ["notes/billing.md", 100],
+      ["top.md", 200],
+      [".hidden.md", 1],
+      ["store.sqlite", 1],
+      ["store.sqlite-wal", 1],
+    ] as const) {
       await writeFile(join(root, path), "x");
       const when = new Date(Date.now() - age * 1000);
       await utimes(join(root, path), when, when);
@@ -165,12 +186,16 @@ describe("memory directory", () => {
     const page = pageFabricDirectory({ ...snapshot, files: Array.from({ length: 120 }, (_, index) => `f${index}`) }, 0);
     assert.equal(page.files.length, 50);
     assert.equal(page.nextOffset, 50);
-    assert.equal(pageFabricDirectory({ ...snapshot, files: Array.from({ length: 120 }, (_, index) => `f${index}`) }, 100).nextOffset, undefined);
+    assert.equal(
+      pageFabricDirectory({ ...snapshot, files: Array.from({ length: 120 }, (_, index) => `f${index}`) }, 100).nextOffset,
+      undefined,
+    );
   });
 
   it("memory_view_without_path_pages_full_directory", async () => {
     const { memory, fabric, directory } = harness();
-    for (let index = 0; index < 60; index += 1) await fabric.remember({ kind: "fact", content: `fact ${index}`, tags: [`topic-${String(index).padStart(2, "0")}`] });
+    for (let index = 0; index < 60; index += 1)
+      await fabric.remember({ kind: "fact", content: `fact ${index}`, tags: [`topic-${String(index).padStart(2, "0")}`] });
     const tools = createMemoryFabric({ memory, consolidate: false }).tools();
     const view = tools.find((tool) => tool.name === "memory.view")!;
     // The package passes its directory to the tool set; build the same wiring directly.
@@ -187,8 +212,13 @@ describe("memory directory", () => {
     assert.equal(value.topics.length, 50);
     assert.equal(value.totals.topics, 60);
     assert.equal(value.nextOffset, 50);
-    assert.match((first.content![0] as { text: string }).text, /^60 facts\..*Topics: topic-00 \(1\), topic-01 \(1\), topic-02 \(1\)\n.*Topics 1-50 of 60.*More: call memory\.view with offset 50\./s);
-    const second = (await wired.find((tool) => tool.name === "memory.view")!.execute({ offset: 50 } as JsonObject, toolContext)) as unknown as { value: { topics: unknown[]; nextOffset?: number } };
+    assert.match(
+      (first.content![0] as { text: string }).text,
+      /^60 facts\..*Topics: topic-00 \(1\), topic-01 \(1\), topic-02 \(1\)\n.*Topics 1-50 of 60.*More: call memory\.view with offset 50\./s,
+    );
+    const second = (await wired
+      .find((tool) => tool.name === "memory.view")!
+      .execute({ offset: 50 } as JsonObject, toolContext)) as unknown as { value: { topics: unknown[]; nextOffset?: number } };
     assert.equal(second.value.topics.length, 10);
     assert.equal(second.value.nextOffset, undefined);
     // Without a directory (or with a path) the tool keeps listing the memory root.

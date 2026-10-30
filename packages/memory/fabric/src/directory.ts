@@ -1,8 +1,8 @@
 import { opendir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { resolveRedactor, type SecretRedactor } from "@arnilo/prism";
-import { MemoryScopeError, MemoryValidationError, redactJson } from "@arnilo/prism-memory-core";
 import type { Memory, MemoryTagCount } from "@arnilo/prism-memory-core";
+import { MemoryScopeError, MemoryValidationError, redactJson } from "@arnilo/prism-memory-core";
 import { readFabricBlock } from "./blocks.js";
 import type { FabricFileJail } from "./files.js";
 import { MEMORY_FABRIC_WORKING_KEY, type MemoryNoteKind } from "./types.js";
@@ -38,7 +38,10 @@ const MAX_WALK_DEPTH = 6;
 const SNAPSHOT_TOPICS = 200;
 const DIRECTORY_NOTE_KINDS: readonly MemoryNoteKind[] = ["fact", "preference", "procedure", "file"];
 
-export function resolveFabricDirectoryOptions(input: boolean | MemoryFabricDirectoryConfig | undefined, defaultOn: boolean): false | ResolvedFabricDirectoryOptions {
+export function resolveFabricDirectoryOptions(
+  input: boolean | MemoryFabricDirectoryConfig | undefined,
+  defaultOn: boolean,
+): false | ResolvedFabricDirectoryOptions {
   if (input === false || (input === undefined && !defaultOn)) return false;
   const config = input === true || input === undefined ? {} : input;
   const pick = (key: keyof ResolvedFabricDirectoryOptions, hard: number): number => {
@@ -65,6 +68,18 @@ export function noteMemoryWrite(memory: object): void {
 /** The write counter behind {@link noteMemoryWrite}; the pinned core reuses it as its cache key. */
 export function memoryWriteVersion(memory: object): number {
   return versions.get(memory) ?? 0;
+}
+
+const retractions = new WeakMap<object, number>();
+
+/** End pinned session epochs when previously delivered memory may no longer be shown. */
+export function noteMemoryRetraction(memory: object): void {
+  retractions.set(memory, memoryRetractionVersion(memory) + 1);
+  noteMemoryWrite(memory);
+}
+
+export function memoryRetractionVersion(memory: object): number {
+  return retractions.get(memory) ?? 0;
 }
 
 export interface FabricDirectoryScopeSnapshot {
@@ -244,20 +259,34 @@ function renderLines(snapshot: FabricDirectorySnapshot, topics: number, files: n
       if (counted === undefined) continue;
       const take = Math.min(perScope, remaining);
       remaining -= take;
-      const shown = take > 0 && scope.topics.length > 0 ? `; topics: ${scope.topics.slice(0, take).map((topic) => `${topic.tag} (${topic.count})`).join(", ")}` : "";
+      const shown =
+        take > 0 && scope.topics.length > 0
+          ? `; topics: ${scope.topics
+              .slice(0, take)
+              .map((topic) => `${topic.tag} (${topic.count})`)
+              .join(", ")}`
+          : "";
       lines.push(`${scope.level}: ${counted}${shown}`);
     }
-    if (lines.length > 0) lines[0] = `${lines[0]}. Recall with memory.recall${snapshot.files.length > 0 ? "; read files with memory.read" : ""}.`;
+    if (lines.length > 0)
+      lines[0] = `${lines[0]}. Recall with memory.recall${snapshot.files.length > 0 ? "; read files with memory.read" : ""}.`;
   } else {
     const counted = countsSentence(snapshot.counts);
     if (counted) lines.push(`${counted}. Recall with memory.recall${snapshot.files.length > 0 ? "; read files with memory.read" : ""}.`);
     if (topics > 0 && snapshot.topics.length > 0) {
-      lines.push(`Topics: ${snapshot.topics.slice(0, topics).map((topic) => `${topic.tag} (${topic.count})`).join(", ")}`);
+      lines.push(
+        `Topics: ${snapshot.topics
+          .slice(0, topics)
+          .map((topic) => `${topic.tag} (${topic.count})`)
+          .join(", ")}`,
+      );
     }
   }
   if (files > 0 && snapshot.files.length > 0) {
     const rest = snapshot.files.length - files;
-    lines.push(`Files: ${snapshot.files.slice(0, files).join(", ")}${rest > 0 ? `, … (+${rest}${snapshot.filesTruncated ? "+" : ""})` : ""}`);
+    lines.push(
+      `Files: ${snapshot.files.slice(0, files).join(", ")}${rest > 0 ? `, … (+${rest}${snapshot.filesTruncated ? "+" : ""})` : ""}`,
+    );
   }
   if (snapshot.blocks.length > 0) lines.push(`Blocks: ${snapshot.blocks.join(", ")}`);
   return lines.join("\n");
@@ -267,7 +296,10 @@ function renderLines(snapshot: FabricDirectorySnapshot, topics: number, files: n
  * The prefix block text, deterministic for a snapshot (stable sort, no timestamps). The topic and file
  * lists shrink until the block fits `maxTokens`; only if the fixed lines alone exceed it is the text cut.
  */
-export function renderFabricDirectory(snapshot: FabricDirectorySnapshot, options: ResolvedFabricDirectoryOptions): { readonly content: string; readonly tokens: number } | undefined {
+export function renderFabricDirectory(
+  snapshot: FabricDirectorySnapshot,
+  options: ResolvedFabricDirectoryOptions,
+): { readonly content: string; readonly tokens: number } | undefined {
   if (isFabricDirectoryEmpty(snapshot)) return undefined;
   let topics = Math.min(options.maxTopics, snapshot.topics.length);
   let files = Math.min(options.maxFiles, snapshot.files.length);

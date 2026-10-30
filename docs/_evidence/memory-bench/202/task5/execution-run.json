@@ -1,0 +1,29 @@
+{
+  "kind": "202-task5-execution-run",
+  "journal": {
+    "campaignId": "campaign-42aa7a93ee64",
+    "status": "finished",
+    "ceiling": 100000000,
+    "spend": 0,
+    "attempts": [
+      {
+        "attemptId": "202-task5.control.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free@1",
+        "jobId": "202-task5.control.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+        "status": "failed",
+        "usageComplete": true,
+        "reservedInputTokens": 7500000,
+        "confirmedInputTokens": 0
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "202-task5.control.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "attemptId": "202-task5.control.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free@1",
+      "status": "failed",
+      "cause": "MemoryBenchAnswerError:400",
+      "usageComplete": true,
+      "charged": 0
+    }
+  ]
+}
