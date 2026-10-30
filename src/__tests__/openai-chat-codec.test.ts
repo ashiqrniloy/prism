@@ -21,6 +21,7 @@ import {
   providerPackage,
   replayFetch,
 } from "../provider-kit/index.js";
+import { createToolNameMap } from "../provider-kit/tool-names.js";
 import { failedRun } from "./run-result-helpers.js";
 
 /** A Chat Completions SSE body from raw chunks, ending in `[DONE]` unless `done: false`. */
@@ -353,6 +354,53 @@ describe("OpenAI Chat codec: usage and conformance (plan 203 Task 3)", () => {
     );
     assert.deepEqual(events[0], { type: "content_delta", content: { type: "text", text: "ok" } });
     assert.equal((events[2] as Extract<ProviderEvent, { type: "done" }>).stopReason, "end_turn");
+  });
+
+  it("openai_chat_replays_unoffered_dotted_tool_call_wire_safe", () => {
+    const body = openAIChatBody({
+      model: { provider: "mock", model: "m" },
+      messages: [
+        { role: "user", content: [text("recall the color")] },
+        { role: "assistant", content: [{ type: "tool_call", id: "call_1", name: "memory.recall", arguments: { query: "color" } }] },
+        { role: "tool", content: [{ type: "tool_result", toolCallId: "call_1", name: "memory.recall", result: { hits: [] } }] },
+      ],
+    } as ProviderRequest);
+    assert.equal(body.tools, undefined, "the dotted tool is not offered this turn");
+    const replayed = (body.messages as JsonObject[])[1]?.tool_calls as JsonObject[];
+    assert.equal(
+      ((replayed[0]?.function ?? {}) as JsonObject).name,
+      "memory_recall",
+      "a replayed call must be wire-safe even without a request map",
+    );
+  });
+
+  it("encodes invalid tool names on the wire and decodes the model's call", async () => {
+    const memory = tool("memory.recall");
+    const names = createToolNameMap([memory, tool("memory_recall")]);
+    const body = openAIChatBody({
+      model: { provider: "mock", model: "m" },
+      messages: [{ role: "user", content: [text("hi")] }],
+      tools: [memory, tool("memory_recall")],
+    } as ProviderRequest);
+    const wireNames = (body.tools as JsonObject[]).map((entry) => (entry.function as JsonObject).name);
+    assert.deepEqual(wireNames, ["memory_recall_2", "memory_recall"]);
+
+    const events = await eventsOf(
+      [
+        {
+          choices: [
+            {
+              delta: { tool_calls: [{ index: 0, id: "call_1", function: { name: "memory_recall_2", arguments: "{}" } }] },
+              finish_reason: "tool_calls",
+            },
+          ],
+          usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+        },
+      ],
+      { toolNames: names },
+    );
+    const call = events.find((event) => event.type === "tool_call");
+    assert.equal(call?.type === "tool_call" ? call.call.name : undefined, "memory.recall");
   });
 });
 

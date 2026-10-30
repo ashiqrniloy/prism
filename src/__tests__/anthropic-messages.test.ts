@@ -1,8 +1,13 @@
-import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
 import type { JsonObject, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
 import type { CacheControlledMessage } from "@arnilo/prism/provider-kit";
-import { type AnthropicMessagesRouteHooks, anthropicMessagesBody, anthropicMessagesEvents } from "../provider-kit/codecs/anthropic-messages.js";
+import {
+  type AnthropicMessagesRouteHooks,
+  anthropicMessagesBody,
+  anthropicMessagesEvents,
+} from "../provider-kit/codecs/anthropic-messages.js";
+import { createToolNameMap } from "../provider-kit/tool-names.js";
 
 const model: ModelConfig = {
   provider: "shared-fixture",
@@ -137,6 +142,39 @@ describe("@arnilo/prism/provider-kit (anthropic-messages)", () => {
     assert.deepEqual(body.output_config, { effort: "medium" });
     assert.equal(body.effort, undefined, "no top-level effort field may reach the wire");
     assert.ok(!JSON.stringify(body).includes("reasoning_effort"), "resolved effort must not leak as a raw compat key");
+  });
+
+  it("shared_anthropic_body_and_events_encode_dotted_tool_names", async () => {
+    const dotted = { ...request, tools: [{ ...request.tools![0], name: "memory.recall" }] };
+    const body = await anthropicMessagesBody(dotted, hooks);
+    assert.equal((body.tools as JsonObject[])[0]?.name, "memory_recall");
+    const replay = await anthropicMessagesBody(
+      {
+        ...dotted,
+        messages: [
+          ...dotted.messages,
+          { role: "assistant", content: [{ type: "tool_call", id: "call_1", name: "memory.recall", arguments: {} }] },
+        ],
+      },
+      hooks,
+    );
+    const replayed = (replay.messages as JsonObject[]).at(-1)?.content as JsonObject[];
+    assert.equal(replayed?.at(-1)?.name, "memory_recall");
+
+    const stream = ok(
+      sse([
+        { type: "message_start", message: { usage: { input_tokens: 1, output_tokens: 1 } } },
+        { type: "content_block_start", index: 0, content_block: { type: "tool_use", id: "call_1", name: "memory_recall" } },
+        { type: "content_block_delta", index: 0, delta: { type: "input_json_delta", partial_json: "{}" } },
+        { type: "content_block_stop", index: 0 },
+        { type: "message_delta", delta: { stop_reason: "tool_use" }, usage: { output_tokens: 2 } },
+        { type: "message_stop" },
+      ]),
+    );
+    const events = [];
+    for await (const event of anthropicMessagesEvents(stream.body!, { toolNames: createToolNameMap(dotted.tools) })) events.push(event);
+    const call = events.find((event) => event.type === "tool_call") as { call?: { name?: string } } | undefined;
+    assert.equal(call?.call?.name, "memory.recall", "the decoded call uses the product name");
   });
 
   it("shared_anthropic_body_emits_no_thinking_fields_when_hooks_return_none", async () => {
@@ -348,9 +386,7 @@ describe("@arnilo/prism/provider-kit (anthropic-messages)", () => {
     const events: ProviderEvent[] = [];
     for await (const event of anthropicMessagesEvents(stream.body!, undefined)) events.push(event);
 
-    const redacted = events.find(
-      (e) => e.type === "content_delta" && e.content.type === "thinking" && e.content.redacted === true,
-    ) as any;
+    const redacted = events.find((e) => e.type === "content_delta" && e.content.type === "thinking" && e.content.redacted === true) as any;
     assert.ok(redacted, "redacted_thinking block must be emitted");
     assert.equal(redacted.content.data, "enc_blob_xyz");
 
@@ -378,12 +414,7 @@ describe("@arnilo/prism/provider-kit (anthropic-messages)", () => {
 
   it("anthropic_error_event_maps_transient_codes", async () => {
     // 1. overloaded_error -> transient
-    const stream1 = ok(
-      sse([
-        { type: "message_start" },
-        { type: "error", error: { type: "overloaded_error", message: "Overloaded" } },
-      ]),
-    );
+    const stream1 = ok(sse([{ type: "message_start" }, { type: "error", error: { type: "overloaded_error", message: "Overloaded" } }]));
     const events1: ProviderEvent[] = [];
     for await (const event of anthropicMessagesEvents(stream1.body!, undefined)) events1.push(event);
     assert.equal(events1.length, 1);
@@ -392,11 +423,7 @@ describe("@arnilo/prism/provider-kit (anthropic-messages)", () => {
     assert.equal((events1[0] as any).error.failureClass, "transient");
 
     // 2. api_error -> transient
-    const stream2 = ok(
-      sse([
-        { type: "error", error: { type: "api_error", message: "Internal server error" } },
-      ]),
-    );
+    const stream2 = ok(sse([{ type: "error", error: { type: "api_error", message: "Internal server error" } }]));
     const events2: ProviderEvent[] = [];
     for await (const event of anthropicMessagesEvents(stream2.body!, undefined)) events2.push(event);
     assert.equal(events2[0].type, "error");
@@ -404,11 +431,7 @@ describe("@arnilo/prism/provider-kit (anthropic-messages)", () => {
     assert.equal((events2[0] as any).error.failureClass, "transient");
 
     // 3. invalid_request_error -> permanent
-    const stream3 = ok(
-      sse([
-        { type: "error", error: { type: "invalid_request_error", message: "Invalid model" } },
-      ]),
-    );
+    const stream3 = ok(sse([{ type: "error", error: { type: "invalid_request_error", message: "Invalid model" } }]));
     const events3: ProviderEvent[] = [];
     for await (const event of anthropicMessagesEvents(stream3.body!, undefined)) events3.push(event);
     assert.equal(events3[0].type, "error");
@@ -439,7 +462,7 @@ describe("@arnilo/prism/provider-kit (anthropic-messages)", () => {
     const stream = ok(
       new ReadableStream({
         start(controller) {
-          controller.enqueue(encoder.encode("event: ping\ndata: {\"type\":\"ping\"}\n\n"));
+          controller.enqueue(encoder.encode('event: ping\ndata: {"type":"ping"}\n\n'));
           controller.enqueue(
             encoder.encode(
               `data: ${JSON.stringify({
@@ -448,7 +471,7 @@ describe("@arnilo/prism/provider-kit (anthropic-messages)", () => {
               })}\n\n`,
             ),
           );
-          controller.enqueue(encoder.encode("event: ping\ndata: {\"type\":\"ping\"}\n\n"));
+          controller.enqueue(encoder.encode('event: ping\ndata: {"type":"ping"}\n\n'));
           controller.enqueue(
             encoder.encode(
               `data: ${JSON.stringify({
@@ -467,7 +490,7 @@ describe("@arnilo/prism/provider-kit (anthropic-messages)", () => {
               })}\n\n`,
             ),
           );
-          controller.enqueue(encoder.encode("event: ping\ndata: {\"type\":\"ping\"}\n\n"));
+          controller.enqueue(encoder.encode('event: ping\ndata: {"type":"ping"}\n\n'));
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "content_block_stop", index: 0 })}\n\n`));
           controller.enqueue(
             encoder.encode(

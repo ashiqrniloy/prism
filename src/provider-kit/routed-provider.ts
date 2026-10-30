@@ -1,12 +1,13 @@
 import type { JsonObject, ModelProvider, ProviderEvent, ProviderRequest, Usage } from "../contracts.js";
-import { providerError } from "../models/events.js";
 import { type CredentialValueSource, resolveCredentialValue } from "../credentials/index.js";
+import { providerError } from "../models/events.js";
 import { trimTrailingSlashes } from "../trim-trailing-slashes.js";
-import { httpStatusError, readBoundedResponseText } from "./transport.js";
-import { ProviderRequirementError } from "./provider-request-policy.js";
 import { type AnthropicMessagesRouteHooks, anthropicMessagesBody, anthropicMessagesEvents } from "./codecs/anthropic-messages.js";
 import { type OpenAIChatCodecOptions, openAIChatBody, openAIChatEvents } from "./codecs/openai-chat.js";
 import { type OpenAIResponsesCodecOptions, openAIResponsesBody, openAIResponsesEvents } from "./codecs/openai-responses.js";
+import { ProviderRequirementError } from "./provider-request-policy.js";
+import { createToolNameMap } from "./tool-names.js";
+import { httpStatusError, readBoundedResponseText } from "./transport.js";
 
 /** Route definition for a multi-route or single-route provider. */
 export type RoutedProviderFormat = "openai-chat" | "anthropic-messages" | "openai-responses";
@@ -130,14 +131,16 @@ export function createRoutedProvider(options: RoutedProviderOptions): ModelProvi
           secrets.push(...options.secrets(request));
         }
 
-        // 5. Codec body serialization
+        // 5. Codec body serialization. One map serializes the tool list and decodes the reply, so
+        // dotted product names (`memory.recall`) become wire-safe without ambiguity.
+        const toolNames = createToolNameMap(request.tools);
         let body: JsonObject;
         if (route.format === "anthropic-messages") {
-          body = await anthropicMessagesBody(request, route.codec as AnthropicMessagesRouteHooks | undefined);
+          body = await anthropicMessagesBody(request, { ...(route.codec as AnthropicMessagesRouteHooks | undefined), toolNames });
         } else if (route.format === "openai-chat") {
-          body = openAIChatBody(request, route.codec as OpenAIChatCodecOptions | undefined);
+          body = openAIChatBody(request, { ...(route.codec as OpenAIChatCodecOptions | undefined), toolNames });
         } else if (route.format === "openai-responses") {
-          body = openAIResponsesBody(request, route.codec as OpenAIResponsesCodecOptions | undefined);
+          body = openAIResponsesBody(request, { ...(route.codec as OpenAIResponsesCodecOptions | undefined), toolNames });
         } else {
           throw new ProviderRequirementError(`Unsupported route format '${(route as any).format}' for route '${routeKey}'`, {
             providerId,
@@ -246,6 +249,7 @@ export function createRoutedProvider(options: RoutedProviderOptions): ModelProvi
             signal: request.signal,
             secrets,
             mapUsage,
+            toolNames,
           });
         } else if (route.format === "openai-responses") {
           const codec = route.codec as OpenAIResponsesCodecOptions | undefined;
@@ -255,6 +259,7 @@ export function createRoutedProvider(options: RoutedProviderOptions): ModelProvi
             strictCompletion: codec?.strictCompletion ?? true,
             mapUsage,
             secrets,
+            toolNames,
           });
         } else {
           const codec = route.codec as OpenAIChatCodecOptions | undefined;
@@ -265,6 +270,7 @@ export function createRoutedProvider(options: RoutedProviderOptions): ModelProvi
             mapUsage,
             onComment: codec?.onComment,
             secrets,
+            toolNames,
           });
         }
       } catch (error) {

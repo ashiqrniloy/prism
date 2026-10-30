@@ -1,3 +1,4 @@
+import type { MediaContentBlock, ResolvedMediaContent } from "../../content.js";
 import type {
   ContentBlock,
   DocumentContent,
@@ -10,7 +11,6 @@ import type {
   ToolDefinition,
   Usage,
 } from "../../contracts.js";
-import type { MediaContentBlock, ResolvedMediaContent } from "../../content.js";
 import {
   mapProviderStopReason,
   providerContentDelta,
@@ -26,18 +26,25 @@ import {
 import {
   anthropicCacheEnabled,
   applyCacheControl,
-  type CacheControlValue,
   type CacheControlledMessage,
+  type CacheControlValue,
   resolvePromptCachePlan,
   systemCacheControlField,
 } from "../cache-helpers.js";
-import { assertStructuredOutputRequestSupported } from "../structured-output.js";
-import { bytesToBase64, isPdfMediaType, rejectProviderMediaBlock, resolveProviderMediaMessages, serializePdfDocumentWireBlock } from "../media.js";
-import { canonicalizeJsonSchema } from "../schema.js";
-import { readSseEvents } from "../transport.js";
+import {
+  bytesToBase64,
+  isPdfMediaType,
+  rejectProviderMediaBlock,
+  resolveProviderMediaMessages,
+  serializePdfDocumentWireBlock,
+} from "../media.js";
 import { OMITTED_TOOL_RESULT_IMAGE_NOTE, serializeToolResultText } from "../openai-primitives.js";
-import { normalizeUsage } from "../usage.js";
+import { canonicalizeJsonSchema } from "../schema.js";
+import { assertStructuredOutputRequestSupported } from "../structured-output.js";
 import { resolvePreserveThinking, resolveReasoningEffort, resolveThinkingObject, stripOwnedCompat } from "../thinking.js";
+import { createToolNameMap, productToolName, type ToolNameMap, wireToolName } from "../tool-names.js";
+import { readSseEvents } from "../transport.js";
+import { normalizeUsage } from "../usage.js";
 
 /**
  * Shared Anthropic Messages route serializer (body + SSE events) for the
@@ -59,12 +66,16 @@ export interface AnthropicMessagesRouteHooks {
   readonly effort?: (request: ProviderRequest) => string | undefined;
   /** Optional session/cache affinity headers injected for the route. */
   readonly affinity?: (request: ProviderRequest) => Record<string, string>;
+  /** Per-request product ↔ wire tool-name map. */
+  readonly toolNames?: ToolNameMap;
 }
 
 export interface AnthropicMessagesEventsOptions {
   readonly signal?: AbortSignal;
   readonly secrets?: readonly (string | undefined)[];
   readonly mapUsage?: (usage: unknown) => Usage | undefined;
+  /** Must be the same map that serialized the request. */
+  readonly toolNames?: ToolNameMap;
 }
 
 interface PartialBlock {
@@ -79,12 +90,16 @@ interface PartialBlock {
 
 export async function anthropicMessagesBody(request: ProviderRequest, hooks: AnthropicMessagesRouteHooks = {}): Promise<JsonObject> {
   assertStructuredOutputRequestSupported(request.model, request.options);
+  const toolNames = hooks.toolNames ?? createToolNameMap(request.tools);
   const preserveThinking = (hooks.preserveThinking ?? resolvePreserveThinking)(request);
   const { maxTokens, ...parameters } = request.model.parameters ?? {};
   const cacheEnabled = anthropicCacheEnabled(request);
   const breakpoints = cacheEnabled ? (request.options?.cache?.breakpoints ?? []) : [];
   const maxBreakpoints = request.model.cache?.maxBreakpoints;
-  const ttl = (request.options?.cacheRetention ?? request.options?.cache?.retention) === "long" && request.model.cache?.longRetention !== false ? "1h" : undefined;
+  const ttl =
+    (request.options?.cacheRetention ?? request.options?.cache?.retention) === "long" && request.model.cache?.longRetention !== false
+      ? "1h"
+      : undefined;
   const hasTools = Boolean(request.tools && request.tools.length > 0);
 
   const plan = resolvePromptCachePlan(request.messages, breakpoints, {
@@ -107,13 +122,15 @@ export async function anthropicMessagesBody(request: ProviderRequest, hooks: Ant
   return clean({
     model: request.model.model,
     messages: await Promise.all(
-      messages.filter((m) => m.role !== "system").map((message) => toMessage(message, request.model, preserveThinking, resolvedMedia)),
+      messages
+        .filter((m) => m.role !== "system")
+        .map((message) => toMessage(message, request.model, preserveThinking, resolvedMedia, toolNames)),
     ),
     system: systemCacheControlField(messages, (m) => text(m, preserveThinking)),
     tools: request.tools?.map((tool, index, array) => {
       const isLast = index === array.length - 1;
       const marker = plan.markTools && isLast ? plan.cacheControl : undefined;
-      return toTool(tool, marker);
+      return toTool(tool, marker, toolNames);
     }),
     stream: true,
     ...parameters,
@@ -130,19 +147,14 @@ export async function* anthropicMessagesEvents(
   body: ReadableStream<Uint8Array>,
   signalOrOptions?: AbortSignal | AnthropicMessagesEventsOptions,
 ): AsyncIterable<ProviderEvent> {
+  const options = signalOrOptions instanceof AbortSignal ? undefined : signalOrOptions;
   const signal =
     signalOrOptions instanceof AbortSignal || (signalOrOptions && "aborted" in signalOrOptions)
       ? (signalOrOptions as AbortSignal)
       : signalOrOptions?.signal;
-  const secrets =
-    signalOrOptions instanceof AbortSignal || !signalOrOptions
-      ? []
-      : signalOrOptions.secrets ?? [];
+  const secrets = signalOrOptions instanceof AbortSignal || !signalOrOptions ? [] : (signalOrOptions.secrets ?? []);
 
-  const customMapUsage =
-    signalOrOptions instanceof AbortSignal || !signalOrOptions
-      ? undefined
-      : signalOrOptions.mapUsage;
+  const customMapUsage = signalOrOptions instanceof AbortSignal || !signalOrOptions ? undefined : signalOrOptions.mapUsage;
 
   const blocks = new Map<number, PartialBlock>();
   let rawUsage: AnthropicUsage | undefined;
@@ -223,7 +235,7 @@ export async function* anthropicMessagesEvents(
         blocks.set(index, {
           type: "tool_use",
           id: event.content_block?.id,
-          name: event.content_block?.name,
+          name: productToolName(event.content_block?.name ?? "", options?.toolNames),
           argumentsText: "",
         });
       } else if (blockType === "thinking") {
@@ -289,7 +301,7 @@ export async function* anthropicMessagesEvents(
   }
   for (const call of blocks.values()) {
     if (call.type === "tool_use") {
-      yield providerToolCall(toolCallFromArgumentsText(call.id!, call.name!, call.argumentsText));
+      yield providerToolCall(toolCallFromArgumentsText(call.id!, productToolName(call.name!, options?.toolNames), call.argumentsText));
     }
   }
   yield providerDone(usage, stopReason === undefined ? undefined : mapProviderStopReason(stopReason));
@@ -300,6 +312,7 @@ async function toMessage(
   model: ModelConfig,
   preserveThinking: boolean,
   resolvedMedia: ReadonlyMap<MediaContentBlock, ResolvedMediaContent>,
+  toolNames?: ToolNameMap,
 ): Promise<JsonObject> {
   const capabilities = model.capabilities ?? {};
   if (message.role === "tool") {
@@ -361,7 +374,7 @@ async function toMessage(
     } else if (part.type === "audio") {
       rejectProviderMediaBlock(part, capabilities, model);
     } else if (part.type === "tool_call") {
-      content.push(withMarker({ type: "tool_use", id: part.id, name: part.name, input: part.arguments }, marker));
+      content.push(withMarker({ type: "tool_use", id: part.id, name: wireToolName(part.name, toolNames), input: part.arguments }, marker));
     } else if (part.type === "tool_result") {
       throw new Error("Anthropic route tool_result blocks must appear in role=tool messages");
     }
@@ -408,9 +421,9 @@ function withMarker(item: JsonObject, marker: JsonObject | undefined): JsonObjec
   return { ...item, cache_control: marker };
 }
 
-function toTool(tool: ToolDefinition, marker?: CacheControlValue): JsonObject {
+function toTool(tool: ToolDefinition, marker?: CacheControlValue, names?: ToolNameMap): JsonObject {
   return clean({
-    name: tool.name,
+    name: wireToolName(tool.name, names),
     description: tool.description,
     input_schema: canonicalizeJsonSchema(tool.parameters ?? { type: "object" }) as JsonObject,
     ...(marker ? { cache_control: marker as unknown as JsonObject } : {}),

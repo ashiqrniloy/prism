@@ -1,5 +1,6 @@
 import type { ContentBlock, JsonObject, Message, ModelCapabilities, StructuredOutputOptions, ToolDefinition, Usage } from "../contracts.js";
 import { canonicalizeJsonSchema } from "./schema.js";
+import { type ToolNameMap, wireToolName } from "./tool-names.js";
 import { normalizeUsage } from "./usage.js";
 
 export function assertOpenAIChatMessage(message: unknown, path: string): asserts message is Message {
@@ -31,11 +32,11 @@ export function applyOpenAIChatStructuredOutput(body: Record<string, unknown>, s
   body.response_format = serializeOpenAIChatStructuredOutput(structuredOutput);
 }
 
-export function serializeOpenAITool(tool: ToolDefinition): JsonObject {
+export function serializeOpenAITool(tool: ToolDefinition, names?: ToolNameMap): JsonObject {
   return {
     type: "function",
     function: {
-      name: tool.name,
+      name: wireToolName(tool.name, names),
       description: tool.description,
       parameters: canonicalizeJsonSchema(tool.parameters ?? { type: "object" }) as JsonObject,
     },

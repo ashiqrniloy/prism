@@ -25,17 +25,16 @@ import {
   toolCallFromArgumentsText,
 } from "../../models/events.js";
 import { type CacheControlValue, resolvePromptCachePlan } from "../cache-helpers.js";
-import { assertStructuredOutputRequestSupported } from "../structured-output.js";
-import { httpStatusError, ProviderTransportError, readSseEvents } from "../transport.js";
 import {
   applyOpenAIChatStructuredOutput,
   assertOpenAIChatMessage,
   mapOpenAIChatUsage,
+  OMITTED_TOOL_RESULT_IMAGE_NOTE,
   serializeOpenAIChatStructuredOutput,
   serializeOpenAITool,
-  OMITTED_TOOL_RESULT_IMAGE_NOTE,
   serializeToolResultText,
 } from "../openai-primitives.js";
+import { assertStructuredOutputRequestSupported } from "../structured-output.js";
 import {
   DEFAULT_OWNED_COMPAT_KEYS,
   preserveThinking,
@@ -48,25 +47,27 @@ import {
   stripOwnedCompat,
   thinkingObject,
 } from "../thinking.js";
+import { createToolNameMap, productToolName, type ToolNameMap, wireToolName } from "../tool-names.js";
+import { httpStatusError, ProviderTransportError, readSseEvents } from "../transport.js";
 
 export {
-  assertOpenAIChatMessage,
-  serializeOpenAIChatStructuredOutput,
   applyOpenAIChatStructuredOutput,
-  serializeOpenAITool,
-  OMITTED_TOOL_RESULT_IMAGE_NOTE,
-  serializeToolResultText,
-  mapOpenAIChatUsage,
+  assertOpenAIChatMessage,
   DEFAULT_OWNED_COMPAT_KEYS,
-  resolvePreserveThinking,
+  mapOpenAIChatUsage,
+  OMITTED_TOOL_RESULT_IMAGE_NOTE,
   preserveThinking,
-  resolveReasoningEffort,
   reasoningEffort,
-  resolveThinkingObject,
-  thinkingObject,
-  resolveReasoningObject,
   reasoningObject,
+  resolvePreserveThinking,
+  resolveReasoningEffort,
+  resolveReasoningObject,
+  resolveThinkingObject,
+  serializeOpenAIChatStructuredOutput,
+  serializeOpenAITool,
+  serializeToolResultText,
   stripOwnedCompat,
+  thinkingObject,
 };
 
 /** Codec options shaping OpenAI Chat Completions body serialization. */
@@ -145,6 +146,9 @@ export interface OpenAIChatCodecOptions {
 
   /** Handle SSE comment lines (e.g. energy/cost telemetry). */
   readonly onComment?: (text: string) => ProviderEvent | undefined;
+
+  /** Per-request product ↔ wire tool-name map. */
+  readonly toolNames?: ToolNameMap;
 }
 
 export interface OpenAIChatEventsOptions {
@@ -158,6 +162,8 @@ export interface OpenAIChatEventsOptions {
   readonly onComment?: (text: string) => ProviderEvent | undefined;
   /** Secrets to redact from stream error messages. */
   readonly secrets?: readonly (string | undefined)[];
+  /** Must be the same map that serialized the request, so calls resolve to product tool names. */
+  readonly toolNames?: ToolNameMap;
 }
 
 /**
@@ -165,6 +171,7 @@ export interface OpenAIChatEventsOptions {
  */
 export function openAIChatBody(request: ProviderRequest, options: OpenAIChatCodecOptions = {}): JsonObject {
   assertStructuredOutputRequestSupported(request.model, request.options);
+  const toolNames = options.toolNames ?? createToolNameMap(request.tools);
 
   const preserve = (options.preserveThinking ?? resolvePreserveThinking)(request);
   const reasoningReplay = options.reasoningReplay ?? "fold";
@@ -210,6 +217,7 @@ export function openAIChatBody(request: ProviderRequest, options: OpenAIChatCode
           preserveThinking: preserve,
           reasoningReplay,
           imageInput,
+          toolNames,
         }),
         index,
       ),
@@ -247,7 +255,7 @@ export function openAIChatBody(request: ProviderRequest, options: OpenAIChatCode
     }
   }
 
-  const tools = request.tools?.map(serializeOpenAITool);
+  const tools = request.tools?.map((tool) => serializeOpenAITool(tool, toolNames));
   if (cachePlan.markTools && options.cacheControlOnTools && tools?.length) {
     tools[tools.length - 1] = { ...tools[tools.length - 1], cache_control: cachePlan.cacheControl as unknown as JsonValue };
   }
@@ -340,6 +348,7 @@ function serializeOpenAIChatMessageWithCodec(
     readonly preserveThinking: boolean;
     readonly reasoningReplay: "reasoning_content" | "fold" | "drop" | "reasoning_details";
     readonly imageInput: "capability-gated" | "always";
+    readonly toolNames?: ToolNameMap;
   },
 ): JsonObject {
   if (message.role === "tool") {
@@ -376,7 +385,7 @@ function serializeOpenAIChatMessageWithCodec(
         tool_calls: toolCalls.map((call) => ({
           id: call.id,
           type: "function",
-          function: { name: call.name, arguments: JSON.stringify(call.arguments) },
+          function: { name: wireToolName(call.name, codecOpts.toolNames), arguments: JSON.stringify(call.arguments) },
         })),
         reasoning_content: reasoningContent,
         reasoning_details: reasoningDetails,
@@ -505,13 +514,13 @@ export async function* openAIChatEvents(
         const index = tool.index ?? 0;
         const current = tools.get(index) ?? { argumentsText: "" };
         current.id = tool.id ?? current.id;
-        current.name = tool.function?.name ?? current.name;
+        current.name = productToolName(tool.function?.name ?? "", options.toolNames) || current.name;
         current.argumentsText += tool.function?.arguments ?? "";
         tools.set(index, current);
         yield providerToolCallDelta({
           index,
           id: tool.id,
-          name: tool.function?.name,
+          name: productToolName(tool.function?.name ?? "", options.toolNames) || undefined,
           argumentsText: tool.function?.arguments,
         });
       }
@@ -549,7 +558,7 @@ export async function* openAIChatEvents(
     });
   }
   for (const call of tools.values()) {
-    yield providerToolCall(toolCallFromArgumentsText(call.id!, call.name!, call.argumentsText));
+    yield providerToolCall(toolCallFromArgumentsText(call.id!, productToolName(call.name!, options.toolNames), call.argumentsText));
   }
   yield providerDone(
     (options.strictCompletion ?? true) || options.doneUsage ? usage : undefined,

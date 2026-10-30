@@ -101,6 +101,20 @@ When sent to an `openai-chat` route, `openAIChatBody` serializes the JSON payloa
 }
 ```
 
+### Tool names on the wire
+
+OpenAI and Anthropic accept only `[a-zA-Z0-9_-]{1,64}` as a function name, while product tools may
+carry dots (`memory.recall`, `context.build`). Each routed request therefore builds one
+`ToolNameMap` (`createToolNameMap(request.tools)`), serializes the tool list and historical
+`tool_call` blocks through `wireToolName`, and decodes the stream back through `productToolName`, so
+the model's call reaches the registry under its product name. The map is a bijection: `memory.recall`
+becomes `memory_recall`, and a tool already named `memory_recall` in the same request keeps that name
+while the dotted one takes `memory_recall_2`. A replayed call for a tool the request no longer
+offers is encoded too, because the fallback goes through `wireToolName` rather than passing the
+product name through unchanged. A caller that overrides `openAIChatBody` /
+`openAIChatEvents` (or the Anthropic and Responses equivalents) directly must pass the same
+`toolNames` to both halves.
+
 And `openAIChatEvents` normalizes incoming SSE frames into provider events:
 ```jsonc
 data: {"choices":[{"delta":{"content":"Hi there"}}]}

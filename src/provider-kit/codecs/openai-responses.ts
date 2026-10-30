@@ -13,6 +13,7 @@ import {
 } from "../../models/events.js";
 import { assertStructuredOutputRequestSupported } from "../structured-output.js";
 import { resolveReasoningEffort, stripOwnedCompat } from "../thinking.js";
+import { createToolNameMap, productToolName, type ToolNameMap, wireToolName } from "../tool-names.js";
 import { isContextOverflowMessage, readSseEvents } from "../transport.js";
 import { normalizeUsage } from "../usage.js";
 
@@ -76,6 +77,8 @@ export interface OpenAIResponsesCodecOptions {
   readonly stripOwnedCompat?: (compat: JsonObject | undefined) => JsonObject | undefined;
   /** Final body transform applied before `omitFields`. */
   readonly transformBody?: (body: JsonObject, request: ProviderRequest) => JsonObject;
+  /** Per-request product ↔ wire tool-name map. */
+  readonly toolNames?: ToolNameMap;
 }
 
 export interface OpenAIResponsesEventsOptions {
@@ -86,6 +89,8 @@ export interface OpenAIResponsesEventsOptions {
   readonly strictCompletion?: boolean;
   readonly mapUsage?: (usage: unknown, chunk?: JsonObject) => Usage | undefined;
   readonly secrets?: readonly (string | undefined)[];
+  /** Must be the same map that serialized the request. */
+  readonly toolNames?: ToolNameMap;
 }
 
 /** What a reasoning `ThinkingContent.data` carries: the wire item plus who produced it. */
@@ -99,6 +104,7 @@ interface ResponsesReasoningData {
  * response, so `previous_response_id` is removed even when a caller sets it.
  */
 export function openAIResponsesBody(request: ProviderRequest, options: OpenAIResponsesCodecOptions = {}): JsonObject {
+  const toolNames = options.toolNames ?? createToolNameMap(request.tools);
   assertStructuredOutputRequestSupported(request.model, request.options);
 
   const store = options.store ?? false;
@@ -111,7 +117,7 @@ export function openAIResponsesBody(request: ProviderRequest, options: OpenAIRes
     input.push({ role: "developer", content: [{ type: "input_text", text: message }] });
   }
   for (const message of conversation) {
-    input.push(...toInputItems(message, request.model, imageInput));
+    input.push(...toInputItems(message, request.model, imageInput, toolNames));
   }
 
   const parameters = { ...(request.model.parameters ?? {}) };
@@ -140,7 +146,7 @@ export function openAIResponsesBody(request: ProviderRequest, options: OpenAIRes
 
   if (instructions) body.instructions = instructions;
 
-  const tools = request.tools?.map(serializeResponsesTool);
+  const tools = request.tools?.map((tool) => serializeResponsesTool(tool, toolNames));
   if (tools && tools.length > 0) body.tools = tools;
 
   const include = store === false ? unique([...(options.include ?? []), "reasoning.encrypted_content"]) : options.include;
@@ -179,14 +185,17 @@ export const buildOpenAIResponsesBody = openAIResponsesBody;
  * Function tools are flat on the Responses wire (`name`/`parameters` at the top level), not wrapped
  * in a `function` object the way Chat Completions requires.
  */
-export function serializeResponsesTool(tool: {
-  readonly name: string;
-  readonly description?: string;
-  readonly parameters?: JsonObject;
-}): JsonObject {
+export function serializeResponsesTool(
+  tool: {
+    readonly name: string;
+    readonly description?: string;
+    readonly parameters?: JsonObject;
+  },
+  names?: ToolNameMap,
+): JsonObject {
   return cleanObject({
     type: "function",
-    name: tool.name,
+    name: wireToolName(tool.name, names),
     description: tool.description,
     parameters: tool.parameters ?? { type: "object" },
   });
@@ -249,7 +258,12 @@ function splitSystemMessages(messages: readonly Message[]): {
   };
 }
 
-function toInputItems(message: Message, model: ModelConfig, imageInput: "capability-gated" | "always"): JsonObject[] {
+function toInputItems(
+  message: Message,
+  model: ModelConfig,
+  imageInput: "capability-gated" | "always",
+  toolNames?: ToolNameMap,
+): JsonObject[] {
   const items: JsonObject[] = [];
 
   if (message.role === "tool") {
@@ -286,7 +300,7 @@ function toInputItems(message: Message, model: ModelConfig, imageInput: "capabil
       items.push({
         type: "function_call",
         call_id: part.id,
-        name: part.name,
+        name: wireToolName(part.name, toolNames),
         arguments: JSON.stringify(part.arguments ?? {}),
       });
     }
@@ -394,7 +408,7 @@ export async function* openAIResponsesEvents(
         tools.set(outputIndex, {
           itemId: typeof item.id === "string" ? item.id : undefined,
           callId: typeof item.call_id === "string" ? item.call_id : undefined,
-          name: typeof item.name === "string" ? item.name : undefined,
+          name: typeof item.name === "string" ? productToolName(item.name, options.toolNames) : undefined,
           argumentsText: "",
         });
       }
@@ -429,7 +443,7 @@ export async function* openAIResponsesEvents(
         tools.set(outputIndex, {
           itemId: current.itemId ?? (typeof item.id === "string" ? item.id : undefined),
           callId: current.callId ?? (typeof item.call_id === "string" ? item.call_id : undefined),
-          name: current.name ?? (typeof item.name === "string" ? item.name : undefined),
+          name: current.name ?? (typeof item.name === "string" ? productToolName(item.name, options.toolNames) : undefined),
           argumentsText: current.argumentsText || (typeof item.arguments === "string" ? item.arguments : current.argumentsText),
         });
       }
@@ -473,14 +487,17 @@ export async function* openAIResponsesEvents(
     }
     for (const call of tools.values()) {
       const id = call.callId ?? call.itemId;
-      if (id && call.name) yield providerToolCall(toolCallFromArgumentsText(id, call.name, call.argumentsText));
+      if (id && call.name)
+        yield providerToolCall(toolCallFromArgumentsText(id, productToolName(call.name, options.toolNames), call.argumentsText));
     }
     yield providerDone(usage, undefined);
     return;
   }
 
   for (const call of tools.values()) {
-    yield providerToolCall(toolCallFromArgumentsText((call.callId ?? call.itemId)!, call.name!, call.argumentsText));
+    yield providerToolCall(
+      toolCallFromArgumentsText((call.callId ?? call.itemId)!, productToolName(call.name!, options.toolNames), call.argumentsText),
+    );
   }
   yield providerDone(usage, mapProviderStopReason(stopReason));
 }
