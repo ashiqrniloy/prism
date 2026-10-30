@@ -161,6 +161,8 @@ export async function verifyTask5Control(dir, { root = ".", attempts = 3 } = {})
 export function task5CampaignFingerprint(proposal) {
   return manifestFingerprint({
     criteriaHash: proposal.criteriaHash,
+    // A checkpoint from another product revision is not a resume: the protocol hash would refuse it.
+    sourceRevision: proposal.product.candidate.revision,
     ceiling: proposal.budgets.campaign.ceiling,
     provider: proposal.models.answers[0].split("/")[0],
     model: proposal.models.answers[0].split("/").slice(1).join("/"),
@@ -212,7 +214,8 @@ export async function preflightTask5(manifest, { root = ".", keyTier } = {}) {
   if (task5CampaignFingerprint(proposal) !== manifest.gate.journal)
     throw new Error("Task5Execute: the campaign fingerprint changed before execution");
   // Working-tree drift could enter the candidate arm, and the control worktree is part of the arms.
-  await assertTask5CandidateClean({ root });
+  const clean = await assertTask5CandidateClean({ root });
+  if (clean.ignored.length) console.log(`preflight: ignoring non-executable dirty paths: ${clean.ignored.join(", ")}`);
   const dir = await prepareTask5Control({ root, proposal });
   await auditTask5Comparison(proposal, { root });
   await assertCacheStabilityPin(proposal, { root });

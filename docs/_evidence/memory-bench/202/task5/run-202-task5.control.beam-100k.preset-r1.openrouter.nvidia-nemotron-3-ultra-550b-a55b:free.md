@@ -1,8 +1,8 @@
 # Memory benchmark: beam-100k / fabric-x-tools
 
-Status: running. Input: 320657; cache read: 8640; ratio: 0.0269.
+Status: running. Input: 361051; cache read: 8640; ratio: 0.0239.
 Attempt: 202-task5.control.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free@1; usage complete: true; resumed results: 0.
-Tool calls: 14 (1.40/q); recall calls: 24; snippet tokens: 50435; recall@k: 1.0000.
+Tool calls: 15 (1.15/q); recall calls: 28; snippet tokens: 62195; recall@k: 0.7778.
 Judge: openrouter/dots-studio/dots-3-note-preview:free. Truncated questions: 0. Metric version: 2.
 Phase: all. Timing: not recorded.
 USD: campaign 0; product measured/cold/warm 0/0/0; evaluation 0.
@@ -15,12 +15,13 @@ recall/precision stay n/a when the dataset does not expose usable fine gold.
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | abstention | 4 | 1.0000 | n/a | n/a | n/a | n/a | 0.0000 |
 | contradiction_resolution | 4 | 0.0000 | n/a | 1.0000 | 0.625 | 0.25 | 0.0000 |
-| event_ordering | 2 | 0.0000 | n/a | 1.0000 | 0.14166666666666666 | 0 | 0.0000 |
+| event_ordering | 4 | 0.0000 | n/a | 0.5000 | 0.07083333333333333 | 0 | 0.0000 |
+| information_extraction | 1 | 1.0000 | n/a | 1.0000 | 1 | 1 | 0.0000 |
 
 Graded rubric score (Plan 202 Task 4.5.1, primary for BEAM rubric abilities; binary accuracy secondary):
 
 | Ability | Questions | Graded mean | Binary accuracy | Judge disagreement rate |
 | --- | ---: | ---: | ---: | ---: |
-| event_ordering | 2 | 0.2405 | 0.0000 | 1.0000 |
+| event_ordering | 4 | 0.2525 | 0.0000 | 0.2500 |
 
 Memory injection token counts are estimates; item text and dataset text are excluded from evidence.

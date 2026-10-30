@@ -241,10 +241,19 @@ export function task5UncommittedPaths(statusText) {
     .filter((path) => !/^plans\/202-Phase-11-Part-O12-[^/]+\.md$/.test(path));
 }
 
+/** Only these dirty paths can change what an arm executes: product, harness and the code roots. */
+export function task5ExecutionPaths(dirty) {
+  const roots = [...TASK5_PRODUCT_PATHS, ...TASK5_HARNESS_PATHS, "src", "packages", "apps", "scripts"];
+  return dirty.filter((path) => roots.some((dir) => underPath(path, dir)));
+}
+
 export async function assertTask5CandidateClean({ root = ".", status } = {}) {
   const text = status ?? (await run("git", ["-C", root, "status", "--porcelain"])).stdout;
   const dirty = task5UncommittedPaths(text);
-  if (dirty.length) throw new Error(`Task5Manifest: the candidate has uncommitted changes: ${dirty.slice(0, 8).join(", ")}`);
+  const blocking = task5ExecutionPaths(dirty);
+  if (blocking.length) throw new Error(`Task5Manifest: the candidate has uncommitted changes: ${blocking.slice(0, 8).join(", ")}`);
+  // A concurrent writer's plans and docs cannot change an arm's bytes, but they are reported, not hidden.
+  return { ignored: dirty };
 }
 
 async function currentRevision(root) {
@@ -904,7 +913,9 @@ export const TASK5_REFREEZE_ALLOWED = [
 
 function flattenLeaves(value, prefix = "", out = {}) {
   if (Array.isArray(value)) {
-    value.forEach((item, index) => flattenLeaves(item, `${prefix}.${index}`, out));
+    value.forEach((item, index) => {
+      flattenLeaves(item, `${prefix}.${index}`, out);
+    });
     return out;
   }
   if (value && typeof value === "object") {

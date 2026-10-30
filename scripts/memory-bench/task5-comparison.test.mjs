@@ -122,6 +122,11 @@ test("task5_refuses_uncommitted_candidate", async () => {
   await assert.rejects(assertTask5CandidateClean({ status: " M packages/memory/fabric/src/tools.ts\n" }), /uncommitted changes/);
   await assert.rejects(assertTask5CandidateClean({ status: "?? src/provider-kit/new.ts\n" }), /uncommitted changes/);
   await assert.doesNotReject(assertTask5CandidateClean({ status: "?? .cache/memory-bench/task5/journal.json\n" }));
+  // Another writer's plans and docs cannot change an arm's bytes: they are reported, not refused.
+  const foreign = await assertTask5CandidateClean({ status: "?? plans/207-new-plan.md\n M docs/provider-kit.md\n M roadmap.md\n" });
+  assert.deepEqual(foreign.ignored, ["plans/207-new-plan.md", "docs/provider-kit.md", "roadmap.md"]);
+  // A dirty README inside a code root is still refused: the root is the unit, not the file type.
+  await assert.rejects(assertTask5CandidateClean({ status: " M packages/memory/fabric/README.md\n" }), /uncommitted changes/);
 });
 
 test("task5_expected_calls_use_measured_rate_not_turn_cap", () => {

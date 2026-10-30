@@ -36,6 +36,23 @@ names, re-frozen and re-gated before any outcome (no product change); (b) an
 owner-approved different free route or relaxed free-only rule. Task 5.4 is not
 complete and Task 5.5 has no paired outcomes to analyse.
 
+## Task 5.4.5 — bounded wire smoke and resume (2026-10-31)
+
+- `campaign.mjs --task5-smoke` runs the approved jobs filtered to one question per `beam-100k`
+  arm, under `journal-smoke.json` and the `smoke-` evidence prefix. Build refuses more than two
+  questions.
+- Smoke result: both arms answered on `nvidia/nemotron-3-ultra-550b-a55b:free` (the route that
+  rejected dotted names on the Task 5.4 attempt), statuses `partial`, 73k tokens, $0.
+  `execution-smoke-verification.json` records the observed tool name (`memory.recall` only) and
+  20 returned notes; no trace carries `memory_recall`. Reports and paired answer caches live in
+  `smoke-*.json` and `.cache/memory-bench/task5/{control,candidate}/answers`.
+- `control-verification.json` records the control worktree suite attempts: a pre-existing
+  cross-file isolation flake in the fabric suite is retried up to three times and every attempt is
+  written down.
+- Gate 9 (`manifestHash 48395537…`, candidate `076677a5…`, control r2 `5355f41e…`) supersedes
+  gate 8; gates 5-8 remain archived under `gates/`. Full campaign
+  `campaign-e3d8ac7d031a` started afterwards and halts/resumes on the free daily quota.
+
 ## Task 5.4.4 — gate 6 replaces gate 5 (2026-10-31)
 
 - Re-frozen after the Task 5.4.3 harness change: `manifestHash dca330de…`, candidate
