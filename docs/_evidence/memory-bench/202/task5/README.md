@@ -36,11 +36,74 @@ names, re-frozen and re-gated before any outcome (no product change); (b) an
 owner-approved different free route or relaxed free-only rule. Task 5.4 is not
 complete and Task 5.5 has no paired outcomes to analyse.
 
+## Task 5.4.4 — gate 6 replaces gate 5 (2026-10-31)
+
+- Re-frozen after the Task 5.4.3 harness change: `manifestHash dca330de…`, candidate
+  `c539e38c…` (product `26bf9013…`), control r2 `2e51437e…` (product `ad25add4…` from
+  `5c2570df…`), harness `9032ef67…`. Journal identity unchanged at `e3d8ac7d…`.
+- Gate 6 (`owner-gate.json`) binds the arms explicitly and records the owner text
+  verbatim. Gate 5 is archived unedited in `gates/` (`owner-gate-5.json`, sha256
+  `08290147…`, manifest `061323d5…`) together with its manifest; gate 6 carries that
+  sha256 and the list of all 45 changed leaves.
+- `TASK5_REFREEZE_ALLOWED` + `assertTask5RefreezeDiff` prove the cohort ids,
+  `criteriaHash`, the evidence protocol, models, judges, budgets, caps and
+  `baselineReuse` are byte-identical to gate 5. The pacer lives at the provider edge in
+  `run.mjs`, so `evidenceProtocol.toolSurfacing` (a fingerprint of `replay.mjs`) did not
+  move.
+- The finished journal `campaign-42aa7a93ee64` (one failed attempt, 7.5M reserved, $0)
+  is archived here as `journal-campaign-42aa7a93ee64.json` and removed from the cache by
+  preflight; an open journal is never archived because it is the resume point.
+
+## Task 5.4.3 — measured call estimate, daily-quota halt, key tier, shared pacer (2026-10-31)
+
+- `expectedPhysicalCalls` 2,289 (range 2,289–2,625) from measured rates — solver 3.2,
+  judge 2.25 per question on `preset-r1 beam-100k` with `labelInjections: "off"`
+  (127 and 90 calls over 40 questions) — instead of the 4,200 turn-cap formula. The
+  16,800 hard cap is unchanged; `budgets.campaign.physicalCallEstimate` cites the source.
+- A daily free-model 429 (`free-models-per-day*`, classified by the diagnostic harness's
+  `rateLimitDisposition`) writes a `quota-daily` attempt, halts the journal with
+  `status: "quota-daily"` and `resumeAfter` (next UTC midnight), skips the 15-minute
+  pause, and does not consume the job's attempts. A rerun resumes the cell from its
+  answer and judge checkpoints, so no completed answer is re-requested.
+- One shared pacer for free routes (20/minute, `PRISM_MEMORY_BENCH_FREE_PACE_PER_MINUTE`)
+  covers the solver, the product's workers and both judges; a value above 20 is refused.
+  Paid routes keep the per-model pacer.
+- Preflight reads `GET /api/v1/key` and records the reduced tier in `free-key.json`;
+  below 1,000 free requests/day it refuses to start. Live read 2026-10-30:
+  `paidTier: true`, `dailyFreeRequests: 1000`, $49.94 remaining.
+- Freeze re-run after the harness change: candidate `bbc4369a…`, control r2 `420d6ab0…`
+  (product `ad25add4…`), `manifestHash` re-frozen (see Task 5.4.4), journal identity `e3d8ac7d…`.
+
+## Task 5.4.2 — arms pinned to commits that differ only in the product paths (2026-10-31)
+
+- Candidate: commit `2a8a0cdd…`, product `26bf9013…`. Nothing is read from the
+  working tree; an uncommitted path (other than `.cache/`, this evidence directory
+  and the plan) is a refusal.
+- Control r2: `e10f6964…`, a deterministic overlay commit (fixed author/committer
+  metadata) = the candidate tree with `TASK5_PRODUCT_PATHS` replaced by the bytes
+  from `TASK5_CONTROL_PRODUCT_SOURCE = 5c2570df…`. `task5ControlRevision` rebuilds
+  it and `auditTask5Comparison` refuses a pin that does not reproduce.
+- Control product `ad25add4…` and the revision-1 fabric-only hash `57aa47d9…` are
+  reproduced from r2 and from the source commit respectively.
+- `git diff --name-only r2 candidate` lists only `packages/memory/{fabric,core}/src`;
+  the classifier refuses `src/`, `scripts/memory-bench/` and provider paths. Commits
+  after the candidate pin may touch only this directory or the plan.
+- New regressions: `task5_control_differs_from_candidate_only_in_product_paths`,
+  `task5_control_product_hash_reproduces_revision1`,
+  `task5_refuses_uncommitted_candidate`.
+- Preflight now: refuses dirty paths, rebuilds r2, checks out `.cache/memory-bench/task5/control-worktree`
+  at r2, requires the worktree harness to equal the frozen harness, and runs
+  `bun test --concurrency=1 packages/memory/fabric packages/memory/core` plus
+  `bun run typecheck` inside the worktree. Serial test execution is deliberate —
+  those suites share temp state across files and flake in parallel (pre-existing).
+- Manifest re-frozen to `061323d5…`; gate re-recorded against the same journal
+  identity `e3d8ac7d…`.
+
 ## Task 5.3 — owner gate 5 recorded (2026-10-30)
 
 [owner-gate.json](owner-gate.json) (readable [summary](owner-gate.md)) records
 the owner approval, verbatim text included, against the frozen proposal. It binds
-`manifestHash 3b870e8c…` and the campaign journal identity
+`manifestHash 061323d5…` and the campaign journal identity
 `e3d8ac7d…` (criteria, ceiling, provider, model and jobs); a changed manifest,
 cohort, criteria or journal is a refusal, not a re-approval. Approved scope: 10
 cells / 5 pairs / 210 development questions, arm `preset-r1`, one answer model
@@ -69,7 +132,7 @@ evidence-protocol hashes are identical across both roles, so only the product is
 the treatment.
 
 The proposal is **not executable**: no provider or model call occurred, and Task
-5.3 binds the owner gate to `manifestHash 3b870e8c…` plus the journal
+5.3 binds the owner gate to `manifestHash 061323d5…` plus the journal
 identity (recorded above). The manifest was re-frozen after the gate machinery
 was added to the harness, so only the gate-bound hash is current.
 Historical revision-1 controls reused: **0**. Answer model

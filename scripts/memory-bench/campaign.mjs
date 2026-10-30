@@ -101,7 +101,15 @@ import {
 import { robustnessCriteriaHash } from "./robustness.mjs";
 import subsets from "./subsets.json" with { type: "json" };
 import { TASK5_EVIDENCE, TASK5_JOURNAL, writeTask5ComparisonManifest } from "./task5-comparison.mjs";
-import { buildTask5CampaignManifest, postflightTask5, preflightTask5, TASK5_LOGS, TASK5_SUMMARY } from "./task5-execute.mjs";
+import {
+  buildTask5CampaignManifest,
+  postflightTask5,
+  preflightTask5,
+  TASK5_LOGS,
+  TASK5_SMOKE_JOURNAL,
+  TASK5_SMOKE_SUMMARY,
+  TASK5_SUMMARY,
+} from "./task5-execute.mjs";
 import { variantProvenance } from "./variants.mjs";
 
 const evidence = "docs/_evidence/memory-bench/task6";
@@ -317,21 +325,23 @@ function runSpec(mode) {
       build: async () => assertAcceptanceManifest(buildAcceptanceManifest()),
       write: () => writeAcceptanceManifest(),
     };
-  if (mode === "task5")
+  if (mode === "task5" || mode === "task5-smoke") {
+    const smoke = mode === "task5-smoke";
     return {
       evidence: TASK5_EVIDENCE,
       logs: TASK5_LOGS,
-      outputPrefix: "run",
-      summaryPath: TASK5_SUMMARY,
-      journalPath: TASK5_JOURNAL,
-      summaryKind: "202-task5-execution-run",
+      outputPrefix: smoke ? "smoke" : "run",
+      summaryPath: smoke ? TASK5_SMOKE_SUMMARY : TASK5_SUMMARY,
+      journalPath: smoke ? TASK5_SMOKE_JOURNAL : TASK5_JOURNAL,
+      summaryKind: smoke ? "202-task5-smoke-run" : "202-task5-execution-run",
       timeout: "518400s",
       maxAttempts: 2,
-      build: () => buildTask5CampaignManifest(),
+      build: () => buildTask5CampaignManifest({ smoke }),
       write: async () => {},
       preflight: (manifest) => preflightTask5(manifest),
       postflight: (manifest, journal) => postflightTask5(manifest, journal),
     };
+  }
   return {
     evidence,
     logs,
@@ -827,6 +837,8 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
       // read arm that names it pays for the answers once (plan 188.9 Task 9).
       if (writeOnly) argv.push("--phase", "write");
       if (job.freeOnly) argv.push("--free-only");
+      // A bounded smoke is a question filter on the approved job, not a different job.
+      if (job.maxQuestions) argv.push("--max-questions", String(job.maxQuestions));
       if (job.boundedWire) argv.push("--bounded-wire");
       if (job.freeProductOnly) argv.push("--free-product-only");
       if (job.maxOutputTokens) argv.push("--max-output-tokens", String(job.maxOutputTokens));
@@ -979,6 +991,7 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
         pushResult({
           id: job.id,
           attemptId: attempt.attemptId,
+          answersDir: job.answersDir,
           status: dailyQuota ? "quota-daily" : quotaWindow ? "quota-pause" : permanent ? "unsupported" : report.status,
           cause: dailyQuota ? "quota-daily" : quotaWindow ? "quota-window" : (permanent ?? report.failure?.message ?? null),
           usageComplete: report.usageComplete !== false,
@@ -1068,21 +1081,23 @@ if (import.meta.main) {
     ? "baseline202"
     : process.argv.includes("--task5")
       ? "task5"
-      : process.argv.includes("--acceptance-188.10-screen-a")
-        ? "screenA18810"
-        : process.argv.includes("--acceptance-188.10")
-          ? "acceptance18810"
-          : process.argv.includes("--acceptance-188.9-probe")
-            ? "probe1889"
-            : process.argv.includes("--acceptance-188.9-screen")
-              ? "screen1889"
-              : process.argv.includes("--acceptance-188.9")
-                ? "acceptance1889"
-                : process.argv.includes("--acceptance-188.8")
-                  ? "acceptance1888"
-                  : process.argv.includes("--acceptance")
-                    ? "acceptance"
-                    : "task6";
+      : process.argv.includes("--task5-smoke")
+        ? "task5-smoke"
+        : process.argv.includes("--acceptance-188.10-screen-a")
+          ? "screenA18810"
+          : process.argv.includes("--acceptance-188.10")
+            ? "acceptance18810"
+            : process.argv.includes("--acceptance-188.9-probe")
+              ? "probe1889"
+              : process.argv.includes("--acceptance-188.9-screen")
+                ? "screen1889"
+                : process.argv.includes("--acceptance-188.9")
+                  ? "acceptance1889"
+                  : process.argv.includes("--acceptance-188.8")
+                    ? "acceptance1888"
+                    : process.argv.includes("--acceptance")
+                      ? "acceptance"
+                      : "task6";
   if (process.argv.includes("--manifest") && process.argv.includes("--plan")) {
     const plan = process.argv[process.argv.indexOf("--plan") + 1];
     if (plan !== "202-baseline") throw new Error(`CampaignPlan: unsupported plan ${plan}`);

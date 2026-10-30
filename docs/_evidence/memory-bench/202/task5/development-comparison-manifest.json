@@ -4,7 +4,7 @@
   "plan": 202,
   "task": 5,
   "subtask": 5.2,
-  "generatedAt": "2026-10-30T17:47:15.032Z",
+  "generatedAt": "2026-10-30T20:00:31.558Z",
   "status": "proposed-awaiting-owner-gate",
   "executable": false,
   "ownerGate": {
@@ -25,17 +25,18 @@
     "harnessPaths": [
       "scripts/memory-bench"
     ],
-    "harnessHash": "adec56dc96d4c6793b0c21de97087405c7bb4efb4651e69d61166b9829cafb06",
+    "harnessHash": "9032ef67142c255cd2c1d273cc1f38124614fe7154250d02567945783f74aabc",
     "control": {
-      "revision": "5c2570df52a084b43120ee4e77921746a029480e",
+      "revision": "2e51437e964614f6bea1655b8ec26d80502839b3",
+      "sourceRevision": "5c2570df52a084b43120ee4e77921746a029480e",
       "productHash": "ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0",
       "historicalFabricOnlyHash": "57aa47d94eb3cad629e232372f220296131583ea7ac06189d6f589b39c825799",
       "worktree": ".cache/memory-bench/task5/control-worktree"
     },
     "candidate": {
-      "revision": "5c2570df52a084b43120ee4e77921746a029480e",
+      "revision": "c539e38cdeb070018d1efffc4a0147bb35fd15ff",
       "productHash": "26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20",
-      "dirty": true
+      "dirty": false
     }
   },
   "cohort": {
@@ -291,10 +292,10 @@
         "sha256": "c0519be25907005ba873c927c50877471d550873039d96c041554d0075a78ace"
       },
       "productHash": "ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0",
-      "productRevision": "5c2570df52a084b43120ee4e77921746a029480e",
+      "productRevision": "2e51437e964614f6bea1655b8ec26d80502839b3",
       "cwd": ".cache/memory-bench/task5/control-worktree",
-      "worktreeRevision": "5c2570df52a084b43120ee4e77921746a029480e",
-      "harnessHash": "adec56dc96d4c6793b0c21de97087405c7bb4efb4651e69d61166b9829cafb06",
+      "worktreeRevision": "2e51437e964614f6bea1655b8ec26d80502839b3",
+      "harnessHash": "9032ef67142c255cd2c1d273cc1f38124614fe7154250d02567945783f74aabc",
       "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
       "criteriaHash": "2ae02b79651b10990440df296dda34141a5eac86f366cc7e2213b714f57e4d1c",
       "evidenceProtocolHash": "4f9e62347045a4056fdfe56f3fe1cbb8c80ec8d988f9d1a1cac21fb83fb159b9",
@@ -392,8 +393,8 @@
         "sha256": "c0519be25907005ba873c927c50877471d550873039d96c041554d0075a78ace"
       },
       "productHash": "26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20",
-      "productRevision": "5c2570df52a084b43120ee4e77921746a029480e",
-      "harnessHash": "adec56dc96d4c6793b0c21de97087405c7bb4efb4651e69d61166b9829cafb06",
+      "productRevision": "c539e38cdeb070018d1efffc4a0147bb35fd15ff",
+      "harnessHash": "9032ef67142c255cd2c1d273cc1f38124614fe7154250d02567945783f74aabc",
       "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
       "criteriaHash": "2ae02b79651b10990440df296dda34141a5eac86f366cc7e2213b714f57e4d1c",
       "evidenceProtocolHash": "4f9e62347045a4056fdfe56f3fe1cbb8c80ec8d988f9d1a1cac21fb83fb159b9",
@@ -511,10 +512,10 @@
         "sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4"
       },
       "productHash": "ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0",
-      "productRevision": "5c2570df52a084b43120ee4e77921746a029480e",
+      "productRevision": "2e51437e964614f6bea1655b8ec26d80502839b3",
       "cwd": ".cache/memory-bench/task5/control-worktree",
-      "worktreeRevision": "5c2570df52a084b43120ee4e77921746a029480e",
-      "harnessHash": "adec56dc96d4c6793b0c21de97087405c7bb4efb4651e69d61166b9829cafb06",
+      "worktreeRevision": "2e51437e964614f6bea1655b8ec26d80502839b3",
+      "harnessHash": "9032ef67142c255cd2c1d273cc1f38124614fe7154250d02567945783f74aabc",
       "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
       "criteriaHash": "2ae02b79651b10990440df296dda34141a5eac86f366cc7e2213b714f57e4d1c",
       "evidenceProtocolHash": "4f9e62347045a4056fdfe56f3fe1cbb8c80ec8d988f9d1a1cac21fb83fb159b9",
@@ -632,8 +633,8 @@
         "sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4"
       },
       "productHash": "26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20",
-      "productRevision": "5c2570df52a084b43120ee4e77921746a029480e",
-      "harnessHash": "adec56dc96d4c6793b0c21de97087405c7bb4efb4651e69d61166b9829cafb06",
+      "productRevision": "c539e38cdeb070018d1efffc4a0147bb35fd15ff",
+      "harnessHash": "9032ef67142c255cd2c1d273cc1f38124614fe7154250d02567945783f74aabc",
       "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
       "criteriaHash": "2ae02b79651b10990440df296dda34141a5eac86f366cc7e2213b714f57e4d1c",
       "evidenceProtocolHash": "4f9e62347045a4056fdfe56f3fe1cbb8c80ec8d988f9d1a1cac21fb83fb159b9",
@@ -711,10 +712,10 @@
         "sha256": "24d5c3f09ce0ce15625cb9f8a98f44f0d864ca6c94d7b4ad04eb697ca3a5ff45"
       },
       "productHash": "ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0",
-      "productRevision": "5c2570df52a084b43120ee4e77921746a029480e",
+      "productRevision": "2e51437e964614f6bea1655b8ec26d80502839b3",
       "cwd": ".cache/memory-bench/task5/control-worktree",
-      "worktreeRevision": "5c2570df52a084b43120ee4e77921746a029480e",
-      "harnessHash": "adec56dc96d4c6793b0c21de97087405c7bb4efb4651e69d61166b9829cafb06",
+      "worktreeRevision": "2e51437e964614f6bea1655b8ec26d80502839b3",
+      "harnessHash": "9032ef67142c255cd2c1d273cc1f38124614fe7154250d02567945783f74aabc",
       "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
       "criteriaHash": "2ae02b79651b10990440df296dda34141a5eac86f366cc7e2213b714f57e4d1c",
       "evidenceProtocolHash": "4f9e62347045a4056fdfe56f3fe1cbb8c80ec8d988f9d1a1cac21fb83fb159b9",
@@ -792,8 +793,8 @@
         "sha256": "24d5c3f09ce0ce15625cb9f8a98f44f0d864ca6c94d7b4ad04eb697ca3a5ff45"
       },
       "productHash": "26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20",
-      "productRevision": "5c2570df52a084b43120ee4e77921746a029480e",
-      "harnessHash": "adec56dc96d4c6793b0c21de97087405c7bb4efb4651e69d61166b9829cafb06",
+      "productRevision": "c539e38cdeb070018d1efffc4a0147bb35fd15ff",
+      "harnessHash": "9032ef67142c255cd2c1d273cc1f38124614fe7154250d02567945783f74aabc",
       "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
       "criteriaHash": "2ae02b79651b10990440df296dda34141a5eac86f366cc7e2213b714f57e4d1c",
       "evidenceProtocolHash": "4f9e62347045a4056fdfe56f3fe1cbb8c80ec8d988f9d1a1cac21fb83fb159b9",
@@ -901,10 +902,10 @@
         "sha256": "9d79e5524794a2e6900a3aa9cb7d9152c5a3e8319c9a87c25494ba1eacee495f"
       },
       "productHash": "ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0",
-      "productRevision": "5c2570df52a084b43120ee4e77921746a029480e",
+      "productRevision": "2e51437e964614f6bea1655b8ec26d80502839b3",
       "cwd": ".cache/memory-bench/task5/control-worktree",
-      "worktreeRevision": "5c2570df52a084b43120ee4e77921746a029480e",
-      "harnessHash": "adec56dc96d4c6793b0c21de97087405c7bb4efb4651e69d61166b9829cafb06",
+      "worktreeRevision": "2e51437e964614f6bea1655b8ec26d80502839b3",
+      "harnessHash": "9032ef67142c255cd2c1d273cc1f38124614fe7154250d02567945783f74aabc",
       "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
       "criteriaHash": "2ae02b79651b10990440df296dda34141a5eac86f366cc7e2213b714f57e4d1c",
       "evidenceProtocolHash": "4f9e62347045a4056fdfe56f3fe1cbb8c80ec8d988f9d1a1cac21fb83fb159b9",
@@ -1012,8 +1013,8 @@
         "sha256": "9d79e5524794a2e6900a3aa9cb7d9152c5a3e8319c9a87c25494ba1eacee495f"
       },
       "productHash": "26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20",
-      "productRevision": "5c2570df52a084b43120ee4e77921746a029480e",
-      "harnessHash": "adec56dc96d4c6793b0c21de97087405c7bb4efb4651e69d61166b9829cafb06",
+      "productRevision": "c539e38cdeb070018d1efffc4a0147bb35fd15ff",
+      "harnessHash": "9032ef67142c255cd2c1d273cc1f38124614fe7154250d02567945783f74aabc",
       "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
       "criteriaHash": "2ae02b79651b10990440df296dda34141a5eac86f366cc7e2213b714f57e4d1c",
       "evidenceProtocolHash": "4f9e62347045a4056fdfe56f3fe1cbb8c80ec8d988f9d1a1cac21fb83fb159b9",
@@ -1111,10 +1112,10 @@
         "sha256": "41b5acbbb55a586b1305514ef9d9fb03365d9b3331b598a1c2dd7603d93ef533"
       },
       "productHash": "ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0",
-      "productRevision": "5c2570df52a084b43120ee4e77921746a029480e",
+      "productRevision": "2e51437e964614f6bea1655b8ec26d80502839b3",
       "cwd": ".cache/memory-bench/task5/control-worktree",
-      "worktreeRevision": "5c2570df52a084b43120ee4e77921746a029480e",
-      "harnessHash": "adec56dc96d4c6793b0c21de97087405c7bb4efb4651e69d61166b9829cafb06",
+      "worktreeRevision": "2e51437e964614f6bea1655b8ec26d80502839b3",
+      "harnessHash": "9032ef67142c255cd2c1d273cc1f38124614fe7154250d02567945783f74aabc",
       "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
       "criteriaHash": "2ae02b79651b10990440df296dda34141a5eac86f366cc7e2213b714f57e4d1c",
       "evidenceProtocolHash": "4f9e62347045a4056fdfe56f3fe1cbb8c80ec8d988f9d1a1cac21fb83fb159b9",
@@ -1212,8 +1213,8 @@
         "sha256": "41b5acbbb55a586b1305514ef9d9fb03365d9b3331b598a1c2dd7603d93ef533"
       },
       "productHash": "26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20",
-      "productRevision": "5c2570df52a084b43120ee4e77921746a029480e",
-      "harnessHash": "adec56dc96d4c6793b0c21de97087405c7bb4efb4651e69d61166b9829cafb06",
+      "productRevision": "c539e38cdeb070018d1efffc4a0147bb35fd15ff",
+      "harnessHash": "9032ef67142c255cd2c1d273cc1f38124614fe7154250d02567945783f74aabc",
       "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
       "criteriaHash": "2ae02b79651b10990440df296dda34141a5eac86f366cc7e2213b714f57e4d1c",
       "evidenceProtocolHash": "4f9e62347045a4056fdfe56f3fe1cbb8c80ec8d988f9d1a1cac21fb83fb159b9",
@@ -1319,7 +1320,29 @@
       }
     },
     "campaign": {
-      "expectedPhysicalCalls": 4200,
+      "expectedPhysicalCalls": 2289,
+      "expectedPhysicalCallsRange": {
+        "low": 2289,
+        "high": 2625
+      },
+      "physicalCallEstimate": {
+        "questionRuns": 420,
+        "source": "docs/_evidence/memory-bench/202/baseline/report-202-baseline.beam-100k.preset-r1.openrouter.nvidia-nemotron-3.5-lightning:free.json (timing.roles: solver 127, judge 90, 40 questions, labelInjections off)",
+        "solver": 3.2,
+        "solverHigh": 4,
+        "judge": 2.25,
+        "solverPerQuestionSource": {
+          "calls": 127,
+          "questions": 40
+        },
+        "judgePerQuestionSource": {
+          "calls": 90,
+          "questions": 40
+        },
+        "labelInjections": "off",
+        "injectionCalls": 0,
+        "note": "measured on the frozen preset-r1 baseline; labelInjections off, so no injection-label calls"
+      },
       "maxPhysicalCalls": 16800,
       "physicalCallRule": "stop before exceeding the cap; an incomplete run is reported incomplete, never silently completed",
       "reservedInputTokens": 69000000,
@@ -1532,5 +1555,5 @@
     ],
     "heldoutBUse": "one remediation round after a Task 18 miss, then end of plan"
   },
-  "manifestHash": "3b870e8c6d5540ab1b856fcad1f58a36f5dc4d131ad4534b78004b6365c91361"
+  "manifestHash": "dca330de50578fc4edabfab30a9c86ce41ca55cc91b054342f77c3a61990874f"
 }

@@ -32,6 +32,8 @@ import {
 import {
   archiveFinishedTask5Journal,
   assertTask5FreeTier,
+  assertTask5SmokeReports,
+  assertTask5TraceProductNames,
   freeTierFromKeyResponse,
   readOpenRouterKeyTier,
   task5CampaignFingerprint,
@@ -329,4 +331,51 @@ test("task5_finished_journal_is_archived_not_resumed", async () => {
   await write(join(root, journalPath), JSON.stringify({ ...journal, campaignId: "campaign-new", status: "quota-daily", attempts: [] }));
   assert.equal(await archiveFinishedTask5Journal({ root }), null);
   assert.equal(existsSync(join(root, journalPath)), true);
+});
+
+test("task5_traces_record_product_tool_names_not_wire_names", () => {
+  const report = (names) => ({
+    trace: {
+      requests: [
+        {
+          messages: [
+            { content: names.map((name) => ({ type: "tool_use", name, input: {} })) },
+            {
+              content: names.map((name) => ({
+                type: "tool_result",
+                name,
+                result: name === "memory.recall" ? { hits: [{ id: "r1" }, { id: "r2" }] } : { notes: [{ id: "r3" }] },
+              })),
+            },
+          ],
+        },
+      ],
+    },
+  });
+  assert.deepEqual(assertTask5TraceProductNames(report(["memory.recall", "memory.read"])), ["memory.read", "memory.recall"]);
+  // A wire name would make surfacing read zero with no error, so it must fail, not pass quietly.
+  assert.throws(() => assertTask5TraceProductNames(report(["memory_recall", "memory.read"])), /wire tool names memory_recall/);
+  assert.throws(() => assertTask5TraceProductNames(report(["memory.recall", "memory_read"])), /wire tool names memory_read/);
+  assert.throws(() => assertTask5TraceProductNames(report(["memory.recall", "memory.forget"])), /unexpected tool names/);
+  const good = assertTask5SmokeReports([report(["memory.recall", "memory.read"]), report(["memory.recall", "memory.read"])]);
+  assert.deepEqual(good, { toolNames: ["memory.read", "memory.recall"], hits: 6, reports: 2 });
+  // Real hits are the point: a smoke that returns nothing cannot prove the surfacing count.
+  const empty = {
+    trace: {
+      requests: [
+        {
+          messages: [
+            { content: [{ type: "tool_use", name: "memory.recall", input: {} }] },
+            { content: [{ type: "tool_result", name: "memory.recall", result: { hits: [] } }] },
+            { content: [{ type: "tool_use", name: "memory.read", input: {} }] },
+            { content: [{ type: "tool_result", name: "memory.read", result: { notes: [] } }] },
+          ],
+        },
+      ],
+    },
+  };
+  assert.throws(() => assertTask5SmokeReports([empty]), /no notes were returned/);
+  assert.throws(() => assertTask5SmokeReports([]), /no report/);
+  // Recall is the call the route refused before Task 5.4.1: a smoke without it proves nothing.
+  assert.throws(() => assertTask5SmokeReports([report(["memory.read"])]), /no memory.recall call appears/);
 });

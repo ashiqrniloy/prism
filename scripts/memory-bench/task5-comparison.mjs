@@ -1126,7 +1126,7 @@ export async function supersedesRecord({ root, manifestPath, manifest }) {
   };
 }
 
-export async function writeTask5OwnerGate({ root = ".", text, approvedAt, path = TASK5_GATE, supersedesPath } = {}) {
+export async function writeTask5OwnerGate({ root = ".", text, approvedAt, path = TASK5_GATE, supersedesPath, subtask = "5.4.5" } = {}) {
   const manifest = JSON.parse(await readFile(join(root, TASK5_MANIFEST), "utf8"));
   // Gate the frozen source pins; a prepared control worktree is audited (and refreshed) in preflight.
   await auditTask5Comparison(manifest, { root, worktree: null });
@@ -1134,7 +1134,7 @@ export async function writeTask5OwnerGate({ root = ".", text, approvedAt, path =
   const gate = task5OwnerGate(manifest, {
     text,
     ...(approvedAt ? { approvedAt } : {}),
-    ...(supersedes ? { gate: (supersedes.gate ?? 5) + 1, subtask: "5.4.4", supersedes } : {}),
+    ...(supersedes ? { gate: (supersedes.gate ?? 5) + 1, subtask, supersedes } : {}),
   });
   await mkdir(join(root, TASK5_EVIDENCE), { recursive: true });
   await writeFile(join(root, path), `${JSON.stringify(gate, null, 2)}\n`);
@@ -1153,6 +1153,7 @@ if (import.meta.main) {
       text: option("--text"),
       approvedAt: option("--approved-at"),
       ...(option("--supersedes") ? { supersedesPath: option("--supersedes") } : {}),
+      ...(option("--subtask") ? { subtask: option("--subtask") } : {}),
     });
     console.log(
       JSON.stringify({

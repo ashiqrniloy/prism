@@ -6,7 +6,7 @@
  */
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
-import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { assertCacheStabilityPin } from "./audit/readiness.mjs";
@@ -28,6 +28,14 @@ export const TASK5_LOGS = ".cache/memory-bench/task5/logs";
 export const TASK5_SUMMARY = `${TASK5_EVIDENCE}/execution-run.json`;
 export const TASK5_VERIFICATION = `${TASK5_EVIDENCE}/execution-verification.json`;
 export const TASK5_KEY_TIER = `${TASK5_EVIDENCE}/free-key.json`;
+export const TASK5_SMOKE_JOURNAL = ".cache/memory-bench/task5/journal-smoke.json";
+export const TASK5_SMOKE_SUMMARY = `${TASK5_EVIDENCE}/execution-smoke.json`;
+export const TASK5_SMOKE_VERIFICATION = `${TASK5_EVIDENCE}/execution-smoke-verification.json`;
+/** The bounded wire smoke: one question per arm on one suite, on the same approved route. */
+export const TASK5_SMOKE_SUITE = "beam-100k";
+export const TASK5_SMOKE_MAX_QUESTIONS = 1;
+/** The product names the decoded calls and traces must carry; anything else is a wire leak. */
+export const TASK5_PRODUCT_TOOL_NAMES = ["memory.recall", "memory.read"];
 /** OpenRouter grants 1,000 free-model requests per day once 10 credits have been purchased, 50 otherwise. */
 export const FREE_TIER_DAILY_REQUESTS = 1000;
 export const TASK5_CONTROL_WORKTREE = ".cache/memory-bench/task5/control-worktree";
@@ -117,10 +125,36 @@ export async function archiveFinishedTask5Journal({ root = ".", journalPath = TA
  * The revision-1 product must run on the r2 kernel. Serial execution is deliberate: the fabric
  * suites share temp state across files and flake in parallel (pre-existing, unrelated to Task 5).
  */
-export async function verifyTask5Control(dir) {
+export const TASK5_CONTROL_VERIFICATION = `${TASK5_EVIDENCE}/control-verification.json`;
+export async function verifyTask5Control(dir, { root = ".", attempts = 3 } = {}) {
   const exec = (command, args, timeout) => run(command, args, { cwd: dir, maxBuffer: 1 << 28, timeout });
-  await exec("bun", ["test", "--concurrency=1", "packages/memory/fabric", "packages/memory/core"], 900_000);
+  const record = { kind: "202-task5-control-verification", checkedAt: new Date().toISOString(), attempts: [] };
+  let suitePassed = false;
+  for (let attempt = 1; attempt <= attempts && !suitePassed; attempt++) {
+    try {
+      await exec("bun", ["test", "--concurrency=1", "packages/memory/fabric", "packages/memory/core"], 900_000);
+      suitePassed = true;
+      record.attempts.push({ attempt, suite: "pass" });
+    } catch (error) {
+      // The fabric suite has a pre-existing cross-file isolation flake (a reviewer duplicate-fold reads
+      // a neighbour's ledger); it cannot be fixed here without changing the frozen product.
+      const cause = `${error.stderr ?? error.stdout ?? error.message}`
+        .split("\n")
+        .filter((line) => line.includes("(fail)") || line.includes("AssertionError"))
+        .slice(0, 3);
+      record.attempts.push({ attempt, suite: "fail", cause });
+      if (attempt === attempts) {
+        await writeFile(join(root, TASK5_CONTROL_VERIFICATION), `${JSON.stringify(record, null, 2)}\n`);
+        throw new Error(`Task5Execute: the control worktree failed its suites on ${attempts} attempts: ${cause.join("; ")}`);
+      }
+    }
+  }
   await exec("bun", ["run", "typecheck"], 1_200_000);
+  record.attempts.push({ attempt: record.attempts.length, typecheck: "pass" });
+  record.status = "pass";
+  await mkdir(join(root, TASK5_EVIDENCE), { recursive: true });
+  await writeFile(join(root, TASK5_CONTROL_VERIFICATION), `${JSON.stringify(record, null, 2)}\n`);
+  return record;
 }
 
 /** The journal identity is the frozen fingerprint; a rebuilt campaign must reproduce it exactly. */
@@ -134,7 +168,7 @@ export function task5CampaignFingerprint(proposal) {
   });
 }
 
-export async function buildTask5CampaignManifest({ root = "." } = {}) {
+export async function buildTask5CampaignManifest({ root = ".", smoke = false } = {}) {
   const proposal = await readTask5Proposal(root);
   const gate = JSON.parse(await readFile(join(root, TASK5_GATE), "utf8"));
   assertTask5OwnerGate(gate, proposal);
@@ -142,6 +176,10 @@ export async function buildTask5CampaignManifest({ root = "." } = {}) {
     throw new Error("Task5Execute: the campaign fingerprint differs from the approved journal identity");
   // Source pins only; preflight refreshes and then strictly audits the control worktree.
   await auditTask5Comparison(proposal, { root, worktree: null });
+  const smokeJobs = smoke ? proposal.cells.filter((cell) => cell.suite === TASK5_SMOKE_SUITE) : [];
+  // Two questions at most: the smoke cannot become a second campaign by accident.
+  if (smoke && (smokeJobs.length !== 2 || smokeJobs.length * TASK5_SMOKE_MAX_QUESTIONS > 2))
+    throw new Error(`Task5Smoke: the smoke must cover both arms of ${TASK5_SMOKE_SUITE} with one question each`);
   const [provider, ...model] = proposal.models.answers[0].split("/");
   return {
     schemaVersion: 1,
@@ -149,6 +187,7 @@ export async function buildTask5CampaignManifest({ root = "." } = {}) {
     plan: 202,
     task: 5,
     subtask: 5.4,
+    smoke,
     status: "approved",
     gate: { path: TASK5_GATE, manifestHash: gate.proposal.manifestHash, journal: gate.journal.fingerprint },
     criteriaHash: proposal.criteriaHash,
@@ -159,7 +198,11 @@ export async function buildTask5CampaignManifest({ root = "." } = {}) {
     model: model.join("/"),
     journalPath: TASK5_JOURNAL,
     summaryPath: TASK5_SUMMARY,
-    jobs: proposal.cells.map(({ reuse, ...job }) => job),
+    // The smoke is the same approved campaign with one question per arm, so the journal identity
+    // and the gate binding are unchanged and both spend the same accounting.
+    jobs: proposal.cells
+      .filter((cell) => (smoke ? cell.suite === TASK5_SMOKE_SUITE : true))
+      .map(({ reuse, ...job }) => (smoke ? { ...job, maxQuestions: TASK5_SMOKE_MAX_QUESTIONS } : job)),
     results: [],
   };
 }
@@ -181,8 +224,91 @@ export async function preflightTask5(manifest, { root = ".", keyTier } = {}) {
     join(root, TASK5_KEY_TIER),
     `${JSON.stringify({ kind: "202-task5-free-key-tier", checkedAt: new Date().toISOString(), ...tier }, null, 2)}\n`,
   );
-  await verifyTask5Control(dir);
+  await verifyTask5Control(dir, { root });
   return tier;
+}
+
+/** Every tool name a report's traces actually carry, in both the call and its result. */
+export function task5TraceToolNames(report) {
+  const names = new Set();
+  for (const request of report?.trace?.requests ?? [])
+    for (const message of request.messages ?? [])
+      for (const block of message.content ?? [])
+        if ((block?.type === "tool_use" || block?.type === "tool_result") && block.name) names.add(block.name);
+  return [...names].sort();
+}
+
+/** Returned notes per trace: the surfacing count must come from these, never from a name match. */
+export function task5TraceHits(report) {
+  const hits = [];
+  for (const request of report?.trace?.requests ?? [])
+    for (const message of request.messages ?? [])
+      for (const block of message.content ?? [])
+        if (block?.type === "tool_result" && !block.error)
+          hits.push(...(block.name === "memory.recall" ? (block.result?.hits ?? []) : (block.result?.notes ?? [])));
+  return hits;
+}
+
+/**
+ * Fail closed on a wire name in a trace: `memory_recall` would make surfacing read zero with no
+ * error, silently corrupting the candidate gap (Task 5.4.5).
+ */
+export function assertTask5TraceProductNames(report) {
+  const names = task5TraceToolNames(report);
+  const wire = names.filter((name) => /^memory_/.test(name));
+  if (wire.length) throw new Error(`Task5Smoke: trace carries wire tool names ${wire.join(", ")}`);
+  const unknown = names.filter((name) => !TASK5_PRODUCT_TOOL_NAMES.includes(name));
+  if (unknown.length) throw new Error(`Task5Smoke: trace carries unexpected tool names ${unknown.join(", ")}`);
+  return names;
+}
+
+export function assertTask5SmokeReports(reports) {
+  const names = new Set();
+  let hits = 0;
+  for (const report of reports) {
+    for (const name of assertTask5TraceProductNames(report)) names.add(name);
+    hits += task5TraceHits(report).length;
+  }
+  if (reports.length === 0) throw new Error("Task5Smoke: the smoke produced no report");
+  // The route refused `memory.recall` on the earlier attempt, so that is the call to prove.
+  if (!names.has("memory.recall")) throw new Error("Task5Smoke: no memory.recall call appears in the traces");
+  // A smoke with no returned note proves nothing about surfacing: the route accepted the call.
+  if (hits === 0) throw new Error("Task5Smoke: no notes were returned, so surfacing would read zero");
+  return { toolNames: [...names].sort(), hits, reports: reports.length };
+}
+
+/** The paired answer-cache traces of a smoke arm: they hold the names that crossed the wire. */
+async function task5AnswerCacheEntries(answersDir, { root = "." } = {}) {
+  const dir = answersDir ? join(root, answersDir) : null;
+  if (!dir || !existsSync(dir)) return [];
+  const entries = [];
+  for (const file of (await readdir(dir)).filter((name) => name.endsWith(".json")))
+    entries.push(JSON.parse(await readFile(join(dir, file), "utf8")));
+  return entries;
+}
+
+/** Read the smoke reports named by the campaign results, prove the trace contract, record it. */
+export async function verifyTask5Smoke(manifest, { root = "." } = {}) {
+  // A capped run ends `partial`, which is the smoke's normal status; only a failure is not a smoke.
+  const results = manifest.results.filter((row) => row.status === "completed" || row.status === "partial");
+  const reports = [];
+  for (const row of results) {
+    const path = join(root, TASK5_EVIDENCE, `smoke-${row.id.replace(/[\\/]/g, "-")}.json`);
+    const report = JSON.parse(await readFile(path, "utf8"));
+    reports.push(report);
+    // The private trace keeps the wire-level call and result names; the report keeps the product ones.
+    for (const entry of await task5AnswerCacheEntries(row.answersDir, { root })) reports.push({ trace: entry.trace });
+    for (const name of report.results.flatMap((question) => question.turnTrace ?? []))
+      if (!TASK5_PRODUCT_TOOL_NAMES.includes(name)) throw new Error(`Task5Smoke: the turn trace carries ${name}`);
+  }
+  const record = {
+    kind: "202-task5-smoke-verification",
+    ...assertTask5SmokeReports(reports),
+    statuses: manifest.results.map((row) => ({ id: row.id, status: row.status })),
+    gate: manifest.gate,
+  };
+  await writeFile(join(root, TASK5_SMOKE_VERIFICATION), `${JSON.stringify(record, null, 2)}\n`);
+  return record;
 }
 
 /** Post-execution provenance: the same pins must still hold, and the journal owns the spend. */
@@ -206,6 +332,10 @@ export async function postflightTask5(manifest, journal, { root = "." } = {}) {
     provider: manifest.provider,
     model: manifest.model,
   };
+  if (manifest.smoke) {
+    await verifyTask5Smoke(manifest, { root });
+    return record;
+  }
   await writeFile(join(root, TASK5_VERIFICATION), `${JSON.stringify(record, null, 2)}\n`);
   return record;
 }

@@ -1,14 +1,15 @@
 # Plan 202 Task 5.2 — frozen paired development-comparison manifest
 
-Status: **proposed-awaiting-owner-gate**, `executable: false`. Task 5.3 must record the owner gate against manifest hash `3b870e8c6d5540ab…` before any provider call.
+Status: **proposed-awaiting-owner-gate**, `executable: false`. Task 5.3 must record the owner gate against manifest hash `dca330de50578fc4…` before any provider call.
 
 Manifest: [docs/_evidence/memory-bench/202/task5/development-comparison-manifest.json](development-comparison-manifest.json) (ids, counts, hashes and budgets only).
 
 ## Product pins
 
-- Control: revision `5c2570df52a084b43120ee4e77921746a029480e`, product `ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0` (reproduces the closed screen's revision-1 fabric hash `57aa47d94eb3cad629e232372f220296131583ea7ac06189d6f589b39c825799`).
-- Candidate: working-tree product `26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20`.
-- Harness `adec56dc96d4c6793b0c21de97087405c7bb4efb4651e69d61166b9829cafb06`; unchanged for both roles so only the product is the treatment.
+- Control: revision `2e51437e964614f6bea1655b8ec26d80502839b3` (r2 = candidate tree with product paths from `5c2570df52a084b43120ee4e77921746a029480e`), product `ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0` (reproduces the closed screen's revision-1 fabric hash `57aa47d94eb3cad629e232372f220296131583ea7ac06189d6f589b39c825799`).
+- Candidate: committed revision `c539e38cdeb070018d1efffc4a0147bb35fd15ff`, product `26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20`.
+- The two arms differ only under `packages/memory/fabric/src` and `packages/memory/core/src`; a git diff outside those paths is a refusal, and so is an uncommitted candidate.
+- Harness `9032ef67142c255cd2c1d273cc1f38124614fe7154250d02567945783f74aabc`; unchanged for both roles so only the product is the treatment.
 
 ## Cohort and cells
 
@@ -25,7 +26,7 @@ Manifest: [docs/_evidence/memory-bench/202/task5/development-comparison-manifest
 ## Budgets and cost
 
 - Reservations: 69,000,000 input tokens per campaign; ceiling 100,000,000.
-- Estimates: 15,820,560 input / 874,440 output tokens; 4,200 expected physical calls, hard cap 16,800.
+- Estimates: 15,820,560 input / 874,440 output tokens; 2,289–2,625 expected physical calls (measured rate, not the turn cap), hard cap 16,800.
 - Product $0.00 / judge $0.00 / total $0.00 (free OpenRouter routes; quotas and caps bind, not USD).
 - Concurrency 1; wall caps 208 h per role, LongMemEval-M ingest dominating.
 
