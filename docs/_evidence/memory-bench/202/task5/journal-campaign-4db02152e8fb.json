@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "campaignId": "campaign-4db02152e8fb",
+  "manifestHash": "4db02152e8fbe1c8aa3164b9b129dc0ab63f0decd7a8533fb62824be9ee91c21",
+  "ceiling": 100000000,
+  "priorReservation": 0,
+  "provider": "openrouter",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "createdAt": "2026-10-30T20:27:54.865Z",
+  "updatedAt": "2026-10-30T20:29:58.212Z",
+  "status": "finished",
+  "legacy": [],
+  "attempts": [
+    {
+      "attemptId": "202-task5.control.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free@1",
+      "jobId": "202-task5.control.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "manifestHash": "4db02152e8fbe1c8aa3164b9b129dc0ab63f0decd7a8533fb62824be9ee91c21",
+      "status": "failed",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/202/task5/smoke-202-task5.control.beam-100k.preset-r1.openrouter.nvidia-nemotron-3-ultra-550b-a55b:free.json",
+      "maxInputTokens": 7000000,
+      "reservedInputTokens": 7500000,
+      "startedAt": "2026-10-30T20:27:54.870Z",
+      "confirmedInputTokens": 24139,
+      "usageComplete": true,
+      "cacheReadTokens": 0,
+      "outputTokens": 2327,
+      "endedAt": "2026-10-30T20:28:46.337Z"
+    },
+    {
+      "attemptId": "202-task5.candidate.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free@1",
+      "jobId": "202-task5.candidate.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "manifestHash": "4db02152e8fbe1c8aa3164b9b129dc0ab63f0decd7a8533fb62824be9ee91c21",
+      "status": "failed",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/202/task5/smoke-202-task5.candidate.beam-100k.preset-r1.openrouter.nvidia-nemotron-3-ultra-550b-a55b:free.json",
+      "maxInputTokens": 7000000,
+      "reservedInputTokens": 7500000,
+      "startedAt": "2026-10-30T20:28:46.338Z",
+      "confirmedInputTokens": 81652,
+      "usageComplete": true,
+      "cacheReadTokens": 8640,
+      "outputTokens": 3583,
+      "endedAt": "2026-10-30T20:29:58.212Z"
+    }
+  ]
+}

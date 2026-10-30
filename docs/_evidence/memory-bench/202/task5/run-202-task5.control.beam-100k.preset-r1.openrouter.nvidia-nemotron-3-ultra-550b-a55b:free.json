@@ -17,7 +17,7 @@
     "temperature": 0,
     "maxTokens": 4096
   },
-  "generatedAt": "2026-10-30T17:26:43.793Z",
+  "generatedAt": "2026-10-30T20:38:57.484Z",
   "suite": "beam-100k",
   "subset": "dev",
   "ability": null,
@@ -54,7 +54,7 @@
   "maxInputTokens": 7000000,
   "ablations": [],
   "sourceVariants": [],
-  "sourceRevision": "5c2570df52a084b43120ee4e77921746a029480e",
+  "sourceRevision": "5355f41ed101f122b15e6973707782b017972dbb",
   "protocol": {
     "answerAttempts": 3,
     "answerBackoffMs": [
@@ -193,10 +193,10 @@
       }
     }
   },
-  "inputTokens": 0,
-  "cacheReadTokens": 0,
+  "inputTokens": 320657,
+  "cacheReadTokens": 8640,
   "cacheWriteTokens": 0,
-  "outputTokens": 0,
+  "outputTokens": 32300,
   "calls": {
     "observer": 0,
     "reflector": 0,
@@ -204,16 +204,16 @@
     "embedding": 0,
     "decider": 0,
     "consolidate": 0,
-    "judge": 0,
-    "judgeAttempts": 0,
+    "judge": 20,
+    "judgeAttempts": 20,
     "gatewayRetries": 0,
     "judgeCacheHits": 0,
-    "judgeCacheMisses": 0,
+    "judgeCacheMisses": 20,
     "concurrencyHalvings": 0,
     "overloads": 0
   },
-  "turns": 1,
-  "injectedContextTokens": 4150,
+  "turns": 24,
+  "injectedContextTokens": 90488,
   "injections": [
     {
       "questionId": "5:abstention:1",
@@ -230,7 +230,7 @@
     {
       "questionId": "5:abstention:1",
       "turn": 1,
-      "id": "94c257009bae",
+      "id": "012759ae8cc4",
       "source": "fabric-semantic",
       "tokens": 3479,
       "placement": "tail",
@@ -242,7 +242,7 @@
     {
       "questionId": "5:abstention:1",
       "turn": 1,
-      "id": "29cdcc92769b",
+      "id": "e76e1bc42615",
       "source": "fabric-semantic",
       "tokens": 275,
       "placement": "tail",
@@ -254,13 +254,1321 @@
     {
       "questionId": "5:abstention:1",
       "turn": 1,
-      "id": "f432069f96a6",
+      "id": "c39a7764d633",
       "source": "fabric-semantic",
       "tokens": 220,
       "placement": "tail",
       "granularity": "item",
       "label": null,
       "coverage": 0.25,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 2,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 2,
+      "id": "012759ae8cc4",
+      "source": "fabric-semantic",
+      "tokens": 3479,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.8333333333333334,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 2,
+      "id": "e76e1bc42615",
+      "source": "fabric-semantic",
+      "tokens": 275,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 2,
+      "id": "c39a7764d633",
+      "source": "fabric-semantic",
+      "tokens": 220,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.25,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 3,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 177,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 3,
+      "id": "012759ae8cc4",
+      "source": "fabric-semantic",
+      "tokens": 3479,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.8333333333333334,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 3,
+      "id": "e76e1bc42615",
+      "source": "fabric-semantic",
+      "tokens": 275,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 3,
+      "id": "c39a7764d633",
+      "source": "fabric-semantic",
+      "tokens": 220,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.25,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 4,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 4,
+      "id": "012759ae8cc4",
+      "source": "fabric-semantic",
+      "tokens": 3479,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.8333333333333334,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 4,
+      "id": "e76e1bc42615",
+      "source": "fabric-semantic",
+      "tokens": 275,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "5:abstention:1",
+      "turn": 4,
+      "id": "c39a7764d633",
+      "source": "fabric-semantic",
+      "tokens": 220,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.25,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 1,
+      "id": "387adcabde18",
+      "source": "fabric-semantic",
+      "tokens": 1131,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 1,
+      "id": "8b992af4a508",
+      "source": "fabric-semantic",
+      "tokens": 1225,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7777777777777778,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 1,
+      "id": "8c1a46ef7c1f",
+      "source": "fabric-semantic",
+      "tokens": 1331,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7777777777777778,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 2,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 2,
+      "id": "387adcabde18",
+      "source": "fabric-semantic",
+      "tokens": 1131,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 2,
+      "id": "8b992af4a508",
+      "source": "fabric-semantic",
+      "tokens": 1225,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7777777777777778,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 2,
+      "id": "8c1a46ef7c1f",
+      "source": "fabric-semantic",
+      "tokens": 1331,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7777777777777778,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 3,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 188,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 3,
+      "id": "387adcabde18",
+      "source": "fabric-semantic",
+      "tokens": 1131,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 3,
+      "id": "8b992af4a508",
+      "source": "fabric-semantic",
+      "tokens": 1225,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7777777777777778,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 3,
+      "id": "8c1a46ef7c1f",
+      "source": "fabric-semantic",
+      "tokens": 1331,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7777777777777778,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 4,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 4,
+      "id": "387adcabde18",
+      "source": "fabric-semantic",
+      "tokens": 1131,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 4,
+      "id": "8b992af4a508",
+      "source": "fabric-semantic",
+      "tokens": 1225,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7777777777777778,
+      "cited": false
+    },
+    {
+      "questionId": "9:abstention:1",
+      "turn": 4,
+      "id": "8c1a46ef7c1f",
+      "source": "fabric-semantic",
+      "tokens": 1331,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7777777777777778,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 177,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 1,
+      "id": "2f9dd5307b62",
+      "source": "fabric-semantic",
+      "tokens": 1156,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7142857142857143,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 1,
+      "id": "1e6d820b6309",
+      "source": "fabric-semantic",
+      "tokens": 1050,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.5714285714285714,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 1,
+      "id": "07d758d39b50",
+      "source": "fabric-semantic",
+      "tokens": 1484,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7142857142857143,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 2,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 177,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 2,
+      "id": "2f9dd5307b62",
+      "source": "fabric-semantic",
+      "tokens": 1156,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7142857142857143,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 2,
+      "id": "1e6d820b6309",
+      "source": "fabric-semantic",
+      "tokens": 1050,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.5714285714285714,
+      "cited": false
+    },
+    {
+      "questionId": "10:abstention:0",
+      "turn": 2,
+      "id": "07d758d39b50",
+      "source": "fabric-semantic",
+      "tokens": 1484,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7142857142857143,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 1,
+      "id": "df6588d21b7e",
+      "source": "fabric-semantic",
+      "tokens": 706,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 1,
+      "id": "2b84ca30a968",
+      "source": "fabric-semantic",
+      "tokens": 1112,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 1,
+      "id": "a0838ce80230",
+      "source": "fabric-semantic",
+      "tokens": 1112,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 1,
+      "id": "5f01f5cbe7bb",
+      "source": "fabric-semantic",
+      "tokens": 1025,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.2857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 2,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 2,
+      "id": "df6588d21b7e",
+      "source": "fabric-semantic",
+      "tokens": 706,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 2,
+      "id": "2b84ca30a968",
+      "source": "fabric-semantic",
+      "tokens": 1112,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 2,
+      "id": "a0838ce80230",
+      "source": "fabric-semantic",
+      "tokens": 1112,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "20:abstention:1",
+      "turn": 2,
+      "id": "5f01f5cbe7bb",
+      "source": "fabric-semantic",
+      "tokens": 1025,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.2857142857142857,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 1,
+      "id": "f7f14bcddda6",
+      "source": "fabric-semantic",
+      "tokens": 837,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 1,
+      "id": "096e5ddf9ed6",
+      "source": "fabric-semantic",
+      "tokens": 625,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 1,
+      "id": "c7e23fdbefc8",
+      "source": "fabric-semantic",
+      "tokens": 647,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 1,
+      "id": "7aea9b1b1965",
+      "source": "fabric-semantic",
+      "tokens": 842,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 1,
+      "id": "df00151ac354",
+      "source": "fabric-semantic",
+      "tokens": 978,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.8,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 2,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 2,
+      "id": "f7f14bcddda6",
+      "source": "fabric-semantic",
+      "tokens": 837,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 2,
+      "id": "096e5ddf9ed6",
+      "source": "fabric-semantic",
+      "tokens": 625,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 2,
+      "id": "c7e23fdbefc8",
+      "source": "fabric-semantic",
+      "tokens": 647,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 2,
+      "id": "7aea9b1b1965",
+      "source": "fabric-semantic",
+      "tokens": 842,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "8:contradiction_resolution:1",
+      "turn": 2,
+      "id": "df00151ac354",
+      "source": "fabric-semantic",
+      "tokens": 978,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.8,
+      "cited": false
+    },
+    {
+      "questionId": "3:contradiction_resolution:1",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "3:contradiction_resolution:1",
+      "turn": 1,
+      "id": "c1a0ffb0cfa5",
+      "source": "fabric-semantic",
+      "tokens": 644,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.875,
+      "cited": false
+    },
+    {
+      "questionId": "3:contradiction_resolution:1",
+      "turn": 1,
+      "id": "143e2746125f",
+      "source": "fabric-semantic",
+      "tokens": 636,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.875,
+      "cited": false
+    },
+    {
+      "questionId": "3:contradiction_resolution:1",
+      "turn": 1,
+      "id": "b287eb5323c4",
+      "source": "fabric-semantic",
+      "tokens": 1989,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "7:contradiction_resolution:0",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 177,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "7:contradiction_resolution:0",
+      "turn": 1,
+      "id": "15b71812ed89",
+      "source": "fabric-semantic",
+      "tokens": 804,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.7,
+      "cited": false
+    },
+    {
+      "questionId": "7:contradiction_resolution:0",
+      "turn": 1,
+      "id": "ded1de0ecf5c",
+      "source": "fabric-semantic",
+      "tokens": 1050,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.4,
+      "cited": false
+    },
+    {
+      "questionId": "7:contradiction_resolution:0",
+      "turn": 1,
+      "id": "a674823265cd",
+      "source": "fabric-semantic",
+      "tokens": 925,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.6,
+      "cited": false
+    },
+    {
+      "questionId": "7:contradiction_resolution:0",
+      "turn": 1,
+      "id": "7b99afad8777",
+      "source": "fabric-semantic",
+      "tokens": 1010,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.5,
+      "cited": false
+    },
+    {
+      "questionId": "9:contradiction_resolution:0",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "9:contradiction_resolution:0",
+      "turn": 1,
+      "id": "1f0fc96fba19",
+      "source": "fabric-semantic",
+      "tokens": 778,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.8571428571428571,
+      "cited": false
+    },
+    {
+      "questionId": "9:contradiction_resolution:0",
+      "turn": 1,
+      "id": "b016b40db36c",
+      "source": "fabric-semantic",
+      "tokens": 830,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.5714285714285714,
+      "cited": false
+    },
+    {
+      "questionId": "9:contradiction_resolution:0",
+      "turn": 1,
+      "id": "d844b0b12b7c",
+      "source": "fabric-semantic",
+      "tokens": 750,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.42857142857142855,
+      "cited": false
+    },
+    {
+      "questionId": "9:contradiction_resolution:0",
+      "turn": 1,
+      "id": "fffccfcf072d",
+      "source": "fabric-semantic",
+      "tokens": 943,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.5714285714285714,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 1,
+      "id": "e27cac2b9668",
+      "source": "fabric-semantic",
+      "tokens": 607,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.26666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 1,
+      "id": "a715aee42412",
+      "source": "fabric-semantic",
+      "tokens": 607,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 1,
+      "id": "91322fc52805",
+      "source": "fabric-semantic",
+      "tokens": 914,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 1,
+      "id": "fbe3d5e015b6",
+      "source": "fabric-semantic",
+      "tokens": 747,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 2,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 2,
+      "id": "e27cac2b9668",
+      "source": "fabric-semantic",
+      "tokens": 607,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.26666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 2,
+      "id": "a715aee42412",
+      "source": "fabric-semantic",
+      "tokens": 607,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 2,
+      "id": "91322fc52805",
+      "source": "fabric-semantic",
+      "tokens": 914,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 2,
+      "id": "fbe3d5e015b6",
+      "source": "fabric-semantic",
+      "tokens": 747,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 3,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 3,
+      "id": "e27cac2b9668",
+      "source": "fabric-semantic",
+      "tokens": 607,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.26666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 3,
+      "id": "a715aee42412",
+      "source": "fabric-semantic",
+      "tokens": 607,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 3,
+      "id": "91322fc52805",
+      "source": "fabric-semantic",
+      "tokens": 914,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 3,
+      "id": "fbe3d5e015b6",
+      "source": "fabric-semantic",
+      "tokens": 747,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 4,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 4,
+      "id": "e27cac2b9668",
+      "source": "fabric-semantic",
+      "tokens": 607,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.26666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 4,
+      "id": "a715aee42412",
+      "source": "fabric-semantic",
+      "tokens": 607,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 4,
+      "id": "91322fc52805",
+      "source": "fabric-semantic",
+      "tokens": 914,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 4,
+      "id": "fbe3d5e015b6",
+      "source": "fabric-semantic",
+      "tokens": 747,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 5,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 5,
+      "id": "e27cac2b9668",
+      "source": "fabric-semantic",
+      "tokens": 607,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.26666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 5,
+      "id": "a715aee42412",
+      "source": "fabric-semantic",
+      "tokens": 607,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 5,
+      "id": "91322fc52805",
+      "source": "fabric-semantic",
+      "tokens": 914,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "13:event_ordering:0",
+      "turn": 5,
+      "id": "fbe3d5e015b6",
+      "source": "fabric-semantic",
+      "tokens": 747,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "5:event_ordering:0",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "5:event_ordering:0",
+      "turn": 1,
+      "id": "049fe672555d",
+      "source": "fabric-semantic",
+      "tokens": 1013,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.4,
+      "cited": false
+    },
+    {
+      "questionId": "5:event_ordering:0",
+      "turn": 1,
+      "id": "948f3ce4236c",
+      "source": "fabric-semantic",
+      "tokens": 601,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "5:event_ordering:0",
+      "turn": 1,
+      "id": "49088f64d58b",
+      "source": "fabric-semantic",
+      "tokens": 774,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "5:event_ordering:0",
+      "turn": 1,
+      "id": "6640121d3943",
+      "source": "fabric-semantic",
+      "tokens": 678,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.4,
+      "cited": false
+    },
+    {
+      "questionId": "5:event_ordering:0",
+      "turn": 1,
+      "id": "d84305c2546a",
+      "source": "fabric-semantic",
+      "tokens": 795,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "5:event_ordering:0",
+      "turn": 2,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 176,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "5:event_ordering:0",
+      "turn": 2,
+      "id": "049fe672555d",
+      "source": "fabric-semantic",
+      "tokens": 1013,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.4,
+      "cited": false
+    },
+    {
+      "questionId": "5:event_ordering:0",
+      "turn": 2,
+      "id": "948f3ce4236c",
+      "source": "fabric-semantic",
+      "tokens": 601,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "5:event_ordering:0",
+      "turn": 2,
+      "id": "49088f64d58b",
+      "source": "fabric-semantic",
+      "tokens": 774,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
+      "cited": false
+    },
+    {
+      "questionId": "5:event_ordering:0",
+      "turn": 2,
+      "id": "6640121d3943",
+      "source": "fabric-semantic",
+      "tokens": 678,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.4,
+      "cited": false
+    },
+    {
+      "questionId": "5:event_ordering:0",
+      "turn": 2,
+      "id": "d84305c2546a",
+      "source": "fabric-semantic",
+      "tokens": 795,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.3333333333333333,
       "cited": false
     }
   ],
@@ -269,10 +1577,1139 @@
   "analysisVersion": "202-paired-cluster-v1",
   "judgeTemplateVersion": "e3883a2aa5910f76c3f6b377f1758fd4a57ca6dda1449cd86291abd0eea5f306",
   "gradedTemplateVersion": "f7ff5f9c24afd87f0a5e00bd168103019f6e7140d64031f3e5bec264043c24cb",
-  "protocolHash": "cc21bd23a7f544ea6533de56aa436e1e872dc81b2f5e01b1392bd4efef932fd5",
+  "protocolHash": "e763e9f2252a1e7ae5f979366c724100817a1d2321c0dc1a1d61200b36be8e23",
   "resumedResults": 0,
-  "results": [],
-  "status": "failed",
+  "results": [
+    {
+      "id": "5:abstention:1",
+      "ability": "abstention",
+      "cluster": "beam-5",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 467,
+        "answer": 24273.8,
+        "evaluation": 27586
+      },
+      "answerKey": "2ced14aed61af3d3772f68341fd200f812e259ed5f885c01855134dcbe9d7f35",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 3,
+      "recallCalls": 4,
+      "explicitRecallCalls": 3,
+      "automaticRecallCalls": 0,
+      "recalledIds": [
+        "5:s1-r20",
+        "5:s1-r8",
+        "5:s1-r22",
+        "5:s1-r20",
+        "5:s2-r24",
+        "5:s0-r26",
+        "5:s1-r33",
+        "5:s1-r25",
+        "5:s1-r26",
+        "5:s1-r20",
+        "5:s2-r24",
+        "5:s0-r26",
+        "5:s1-r33",
+        "5:s1-r25",
+        "5:s1-r26",
+        "5:s1-r20",
+        "5:s2-r24",
+        "5:s0-r26",
+        "5:s1-r33",
+        "5:s1-r25",
+        "5:s1-r26",
+        "5:s1-r20",
+        "5:s2-r24",
+        "5:s0-r26",
+        "5:s1-r33",
+        "5:s1-r25",
+        "5:s1-r26",
+        "5:s1-r20",
+        "5:s2-r24",
+        "5:s0-r26",
+        "5:s1-r33",
+        "5:s1-r25",
+        "5:s1-r26",
+        "5:s1-r20",
+        "5:s2-r24",
+        "5:s0-r26",
+        "5:s1-r33",
+        "5:s1-r25",
+        "5:s1-r26"
+      ],
+      "answerRetries": 0,
+      "turns": 4,
+      "turnTrace": [
+        "memory.recall",
+        "memory.recall",
+        "memory.recall"
+      ],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 7565,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [],
+          "needed": 0,
+          "neverSurfaced": 0,
+          "candidateGap": false
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 0,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 238,
+        "coveredSourceMessages": 238,
+        "eligibleExchanges": 119,
+        "refused": 0,
+        "unpairedSourceMessages": 0,
+        "sessions": 3,
+        "entries": 238,
+        "archived": 119,
+        "parts": 123,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 0
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "correct"
+    },
+    {
+      "id": "9:abstention:1",
+      "ability": "abstention",
+      "cluster": "beam-9",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 510.5,
+        "answer": 21592.2,
+        "evaluation": 26507.4
+      },
+      "answerKey": "e4135821e1cd12154600aaa59dd86d0eaa0a23fe55066e5355e375dd11892f09",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 3,
+      "recallCalls": 4,
+      "explicitRecallCalls": 3,
+      "automaticRecallCalls": 0,
+      "recalledIds": [
+        "9:s1-r21",
+        "9:s4-r16",
+        "9:s4-r15",
+        "9:s4-r16",
+        "9:s4-r15",
+        "9:s3-r18",
+        "9:s0-r15",
+        "9:s3-r15",
+        "9:s4-r16",
+        "9:s4-r15",
+        "9:s3-r18",
+        "9:s0-r15",
+        "9:s3-r15",
+        "9:s4-r16",
+        "9:s4-r15",
+        "9:s2-r4",
+        "9:s1-r21",
+        "9:s3-r18",
+        "9:s4-r13",
+        "9:s4-r16",
+        "9:s4-r15",
+        "9:s3-r18",
+        "9:s0-r15",
+        "9:s3-r15",
+        "9:s4-r16",
+        "9:s4-r15",
+        "9:s2-r4",
+        "9:s1-r21",
+        "9:s3-r18",
+        "9:s4-r13",
+        "9:s4-r16",
+        "9:s2-r4",
+        "9:s4-r15",
+        "9:s0-r15",
+        "9:s4-r13"
+      ],
+      "answerRetries": 0,
+      "turns": 4,
+      "turnTrace": [
+        "memory.recall",
+        "memory.recall",
+        "memory.recall"
+      ],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 6919,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [],
+          "needed": 0,
+          "neverSurfaced": 0,
+          "candidateGap": false
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 0,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 270,
+        "coveredSourceMessages": 266,
+        "eligibleExchanges": 135,
+        "refused": 2,
+        "unpairedSourceMessages": 0,
+        "sessions": 5,
+        "entries": 270,
+        "archived": 133,
+        "parts": 133,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 4
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "correct"
+    },
+    {
+      "id": "10:abstention:0",
+      "ability": "abstention",
+      "cluster": "beam-10",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 423.1,
+        "answer": 18250.2,
+        "evaluation": 17238.5
+      },
+      "answerKey": "71ddca5995cb2754566c31b909316014aec88906cdf0358df19983d9926d19c7",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 1,
+      "recallCalls": 2,
+      "explicitRecallCalls": 1,
+      "automaticRecallCalls": 0,
+      "recalledIds": [
+        "10:s0-r3",
+        "10:s1-r42",
+        "10:s2-r20",
+        "10:s2-r20",
+        "10:s4-r20",
+        "10:s4-r24",
+        "10:s3-r26",
+        "10:s0-r3"
+      ],
+      "answerRetries": 0,
+      "turns": 2,
+      "turnTrace": [
+        "memory.recall"
+      ],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 4691,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [],
+          "needed": 0,
+          "neverSurfaced": 0,
+          "candidateGap": false
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 0,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 344,
+        "coveredSourceMessages": 344,
+        "eligibleExchanges": 172,
+        "refused": 0,
+        "unpairedSourceMessages": 0,
+        "sessions": 5,
+        "entries": 344,
+        "archived": 172,
+        "parts": 172,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 0
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "correct"
+    },
+    {
+      "id": "20:abstention:1",
+      "ability": "abstention",
+      "cluster": "beam-20",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 350,
+        "answer": 22094.1,
+        "evaluation": 14772.1
+      },
+      "answerKey": "8922b4aae0c43495740ff577a4a85b864ac6fbdf8d7927f49e264b960e1301f5",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 1,
+      "recallCalls": 2,
+      "explicitRecallCalls": 1,
+      "automaticRecallCalls": 0,
+      "recalledIds": [
+        "20:s3-r16",
+        "20:s3-r18",
+        "20:s3-r17",
+        "20:s3-r0",
+        "20:s3-r16",
+        "20:s3-r18",
+        "20:s3-r17",
+        "20:s1-r21",
+        "20:s3-r9"
+      ],
+      "answerRetries": 0,
+      "turns": 2,
+      "turnTrace": [
+        "memory.recall"
+      ],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 4973,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [],
+          "needed": 0,
+          "neverSurfaced": 0,
+          "candidateGap": false
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 0,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 372,
+        "coveredSourceMessages": 372,
+        "eligibleExchanges": 186,
+        "refused": 0,
+        "unpairedSourceMessages": 0,
+        "sessions": 5,
+        "entries": 372,
+        "archived": 186,
+        "parts": 186,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 0
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "correct"
+    },
+    {
+      "id": "8:contradiction_resolution:1",
+      "ability": "contradiction_resolution",
+      "cluster": "beam-8",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 276.3,
+        "answer": 35060.6,
+        "evaluation": 22440.5
+      },
+      "answerKey": "7163490ed05df89dfe9c0824facafcd0ccfa23337c4c27a991ee8ff0b7f829bc",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 1,
+      "recallCalls": 2,
+      "explicitRecallCalls": 1,
+      "automaticRecallCalls": 0,
+      "recalledIds": [
+        "8:s0-r13",
+        "8:s1-r26",
+        "8:s1-r17",
+        "8:s2-r2",
+        "8:s2-r0",
+        "8:s1-r0",
+        "8:s4-r0",
+        "8:s4-r15",
+        "8:s1-r26",
+        "8:s4-r14"
+      ],
+      "answerRetries": 0,
+      "turns": 2,
+      "turnTrace": [
+        "memory.recall"
+      ],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 4935,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": 1,
+      "evidenceAllRequired": true,
+      "fineEvidenceRecall": 1,
+      "fineEvidencePrecision": 0.2222222222222222,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "8:s1-r17",
+              "surfaced": false
+            },
+            {
+              "id": "8:s1-r26",
+              "surfaced": true
+            }
+          ],
+          "needed": 2,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": null,
+        "selectedGold": 2,
+        "fineRounds": 2,
+        "fineSelected": 2
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 268,
+        "coveredSourceMessages": 268,
+        "eligibleExchanges": 134,
+        "refused": 0,
+        "unpairedSourceMessages": 0,
+        "sessions": 5,
+        "entries": 268,
+        "archived": 134,
+        "parts": 134,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 0
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "3:contradiction_resolution:1",
+      "ability": "contradiction_resolution",
+      "cluster": "beam-3",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 170.5,
+        "answer": 9810.6,
+        "evaluation": 13439
+      },
+      "answerKey": "31f04f6f07a6f7d28577acbf03d48e9c2ed5fc4b99f7a13f87d5922e549d33ab",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [
+        "3:s1-r25",
+        "3:s1-r26",
+        "3:s1-r31"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 3269,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": 0.5,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": 0.5,
+      "fineEvidencePrecision": 0.3333333333333333,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "3:s1-r7",
+              "surfaced": false
+            },
+            {
+              "id": "3:s1-r31",
+              "surfaced": false
+            }
+          ],
+          "needed": 2,
+          "neverSurfaced": 2,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": null,
+        "selectedGold": 1,
+        "fineRounds": 2,
+        "fineSelected": 1
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 194,
+        "coveredSourceMessages": 194,
+        "eligibleExchanges": 97,
+        "refused": 0,
+        "unpairedSourceMessages": 0,
+        "sessions": 3,
+        "entries": 194,
+        "archived": 97,
+        "parts": 97,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 0
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "7:contradiction_resolution:0",
+      "ability": "contradiction_resolution",
+      "cluster": "beam-7",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 279.1,
+        "answer": 25616.4,
+        "evaluation": 15981
+      },
+      "answerKey": "71be0be915d1756ee8fd1784dd88774d1bd3f527d7d0dc833a7610a205fbec60",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [
+        "7:s0-r26",
+        "7:s1-r0",
+        "7:s4-r15",
+        "7:s4-r3"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 3789,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": 0.5,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": 0.5,
+      "fineEvidencePrecision": 0.25,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "7:s0-r19",
+              "surfaced": false
+            },
+            {
+              "id": "7:s0-r26",
+              "surfaced": false
+            }
+          ],
+          "needed": 2,
+          "neverSurfaced": 2,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": null,
+        "selectedGold": 1,
+        "fineRounds": 2,
+        "fineSelected": 1
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 260,
+        "coveredSourceMessages": 260,
+        "eligibleExchanges": 130,
+        "refused": 0,
+        "unpairedSourceMessages": 0,
+        "sessions": 5,
+        "entries": 260,
+        "archived": 130,
+        "parts": 130,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 0
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "9:contradiction_resolution:0",
+      "ability": "contradiction_resolution",
+      "cluster": "beam-9",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 265.4,
+        "answer": 5178.3,
+        "evaluation": 13828.4
+      },
+      "answerKey": "16ce7baea7ea091d7e8f675b9ed2e7612533cc6c35a1f227c6ddde4325f116c6",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [
+        "9:s0-r25",
+        "9:s1-r4",
+        "9:s2-r3",
+        "9:s3-r2"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 3301,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": 0.5,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": 0.5,
+      "fineEvidencePrecision": 0.25,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "9:s0-r2",
+              "surfaced": false
+            },
+            {
+              "id": "9:s0-r25",
+              "surfaced": false
+            }
+          ],
+          "needed": 2,
+          "neverSurfaced": 2,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": null,
+        "selectedGold": 1,
+        "fineRounds": 2,
+        "fineSelected": 1
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 270,
+        "coveredSourceMessages": 266,
+        "eligibleExchanges": 135,
+        "refused": 2,
+        "unpairedSourceMessages": 0,
+        "sessions": 5,
+        "entries": 270,
+        "archived": 133,
+        "parts": 133,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 4
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "13:event_ordering:0",
+      "ability": "event_ordering",
+      "cluster": "beam-13",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 278.2,
+        "answer": 103871.5,
+        "evaluation": 113695.6
+      },
+      "answerKey": "5f08ac0159b1f7c3203205ce665933b4a4257a7c86f62cc5df12579ff1b14002",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 4,
+      "recallCalls": 5,
+      "explicitRecallCalls": 4,
+      "automaticRecallCalls": 0,
+      "recalledIds": [
+        "13:s0-r25",
+        "13:s3-r0",
+        "13:s3-r13",
+        "13:s3-r3",
+        "13:s1-r9",
+        "13:s1-r8",
+        "13:s1-r17",
+        "13:s1-r30",
+        "13:s1-r4",
+        "13:s1-r9",
+        "13:s1-r8",
+        "13:s1-r17",
+        "13:s1-r30",
+        "13:s1-r4",
+        "13:s1-r9",
+        "13:s1-r8",
+        "13:s1-r17",
+        "13:s1-r30",
+        "13:s1-r4",
+        "13:s3-r2",
+        "13:s1-r9",
+        "13:s1-r8",
+        "13:s1-r30",
+        "13:s1-r4",
+        "13:s1-r9",
+        "13:s1-r8",
+        "13:s1-r17",
+        "13:s1-r30",
+        "13:s1-r4",
+        "13:s3-r2",
+        "13:s1-r9",
+        "13:s1-r8",
+        "13:s1-r30",
+        "13:s1-r4",
+        "13:s1-r4",
+        "13:s3-r2",
+        "13:s0-r14",
+        "13:s1-r28",
+        "13:s4-r9",
+        "13:s3-r12"
+      ],
+      "answerRetries": 0,
+      "turns": 5,
+      "turnTrace": [
+        "memory.recall",
+        "memory.recall",
+        "memory.recall",
+        "memory.recall"
+      ],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 6104,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": 0.2,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": 0.2,
+      "fineEvidencePrecision": 0.07142857142857142,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "13:s0-r8",
+              "surfaced": false
+            },
+            {
+              "id": "13:s1-r8",
+              "surfaced": true
+            },
+            {
+              "id": "13:s2-r11",
+              "surfaced": false
+            },
+            {
+              "id": "13:s3-r6",
+              "surfaced": false
+            },
+            {
+              "id": "13:s4-r5",
+              "surfaced": false
+            }
+          ],
+          "needed": 5,
+          "neverSurfaced": 4,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 5,
+        "candidateGold": null,
+        "selectedGold": 1,
+        "fineRounds": 5,
+        "fineSelected": 1
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 310,
+        "coveredSourceMessages": 310,
+        "eligibleExchanges": 155,
+        "refused": 0,
+        "unpairedSourceMessages": 0,
+        "sessions": 5,
+        "entries": 310,
+        "archived": 155,
+        "parts": 155,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 0
+      },
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "graded": 0.2405,
+      "gradedSpread": 0.20899999999999996,
+      "gradedDisagreement": true,
+      "gradedJudges": {
+        "openrouter/dots-studio/dots-3-note-preview:free": 0.136,
+        "openrouter/cohere/north-mini-code:free": 0.345
+      },
+      "attributionProvenance": "source_chat_ids",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "5:event_ordering:0",
+      "ability": "event_ordering",
+      "cluster": "beam-5",
+      "outcome": "answered",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 209,
+        "answer": 36588.3
+      },
+      "answerKey": "6ef42df1dd2a9ee8906eafd1054e72da40be73b5f40353ff36701c3491ae6c5c",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 1,
+      "recallCalls": 2,
+      "explicitRecallCalls": 1,
+      "automaticRecallCalls": 0,
+      "recalledIds": [
+        "5:s0-r3",
+        "5:s1-r4",
+        "5:s2-r27",
+        "5:s2-r16",
+        "5:s2-r35",
+        "5:s2-r13",
+        "5:s1-r19",
+        "5:s2-r0",
+        "5:s2-r31",
+        "5:s2-r24"
+      ],
+      "answerRetries": 0,
+      "turns": 2,
+      "turnTrace": [
+        "memory.recall"
+      ],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 4889,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": 0.08333333333333333,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": 0.08333333333333333,
+      "fineEvidencePrecision": 0.1,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "5:s0-r3",
+              "surfaced": false
+            },
+            {
+              "id": "5:s0-r5",
+              "surfaced": false
+            },
+            {
+              "id": "5:s0-r7",
+              "surfaced": false
+            },
+            {
+              "id": "5:s0-r8",
+              "surfaced": false
+            },
+            {
+              "id": "5:s0-r9",
+              "surfaced": false
+            },
+            {
+              "id": "5:s0-r10",
+              "surfaced": false
+            },
+            {
+              "id": "5:s0-r12",
+              "surfaced": false
+            },
+            {
+              "id": "5:s0-r15",
+              "surfaced": false
+            },
+            {
+              "id": "5:s0-r17",
+              "surfaced": false
+            },
+            {
+              "id": "5:s0-r25",
+              "surfaced": false
+            },
+            {
+              "id": "5:s0-r28",
+              "surfaced": false
+            },
+            {
+              "id": "5:s0-r29",
+              "surfaced": false
+            }
+          ],
+          "needed": 12,
+          "neverSurfaced": 12,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "source_chat_ids",
+        "unknownSourceReferences": 0,
+        "goldRounds": 12,
+        "candidateGold": null,
+        "selectedGold": 1,
+        "fineRounds": 12,
+        "fineSelected": 1
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 238,
+        "coveredSourceMessages": 238,
+        "eligibleExchanges": 119,
+        "refused": 0,
+        "unpairedSourceMessages": 0,
+        "sessions": 3,
+        "entries": 238,
+        "archived": 119,
+        "parts": 123,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 0
+      }
+    }
+  ],
+  "status": "running",
   "limitations": [
     "Block-level injection accounting until item metadata lands in Tasks 4, 9, 11 and 12.",
     "Injection token allocations are character estimates, not billing usage.",
@@ -334,11 +2771,11 @@
   },
   "roleUsage": {
     "product": {
-      "inputTokens": 0,
-      "cacheReadTokens": 0,
+      "inputTokens": 312159,
+      "cacheReadTokens": 8640,
       "cacheWriteTokens": 0,
-      "outputTokens": 0,
-      "exchanges": 1,
+      "outputTokens": 11376,
+      "exchanges": 24,
       "complete": true,
       "measured": 0,
       "cold": 0,
@@ -360,11 +2797,11 @@
       "inputCold": 0
     },
     "evaluation": {
-      "inputTokens": 0,
+      "inputTokens": 8498,
       "cacheReadTokens": 0,
       "cacheWriteTokens": 0,
-      "outputTokens": 0,
-      "exchanges": 0,
+      "outputTokens": 20924,
+      "exchanges": 20,
       "complete": true,
       "measured": 0,
       "cold": 0,
@@ -386,140 +2823,183 @@
       "inputCold": 0
     },
     "total": {
-      "inputTokens": 0,
-      "cacheReadTokens": 0,
+      "inputTokens": 320657,
+      "cacheReadTokens": 8640,
       "cacheWriteTokens": 0,
-      "outputTokens": 0,
-      "exchanges": 1,
+      "outputTokens": 32300,
+      "exchanges": 44,
       "measured": 0
     }
   },
-  "accountedInputTokens": 0,
+  "accountedInputTokens": 320657,
   "usageComplete": true,
   "usageMissingExchanges": 0,
-  "wireExchanges": 1,
-  "errors": [
-    {
-      "questionId": "5:abstention:1",
-      "diagnosticKey": "644f8b379bfa3da13fb726321c5cce32ace29316d4023a3044552ba3cbc100e2",
-      "code": "MemoryBenchAnswerError:400",
-      "message": "MemoryBenchAnswerError:400",
-      "cause": {
-        "name": "Error",
-        "code": "400",
-        "message": "OpenRouter request failed: 400 error:message:Provider returned error,code:400,metadata:raw:error:message:Validation: Function at index 0 has an invalid name: me",
-        "failureClass": "permanent"
-      },
-      "trace": {
-        "turns": 1,
-        "toolCalls": 0,
-        "recallCalls": 1,
-        "answerRetries": 0,
-        "mutating": false,
-        "maxTurns": 8,
-        "tools": []
-      }
-    }
-  ],
-  "failure": {
-    "questionId": "5:abstention:1",
-    "diagnosticKey": "644f8b379bfa3da13fb726321c5cce32ace29316d4023a3044552ba3cbc100e2",
-    "code": "MemoryBenchAnswerError:400",
-    "message": "MemoryBenchAnswerError:400",
-    "cause": {
-      "name": "Error",
-      "code": "400",
-      "message": "OpenRouter request failed: 400 error:message:Provider returned error,code:400,metadata:raw:error:message:Validation: Function at index 0 has an invalid name: me",
-      "failureClass": "permanent"
-    },
-    "trace": {
-      "turns": 1,
-      "toolCalls": 0,
-      "recallCalls": 1,
-      "answerRetries": 0,
-      "mutating": false,
-      "maxTurns": 8,
-      "tools": []
-    }
-  },
-  "timing": {
-    "wallMs": 2718.4,
-    "concurrency": {
-      "initial": 1,
-      "active": 1,
-      "floor": 1
-    },
-    "questions": {
-      "n": 1,
-      "wallMs": {
-        "p50": 1072.9,
-        "p95": 1072.9,
-        "mean": 1072.9
-      }
-    },
-    "phases": {
-      "ingestion": {
-        "n": 0,
-        "wallMs": {
-          "p50": null,
-          "p95": null,
-          "mean": null
-        }
-      },
-      "restore": {
-        "n": 0,
-        "wallMs": {
-          "p50": null,
-          "p95": null,
-          "mean": null
-        }
-      },
-      "answer": {
-        "n": 0,
-        "wallMs": {
-          "p50": null,
-          "p95": null,
-          "mean": null
-        }
-      },
-      "evaluation": {
-        "n": 0,
-        "wallMs": {
-          "p50": null,
-          "p95": null,
-          "mean": null
-        }
-      }
-    },
-    "policy": {
-      "answer": "after ingestion, before grading, annotation, final background settlement and disposal",
-      "queueWaitIncluded": false,
-      "retriesAndBackoffIncluded": true
-    },
-    "roles": {
-      "solver": {
-        "calls": 1,
-        "firstByteMs": {
-          "p50": 629.2,
-          "p95": 629.2,
-          "mean": 629.2
-        },
-        "totalMs": {
-          "p50": 629.4,
-          "p95": 629.4,
-          "mean": 629.4
-        }
-      }
-    },
-    "calls": 1
-  },
+  "wireExchanges": 44,
   "metricVersion": 2,
-  "abilities": {},
-  "abilityGroups": {},
-  "metricDefinitions": {},
+  "abilities": {
+    "abstention": {
+      "n": 4,
+      "correct": 4,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "contradiction_resolution": {
+      "n": 4,
+      "correct": 0,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": 0.625,
+      "evidenceAllRequired": 0.25,
+      "fineEvidenceRecall": 0.625,
+      "fineEvidencePrecision": 0.2638888888888889,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "contradiction_resolution",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "event_ordering": {
+      "n": 2,
+      "correct": 0,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": 0.2405,
+      "gradedDisagreementRate": 1,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": 0.14166666666666666,
+      "evidenceAllRequired": 0,
+      "fineEvidenceRecall": 0.14166666666666666,
+      "fineEvidencePrecision": 0.08571428571428572,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "event_ordering",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    }
+  },
+  "abilityGroups": {
+    "abstention": {
+      "n": 4,
+      "correct": 4,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "contradiction_resolution": {
+      "n": 4,
+      "correct": 0,
+      "scored": 4,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": 0.625,
+      "evidenceAllRequired": 0.25,
+      "fineEvidenceRecall": 0.625,
+      "fineEvidencePrecision": 0.2638888888888889,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "contradiction_resolution",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "event_ordering": {
+      "n": 2,
+      "correct": 0,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": 0.2405,
+      "gradedDisagreementRate": 1,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": 0.14166666666666666,
+      "evidenceAllRequired": 0,
+      "fineEvidenceRecall": 0.14166666666666666,
+      "fineEvidencePrecision": 0.08571428571428572,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "event_ordering",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    }
+  },
+  "metricDefinitions": {
+    "abstention": {
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "contradiction_resolution": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "event_ordering": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    }
+  },
   "runLimitRate": 0,
   "errorRate": 0,
-  "cacheReadRatio": 0,
+  "cacheReadRatio": 0.026944679205506195,
   "cacheWriteRatio": 0,
   "cost": {
     "currency": "USD",
@@ -533,11 +3013,11 @@
     "ratesStatus": "provider-catalog",
     "scope": "campaign: product plus evaluation plus unknown historical usage",
     "product": {
-      "inputTokens": 0,
-      "cacheReadTokens": 0,
+      "inputTokens": 312159,
+      "cacheReadTokens": 8640,
       "cacheWriteTokens": 0,
-      "outputTokens": 0,
-      "exchanges": 1,
+      "outputTokens": 11376,
+      "exchanges": 24,
       "complete": true,
       "measured": 0,
       "cold": 0,
@@ -546,11 +3026,11 @@
       "inputCold": 0
     },
     "evaluation": {
-      "inputTokens": 0,
+      "inputTokens": 8498,
       "cacheReadTokens": 0,
       "cacheWriteTokens": 0,
-      "outputTokens": 0,
-      "exchanges": 0,
+      "outputTokens": 20924,
+      "exchanges": 20,
       "complete": true,
       "measured": 0,
       "cold": 0,
@@ -560,39 +3040,43 @@
     }
   },
   "judgeAgreement": {
-    "n": 0,
+    "n": 9,
     "judges": {
       "openrouter/dots-studio/dots-3-note-preview:free": {
-        "scored": 0,
-        "agreementWithPanel": null
+        "scored": 9,
+        "agreementWithPanel": 1
       },
       "openrouter/cohere/north-mini-code:free": {
-        "scored": 0,
-        "agreementWithPanel": null
+        "scored": 9,
+        "agreementWithPanel": 1
       }
     },
     "pairs": [
       {
         "a": "openrouter/dots-studio/dots-3-note-preview:free",
         "b": "openrouter/cohere/north-mini-code:free",
-        "n": 0,
-        "agreement": null,
-        "kappa": null
+        "n": 9,
+        "agreement": 1,
+        "kappa": 1
       }
     ],
     "fleissKappa": null
   },
   "injectionPrecision": null,
   "injectionPrecisionReason": "not-labelled",
-  "toolCalls": 0,
-  "toolCallsPerQuestion": 0,
-  "recallCalls": 0,
-  "retrievedSnippetTokens": 0,
+  "toolCalls": 14,
+  "toolCallsPerQuestion": 1.4,
+  "recallCalls": 24,
+  "retrievedSnippetTokens": 50435,
   "answerSessionHitAtK": null,
-  "evidenceRoundCoverage": null,
-  "evidenceAllRequired": null,
-  "fineEvidenceRecall": null,
-  "fineEvidencePrecision": null,
-  "legacyRetrievalRecallAtK": null,
-  "retrievalRecallAtK": null
+  "evidenceRoundCoverage": 0.46388888888888896,
+  "evidenceAllRequired": 0.16666666666666666,
+  "fineEvidenceRecall": 0.46388888888888896,
+  "fineEvidencePrecision": 0.2044973544973545,
+  "legacyRetrievalRecallAtK": 1,
+  "retrievalRecallAtK": 1,
+  "stages": {
+    "correct": 4,
+    "unknown_gap": 5
+  }
 }

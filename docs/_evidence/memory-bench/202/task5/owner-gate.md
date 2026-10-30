@@ -1,36 +1,21 @@
-# Plan 202 Task 5.4.4 — owner gate 6
+# Plan 202 Task 5.4.5 — owner gate 9
 
 Status: **approved-by-owner** on 2026-10-31. The proposal itself stays `executable: false`; this gate is the authorization.
 
-Gate text (verbatim): Complete - [ ] Task 5.4.4: Re-freeze the manifest and re-record the owner gate and update the plan once done
+Gate text (verbatim): Complete next task - [ ] Task 5.4.5: Bounded wire smoke, then resume Task 5.4 and update the plan once done
 
 ## Binding
 
-- Manifest: `dca330de50578fc4edabfab30a9c86ce41ca55cc91b054342f77c3a61990874f` ([docs/_evidence/memory-bench/202/task5/development-comparison-manifest.json](development-comparison-manifest.json)).
+- Manifest: `48395537a565254f4deee41d6a04f06eb2ad7059fc2408c40ab32d68215044a2` ([docs/_evidence/memory-bench/202/task5/development-comparison-manifest.json](development-comparison-manifest.json)).
 - Journal: `.cache/memory-bench/task5/journal.json`, fingerprint `e3d8ac7d031aa5dcfad250b7dd7e84472fb517d8268eeafd2236b87dcf21ab32` (campaign identity over criteria, ceiling, provider, model and jobs).
-- Arms: candidate `c539e38cdeb070018d1efffc4a0147bb35fd15ff` (product `26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20`); control r2 `2e51437e964614f6bea1655b8ec26d80502839b3` (product `ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0` from `5c2570df52a084b43120ee4e77921746a029480e`); harness `9032ef67142c255cd2c1d273cc1f38124614fe7154250d02567945783f74aabc`.
+- Arms: candidate `076677a5c041187919a87534eb9ecb1df1e9a5c4` (product `26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20`); control r2 `5355f41ed101f122b15e6973707782b017972dbb` (product `ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0` from `5c2570df52a084b43120ee4e77921746a029480e`); harness `a7be89b4a10303446e4387a92061f4a8426d8195504cafe58e209f7ffda3eb0d`.
 - A changed manifest, cohort, criteria or journal identity is a refusal, not a re-approval.
 
-## Supersedes gate 5
+## Supersedes gate 8
 
-- Gate 5 stays unedited at `docs/_evidence/memory-bench/202/task5/gates/owner-gate-5.json` (sha256 `082901477d34e02979a1a5731638c4a1a8d4fc60dd1566d706dc7e0ef883f15d`, manifest `061323d5a058edd463f8fbb6850ba49a27c94a0dd2723f7991f97d0c7fce26da`); this gate replaces it.
+- Gate 8 stays unedited at `docs/_evidence/memory-bench/202/task5/gates/owner-gate-8.json` (sha256 `9f572c8c2debbbe925e2aa90aa8c666a5c864a29f328deccd50b5a2de8abb325`, manifest `680b52e12fcce4aac4d4c111375028847d9cc4e9ebf314296e5cbea2bf254fdd`); this gate replaces it.
 - Journal identity is unchanged (`e3d8ac7d031aa5dcfad250b7dd7e84472fb517d8268eeafd2236b87dcf21ab32`) because the cohort, criteria, protocol, models, judges, budgets and caps did not move: only the fields below changed.
 
-- `budgets.campaign.expectedPhysicalCalls`
-- `budgets.campaign.expectedPhysicalCallsRange.high`
-- `budgets.campaign.expectedPhysicalCallsRange.low`
-- `budgets.campaign.physicalCallEstimate.injectionCalls`
-- `budgets.campaign.physicalCallEstimate.judge`
-- `budgets.campaign.physicalCallEstimate.judgePerQuestionSource.calls`
-- `budgets.campaign.physicalCallEstimate.judgePerQuestionSource.questions`
-- `budgets.campaign.physicalCallEstimate.labelInjections`
-- `budgets.campaign.physicalCallEstimate.note`
-- `budgets.campaign.physicalCallEstimate.questionRuns`
-- `budgets.campaign.physicalCallEstimate.solver`
-- `budgets.campaign.physicalCallEstimate.solverHigh`
-- `budgets.campaign.physicalCallEstimate.solverPerQuestionSource.calls`
-- `budgets.campaign.physicalCallEstimate.solverPerQuestionSource.questions`
-- `budgets.campaign.physicalCallEstimate.source`
 - `cells.0.harnessHash`
 - `cells.0.productRevision`
 - `cells.0.worktreeRevision`

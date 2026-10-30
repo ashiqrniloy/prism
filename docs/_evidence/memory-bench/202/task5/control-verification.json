@@ -1,0 +1,15 @@
+{
+  "kind": "202-task5-control-verification",
+  "checkedAt": "2026-10-30T20:38:32.932Z",
+  "attempts": [
+    {
+      "attempt": 1,
+      "suite": "pass"
+    },
+    {
+      "attempt": 1,
+      "typecheck": "pass"
+    }
+  ],
+  "status": "pass"
+}

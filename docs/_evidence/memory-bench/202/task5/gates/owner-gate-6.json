@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "kind": "202-task5-owner-gate",
+  "plan": 202,
+  "task": 5,
+  "subtask": "5.4.4",
+  "gate": 6,
+  "approved": true,
+  "approvedAt": "2026-10-31",
+  "approvedBy": "owner",
+  "text": "Complete - [ ] Task 5.4.4: Re-freeze the manifest and re-record the owner gate and update the plan once done",
+  "supersedes": {
+    "gate": 5,
+    "manifestHash": "061323d5a058edd463f8fbb6850ba49a27c94a0dd2723f7991f97d0c7fce26da",
+    "journalFingerprint": "e3d8ac7d031aa5dcfad250b7dd7e84472fb517d8268eeafd2236b87dcf21ab32",
+    "records": {
+      "manifest": "docs/_evidence/memory-bench/202/task5/gates/development-comparison-manifest-5.json",
+      "gate": "docs/_evidence/memory-bench/202/task5/gates/owner-gate-5.json",
+      "gateSha256": "082901477d34e02979a1a5731638c4a1a8d4fc60dd1566d706dc7e0ef883f15d"
+    },
+    "changes": [
+      "budgets.campaign.expectedPhysicalCalls",
+      "budgets.campaign.expectedPhysicalCallsRange.high",
+      "budgets.campaign.expectedPhysicalCallsRange.low",
+      "budgets.campaign.physicalCallEstimate.injectionCalls",
+      "budgets.campaign.physicalCallEstimate.judge",
+      "budgets.campaign.physicalCallEstimate.judgePerQuestionSource.calls",
+      "budgets.campaign.physicalCallEstimate.judgePerQuestionSource.questions",
+      "budgets.campaign.physicalCallEstimate.labelInjections",
+      "budgets.campaign.physicalCallEstimate.note",
+      "budgets.campaign.physicalCallEstimate.questionRuns",
+      "budgets.campaign.physicalCallEstimate.solver",
+      "budgets.campaign.physicalCallEstimate.solverHigh",
+      "budgets.campaign.physicalCallEstimate.solverPerQuestionSource.calls",
+      "budgets.campaign.physicalCallEstimate.solverPerQuestionSource.questions",
+      "budgets.campaign.physicalCallEstimate.source",
+      "cells.0.harnessHash",
+      "cells.0.productRevision",
+      "cells.0.worktreeRevision",
+      "cells.1.harnessHash",
+      "cells.1.productRevision",
+      "cells.2.harnessHash",
+      "cells.2.productRevision",
+      "cells.2.worktreeRevision",
+      "cells.3.harnessHash",
+      "cells.3.productRevision",
+      "cells.4.harnessHash",
+      "cells.4.productRevision",
+      "cells.4.worktreeRevision",
+      "cells.5.harnessHash",
+      "cells.5.productRevision",
+      "cells.6.harnessHash",
+      "cells.6.productRevision",
+      "cells.6.worktreeRevision",
+      "cells.7.harnessHash",
+      "cells.7.productRevision",
+      "cells.8.harnessHash",
+      "cells.8.productRevision",
+      "cells.8.worktreeRevision",
+      "cells.9.harnessHash",
+      "cells.9.productRevision",
+      "generatedAt",
+      "manifestHash",
+      "product.candidate.revision",
+      "product.control.revision",
+      "product.harnessHash"
+    ]
+  },
+  "proposal": {
+    "path": "docs/_evidence/memory-bench/202/task5/development-comparison-manifest.json",
+    "manifestHash": "dca330de50578fc4edabfab30a9c86ce41ca55cc91b054342f77c3a61990874f"
+  },
+  "journal": {
+    "path": ".cache/memory-bench/task5/journal.json",
+    "fingerprint": "e3d8ac7d031aa5dcfad250b7dd7e84472fb517d8268eeafd2236b87dcf21ab32"
+  },
+  "product": {
+    "control": "2e51437e964614f6bea1655b8ec26d80502839b3",
+    "controlSource": "5c2570df52a084b43120ee4e77921746a029480e",
+    "controlProductHash": "ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0",
+    "candidate": "c539e38cdeb070018d1efffc4a0147bb35fd15ff",
+    "candidateProductHash": "26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20",
+    "harnessHash": "9032ef67142c255cd2c1d273cc1f38124614fe7154250d02567945783f74aabc"
+  },
+  "scope": {
+    "cells": 10,
+    "pairs": 5,
+    "questions": 210,
+    "suites": [
+      "beam-100k",
+      "locomo",
+      "memoryagentbench-cr",
+      "longmemeval-m",
+      "beam-1m"
+    ],
+    "roles": [
+      "control",
+      "candidate"
+    ],
+    "arm": {
+      "id": "preset-r1",
+      "config": "fabric-x-tools"
+    },
+    "answers": [
+      "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free"
+    ],
+    "judges": [
+      "openrouter/dots-studio/dots-3-note-preview:free",
+      "openrouter/cohere/north-mini-code:free"
+    ]
+  },
+  "billing": {
+    "mode": "free-openrouter",
+    "provider": "openrouter",
+    "freeProductsOnly": true,
+    "paidFallbacks": [],
+    "productUsd": 0,
+    "judgeUsd": 0,
+    "totalUsd": 0
+  },
+  "caps": {
+    "reservedInputTokens": 69000000,
+    "ceiling": 100000000,
+    "maxPhysicalCalls": 16800,
+    "concurrency": 1,
+    "wallTimeCapHours": 416
+  },
+  "preservation": {
+    "closedScreen": "closed-by-owner",
+    "priorCharges": "preserved",
+    "historicalControlsReused": 0,
+    "heldOutAccess": false,
+    "credentialValues": false
+  }
+}
