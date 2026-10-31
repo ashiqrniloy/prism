@@ -51,15 +51,17 @@ export const TASK5_HARNESS_PATHS = ["scripts/memory-bench"];
 export const TASK5_SUITES = ["beam-100k", "locomo", "memoryagentbench-cr", "longmemeval-m", "beam-1m"];
 /** Plan 202 Task 5.4.6: the owner-approved development screen drops LongMemEval-M. */
 export const TASK5_SCREEN_SUITES = TASK5_SUITES.filter((suite) => suite !== "longmemeval-m");
-export const TASK5_SCREEN_VERSION = "202-task5-candidate-gap-v1-screen";
+/** v2 changes only the free gateway: the answer and judge model ids, prices, rules, cohort and caps stay. */
+export const TASK5_CRITERIA_VERSION = "202-task5-candidate-gap-v2";
+export const TASK5_SCREEN_VERSION = `${TASK5_CRITERIA_VERSION}-screen`;
 export const TASK5_SCREEN_BEAM_1M_MIN_QUESTIONS = 12;
 export const TASK5_SCREEN_BEAM_1M_WALL_HOURS = 12;
 export const TASK5_SCREEN_HANDOFF_REASON =
   "deferred to plan 210 by the plan 202 Task 5.4.6 owner disposition; the full target is postponed, not dropped";
 export const TASK5_ARM = { id: "preset-r1", config: "fabric-x-tools" };
-export const TASK5_MODEL = { provider: "openrouter", model: "nvidia/nemotron-3-ultra-550b-a55b:free" };
+export const TASK5_MODEL = { provider: "kilo", model: "nvidia/nemotron-3-ultra-550b-a55b:free" };
 /** Two free, non-answer families; plain text avoids structured-output capability questions. */
-export const TASK5_JUDGES = ["openrouter/dots-studio/dots-3-note-preview:free", "openrouter/cohere/north-mini-code:free"];
+export const TASK5_JUDGES = ["kilo/dots-studio/dots-3-note-preview:free", "kilo/cohere/north-mini-code:free"];
 export const TASK5_HALVING_FACTOR = 0.5;
 export const TASK5_ABILITY_MARGIN = 0.03;
 export const TASK5_CEILING = 100_000_000;
@@ -102,7 +104,16 @@ const idsHash = (ids) => stableHash([...ids].map(String).sort());
 /** The pre-registered comparison rules; hashed into the manifest before any candidate outcome. */
 export function task5ComparisonCriteria() {
   return {
-    version: "202-task5-candidate-gap-v1",
+    version: TASK5_CRITERIA_VERSION,
+    // The panel is the same models; only the gateway that serves the free rows moved.
+    transport: {
+      provider: TASK5_MODEL.provider,
+      gateway: "https://ai-gateway.kilo.ai/api/v1",
+      reason:
+        "owner instruction 2026-11-01: run the free panel on the Kilo AI Gateway; the OpenRouter key is not available in this environment",
+      substitution:
+        "same answer and judge model ids at $0, same rules, cohort, protocol, caps and journal accounting; only the transport changed",
+    },
     candidateGap: {
       unit: "question",
       neededRounds: "repaired fine-gold round ids (causalSessions -> sessionRounds -> extractEvidence.fineGoldIds)",
@@ -319,7 +330,7 @@ function freeCost(questions) {
       rate,
     );
     if (value === null) throw new Error(`Task5Cost: no priced rate for ${ref}`);
-    if (value !== 0) throw new Error(`Task5Cost: ${ref} is not a free route; the current restriction permits free OpenRouter models only`);
+    if (value !== 0) throw new Error(`Task5Cost: ${ref} is not a free route; only free ${TASK5_MODEL.provider} models are permitted`);
     if (ref === `${TASK5_MODEL.provider}/${TASK5_MODEL.model}`) productUsd += questions * value;
     else judgeUsd += questions * value;
   }
@@ -403,7 +414,7 @@ export function task5Beam1mSlice(questionIds, minimum = TASK5_SCREEN_BEAM_1M_MIN
 /** The screen keeps every criterion verbatim except the version and the guard's role. */
 export function task5ScreenCriteria(criteria) {
   const next = structuredClone(criteria);
-  next.version = TASK5_SCREEN_VERSION;
+  next.version = criteria.version?.endsWith("-screen") ? criteria.version : `${criteria.version}-screen`;
   next.abilityGuard = { ...next.abilityGuard, role: "descriptive" };
   return next;
 }
@@ -1068,13 +1079,13 @@ export function assertTask5ComparisonManifest(
   if (manifest.evidenceProtocol?.criteriaHash !== manifest.criteriaHash) refuse("evidence protocol is not bound to the frozen criteria");
   if (manifest.analysisHash !== stableHash(manifest.analysis)) refuse("analysis protocol changed after the freeze");
 
-  // Cost and models: the restriction is free OpenRouter only.
+  // Cost and models: the restriction is one free gateway, its free rows only.
   const answers = manifest.models?.answers ?? [];
   const judges = manifest.models?.judges ?? [];
-  if (answers.length !== 1 || !answers[0].startsWith("openrouter/") || !answers[0].endsWith(":free"))
-    refuse("the comparison requires exactly one free OpenRouter answer model");
-  if (judges.length < 2 || judges.some((ref) => !ref.startsWith("openrouter/") || !ref.endsWith(":free") || answers.includes(ref)))
-    refuse("judges must be two free OpenRouter families and never answer an arm");
+  const gateway = String(answers[0] ?? "").split("/")[0];
+  if (answers.length !== 1 || !gateway || !answers[0].endsWith(":free")) refuse("the comparison requires exactly one free answer model");
+  if (judges.length < 2 || judges.some((ref) => !ref.startsWith(`${gateway}/`) || !ref.endsWith(":free") || answers.includes(ref)))
+    refuse(`judges must be two free ${gateway} families and never answer an arm`);
   if (manifest.models?.paidFallbacks?.length) refuse("paid fallbacks are not authorized");
   if ((manifest.cost?.totalUsd ?? 0) !== 0) refuse("the authorized routes are free; a nonzero estimate is not authorized");
 
@@ -1254,6 +1265,45 @@ export const TASK5_REFREEZE_ALLOWED = [
   /^budgets\.campaign\.physicalCallEstimate\./,
 ];
 
+/**
+ * Plan 202 Task 5.4: a gateway substitution is not a scope reduction either. The frozen panel keeps
+ * its model ids and prices; only the provider prefix, the criteria transport text and the hashes
+ * derived from them may move. Everything else stays byte-identical.
+ */
+export const TASK5_TRANSPORT_REVISION_ALLOWED = [
+  "generatedAt",
+  "manifestHash",
+  "criteriaHash",
+  "evidenceProtocol.criteriaHash",
+  "evidenceProtocolHash",
+  "stopResume.manifestFingerprint",
+  /^criteria\./,
+  /^models\./,
+  /^cells\.\d+\.(id|provider)$/,
+];
+
+export function task5TransportRevisionAllowed(path) {
+  return TASK5_TRANSPORT_REVISION_ALLOWED.some((rule) => (typeof rule === "string" ? rule === path : rule.test(path)));
+}
+
+/** Refuse a transport revision that also moved a cohort, a model id, a judge, a rule or a cap. */
+export function assertTask5TransportRevision(previous, next) {
+  const diff = task5FreezeDiff(previous, next);
+  const refused = diff.filter((path) => !task5TransportRevisionAllowed(path));
+  if (refused.length) throw new Error(`Task5Gate: the transport revision changed frozen fields: ${refused.slice(0, 5).join(", ")}`);
+  const before = [...previous.models.answers, ...previous.models.judges].map((ref) => ref.split("/").slice(1).join("/"));
+  const after = [...next.models.answers, ...next.models.judges].map((ref) => ref.split("/").slice(1).join("/"));
+  if (JSON.stringify(before) !== JSON.stringify(after)) throw new Error("Task5Gate: a transport revision cannot change a model id");
+  for (const suite of next.cells) {
+    const peer = previous.cells.find((cell) => cell.suite === suite.suite && cell.role === suite.role);
+    if (!peer || idsHash(peer.questionIds) !== idsHash(suite.questionIds))
+      throw new Error("Task5Gate: a transport revision cannot change a cohort");
+  }
+  if (previous.cost?.totalUsd !== 0 || next.cost?.totalUsd !== 0) throw new Error("Task5Gate: the free panel is not priced at zero");
+  if (!diff.length) throw new Error("Task5Gate: the transport revision changed nothing");
+  return diff;
+}
+
 function flattenLeaves(value, prefix = "", out = {}) {
   if (Array.isArray(value)) {
     value.forEach((item, index) => {
@@ -1342,8 +1392,8 @@ export function task5OwnerGate(
       judges: manifest.models.judges,
     },
     billing: {
-      mode: "free-openrouter",
-      provider: "openrouter",
+      mode: `free-${manifest.models.answers[0].split("/")[0]}`,
+      provider: manifest.models.answers[0].split("/")[0],
       freeProductsOnly: true,
       paidFallbacks: [],
       productUsd: manifest.cost.productUsd,
@@ -1381,16 +1431,17 @@ export function assertTask5OwnerGate(gate, manifest, proposalPath = TASK5_ACTIVE
     refuse("the approval is not bound to the frozen criteria");
   if (gate.journal?.path !== TASK5_JOURNAL || gate.journal?.fingerprint !== manifest.stopResume?.manifestFingerprint)
     refuse("the approval is not bound to the campaign journal identity");
+  const provider = String(manifest.models?.answers?.[0] ?? "").split("/")[0];
   if (
-    gate.billing?.mode !== "free-openrouter" ||
-    gate.billing?.provider !== "openrouter" ||
+    gate.billing?.mode !== `free-${provider}` ||
+    gate.billing?.provider !== provider ||
     gate.billing?.freeProductsOnly !== true ||
     !Array.isArray(gate.billing?.paidFallbacks) ||
     gate.billing.paidFallbacks.length !== 0
   )
-    refuse("only free OpenRouter products are authorized");
+    refuse(`only free ${provider} products are authorized`);
   for (const ref of [...manifest.models.answers, ...manifest.models.judges]) {
-    if (!String(ref).endsWith(":free")) refuse(`${ref} is not a free OpenRouter route`);
+    if (!String(ref).endsWith(":free") || String(ref).split("/")[0] !== provider) refuse(`${ref} is not a free ${provider} route`);
   }
   if (manifest.cost?.totalUsd !== 0 || gate.billing?.totalUsd !== 0 || gate.billing?.productUsd !== 0 || gate.billing?.judgeUsd !== 0)
     refuse("a paid estimate is not authorized");
@@ -1444,9 +1495,11 @@ export function task5OwnerGateMarkdown(manifest, gate) {
           `## Supersedes gate ${gate.supersedes.gate}`,
           "",
           `- Gate ${gate.supersedes.gate} stays unedited at \`${gate.supersedes.records.gate}\` (sha256 \`${gate.supersedes.records.gateSha256}\`, manifest \`${gate.supersedes.manifestHash}\`); this gate replaces it.`,
-          gate.criteria?.version === TASK5_SCREEN_VERSION
-            ? `- This is a **scope reduction, not a re-freeze**: the treatment (control \`${gate.product?.controlProductHash}\`, candidate product \`${gate.product?.candidateProductHash}\`) is byte-identical. The journal identity moves from \`${gate.supersedes.journalFingerprint}\` to \`${gate.journal.fingerprint}\` because the criteria version and the cohort changed, and the screen runs fresh.`
-            : `- Journal identity is unchanged (\`${gate.supersedes.journalFingerprint}\`) because the cohort, criteria, protocol, models, judges, budgets and caps did not move: only the fields below changed.`,
+          gate.supersedes.change === "transport-revision"
+            ? `- This is a **transport revision, not a re-freeze**: the answer and judge model ids, prices, rules, cohort, caps and treatment (control \`${gate.product?.controlProductHash}\`, candidate product \`${gate.product?.candidateProductHash}\`) are byte-identical. Only the free gateway moved, so the journal identity moves from \`${gate.supersedes.journalFingerprint}\` to \`${gate.journal.fingerprint}\` and the screen runs fresh.`
+            : gate.criteria?.version === TASK5_SCREEN_VERSION
+              ? `- This is a **scope reduction, not a re-freeze**: the treatment (control \`${gate.product?.controlProductHash}\`, candidate product \`${gate.product?.candidateProductHash}\`) is byte-identical. The journal identity moves from \`${gate.supersedes.journalFingerprint}\` to \`${gate.journal.fingerprint}\` because the criteria version and the cohort changed, and the screen runs fresh.`
+              : `- Journal identity is unchanged (\`${gate.supersedes.journalFingerprint}\`) because the cohort, criteria, protocol, models, judges, budgets and caps did not move: only the fields below changed.`,
           "",
           ...gate.supersedes.changes.map((path) => `- \`${path}\``),
         ]
@@ -1456,7 +1509,7 @@ export function task5OwnerGateMarkdown(manifest, gate) {
     "",
     `- ${gate.scope.cells} cells (${gate.scope.pairs} control/candidate pairs) over ${gate.scope.suites.join(", ")}; arm \`${gate.scope.arm.id}\` (\`${gate.scope.arm.config}\`); ${gate.scope.questions} development questions.`,
     `- Answer: ${gate.scope.answers.map((ref) => `\`${ref}\``).join(", ")}; judges ${gate.scope.judges.map((ref) => `\`${ref}\``).join(" + ")}.`,
-    "- Billing: free OpenRouter routes only; no paid fallback, no cross-provider claim.",
+    `- Billing: free ${gate.billing.provider} routes only; no paid fallback, no cross-provider claim.`,
     "",
     "## Caps and preservation",
     "",
@@ -1474,6 +1527,18 @@ export function task5OwnerGateMarkdown(manifest, gate) {
   ].join("\n");
 }
 
+/** A gate record groups a transport revision's changes by section. */
+const summariseTransportChange = (path) => {
+  if (path === "criteria.version") return `criteria.version (${TASK5_SCREEN_VERSION})`;
+  if (path.startsWith("criteria.transport")) return "criteria.transport (free Kilo AI Gateway; same panel, prices and rules)";
+  if (path.startsWith("models.")) return "models (kilo/ provider prefix; same model ids at $0)";
+  if (/^cells\.\d+\.(id|provider)$/.test(path)) return "cells (provider prefix and derived ids; cohorts, caps and pins unchanged)";
+  if (path === "criteriaHash" || path === "evidenceProtocolHash" || path === "evidenceProtocol.criteriaHash")
+    return "hashes derived from the revised criteria";
+  if (path === "stopResume.manifestFingerprint") return "journal identity (derived from the provider and criteria)";
+  return path;
+};
+
 /** A gate record groups a scope reduction's changes by section; the manifest hash covers the leaves. */
 const summariseScreenChange = (path) => {
   if (path.startsWith("cells."))
@@ -1483,7 +1548,7 @@ const summariseScreenChange = (path) => {
   if (path.startsWith("budgets."))
     return "budgets (recomputed estimates, reservations, expected calls and wall caps; ceiling and hard cap unchanged)";
   if (path.startsWith("comparison.")) return "comparison (cell lists and pair count)";
-  if (path === "criteria.version") return "criteria.version (202-task5-candidate-gap-v1-screen)";
+  if (path === "criteria.version") return `criteria.version (${TASK5_SCREEN_VERSION})`;
   if (path === "criteria.abilityGuard.role") return "criteria.abilityGuard.role (descriptive, not a veto)";
   if (path === "criteriaHash" || path === "evidenceProtocolHash" || path === "evidenceProtocol.criteriaHash")
     return "hashes derived from the screen criteria";
@@ -1496,19 +1561,21 @@ const summariseScreenChange = (path) => {
  * The record that replaces a gate without editing it: the archived gate's bytes stay as they were,
  * their sha256 is carried into the new gate, and the changed manifest fields are listed.
  */
-export async function supersedesRecord({ root, manifestPath, manifest }) {
+export async function supersedesRecord({ root, manifestPath, manifest, transportRevision = false }) {
   const previous = JSON.parse(await readFile(join(root, manifestPath), "utf8"));
-  const gatePath = manifestPath.replace(/development-comparison-manifest/, "owner-gate");
+  const gatePath = manifestPath.replace(/development-(comparison|screen)-manifest/, "owner-gate");
   const gateBytes = await readFile(join(root, gatePath));
   const previousGate = JSON.parse(gateBytes.toString("utf8"));
   // A scope reduction is not a re-freeze; the stricter guard is the one that applies. Cell leaves
   // shift when a suite is removed, so the record groups them instead of listing every index.
-  const changes =
-    manifest.criteria?.version === TASK5_SCREEN_VERSION
+  const changes = transportRevision
+    ? [...new Set(assertTask5TransportRevision(previous, manifest).map(summariseTransportChange))].sort()
+    : manifest.criteria?.version === TASK5_SCREEN_VERSION
       ? [...new Set(assertTask5ScopeReduction(previous, manifest).map(summariseScreenChange))].sort()
       : assertTask5RefreezeDiff(previous, manifest);
   if (!changes.length) throw new Error("Task5Gate: a re-freeze must change something");
   return {
+    ...(transportRevision ? { change: "transport-revision" } : {}),
     gate: previousGate.gate ?? null,
     manifestHash: previousGate.proposal?.manifestHash ?? null,
     journalFingerprint: previousGate.journal?.fingerprint ?? null,
@@ -1524,6 +1591,7 @@ export async function writeTask5OwnerGate({
   path = TASK5_GATE,
   manifestPath = TASK5_ACTIVE_MANIFEST,
   supersedesPath,
+  transportRevision = false,
   subtask = "5.4.5",
 } = {}) {
   const manifest = JSON.parse(await readFile(join(root, manifestPath), "utf8"));
@@ -1541,7 +1609,7 @@ export async function writeTask5OwnerGate({
       pinned,
     });
   } else await auditTask5Comparison(manifest, { root, worktree: null });
-  const supersedes = supersedesPath ? await supersedesRecord({ root, manifestPath: supersedesPath, manifest }) : null;
+  const supersedes = supersedesPath ? await supersedesRecord({ root, manifestPath: supersedesPath, manifest, transportRevision }) : null;
   const gate = task5OwnerGate(manifest, {
     text,
     ...(approvedAt ? { approvedAt } : {}),
@@ -1565,6 +1633,7 @@ if (import.meta.main) {
       text: option("--text"),
       approvedAt: option("--approved-at"),
       ...(option("--supersedes") ? { supersedesPath: option("--supersedes") } : {}),
+      transportRevision: argv.includes("--transport-revision"),
       ...(option("--subtask") ? { subtask: option("--subtask") } : {}),
     });
     console.log(
@@ -1581,7 +1650,7 @@ if (import.meta.main) {
   }
   if (!argv.includes("--manifest"))
     throw new Error(
-      "Task5Manifest: usage: task5-comparison.mjs --manifest [--screen [--repin]] | --gate --text <owner approval> [--approved-at YYYY-MM-DD] [--supersedes <archived manifest>] [--subtask <id>]",
+      "Task5Manifest: usage: task5-comparison.mjs --manifest [--screen [--repin]] | --gate --text <owner approval> [--approved-at YYYY-MM-DD] [--supersedes <archived manifest> [--transport-revision]] [--subtask <id>]",
     );
   if (argv.includes("--screen")) {
     const screen = await writeTask5ScreenManifest({ repin: argv.includes("--repin") });

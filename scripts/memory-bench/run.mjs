@@ -90,6 +90,8 @@ export const PROVIDERS = {
     secret: "COMMAND_CODE_API_KEY",
     url: "https://api.commandcode.ai/provider/v1",
   },
+  // Free models are reachable without a key; a key only widens the catalog.
+  kilo: { create: "createKiloProvider", list: "listKiloModels", secret: "KILO_API_KEY", url: "https://ai-gateway.kilo.ai/api/v1" },
   // A local gateway, so its URL comes from the environment: the pool binds loopback only.
   litellm: {
     create: "createLiteLLMProvider",
@@ -241,6 +243,9 @@ export function benchmarkFetch({
 /** Free routing is explicit: unknown prices never become zero-cost authorization. */
 export function isFreeBenchmarkModel(model) {
   if (model.provider === "openrouter") return model.model.endsWith(":free") && model.cost?.input === 0 && model.cost?.output === 0;
+  // Kilo stamps the free rows in its catalog, and the credentialless free route needs no account.
+  if (model.provider === "kilo")
+    return (model.model.endsWith(":free") || model.compat?.isFree === true) && model.cost?.input === 0 && model.cost?.output === 0;
   // The pool's groups are the authorization: a `prism-free/` group the gateway prices at exactly
   // zero. Unknown cost is refused, exactly as for the other paid hosts.
   if (model.provider === "litellm") return model.model.startsWith("prism-free/") && model.cost?.input === 0 && model.cost?.output === 0;
@@ -253,9 +258,11 @@ export async function liveProviders(refs, temp, fetchOptions) {
   try {
     for (const id of new Set(refs.map((ref) => ref.provider))) {
       const spec = PROVIDERS[id];
-      if (!spec) throw new Error("MemoryBenchProvider: supported providers are hyper, opencode-go, openrouter, commandcode and litellm");
+      if (!spec)
+        throw new Error("MemoryBenchProvider: supported providers are hyper, opencode-go, openrouter, commandcode, kilo and litellm");
       const key = process.env[spec.secret] ?? (id === "opencode-go" ? process.env.OPENCODE_API_KEY : undefined);
-      if (!key) throw new Error("MemoryBenchCredentials: provider credential unavailable");
+      // Kilo serves its `:free` rows credentialless; the free-only check still runs on the catalog.
+      if (!key && id !== "kilo") throw new Error("MemoryBenchCredentials: provider credential unavailable");
       const module = await import(`@arnilo/prism-provider-${id}`);
       const catalog = await module[spec.list]({ apiKey: () => key, signal: AbortSignal.timeout(30_000) });
       for (const ref of refs.filter((ref) => ref.provider === id)) {

@@ -129,6 +129,36 @@ export async function readOpenRouterKeyTier({ apiKey = process.env.OPENROUTER_AP
   return freeTierFromKeyResponse(await response.json());
 }
 
+/**
+ * Plan 202 Task 5.4 (Kilo transport): the free rows need no account, so the tier question becomes a
+ * panel question: every pinned answer and judge row must be in the live catalog at exactly $0 and
+ * accept tools. A stale row is refused before the campaign spends anything.
+ */
+export async function readKiloFreePanel({ refs = [], baseUrl = "https://ai-gateway.kilo.ai/api/v1", fetchImpl = fetch, catalog } = {}) {
+  let rows = catalog;
+  if (!rows) {
+    const response = await fetchImpl(`${baseUrl}/models`, { signal: AbortSignal.timeout(30_000) });
+    if (!response.ok) throw new Error(`Task5Execute: GET ${baseUrl}/models returned ${response.status}`);
+    rows = (await response.json())?.data;
+  }
+  if (!Array.isArray(rows)) throw new Error("Task5Execute: the Kilo catalog has no data array");
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  return refs.map((ref) => {
+    const model = ref.split("/").slice(1).join("/");
+    const row = byId.get(model);
+    if (!row) throw new Error(`Task5Execute: ${ref} is not in the Kilo catalog`);
+    if (Number(row.pricing?.prompt) !== 0 || Number(row.pricing?.completion) !== 0)
+      throw new Error(`Task5Execute: ${ref} is not free right now`);
+    const params = row.supported_parameters ?? [];
+    if (params.length && !params.includes("tools")) throw new Error(`Task5Execute: ${ref} does not accept tools`);
+    return {
+      ref,
+      contextWindow: row.context_length ?? null,
+      maxOutputTokens: row.top_provider?.max_completion_tokens ?? null,
+    };
+  });
+}
+
 /** Below the 1,000/day tier the campaign cannot finish, so it must not start. */
 export function assertTask5FreeTier(tier) {
   if (!tier || tier.dailyFreeRequests < FREE_TIER_DAILY_REQUESTS)
@@ -262,7 +292,17 @@ export async function preflightTask5(manifest, { root = ".", keyTier } = {}) {
   await auditTask5ActiveProposal(root, proposal);
   await assertCacheStabilityPin(proposal, { root });
   // The account's free tier decides whether the run can finish; check it before spending anything.
-  const tier = assertTask5FreeTier(keyTier ?? (await readOpenRouterKeyTier()));
+  // A credentialless Kilo panel has no tier to read, so its rows are checked against the live catalog.
+  const provider = proposal.models.answers[0].split("/")[0];
+  const tier =
+    provider === "kilo"
+      ? {
+          kind: "202-task5-free-panel",
+          provider,
+          checkedAt: new Date().toISOString(),
+          panel: await readKiloFreePanel({ refs: [...proposal.models.answers, ...proposal.models.judges] }),
+        }
+      : assertTask5FreeTier(keyTier ?? (await readOpenRouterKeyTier()));
   // Never resume a finished campaign: its attempts are frozen evidence, not a starting point.
   await archiveFinishedTask5Journal({ root });
   // An open journal from a superseded gate is not a screen resume point either.

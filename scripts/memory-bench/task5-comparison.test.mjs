@@ -229,8 +229,8 @@ test("task5_execution_refuses_unapproved_or_changed_manifest", () => {
   refused((value) => (value.text = ""), /approval text is missing/);
   refused((value) => (value.proposal.manifestHash = "0".repeat(64)), /not bound to the frozen manifest/);
   refused((value) => (value.journal.fingerprint = "0".repeat(64)), /not bound to the campaign journal identity/);
-  refused((value) => (value.billing.mode = "paid-commandcode"), /free OpenRouter products/);
-  refused((value) => (value.billing.paidFallbacks = ["commandcode/meta/muse-spark-1.3-contributor"]), /free OpenRouter products/);
+  refused((value) => (value.billing.mode = "paid-commandcode"), /free \w+ products/);
+  refused((value) => (value.billing.paidFallbacks = ["commandcode/meta/muse-spark-1.3-contributor"]), /free \w+ products/);
   refused((value) => (value.billing.totalUsd = 6.83), /paid estimate is not authorized/);
   refused((value) => (value.caps.reservedInputTokens += 1000), /reservedInputTokens differs/);
   refused((value) => (value.scope.cells -= 1), /does not cover the frozen cells/);
