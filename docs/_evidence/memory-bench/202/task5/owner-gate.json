@@ -3,61 +3,46 @@
   "kind": "202-task5-owner-gate",
   "plan": 202,
   "task": 5,
-  "subtask": "5.4.5",
-  "gate": 14,
+  "subtask": "5.4.6",
+  "gate": 15,
   "approved": true,
-  "approvedAt": "2026-10-31",
+  "approvedAt": "2026-11-01",
   "approvedBy": "owner",
-  "text": "What is the status now",
+  "text": "Given the scope of the memory work has been extended significantly now beyond [plan 202] is it worth spending so many live run tokens in Task 5.4 for example or we can relax it with a lighter test reasonably. We can do a hard test after all the other updates in 207 to 210 is in. Then, after reviewing the risks: \"go ahead, draft the disposition and plan 210 hand-off\".",
   "supersedes": {
-    "gate": 13,
-    "manifestHash": "4f5ccdb9dbfaec237f1369f5e2280980b4515245bd645ecefb0360f791518255",
+    "gate": 14,
+    "manifestHash": "2694bf3945d19e9b9f3aa784afc4ce45a83d19d3b5f896db67ee39a7544706a3",
     "journalFingerprint": "e3d8ac7d031aa5dcfad250b7dd7e84472fb517d8268eeafd2236b87dcf21ab32",
     "records": {
-      "manifest": "docs/_evidence/memory-bench/202/task5/gates/development-comparison-manifest-13.json",
-      "gate": "docs/_evidence/memory-bench/202/task5/gates/owner-gate-13.json",
-      "gateSha256": "064015358eb9436aafc35b5bfe455165f70663e4189701ae22515389de14446e"
+      "manifest": "docs/_evidence/memory-bench/202/task5/gates/development-comparison-manifest-14.json",
+      "gate": "docs/_evidence/memory-bench/202/task5/gates/owner-gate-14.json",
+      "gateSha256": "fd6b3d55f11533b576d3cd47bc14b30040dba2054f6d1f50fd0a7414c7a5750a"
     },
     "changes": [
-      "cells.0.harnessHash",
-      "cells.0.productRevision",
-      "cells.0.worktreeRevision",
-      "cells.1.harnessHash",
-      "cells.1.productRevision",
-      "cells.2.harnessHash",
-      "cells.2.productRevision",
-      "cells.2.worktreeRevision",
-      "cells.3.harnessHash",
-      "cells.3.productRevision",
-      "cells.4.harnessHash",
-      "cells.4.productRevision",
-      "cells.4.worktreeRevision",
-      "cells.5.harnessHash",
-      "cells.5.productRevision",
-      "cells.6.harnessHash",
-      "cells.6.productRevision",
-      "cells.6.worktreeRevision",
-      "cells.7.harnessHash",
-      "cells.7.productRevision",
-      "cells.8.harnessHash",
-      "cells.8.productRevision",
-      "cells.8.worktreeRevision",
-      "cells.9.harnessHash",
-      "cells.9.productRevision",
+      "budgets (recomputed estimates, reservations, expected calls and wall caps; ceiling and hard cap unchanged)",
+      "cells (LongMemEval-M removed, beam-1m sliced to the rule's 14 questions, derived ids/estimates/wall caps)",
+      "cohort (question count, id hash, suite rows and label totals)",
+      "comparison (cell lists and pair count)",
+      "coverage (LongMemEval-M deferred to plan 210, all-suite target off)",
+      "criteria.abilityGuard.role (descriptive, not a veto)",
+      "criteria.version (202-task5-candidate-gap-v1-screen)",
       "generatedAt",
-      "manifestHash",
-      "product.candidate.revision",
-      "product.control.revision",
-      "product.harnessHash"
+      "hashes derived from the screen criteria",
+      "journal identity (new criteria and cohort)",
+      "manifestHash"
     ]
   },
   "proposal": {
-    "path": "docs/_evidence/memory-bench/202/task5/development-comparison-manifest.json",
-    "manifestHash": "2694bf3945d19e9b9f3aa784afc4ce45a83d19d3b5f896db67ee39a7544706a3"
+    "path": "docs/_evidence/memory-bench/202/task5/development-screen-manifest.json",
+    "manifestHash": "0dea417b67a019deea5a32912103225c28bd7a18ef181a1c1980f778446dbdb3"
+  },
+  "criteria": {
+    "version": "202-task5-candidate-gap-v1-screen",
+    "hash": "faa72035b9aaeb70662862b102e653269c4222f098f987ef1056a8296e299f07"
   },
   "journal": {
     "path": ".cache/memory-bench/task5/journal.json",
-    "fingerprint": "e3d8ac7d031aa5dcfad250b7dd7e84472fb517d8268eeafd2236b87dcf21ab32"
+    "fingerprint": "ecb83564868cece9e82d24c6fc86d05fa1f94fef0cf4c3dbd72a931c096a3809"
   },
   "product": {
     "control": "5ed8a63e856d472afee748ad5b9e49e3e10873ff",
@@ -68,14 +53,13 @@
     "harnessHash": "196a21ee6dafcef2a30d4eff0b700573bcd9695be9d49eb396840fc3220a62bd"
   },
   "scope": {
-    "cells": 10,
-    "pairs": 5,
-    "questions": 210,
+    "cells": 8,
+    "pairs": 4,
+    "questions": 134,
     "suites": [
       "beam-100k",
       "locomo",
       "memoryagentbench-cr",
-      "longmemeval-m",
       "beam-1m"
     ],
     "roles": [
@@ -104,11 +88,11 @@
     "totalUsd": 0
   },
   "caps": {
-    "reservedInputTokens": 69000000,
+    "reservedInputTokens": 53000000,
     "ceiling": 100000000,
     "maxPhysicalCalls": 16800,
     "concurrency": 1,
-    "wallTimeCapHours": 416
+    "wallTimeCapHours": 56
   },
   "preservation": {
     "closedScreen": "closed-by-owner",

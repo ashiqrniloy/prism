@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "kind": "202-task5-owner-gate",
+  "plan": 202,
+  "task": 5,
+  "subtask": "5.4.5",
+  "gate": 14,
+  "approved": true,
+  "approvedAt": "2026-10-31",
+  "approvedBy": "owner",
+  "text": "What is the status now",
+  "supersedes": {
+    "gate": 13,
+    "manifestHash": "4f5ccdb9dbfaec237f1369f5e2280980b4515245bd645ecefb0360f791518255",
+    "journalFingerprint": "e3d8ac7d031aa5dcfad250b7dd7e84472fb517d8268eeafd2236b87dcf21ab32",
+    "records": {
+      "manifest": "docs/_evidence/memory-bench/202/task5/gates/development-comparison-manifest-13.json",
+      "gate": "docs/_evidence/memory-bench/202/task5/gates/owner-gate-13.json",
+      "gateSha256": "064015358eb9436aafc35b5bfe455165f70663e4189701ae22515389de14446e"
+    },
+    "changes": [
+      "cells.0.harnessHash",
+      "cells.0.productRevision",
+      "cells.0.worktreeRevision",
+      "cells.1.harnessHash",
+      "cells.1.productRevision",
+      "cells.2.harnessHash",
+      "cells.2.productRevision",
+      "cells.2.worktreeRevision",
+      "cells.3.harnessHash",
+      "cells.3.productRevision",
+      "cells.4.harnessHash",
+      "cells.4.productRevision",
+      "cells.4.worktreeRevision",
+      "cells.5.harnessHash",
+      "cells.5.productRevision",
+      "cells.6.harnessHash",
+      "cells.6.productRevision",
+      "cells.6.worktreeRevision",
+      "cells.7.harnessHash",
+      "cells.7.productRevision",
+      "cells.8.harnessHash",
+      "cells.8.productRevision",
+      "cells.8.worktreeRevision",
+      "cells.9.harnessHash",
+      "cells.9.productRevision",
+      "generatedAt",
+      "manifestHash",
+      "product.candidate.revision",
+      "product.control.revision",
+      "product.harnessHash"
+    ]
+  },
+  "proposal": {
+    "path": "docs/_evidence/memory-bench/202/task5/development-comparison-manifest.json",
+    "manifestHash": "2694bf3945d19e9b9f3aa784afc4ce45a83d19d3b5f896db67ee39a7544706a3"
+  },
+  "journal": {
+    "path": ".cache/memory-bench/task5/journal.json",
+    "fingerprint": "e3d8ac7d031aa5dcfad250b7dd7e84472fb517d8268eeafd2236b87dcf21ab32"
+  },
+  "product": {
+    "control": "5ed8a63e856d472afee748ad5b9e49e3e10873ff",
+    "controlSource": "5c2570df52a084b43120ee4e77921746a029480e",
+    "controlProductHash": "ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0",
+    "candidate": "9d5a7c656bdc27c6a67166fb2aeb826954118927",
+    "candidateProductHash": "26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20",
+    "harnessHash": "196a21ee6dafcef2a30d4eff0b700573bcd9695be9d49eb396840fc3220a62bd"
+  },
+  "scope": {
+    "cells": 10,
+    "pairs": 5,
+    "questions": 210,
+    "suites": [
+      "beam-100k",
+      "locomo",
+      "memoryagentbench-cr",
+      "longmemeval-m",
+      "beam-1m"
+    ],
+    "roles": [
+      "control",
+      "candidate"
+    ],
+    "arm": {
+      "id": "preset-r1",
+      "config": "fabric-x-tools"
+    },
+    "answers": [
+      "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free"
+    ],
+    "judges": [
+      "openrouter/dots-studio/dots-3-note-preview:free",
+      "openrouter/cohere/north-mini-code:free"
+    ]
+  },
+  "billing": {
+    "mode": "free-openrouter",
+    "provider": "openrouter",
+    "freeProductsOnly": true,
+    "paidFallbacks": [],
+    "productUsd": 0,
+    "judgeUsd": 0,
+    "totalUsd": 0
+  },
+  "caps": {
+    "reservedInputTokens": 69000000,
+    "ceiling": 100000000,
+    "maxPhysicalCalls": 16800,
+    "concurrency": 1,
+    "wallTimeCapHours": 416
+  },
+  "preservation": {
+    "closedScreen": "closed-by-owner",
+    "priorCharges": "preserved",
+    "historicalControlsReused": 0,
+    "heldOutAccess": false,
+    "credentialValues": false
+  }
+}

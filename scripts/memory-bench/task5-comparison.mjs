@@ -11,7 +11,7 @@ import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { promisify } from "node:util";
 import { fileFingerprint, sourceFingerprint } from "./acceptance.mjs";
 import { DATASETS } from "./datasets.mjs";
@@ -28,6 +28,9 @@ const run = promisify(execFile);
 
 export const TASK5_EVIDENCE = "docs/_evidence/memory-bench/202/task5";
 export const TASK5_MANIFEST = `${TASK5_EVIDENCE}/development-comparison-manifest.json`;
+export const TASK5_SCREEN_MANIFEST = `${TASK5_EVIDENCE}/development-screen-manifest.json`;
+/** The plan of record for execution: the reduced development screen, not the ten-cell full target. */
+export const TASK5_ACTIVE_MANIFEST = TASK5_SCREEN_MANIFEST;
 export const TASK5_INVENTORY = `${TASK5_EVIDENCE}/revision1-trace-inventory.json`;
 export const TASK5_VERIFICATION = `${TASK5_EVIDENCE}/verification.json`;
 export const TASK5_CACHE = ".cache/memory-bench/task5";
@@ -46,6 +49,13 @@ export const TASK5_HISTORICAL_FABRIC_HASH = "57aa47d94eb3cad629e232372f220296131
 export const TASK5_PRODUCT_PATHS = ["packages/memory/fabric/src", "packages/memory/core/src"];
 export const TASK5_HARNESS_PATHS = ["scripts/memory-bench"];
 export const TASK5_SUITES = ["beam-100k", "locomo", "memoryagentbench-cr", "longmemeval-m", "beam-1m"];
+/** Plan 202 Task 5.4.6: the owner-approved development screen drops LongMemEval-M. */
+export const TASK5_SCREEN_SUITES = TASK5_SUITES.filter((suite) => suite !== "longmemeval-m");
+export const TASK5_SCREEN_VERSION = "202-task5-candidate-gap-v1-screen";
+export const TASK5_SCREEN_BEAM_1M_MIN_QUESTIONS = 12;
+export const TASK5_SCREEN_BEAM_1M_WALL_HOURS = 12;
+export const TASK5_SCREEN_HANDOFF_REASON =
+  "deferred to plan 210 by the plan 202 Task 5.4.6 owner disposition; the full target is postponed, not dropped";
 export const TASK5_ARM = { id: "preset-r1", config: "fabric-x-tools" };
 export const TASK5_MODEL = { provider: "openrouter", model: "nvidia/nemotron-3-ultra-550b-a55b:free" };
 /** Two free, non-answer families; plain text avoids structured-output capability questions. */
@@ -364,6 +374,314 @@ function cell({ role, suite, cohort, budget, cost, control, candidate, harnessHa
   };
 }
 
+/**
+ * Plan 202 Task 5.4.6: the `beam-1m` slice is a pure function of the frozen cohort ids. It takes the
+ * cohort's conversations in descending question count, breaking ties by ascending numeric conversation
+ * id, until at least `minimum` questions are covered. No report, journal or outcome is an input.
+ */
+export function task5Beam1mSlice(questionIds, minimum = TASK5_SCREEN_BEAM_1M_MIN_QUESTIONS) {
+  if (!Array.isArray(questionIds) || questionIds.length === 0 || typeof questionIds[0] !== "string")
+    throw new Error("Task5Screen: the beam-1m slice takes cohort question ids, never a report or journal");
+  const counts = new Map();
+  for (const id of questionIds.map(String)) {
+    const conversation = Number(id.split(":")[0]);
+    if (!Number.isInteger(conversation)) throw new Error(`Task5Screen: ${id} is not a cohort question id`);
+    counts.set(conversation, (counts.get(conversation) ?? 0) + 1);
+  }
+  const ordered = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0]);
+  const conversations = [];
+  let covered = 0;
+  for (const [conversation, count] of ordered) {
+    if (covered >= minimum) break;
+    conversations.push(String(conversation));
+    covered += count;
+  }
+  const keep = new Set(conversations);
+  return questionIds.map(String).filter((id) => keep.has(id.split(":")[0]));
+}
+
+/** The screen keeps every criterion verbatim except the version and the guard's role. */
+export function task5ScreenCriteria(criteria) {
+  const next = structuredClone(criteria);
+  next.version = TASK5_SCREEN_VERSION;
+  next.abilityGuard = { ...next.abilityGuard, role: "descriptive" };
+  return next;
+}
+
+/** The frozen question ids each screen suite must run: unchanged suites keep theirs, beam-1m is sliced. */
+export function task5ScreenExpectedCohort(full) {
+  const cohort = {};
+  for (const suite of TASK5_SCREEN_SUITES) {
+    const control = full.cells?.find((entry) => entry.suite === suite && entry.role === "control");
+    if (!control) throw new Error(`Task5Screen: the full manifest has no ${suite} control cell`);
+    cohort[suite] = suite === "beam-1m" ? task5Beam1mSlice(control.questionIds) : control.questionIds.map(String);
+  }
+  return cohort;
+}
+
+/** Ability counts for a slice, derived from the cohort ids themselves. */
+function task5AbilityCounts(ids, abilities) {
+  const counts = Object.fromEntries(Object.keys(abilities).map((ability) => [ability, 0]));
+  for (const id of ids) {
+    const ability = String(id).split(":")[1];
+    if (!(ability in counts)) throw new Error(`Task5Screen: ${id} carries unknown ability ${ability}`);
+    counts[ability] += 1;
+  }
+  return counts;
+}
+
+/**
+ * The screen manifest is the full manifest reduced to the disposition's scope. Everything the scope
+ * does not name is copied byte-for-byte; derived hashes, counts and budgets are recomputed from the
+ * reduced cells, never edited. `product` may be supplied to re-pin the harness at execution time.
+ */
+export function reduceTask5Manifest(full, { generatedAt = new Date().toISOString(), product } = {}) {
+  const screen = structuredClone(full);
+  if (product) screen.product = structuredClone(product);
+  const byKey = new Map(full.cells.map((entry) => [`${entry.suite}:${entry.role}`, entry]));
+  const cells = [];
+  const suites = [];
+  const wallCaps = {};
+  for (const suite of TASK5_SCREEN_SUITES) {
+    const row = full.cohort.suites.find((entry) => entry.suite === suite);
+    const control = byKey.get(`${suite}:control`);
+    const candidate = byKey.get(`${suite}:candidate`);
+    if (!row || !control || !candidate) throw new Error(`Task5Screen: ${suite} is not paired in the full manifest`);
+    const ids = suite === "beam-1m" ? task5Beam1mSlice(control.questionIds) : control.questionIds.map(String);
+    const budget = suiteBudget(ids.length);
+    const wall = suite === "beam-1m" ? TASK5_SCREEN_BEAM_1M_WALL_HOURS : full.budgets.perCell.wallTimeCapHoursBySuite[suite];
+    wallCaps[suite] = wall;
+    for (const role of ["control", "candidate"]) {
+      const cell = structuredClone(byKey.get(`${suite}:${role}`));
+      cell.questionIds = [...ids];
+      cell.questions = ids.length;
+      cell.idsHash = idsHash(ids);
+      cell.maxInputTokens = budget.maxInputTokens;
+      cell.estimate = { ...budget.estimate };
+      cell.wallTimeCapHours = wall;
+      cells.push(cell);
+    }
+    suites.push({
+      ...structuredClone(row),
+      questions: ids.length,
+      idsHash: idsHash(ids),
+      abilities: suite === "beam-1m" ? task5AbilityCounts(ids, row.abilities) : structuredClone(row.abilities),
+    });
+  }
+  screen.cells = cells;
+  screen.criteria = task5ScreenCriteria(full.criteria);
+  screen.criteriaHash = stableHash(screen.criteria);
+  screen.evidenceProtocol = { ...structuredClone(full.evidenceProtocol), criteriaHash: screen.criteriaHash };
+  screen.evidenceProtocolHash = stableHash(screen.evidenceProtocol);
+  for (const cell of cells) {
+    cell.criteriaHash = screen.criteriaHash;
+    cell.evidenceProtocolHash = screen.evidenceProtocolHash;
+  }
+  screen.cohort = {
+    ...structuredClone(full.cohort),
+    suites,
+    questionCount: cells.filter((cell) => cell.role === "control").reduce((n, cell) => n + cell.questions, 0),
+    idsHash: idsHash(
+      cells.filter((cell) => cell.role === "control").flatMap((cell) => cell.questionIds.map((id) => `${cell.suite}:${id}`)),
+    ),
+    mapping: {
+      ...structuredClone(full.cohort.mapping),
+      labels: {
+        mapped: suites.reduce((n, row) => n + row.historical.mappedGoldQuestions, 0),
+        unresolved: suites.reduce((n, row) => n + row.historical.unresolvedGoldQuestions, 0),
+        noFineGold: suites.reduce((n, row) => n + row.historical.noFineGoldQuestions, 0),
+      },
+    },
+  };
+  screen.comparison = {
+    ...structuredClone(full.comparison),
+    controlCells: cells.filter((cell) => cell.role === "control").map((cell) => cell.id),
+    candidateCells: cells.filter((cell) => cell.role === "candidate").map((cell) => cell.id),
+    pairs: TASK5_SCREEN_SUITES.length,
+  };
+  const outOfScope = full.coverage.outOfScope.some((row) => row.suites.includes("longmemeval-m"))
+    ? structuredClone(full.coverage.outOfScope)
+    : [...structuredClone(full.coverage.outOfScope), { suites: ["longmemeval-m"], reason: TASK5_SCREEN_HANDOFF_REASON }];
+  screen.coverage = {
+    ...structuredClone(full.coverage),
+    applicableSuites: [...TASK5_SCREEN_SUITES],
+    outOfScope,
+    allApplicableSuiteTarget: false,
+    note: "development screen on four suites; the full target (LongMemEval-M, the full beam-1m cohort and the ability veto) is plan 210's",
+  };
+  screen.budgets.perCell = { ...structuredClone(full.budgets.perCell), wallTimeCapHoursBySuite: wallCaps };
+  const questionRuns = 2 * screen.cohort.questionCount;
+  screen.budgets.campaign = {
+    ...structuredClone(full.budgets.campaign),
+    expectedPhysicalCalls: Math.round(questionRuns * (TASK5_CALL_RATES.solver + TASK5_CALL_RATES.judge)),
+    expectedPhysicalCallsRange: {
+      low: Math.round(questionRuns * (TASK5_CALL_RATES.solver + TASK5_CALL_RATES.judge)),
+      high: Math.round(questionRuns * (TASK5_CALL_RATES.solverHigh + TASK5_CALL_RATES.judge)),
+    },
+    physicalCallEstimate: { ...structuredClone(full.budgets.campaign.physicalCallEstimate), questionRuns },
+    reservedInputTokens: cells.reduce((n, cell) => n + cell.maxInputTokens, 0),
+    estimatedInputTokens: cells.reduce((n, cell) => n + cell.estimate.inputTokens, 0),
+    estimatedOutputTokens: cells.reduce((n, cell) => n + cell.estimate.outputTokens, 0),
+    wallTimeCapHours: 2 * Object.values(wallCaps).reduce((a, b) => a + b, 0),
+    wallTimeNote:
+      "the beam-1m slice is capped at 12 h per role; LongMemEval-M, which dominated the full run's wall time, is deferred to plan 210",
+  };
+  screen.stopResume = {
+    ...structuredClone(full.stopResume),
+    manifestFingerprint: manifestFingerprint({
+      criteriaHash: screen.criteriaHash,
+      ceiling: screen.budgets.campaign.ceiling,
+      provider: TASK5_MODEL.provider,
+      model: TASK5_MODEL.model,
+      jobs: cells,
+    }),
+  };
+  screen.generatedAt = generatedAt;
+  screen.manifestHash = task5ManifestHash(screen);
+  return screen;
+}
+
+/** What a scope reduction may change; everything else must be byte-identical to the gate-14 manifest. */
+export const TASK5_SCOPE_REDUCTION_ALLOWED = [
+  "generatedAt",
+  "manifestHash",
+  "criteria.version",
+  "criteriaHash",
+  "evidenceProtocol.criteriaHash",
+  "evidenceProtocolHash",
+  "stopResume.manifestFingerprint",
+  "product.candidate.revision",
+  "product.harnessHash",
+  /^criteria\.abilityGuard\.role$/,
+  /^cohort\.(questionCount|idsHash|suites|mapping\.labels)/,
+  /^cells\./,
+  /^comparison\.(controlCells|candidateCells|pairs)/,
+  /^budgets\.perCell\.wallTimeCapHoursBySuite/,
+  /^budgets\.campaign\./,
+  /^coverage\./,
+];
+
+export function task5ScopeReductionAllowed(path) {
+  return TASK5_SCOPE_REDUCTION_ALLOWED.some((rule) => (typeof rule === "string" ? rule === path : rule.test(path)));
+}
+
+const TASK5_SCREEN_UNTOUCHED = [
+  "schemaVersion",
+  "kind",
+  "plan",
+  "task",
+  "subtask",
+  "status",
+  "executable",
+  "ownerGate",
+  "scope",
+  "scopeAuthorization",
+  "claim",
+  "models",
+  "analysis",
+  "analysisHash",
+  "isolation",
+  "baselineReuse",
+  "heldOutGuard",
+  "cost",
+];
+
+/**
+ * Plan 202 Task 5.4.6: a scope reduction is not a re-freeze. This refuses a screen that moved a model,
+ * judge, margin, halving factor, product, cap or kept cohort, and refuses a hand-written screen: the
+ * only accepted manifest is the exact reduction of the full one.
+ */
+export function assertTask5ScopeReduction(full, screen) {
+  const refuse = (reason) => {
+    throw new Error(`Task5Scope: ${reason}`);
+  };
+  if (screen?.criteria?.version !== TASK5_SCREEN_VERSION) refuse("the manifest is not a screen proposal");
+  // The treatment is gate 14's byte for byte: only the candidate revision/harness pin may move.
+  if (stableHash(screen.product?.control) !== stableHash(full.product?.control)) refuse("the control pin moved");
+  if (stableHash(screen.product?.paths) !== stableHash(full.product?.paths)) refuse("the product paths moved");
+  if (stableHash(screen.product?.harnessPaths) !== stableHash(full.product?.harnessPaths)) refuse("the harness paths moved");
+  if (screen.product?.candidate?.productHash !== full.product?.candidate?.productHash) refuse("the candidate product moved");
+  // Criteria: only the version and the descriptive guard role may change.
+  if (stableHash(screen.criteria) !== stableHash(task5ScreenCriteria(full.criteria)))
+    refuse("criteria moved beyond the screen version and the descriptive guard role");
+  if (screen.criteria.abilityGuard?.role !== "descriptive") refuse("the screen ability guard must be descriptive");
+  for (const key of ["metric", "margin", "rule", "uncertainty", "multiplicity", "missing"]) {
+    if (stableHash(screen.criteria.abilityGuard?.[key]) !== stableHash(full.criteria.abilityGuard?.[key]))
+      refuse(`the ability guard ${key} moved`);
+  }
+  // Suites: the disposition's four, nothing else; every kept cohort is the full one, beam-1m is the rule.
+  const suites = screen.coverage?.applicableSuites ?? [];
+  if (idsHash(suites) !== idsHash(TASK5_SCREEN_SUITES))
+    refuse(`the screen cohort is not the disposition's suites (${TASK5_SCREEN_SUITES.join(", ")})`);
+  for (const suite of suites) if (!full.coverage?.applicableSuites?.includes(suite)) refuse(`${suite} is not in the full cohort`);
+  const expectedCohort = task5ScreenExpectedCohort(full);
+  if (screen.cells?.length !== suites.length * 2) refuse("the screen has cells outside its four suites");
+  for (const suite of suites) {
+    for (const role of ["control", "candidate"]) {
+      const cell = screen.cells.find((entry) => entry.suite === suite && entry.role === role);
+      if (!cell) refuse(`${suite}:${role} is missing`);
+      if (idsHash(cell.questionIds) !== idsHash(expectedCohort[suite])) refuse(`${suite}:${role} is not the frozen screen cohort`);
+    }
+  }
+  // Everything the scope does not name stays byte-identical.
+  for (const key of TASK5_SCREEN_UNTOUCHED) if (stableHash(screen[key]) !== stableHash(full[key])) refuse(`${key} changed`);
+  const frozenPerCell = { ...structuredClone(full.budgets.perCell) };
+  const screenPerCell = { ...structuredClone(screen.budgets.perCell) };
+  delete frozenPerCell.wallTimeCapHoursBySuite;
+  delete screenPerCell.wallTimeCapHoursBySuite;
+  if (stableHash(screenPerCell) !== stableHash(frozenPerCell)) refuse("the per-cell budgets changed");
+  for (const key of ["ceiling", "maxPhysicalCalls", "physicalCallRule"])
+    if (screen.budgets.campaign?.[key] !== full.budgets.campaign?.[key]) refuse(`the campaign ${key} moved`);
+  if (stableHash(screen.cohort?.mapping?.rule) !== stableHash(full.cohort?.mapping?.rule)) refuse("the cohort mapping rule moved");
+  if (stableHash(screen.cohort?.mapping?.source) !== stableHash(full.cohort?.mapping?.source)) refuse("the cohort mapping source moved");
+  // The only accepted screen is the exact reduction; a hand-written one is refused here.
+  const expected = reduceTask5Manifest(full, { generatedAt: screen.generatedAt, product: screen.product });
+  const drift = task5FreezeDiff(expected, screen);
+  if (drift.length) refuse(`the screen is not the reduction of the full manifest: ${drift.slice(0, 5).join(", ")}`);
+  return task5FreezeDiff(full, screen).filter((path) => task5ScopeReductionAllowed(path));
+}
+
+/** Structural refusal of a screen proposal, with the reduced cohort as the authority. */
+export function assertTask5ScreenManifest(screen, full) {
+  return assertTask5ComparisonManifest(screen, {
+    suites: TASK5_SCREEN_SUITES,
+    expectedCohort: task5ScreenExpectedCohort(full),
+  });
+}
+
+export async function buildTask5ScreenManifest({ root = ".", fullPath = TASK5_MANIFEST, product, generatedAt } = {}) {
+  const full = JSON.parse(await readFile(join(root, fullPath), "utf8"));
+  const screen = reduceTask5Manifest(full, { ...(product ? { product } : {}), ...(generatedAt ? { generatedAt } : {}) });
+  assertTask5ScreenManifest(screen, full);
+  assertTask5ScopeReduction(full, screen);
+  return screen;
+}
+
+export async function writeTask5ScreenManifest({
+  root = ".",
+  fullPath = TASK5_MANIFEST,
+  path = TASK5_SCREEN_MANIFEST,
+  repin = false,
+} = {}) {
+  let product;
+  if (repin) {
+    // The execution re-freeze pins the harness and candidate that will actually run; the product
+    // hash must not move, or this is a different treatment and needs a new base manifest.
+    const base = JSON.parse(await readFile(join(root, fullPath), "utf8"));
+    const current = await currentRevision(root);
+    product = {
+      ...structuredClone(base.product),
+      harnessHash: await sourceFingerprint(base.product.harnessPaths, root),
+      candidate: { ...structuredClone(base.product.candidate), revision: current.revision, dirty: current.dirty },
+    };
+  }
+  const screen = await buildTask5ScreenManifest({ root, fullPath, ...(product ? { product } : {}) });
+  await mkdir(join(root, TASK5_EVIDENCE), { recursive: true });
+  await writeFile(join(root, path), `${JSON.stringify(screen, null, 2)}\n`);
+  await writeFile(join(root, path.replace(/\.json$/, ".md")), task5ComparisonMarkdown(screen, { path }));
+  return screen;
+}
+
 export async function buildTask5ComparisonManifest({ root = "." } = {}) {
   const inventoryBytes = await readFile(join(root, TASK5_INVENTORY));
   const inventory = JSON.parse(inventoryBytes);
@@ -656,7 +974,10 @@ const isPlainId = (value) => typeof value === "string" && value.length > 0;
  * Structural refusal of a drifted proposal. Observed hashes/cohorts are supplied by the caller so a
  * verifier recomputes them instead of trusting the manifest it is checking.
  */
-export function assertTask5ComparisonManifest(manifest, { observedProductHash, observedControlProductHash, observedCohort } = {}) {
+export function assertTask5ComparisonManifest(
+  manifest,
+  { observedProductHash, observedControlProductHash, observedCohort, suites = TASK5_SUITES, expectedCohort } = {},
+) {
   const refuse = (message) => {
     throw new Error(`Task5Manifest: ${message}`);
   };
@@ -677,7 +998,7 @@ export function assertTask5ComparisonManifest(manifest, { observedProductHash, o
     refuse("Task 5.1 recovered no reusable revision-1 trace; reuse must be refused");
 
   const cells = manifest.cells ?? [];
-  const expected = new Set(TASK5_SUITES.map((suite) => `${suite}:control`).concat(TASK5_SUITES.map((suite) => `${suite}:candidate`)));
+  const expected = new Set(suites.map((suite) => `${suite}:control`).concat(suites.map((suite) => `${suite}:candidate`)));
   if (cells.length !== expected.size) refuse("every applicable suite needs one control and one candidate cell");
   const seen = new Set();
   const allIds = [];
@@ -685,7 +1006,7 @@ export function assertTask5ComparisonManifest(manifest, { observedProductHash, o
     const key = `${cell.suite}:${cell.role}`;
     if (!expected.has(key) || seen.has(key)) refuse(`unexpected or duplicate cell ${key}`);
     seen.add(key);
-    if (!TASK5_SUITES.includes(cell.suite)) refuse(`suite ${cell.suite} is not an applicable Task-5 suite`);
+    if (!suites.includes(cell.suite)) refuse(`suite ${cell.suite} is not an applicable Task-5 suite`);
     // Development partitions only: held-out ids may never enter the cohort.
     if (cell.subset !== "dev") refuse(`${key} must run the development partition`);
     const draw = robustnessDraw(cell.suite);
@@ -696,8 +1017,9 @@ export function assertTask5ComparisonManifest(manifest, { observedProductHash, o
     if (!Array.isArray(cell.questionIds) || cell.questionIds.length !== cell.questions)
       refuse(`${key} question cohort does not match its declared size`);
     if (idsHash(cell.questionIds) !== cell.idsHash) refuse(`${key} cohort hash does not match its ids`);
-    // Cohort drift: the frozen draw, not the manifest, is authoritative.
-    if (idsHash(cell.questionIds) !== idsHash([...dev])) refuse(`${key} cohort drifted from the frozen development draw`);
+    // Cohort drift: the frozen draw (or the frozen screen cohort), not the manifest, is authoritative.
+    const frozen = expectedCohort?.[cell.suite] ?? [...dev];
+    if (idsHash(cell.questionIds) !== idsHash(frozen)) refuse(`${key} cohort drifted from the frozen development draw`);
     for (const id of cell.questionIds) {
       if (heldout.has(id)) refuse(`${key} contains a held-out question id`);
       if (!dev.has(id)) refuse(`${key} contains a question outside the frozen development cohort`);
@@ -710,13 +1032,13 @@ export function assertTask5ComparisonManifest(manifest, { observedProductHash, o
   if (idsHash(uniqueIds) !== manifest.cohort?.idsHash) refuse("combined cohort hash does not match the cells");
   if (manifest.cohort?.questionCount !== uniqueIds.length) refuse("cohort size does not match the cells");
 
-  if (idsHash(manifest.coverage?.applicableSuites ?? []) !== idsHash(TASK5_SUITES))
-    refuse("applicable suites drifted from the five suites that carry revision-1 evidence");
+  if (idsHash(manifest.coverage?.applicableSuites ?? []) !== idsHash(suites))
+    refuse("applicable suites drifted from the frozen suites that carry revision-1 evidence");
 
   // Paired cells must share the treatment-external protocol exactly; only the product may differ.
   const frozenKeys = ["suite", "subset", "arm", "config", "provider", "model", "judges", "judgeProtocol", "labelInjections"];
   const budgetKeys = ["questions", "idsHash", "maxInputTokens", "maxOutputTokens", "maxTurns", "concurrency"];
-  for (const suite of TASK5_SUITES) {
+  for (const suite of suites) {
     const pair = cells.filter((cell) => cell.suite === suite);
     if (pair.length !== 2) refuse(`${suite} needs exactly a control and a candidate`);
     const [a, b] = pair;
@@ -778,12 +1100,17 @@ export function assertTask5ComparisonManifest(manifest, { observedProductHash, o
 }
 
 /** Recompute every pin from source and the frozen draws before a manifest may be gated or run. */
-export async function auditTask5Comparison(manifest, { root = ".", worktree = manifest.product?.control?.worktree } = {}) {
-  assertTask5ComparisonManifest(manifest);
+export async function auditTask5Comparison(
+  manifest,
+  { root = ".", worktree = manifest.product?.control?.worktree, suites = TASK5_SUITES, expectedCohort, pinned = false } = {},
+) {
+  assertTask5ComparisonManifest(manifest, { suites, expectedCohort });
   const candidateRevision = manifest.product.candidate.revision;
   const controlRevision = manifest.product.control.revision;
   const candidateProductHash = await gitTreeFingerprint(manifest.product.paths, candidateRevision, root);
-  const workingProductHash = await sourceFingerprint(manifest.product.paths, root);
+  // `pinned` audits the committed trees a frozen proposal names, not the working tree: a scope gate
+  // authorizes a manifest whose harness is the one its pinned revision carries.
+  const workingProductHash = pinned ? candidateProductHash : await sourceFingerprint(manifest.product.paths, root);
   if (workingProductHash !== candidateProductHash)
     throw new Error("Task5Manifest: the working-tree product differs from the pinned candidate commit");
   // The overlay must be a function of the candidate and the product source, never a hand-made ref.
@@ -794,9 +1121,13 @@ export async function auditTask5Comparison(manifest, { root = ".", worktree = ma
   if (!armDiff.length || unexpected.length)
     throw new Error(`Task5Manifest: the arms differ outside the product paths (${unexpected.slice(0, 3).join(", ") || "no differences"})`);
   // Commits after the freeze may only touch evidence and the plan; anything else needs a re-freeze.
-  const { stdout: afterFreeze } = await run("git", ["-C", root, "diff", "--name-only", candidateRevision, "HEAD"], { maxBuffer: 1 << 28 });
-  const drift = task5PostFreezePaths(afterFreeze.split("\n").filter(Boolean));
-  if (drift.length) throw new Error(`Task5Manifest: commits after the candidate pin changed ${drift.slice(0, 3).join(", ")}`);
+  if (!pinned) {
+    const { stdout: afterFreeze } = await run("git", ["-C", root, "diff", "--name-only", candidateRevision, "HEAD"], {
+      maxBuffer: 1 << 28,
+    });
+    const drift = task5PostFreezePaths(afterFreeze.split("\n").filter(Boolean));
+    if (drift.length) throw new Error(`Task5Manifest: commits after the candidate pin changed ${drift.slice(0, 3).join(", ")}`);
+  }
   const controlPath = worktree ? join(root, worktree) : null;
   let controlProductHash;
   let controlHarnessHash = null;
@@ -811,28 +1142,39 @@ export async function auditTask5Comparison(manifest, { root = ".", worktree = ma
   } else controlProductHash = await gitTreeFingerprint(manifest.product.paths, controlRevision, root);
   if (controlProductHash !== TASK5_REVISION1_PRODUCT_HASH)
     throw new Error("Task5Manifest: the control does not reproduce the revision-1 product hash");
-  const harnessHash = await sourceFingerprint(manifest.product.harnessPaths, root);
+  const harnessHash = pinned
+    ? await gitTreeFingerprint(manifest.product.harnessPaths, candidateRevision, root)
+    : await sourceFingerprint(manifest.product.harnessPaths, root);
   const analysis = await pairedAnalysisProtocol(root);
   if (harnessHash !== manifest.product.harnessHash) throw new Error("Task5Manifest: harness drifted after the freeze");
   if (stableHash(analysis) !== manifest.analysisHash) throw new Error("Task5Manifest: analysis protocol drifted after the freeze");
   if (analysis.criteriaHash !== robustnessCriteriaHash()) throw new Error("Task5Manifest: robustness criteria binding is broken");
-  const observedCohort = Object.fromEntries(TASK5_SUITES.map((suite) => [suite, suiteCohort(suite).questionIds]));
+  const observedCohort = expectedCohort ?? Object.fromEntries(suites.map((suite) => [suite, suiteCohort(suite).questionIds]));
   assertTask5ComparisonManifest(manifest, {
     observedProductHash: candidateProductHash,
     observedControlProductHash: controlProductHash,
     observedCohort,
+    suites,
+    expectedCohort,
   });
   return { candidateProductHash, controlProductHash, controlHarnessHash, harnessHash, observedCohort };
 }
 
-export function task5ComparisonMarkdown(manifest) {
+export function task5ComparisonMarkdown(manifest, { path = TASK5_MANIFEST } = {}) {
   const money = (value) => `$${Number(value ?? 0).toFixed(2)}`;
+  const screen = manifest.criteria?.version === TASK5_SCREEN_VERSION;
   return [
-    "# Plan 202 Task 5.2 — frozen paired development-comparison manifest",
+    `# Plan 202 Task 5.2 — frozen paired ${screen ? "development-screen" : "development-comparison"} manifest`,
     "",
     `Status: **${manifest.status}**, \`executable: false\`. Task 5.3 must record the owner gate against manifest hash \`${manifest.manifestHash.slice(0, 16)}…\` before any provider call.`,
     "",
-    `Manifest: [${TASK5_MANIFEST}](development-comparison-manifest.json) (ids, counts, hashes and budgets only).`,
+    `Manifest: [${path}](${basename(path)}) (ids, counts, hashes and budgets only).`,
+    ...(screen
+      ? [
+          "",
+          `Screen scope (plan 202 Task 5.4.6): ${TASK5_SCREEN_SUITES.join(", ")}; \`longmemeval-m\` and the full \`beam-1m\` cohort are deferred to plan 210. The beam-1m slice is ${manifest.cells.find((cell) => cell.suite === "beam-1m")?.questions ?? 0} questions selected by a rule over cohort ids only.`,
+        ]
+      : []),
     "",
     "## Product pins",
     "",
@@ -863,7 +1205,7 @@ export function task5ComparisonMarkdown(manifest) {
     "",
     `- Candidate gap: ${manifest.criteria.candidateGap.numerator}. Denominator: ${manifest.criteria.candidateGap.denominator}.`,
     `- Halving: ${manifest.criteria.candidateGap.halving}. Zero-gap baseline: ${manifest.criteria.candidateGap.zeroGapBaseline}.`,
-    `- Ability guard: ${manifest.criteria.abilityGuard.rule}.`,
+    `- Ability guard (${manifest.criteria.abilityGuard.role ?? "veto"}): ${manifest.criteria.abilityGuard.rule}.`,
     `- Failures/missingness are never zero: ${manifest.criteria.candidateGap.missingness}.`,
     "",
     "## Reuse, isolation and coverage",
@@ -877,7 +1219,7 @@ export function task5ComparisonMarkdown(manifest) {
     "",
     "```sh",
     "timeout 120 bun test --timeout=0 scripts/memory-bench/task5-comparison.test.mjs",
-    "timeout 120 bun scripts/memory-bench/task5-comparison.mjs --manifest",
+    `timeout 120 bun scripts/memory-bench/task5-comparison.mjs --manifest${screen ? " --screen" : ""}`,
     "```",
     "",
   ].join("\n");
@@ -954,7 +1296,15 @@ export function assertTask5RefreezeDiff(previous, next) {
  */
 export function task5OwnerGate(
   manifest,
-  { text, approvedAt = new Date().toISOString().slice(0, 10), approvedBy = "owner", gate = 5, subtask = "5.3", supersedes = null } = {},
+  {
+    text,
+    approvedAt = new Date().toISOString().slice(0, 10),
+    approvedBy = "owner",
+    gate = 5,
+    subtask = "5.3",
+    supersedes = null,
+    proposalPath = TASK5_ACTIVE_MANIFEST,
+  } = {},
 ) {
   if (!text?.trim()) throw new Error("Task5Gate: the owner's approval text is required verbatim");
   const record = {
@@ -969,7 +1319,8 @@ export function task5OwnerGate(
     approvedBy,
     text,
     ...(supersedes ? { supersedes } : {}),
-    proposal: { path: TASK5_MANIFEST, manifestHash: manifest.manifestHash },
+    proposal: { path: proposalPath, manifestHash: manifest.manifestHash },
+    criteria: { version: manifest.criteria.version, hash: manifest.criteriaHash },
     journal: { path: TASK5_JOURNAL, fingerprint: manifest.stopResume.manifestFingerprint },
     // The gate binds the arms themselves, not only the manifest hash that covers them.
     product: {
@@ -1017,15 +1368,17 @@ export function task5OwnerGate(
   return assertTask5OwnerGate(record, manifest);
 }
 
-export function assertTask5OwnerGate(gate, manifest) {
+export function assertTask5OwnerGate(gate, manifest, proposalPath = TASK5_ACTIVE_MANIFEST) {
   const refuse = (reason) => {
     throw new Error(`Task5Gate: ${reason}`);
   };
   if (gate?.kind !== "202-task5-owner-gate") refuse("unknown gate kind");
   if (gate.approved !== true) refuse("execution is not approved");
   if (typeof gate.text !== "string" || !gate.text.trim()) refuse("the owner's approval text is missing");
-  if (gate.proposal?.path !== TASK5_MANIFEST || gate.proposal?.manifestHash !== manifest.manifestHash)
+  if (gate.proposal?.path !== proposalPath || gate.proposal?.manifestHash !== manifest.manifestHash)
     refuse("the approval is not bound to the frozen manifest");
+  if (gate.criteria && (gate.criteria.version !== manifest.criteria?.version || gate.criteria.hash !== manifest.criteriaHash))
+    refuse("the approval is not bound to the frozen criteria");
   if (gate.journal?.path !== TASK5_JOURNAL || gate.journal?.fingerprint !== manifest.stopResume?.manifestFingerprint)
     refuse("the approval is not bound to the campaign journal identity");
   if (
@@ -1080,7 +1433,8 @@ export function task5OwnerGateMarkdown(manifest, gate) {
     "",
     "## Binding",
     "",
-    `- Manifest: \`${gate.proposal.manifestHash}\` ([${gate.proposal.path}](development-comparison-manifest.json)).`,
+    `- Manifest: \`${gate.proposal.manifestHash}\` ([${gate.proposal.path}](${basename(gate.proposal.path)})).`,
+    ...(gate.criteria ? [`- Criteria: \`${gate.criteria.version}\` (\`${gate.criteria.hash.slice(0, 16)}…\`).`] : []),
     `- Journal: \`${gate.journal.path}\`, fingerprint \`${gate.journal.fingerprint}\` (campaign identity over criteria, ceiling, provider, model and jobs).`,
     `- Arms: candidate \`${gate.product?.candidate}\` (product \`${gate.product?.candidateProductHash}\`); control r2 \`${gate.product?.control}\` (product \`${gate.product?.controlProductHash}\` from \`${gate.product?.controlSource}\`); harness \`${gate.product?.harnessHash}\`.`,
     `- A changed manifest, cohort, criteria or journal identity is a refusal, not a re-approval.`,
@@ -1090,7 +1444,9 @@ export function task5OwnerGateMarkdown(manifest, gate) {
           `## Supersedes gate ${gate.supersedes.gate}`,
           "",
           `- Gate ${gate.supersedes.gate} stays unedited at \`${gate.supersedes.records.gate}\` (sha256 \`${gate.supersedes.records.gateSha256}\`, manifest \`${gate.supersedes.manifestHash}\`); this gate replaces it.`,
-          `- Journal identity is unchanged (\`${gate.supersedes.journalFingerprint}\`) because the cohort, criteria, protocol, models, judges, budgets and caps did not move: only the fields below changed.`,
+          gate.criteria?.version === TASK5_SCREEN_VERSION
+            ? `- This is a **scope reduction, not a re-freeze**: the treatment (control \`${gate.product?.controlProductHash}\`, candidate product \`${gate.product?.candidateProductHash}\`) is byte-identical. The journal identity moves from \`${gate.supersedes.journalFingerprint}\` to \`${gate.journal.fingerprint}\` because the criteria version and the cohort changed, and the screen runs fresh.`
+            : `- Journal identity is unchanged (\`${gate.supersedes.journalFingerprint}\`) because the cohort, criteria, protocol, models, judges, budgets and caps did not move: only the fields below changed.`,
           "",
           ...gate.supersedes.changes.map((path) => `- \`${path}\``),
         ]
@@ -1111,12 +1467,30 @@ export function task5OwnerGateMarkdown(manifest, gate) {
     "## Reproduce",
     "",
     "```sh",
-    "timeout 120 bun test --timeout=0 scripts/memory-bench/task5-comparison.test.mjs",
+    "timeout 120 bun test --timeout=0 scripts/memory-bench/task5-comparison.test.mjs scripts/memory-bench/task5-screen.test.mjs",
     'timeout 120 bun scripts/memory-bench/task5-comparison.mjs --gate --text "<owner approval>" --approved-at 2026-10-30',
     "```",
     "",
   ].join("\n");
 }
+
+/** A gate record groups a scope reduction's changes by section; the manifest hash covers the leaves. */
+const summariseScreenChange = (path) => {
+  if (path.startsWith("cells."))
+    return "cells (LongMemEval-M removed, beam-1m sliced to the rule's 14 questions, derived ids/estimates/wall caps)";
+  if (path.startsWith("cohort.")) return "cohort (question count, id hash, suite rows and label totals)";
+  if (path.startsWith("coverage.")) return "coverage (LongMemEval-M deferred to plan 210, all-suite target off)";
+  if (path.startsWith("budgets."))
+    return "budgets (recomputed estimates, reservations, expected calls and wall caps; ceiling and hard cap unchanged)";
+  if (path.startsWith("comparison.")) return "comparison (cell lists and pair count)";
+  if (path === "criteria.version") return "criteria.version (202-task5-candidate-gap-v1-screen)";
+  if (path === "criteria.abilityGuard.role") return "criteria.abilityGuard.role (descriptive, not a veto)";
+  if (path === "criteriaHash" || path === "evidenceProtocolHash" || path === "evidenceProtocol.criteriaHash")
+    return "hashes derived from the screen criteria";
+  if (path === "stopResume.manifestFingerprint") return "journal identity (new criteria and cohort)";
+  if (path === "product.harnessHash" || path === "product.candidate.revision") return "recomputed pins";
+  return path;
+};
 
 /**
  * The record that replaces a gate without editing it: the archived gate's bytes stay as they were,
@@ -1127,7 +1501,12 @@ export async function supersedesRecord({ root, manifestPath, manifest }) {
   const gatePath = manifestPath.replace(/development-comparison-manifest/, "owner-gate");
   const gateBytes = await readFile(join(root, gatePath));
   const previousGate = JSON.parse(gateBytes.toString("utf8"));
-  const changes = assertTask5RefreezeDiff(previous, manifest);
+  // A scope reduction is not a re-freeze; the stricter guard is the one that applies. Cell leaves
+  // shift when a suite is removed, so the record groups them instead of listing every index.
+  const changes =
+    manifest.criteria?.version === TASK5_SCREEN_VERSION
+      ? [...new Set(assertTask5ScopeReduction(previous, manifest).map(summariseScreenChange))].sort()
+      : assertTask5RefreezeDiff(previous, manifest);
   if (!changes.length) throw new Error("Task5Gate: a re-freeze must change something");
   return {
     gate: previousGate.gate ?? null,
@@ -1138,15 +1517,36 @@ export async function supersedesRecord({ root, manifestPath, manifest }) {
   };
 }
 
-export async function writeTask5OwnerGate({ root = ".", text, approvedAt, path = TASK5_GATE, supersedesPath, subtask = "5.4.5" } = {}) {
-  const manifest = JSON.parse(await readFile(join(root, TASK5_MANIFEST), "utf8"));
+export async function writeTask5OwnerGate({
+  root = ".",
+  text,
+  approvedAt,
+  path = TASK5_GATE,
+  manifestPath = TASK5_ACTIVE_MANIFEST,
+  supersedesPath,
+  subtask = "5.4.5",
+} = {}) {
+  const manifest = JSON.parse(await readFile(join(root, manifestPath), "utf8"));
   // Gate the frozen source pins; a prepared control worktree is audited (and refreshed) in preflight.
-  await auditTask5Comparison(manifest, { root, worktree: null });
+  if (manifest.criteria?.version === TASK5_SCREEN_VERSION) {
+    // The scope gate authorizes the reduction; the bytes it names are the ones its pins carry.
+    const full = JSON.parse(await readFile(join(root, TASK5_MANIFEST), "utf8"));
+    assertTask5ScopeReduction(full, manifest);
+    const pinned = (await sourceFingerprint(manifest.product.harnessPaths, root)) !== manifest.product.harnessHash;
+    await auditTask5Comparison(manifest, {
+      root,
+      worktree: null,
+      suites: TASK5_SCREEN_SUITES,
+      expectedCohort: task5ScreenExpectedCohort(full),
+      pinned,
+    });
+  } else await auditTask5Comparison(manifest, { root, worktree: null });
   const supersedes = supersedesPath ? await supersedesRecord({ root, manifestPath: supersedesPath, manifest }) : null;
   const gate = task5OwnerGate(manifest, {
     text,
     ...(approvedAt ? { approvedAt } : {}),
     ...(supersedes ? { gate: (supersedes.gate ?? 5) + 1, subtask, supersedes } : {}),
+    proposalPath: manifestPath,
   });
   await mkdir(join(root, TASK5_EVIDENCE), { recursive: true });
   await writeFile(join(root, path), `${JSON.stringify(gate, null, 2)}\n`);
@@ -1181,8 +1581,24 @@ if (import.meta.main) {
   }
   if (!argv.includes("--manifest"))
     throw new Error(
-      "Task5Manifest: usage: task5-comparison.mjs --manifest | --gate --text <owner approval> [--approved-at YYYY-MM-DD] [--supersedes <archived manifest>]",
+      "Task5Manifest: usage: task5-comparison.mjs --manifest [--screen [--repin]] | --gate --text <owner approval> [--approved-at YYYY-MM-DD] [--supersedes <archived manifest>] [--subtask <id>]",
     );
+  if (argv.includes("--screen")) {
+    const screen = await writeTask5ScreenManifest({ repin: argv.includes("--repin") });
+    console.log(
+      JSON.stringify({
+        manifest: TASK5_SCREEN_MANIFEST,
+        cells: screen.cells.length,
+        questions: screen.cohort.questionCount,
+        reservedInputTokens: screen.budgets.campaign.reservedInputTokens,
+        expectedPhysicalCalls: screen.budgets.campaign.expectedPhysicalCalls,
+        totalUsd: screen.cost.totalUsd,
+        manifestHash: screen.manifestHash,
+        journalFingerprint: screen.stopResume.manifestFingerprint,
+      }),
+    );
+    process.exit(0);
+  }
   const manifest = await writeTask5ComparisonManifest();
   console.log(
     JSON.stringify({

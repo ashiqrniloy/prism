@@ -527,6 +527,24 @@ passing gate.
 gated proposal. Do not narrow the cohort or swap models without a new manifest
 and gate.
 
+### Development screen (plan 202 Task 5.4.6)
+
+`timeout 120 bun scripts/memory-bench/task5-comparison.mjs --manifest --screen`
+writes the reduced [development screen](../../docs/_evidence/memory-bench/202/task5/development-screen-manifest.json)
+from the full gate-14 manifest. The screen keeps `beam-100k`, `locomo`,
+`memoryagentbench-cr` and a rule-selected `beam-1m` slice (conversations 10, 12,
+15, 25 on the frozen cohort: 14 questions), and defers `longmemeval-m` to plan
+210. `assertTask5ScopeReduction` allows only removed suites, the exact slice, the
+criteria-version/descriptive-guard change, the hashes derived from them and
+recomputed budgets and pins; a hand-written screen is refused. The ability guard
+is reported, not vetoed; the candidate-gap halving rule stays the screen's gate.
+
+The campaign reads the screen manifest and preflight asserts it is still the full
+manifest's reduction. A journal from a superseded gate is refused rather than
+resumed, so gate-11 reports are never reused. `--repin` re-stamps the harness and
+candidate revision at the execution re-freeze; gate 15 authorizes the scope, and
+the bytes that run are only accepted after that re-freeze and its gate.
+
 ### Control r2: arms differ only in the product paths
 
 The candidate is a commit, not the working tree. The control is a derived overlay

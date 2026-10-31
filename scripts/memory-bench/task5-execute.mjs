@@ -15,12 +15,16 @@ import { assertComparableServedDeployments } from "./served-model.mjs";
 import {
   assertTask5CandidateClean,
   assertTask5OwnerGate,
+  assertTask5ScopeReduction,
   auditTask5Comparison,
   ensureTask5ControlRef,
+  TASK5_ACTIVE_MANIFEST,
   TASK5_EVIDENCE,
   TASK5_GATE,
   TASK5_JOURNAL,
   TASK5_MANIFEST,
+  TASK5_SCREEN_SUITES,
+  task5ScreenExpectedCohort,
 } from "./task5-comparison.mjs";
 
 const run = promisify(execFile);
@@ -41,8 +45,39 @@ export const TASK5_PRODUCT_TOOL_NAMES = ["memory.recall", "memory.read"];
 export const FREE_TIER_DAILY_REQUESTS = 1000;
 export const TASK5_CONTROL_WORKTREE = ".cache/memory-bench/task5/control-worktree";
 
+/** The plan of record for execution is the reduced development screen (plan 202 Task 5.4.6). */
 export async function readTask5Proposal(root = ".") {
-  return JSON.parse(await readFile(join(root, TASK5_MANIFEST), "utf8"));
+  return JSON.parse(await readFile(join(root, TASK5_ACTIVE_MANIFEST), "utf8"));
+}
+
+/** The full ten-cell manifest stays on disk as the record plan 210 inherits; the screen must be its reduction. */
+export async function assertTask5ScreenProposal(root, proposal) {
+  const full = JSON.parse(await readFile(join(root, TASK5_MANIFEST), "utf8"));
+  return assertTask5ScopeReduction(full, proposal);
+}
+
+/**
+ * Gate-11 reports are not reused: a screen journal opened under a superseded gate is refused rather
+ * than resumed, so every screen cell runs fresh under gate 15.
+ */
+/** Audit the active proposal against its own reduced cohort, not the full draw. */
+export async function auditTask5ActiveProposal(root, proposal) {
+  const full = JSON.parse(await readFile(join(root, TASK5_MANIFEST), "utf8"));
+  return auditTask5Comparison(proposal, {
+    root,
+    suites: TASK5_SCREEN_SUITES,
+    expectedCohort: task5ScreenExpectedCohort(full),
+  });
+}
+
+export function assertTask5ScreenJournalFresh(journal, manifest) {
+  const expected = manifest.stopResume?.manifestFingerprint;
+  if (!expected) throw new Error("Task5Screen: the screen manifest carries no journal identity");
+  if (journal?.manifestHash !== expected)
+    throw new Error(`Task5Screen: journal ${journal?.campaignId ?? "(unknown)"} belongs to a superseded gate; screen cells run fresh`);
+  const stale = (journal.attempts ?? []).filter((attempt) => attempt.manifestHash && attempt.manifestHash !== expected);
+  if (stale.length) throw new Error(`Task5Screen: ${stale.length} journal attempts were produced under a superseded gate`);
+  return journal;
 }
 
 /**
@@ -171,12 +206,13 @@ export function task5CampaignFingerprint(proposal) {
 
 export async function buildTask5CampaignManifest({ root = ".", smoke = false } = {}) {
   const proposal = await readTask5Proposal(root);
+  await assertTask5ScreenProposal(root, proposal);
   const gate = JSON.parse(await readFile(join(root, TASK5_GATE), "utf8"));
-  assertTask5OwnerGate(gate, proposal);
+  assertTask5OwnerGate(gate, proposal, TASK5_ACTIVE_MANIFEST);
   if (task5CampaignFingerprint(proposal) !== gate.journal.fingerprint)
     throw new Error("Task5Execute: the campaign fingerprint differs from the approved journal identity");
   // Source pins only; preflight refreshes and then strictly audits the control worktree.
-  await auditTask5Comparison(proposal, { root, worktree: null });
+  await auditTask5ActiveProposal(root, proposal);
   const smokeJobs = smoke ? proposal.cells.filter((cell) => cell.suite === TASK5_SMOKE_SUITE) : [];
   // Two questions at most: the smoke cannot become a second campaign by accident.
   if (smoke && (smokeJobs.length !== 2 || smokeJobs.length * TASK5_SMOKE_MAX_QUESTIONS > 2))
@@ -216,18 +252,22 @@ export async function buildTask5CampaignManifest({ root = ".", smoke = false } =
 
 export async function preflightTask5(manifest, { root = ".", keyTier } = {}) {
   const proposal = await readTask5Proposal(root);
+  await assertTask5ScreenProposal(root, proposal);
   if (task5CampaignFingerprint(proposal) !== manifest.gate.journal)
     throw new Error("Task5Execute: the campaign fingerprint changed before execution");
   // Working-tree drift could enter the candidate arm, and the control worktree is part of the arms.
   const clean = await assertTask5CandidateClean({ root });
   if (clean.ignored.length) console.log(`preflight: ignoring non-executable dirty paths: ${clean.ignored.join(", ")}`);
   const dir = await prepareTask5Control({ root, proposal });
-  await auditTask5Comparison(proposal, { root });
+  await auditTask5ActiveProposal(root, proposal);
   await assertCacheStabilityPin(proposal, { root });
   // The account's free tier decides whether the run can finish; check it before spending anything.
   const tier = assertTask5FreeTier(keyTier ?? (await readOpenRouterKeyTier()));
   // Never resume a finished campaign: its attempts are frozen evidence, not a starting point.
   await archiveFinishedTask5Journal({ root });
+  // An open journal from a superseded gate is not a screen resume point either.
+  const openJournal = join(root, TASK5_JOURNAL);
+  if (existsSync(openJournal)) assertTask5ScreenJournalFresh(JSON.parse(await readFile(openJournal, "utf8")), proposal);
   await writeFile(
     join(root, TASK5_KEY_TIER),
     `${JSON.stringify({ kind: "202-task5-free-key-tier", checkedAt: new Date().toISOString(), ...tier }, null, 2)}\n`,
@@ -340,8 +380,9 @@ export async function assertTask5ServedDeployments(manifest, journal) {
 
 export async function postflightTask5(manifest, journal, { root = "." } = {}) {
   const proposal = await readTask5Proposal(root);
-  assertTask5OwnerGate(JSON.parse(await readFile(join(root, TASK5_GATE), "utf8")), proposal);
-  await auditTask5Comparison(proposal, { root });
+  assertTask5OwnerGate(JSON.parse(await readFile(join(root, TASK5_GATE), "utf8")), proposal, TASK5_ACTIVE_MANIFEST);
+  await assertTask5ScreenProposal(root, proposal);
+  await auditTask5ActiveProposal(root, proposal);
   await assertTask5ServedDeployments(manifest, journal);
   const record = {
     kind: "202-task5-execution-verification",

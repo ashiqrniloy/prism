@@ -101,7 +101,7 @@ import {
 import { robustnessCriteriaHash } from "./robustness.mjs";
 import { assertComparableServedDeployments } from "./served-model.mjs";
 import subsets from "./subsets.json" with { type: "json" };
-import { TASK5_EVIDENCE, TASK5_JOURNAL, writeTask5ComparisonManifest } from "./task5-comparison.mjs";
+import { TASK5_EVIDENCE, TASK5_JOURNAL, writeTask5ComparisonManifest, writeTask5ScreenManifest } from "./task5-comparison.mjs";
 import {
   buildTask5CampaignManifest,
   postflightTask5,
@@ -1127,7 +1127,7 @@ if (import.meta.main) {
     else if (mode === "acceptance1889") await writeAcceptance1889Manifest();
     else if (mode === "acceptance1888") await writeAcceptance1888Manifest();
     else if (mode === "acceptance") await writeAcceptanceManifest();
-    else if (mode === "task5") await writeTask5ComparisonManifest();
+    else if (mode === "task5") await (process.argv.includes("--screen") ? writeTask5ScreenManifest() : writeTask5ComparisonManifest());
     else await writeManifest();
     process.exit(0);
   }

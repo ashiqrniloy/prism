@@ -1,5 +1,43 @@
 # Plan 202 Task 5 evidence
 
+## Task 5.4.6 — owner disposition and bounded development screen (2026-11-01)
+
+The owner re-scoped Task 5.4 to a development screen and deferred the hard test until plans
+207-210 land. The disposition text is recorded verbatim in
+[owner-gate.json](owner-gate.json) (gate 15), which binds the new
+[development-screen-manifest.json](development-screen-manifest.json)
+(`manifestHash 0dea417b…`, criteria `202-task5-candidate-gap-v1-screen`, journal
+`ecb83564…`). Gate 14 stays unedited under `gates/` with its manifest; the full ten-cell
+manifest remains [development-comparison-manifest.json](development-comparison-manifest.json)
+as the record plan 210 inherits.
+
+The screen is the gate-14 manifest reduced, never rebuilt by hand:
+`assertTask5ScopeReduction` refuses a moved model, judge, margin, halving factor, product or
+kept cohort, and refuses a hand-written screen. Scope:
+
+| Suite | Questions | Note |
+| --- | ---: | --- |
+| `beam-100k` | 40 | unchanged |
+| `locomo` | 60 | unchanged |
+| `memoryagentbench-cr` | 20 | unchanged |
+| `beam-1m` | 14 | conversations 10, 12, 15, 25 selected by a rule over cohort ids only |
+| `longmemeval-m` | — | deferred to plan 210 Task 5 and Task 9 |
+
+The candidate-gap halving rule is unchanged and is the screen's gate; the ability guard keeps
+its metric, margin, uncertainty and multiplicity text but is `descriptive`, and its veto moves
+to plan 210. Expected question runs fall from 420 to 268 (134 questions x 2 roles), expected
+physical calls from 2,289-2,625 to 1,461-1,675 and wall time to about 28 h per role. Gate-11
+reports are not reused: `assertTask5ScreenJournalFresh` refuses a journal or attempt from a
+superseded gate, so every screen cell runs fresh.
+
+**Execution re-freeze is required before the first cell.** Gate 15 authorizes the scope against
+the gate-14 pins; the screen machinery (`--screen`, the scope guard, the campaign wiring) is
+harness code, so the bytes that actually execute are the current harness. Immediately before a
+resume, run `task5-comparison.mjs --manifest --screen --repin`, record the next gate with
+`--supersedes development-screen-manifest.json`, then `campaign.mjs --task5`. Preflight still
+refuses a dirty tree, a moved product or a moved harness, so this cannot silently run stale
+bytes.
+
 ## Task 5.4 — execution attempted, blocked (2026-10-30)
 
 `campaign.mjs --task5` (backed by [task5-execute.mjs](../../../../scripts/memory-bench/task5-execute.mjs))
