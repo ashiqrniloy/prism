@@ -27,6 +27,7 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
 
 - It starts after plan 209 Task 6, when every memory plan has development evidence and has listed its unjustified features for the ledger.
 - It ends before plan 184 (cache parity, which measures the final product) and plan 185 (surface freeze).
+- **Amended 2026-10-31 by plans 211–212 (host adoption ships in 0.13.0).** When this plan is complete, continue with plan 211 (module skills; its memory skills are written on the surface this plan leaves), then plan 212, then plan 184.
 - **Audit before acceptance.** Removals happen on development evidence only, before any held-out item is read. The held-out acceptance then measures the product that ships, so no claim has to be re-pointed and no removal needs a second held-out read.
 
 **Scope:** `memory-observational`, `memory-fabric`, `memory-wiki` and the parts of `memory-core` only they use. `memory-rag` (document retrieval, a separate capability the owner keeps outside memory) and `memory-compaction` (measured by plan 194's rot curve) are out of scope; the ledger lists them as excluded with that reason.

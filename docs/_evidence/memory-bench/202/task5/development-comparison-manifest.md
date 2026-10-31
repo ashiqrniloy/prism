@@ -1,15 +1,15 @@
 # Plan 202 Task 5.2 — frozen paired development-comparison manifest
 
-Status: **proposed-awaiting-owner-gate**, `executable: false`. Task 5.3 must record the owner gate against manifest hash `90862ef1c2f0f239…` before any provider call.
+Status: **proposed-awaiting-owner-gate**, `executable: false`. Task 5.3 must record the owner gate against manifest hash `2694bf3945d19e9b…` before any provider call.
 
 Manifest: [docs/_evidence/memory-bench/202/task5/development-comparison-manifest.json](development-comparison-manifest.json) (ids, counts, hashes and budgets only).
 
 ## Product pins
 
-- Control: revision `51d23d4e77debf3ae5b2ec7e68d12656b2c8cd95` (r2 = candidate tree with product paths from `5c2570df52a084b43120ee4e77921746a029480e`), product `ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0` (reproduces the closed screen's revision-1 fabric hash `57aa47d94eb3cad629e232372f220296131583ea7ac06189d6f589b39c825799`).
-- Candidate: committed revision `d21b9305bbac078ebdd56e8251c69459c0202108`, product `26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20`.
+- Control: revision `5ed8a63e856d472afee748ad5b9e49e3e10873ff` (r2 = candidate tree with product paths from `5c2570df52a084b43120ee4e77921746a029480e`), product `ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0` (reproduces the closed screen's revision-1 fabric hash `57aa47d94eb3cad629e232372f220296131583ea7ac06189d6f589b39c825799`).
+- Candidate: committed revision `9d5a7c656bdc27c6a67166fb2aeb826954118927`, product `26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20`.
 - The two arms differ only under `packages/memory/fabric/src` and `packages/memory/core/src`; a git diff outside those paths is a refusal, and so is an uncommitted candidate.
-- Harness `66aabefbea1bc21e4615b891ef5e4f0a016a3bc6671c24dd329ec21234e738a1`; unchanged for both roles so only the product is the treatment.
+- Harness `196a21ee6dafcef2a30d4eff0b700573bcd9695be9d49eb396840fc3220a62bd`; unchanged for both roles so only the product is the treatment.
 
 ## Cohort and cells
 
