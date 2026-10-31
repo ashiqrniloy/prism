@@ -610,9 +610,9 @@ Native packages are ordinary packages. None is installed by default.
 | `@arnilo/prism-memory-compaction` | LLM summary compaction | `compaction` slot, `models` | `memory/compaction/llm` |
 | `@arnilo/prism-memory-observational` | Observer and reflector agents on a separate model, observation-based compaction, `recall` tool, per-session toggle, `/om` commands | `compaction` slot, `context.build`, `turn.completed` + background, state, tools, commands, events | `memory/compaction/observational-memory`, `prism-code` `observational-memory.ts` |
 | `@arnilo/prism-memory-rag` | Retrieval over indexed sources; owns memory's `Embedder` (batching, chunking, caps) and provides it as the `embeddings` service | tools, `context.build` | `memory/rag` |
-| `@arnilo/prism-memory-wiki` | Wiki ingest and query with bundled skills | tools, skills, commands, consumes `web.fetch` | `memory/wiki`, `prism-code` `wiki.ts` |
+| `@arnilo/prism-memory-wiki` | The ontology tier of the three-tier memory: concept notes over the fabric (one per subject, relations, itemized claims citing fabric notes), a background curator pass with incremental cited edits, subject binding, claim lint, and source ingest into the fabric | `models`, background work, commands, `wiki_ingest` tool, requires `memory.fabric`, consumes `web.fetch` | `memory/wiki`, `prism-code` `wiki.ts` (the 0.12 compiler, `.wiki/` page store and `qmd` search are retired) |
 | `@arnilo/prism-memory-core` | Shared memory contracts, in-memory and Postgres vector stores, lineage, deletion propagation, source repointing, recall scoring, limits, and schema helpers used by the memory packages; a plain library with no slot and no capability (`pg` loads only under `./postgres`) | — | `memory` core |
-| `@arnilo/prism-memory-fabric` | Working, semantic, and scoped memory | tools, `context.build`, state | `memory/fabric`, `memory/scoped`, `memory` core |
+| `@arnilo/prism-memory-fabric` | Working, semantic, and scoped memory: the atomic-note tier and the single store of record for the three-tier memory, including opt-in `concept` notes, their deletion cascade and concept-first recall | tools, `context.build`, state, `services.provide("memory.fabric")` | `memory/fabric`, `memory/scoped`, `memory` core |
 | `@arnilo/prism-store-{jsonl, sqlite, postgres}` | Durable session stores (Postgres loads `pg` only in its own package), with session links and list/search filters (K4). SQLite and Postgres also provide the `checkpoints` and `leases` services that workflows use (§2.12.13), and the `external_state` entries that drivers archive and resume from (K5) | `store` slot, services | `node/session-store-jsonl`, `prism-core/sessions`, `src/checkpoints.ts`, `src/leases.ts` |
 | `@arnilo/prism-store-codecs` | Row, cursor, and ownership-scope codecs plus dialect-local query semantics shared by the SQLite and Postgres stores; a plain library with no slot and no capability | — | `prism-core/sessions/codecs`, `prism-core/sessions/query-semantics.ts` |
 | `@arnilo/prism-mcp` | MCP client: servers, trust over `host.ui`, header refs, status/reconnect as commands and events | tools, commands, events | `mcp` client, SDK MCP plane, `prism-code` `mcp.ts` |
@@ -1875,7 +1875,7 @@ Each phase lists its goal, why it exists, its scope, and its done criteria. Exec
   - observation- and reflection-based compaction in the `compaction` slot
   - status events
 - **`memory-compaction`:** LLM summary compaction in the slot.
-- **`memory-rag`** (owns embeddings), **`memory-wiki`** (consumes `web.fetch`), **`memory-fabric`** (working, semantic, scoped).
+- **`memory-rag`** (owns embeddings), **`memory-wiki`** (the ontology tier over the fabric; consumes `web.fetch`), **`memory-fabric`** (working, semantic, scoped; the store of record).
 - **`context-engineering`:** context budget, tool-result fold, tool search, attention compiler. Their modules leave the kernel.
 - State the cost in each README: extra model calls, off by default.
 
@@ -2429,6 +2429,26 @@ This phase was re-scoped on 2026-10-10, from "Prism Code on the SDK" to a refere
   - a safety gate (poisoning, cross-principal leakage, deletion cascade, false refusal, PII) that must pass before any memory default turns on
   - claims limited to the criteria that passed
   - Plan 202 carries this (`scripts/memory-bench/robustness-criteria.json`).
+- **Three-tier memory (owner decision 2026-10-31):** memory ships as three tiers over one store of record, the design that distinguishes Prism's memory:
+  - **T0, observation:** the session, the verbatim exchange archive and observational memory, which documents facts, procedures and insights into the fabric as candidates that earn trust by use
+  - **T1, the fabric:** atomic, scoped, lifecycle-managed notes; the evidence
+  - **T2, the wiki as the ontology of the context it is built in:** one concept note per subject with sparse typed relations and itemized claims, each citing T1 notes; maintained by a background curator pass with incremental edits only, never a rewrite; notes are bound to subjects when written (schema-assisted encoding)
+  - one retrieval surface: `memory.recall` ranks concepts first and drills down to notes and exchanges; a pattern not yet consolidated comes from T1 in the same call
+  - forgetting a note removes every claim that cited it, deterministically and in the store, whether or not the wiki is installed
+  - the 0.12-era wiki (regex compiler, `.wiki/` page store, `qmd` search, record-insight tool) is retired, so the wiki and the fabric no longer store the same knowledge twice
+  - the tier ships opt-in; pre-registered criteria (paired benefit, no harm, claim support against false generalization, safety, cost) decide its reference-host default and every published claim
+  - Plans 207 (build) and 208 (evaluation) carry this, after plan 202 and before plan 209.
+- **Memory for the working agent (owner decision 2026-10-31):** from a first-principles assessment of what an agent needs from memory:
+  - standing rules are the centre: one small, confirmed, human-editable rule set per scope (`rules.md`), always loaded within a fixed budget, with path-scoped rules cued on touch
+  - the record includes what the agent did: an opt-in, bounded, redacted tool-step trace in the exchange archive
+  - a cited lesson notebook the agent writes itself, kept by use, with a nudge that costs no model call
+  - consolidation into concepts is triggered first by what the agent actually read together (read-time consolidation)
+  - claims rest on work outcomes as well as recall: repeated corrected mistakes, convention adherence, re-asked questions and orientation cost, on a pre-registered suite
+  - Plan 209 carries this.
+- **Memory feature audit before the freeze (owner decision 2026-10-31):** once every memory plan is built and screened on development partitions, each memory feature is audited:
+  - a feature with no measured benefit or a negative impact is checked for mechanism errors and conceptual gaps, and a credible fix is measured once
+  - otherwise it is removed before plan 185 freezes the surface; an owner-held feature without evidence ships only in an experimental tier outside the API-level-1 promise
+  - Plan 210 carries this, after plans 202, 207, 208 and 209 and before plan 184. It also runs the one held-out acceptance of every memory claim on the slimmed product and sets the preset revision, defaults and claims (moved there from plans 202, 208 and 209 on 2026-10-31). The memory train is strictly sequential: 202 → 207 → 208 → 209 → 210 → 184 → 185.
 
 **Done.**
 

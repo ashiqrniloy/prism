@@ -223,7 +223,8 @@ export function task5UnexpectedPaths(paths) {
 
 /** After the freeze only evidence and the plan may change; anything else means a re-freeze. */
 export function task5PostFreezePaths(paths) {
-  return paths.filter((path) => !underPath(path, TASK5_EVIDENCE) && !/^plans\/202-Phase-11-Part-O12-[^/]+\.md$/.test(path));
+  // A commit after the pin may only touch files that cannot change what an arm executes.
+  return task5ExecutionPaths(paths.filter((path) => !underPath(path, TASK5_EVIDENCE)));
 }
 
 /**

@@ -921,10 +921,11 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
           : JSON.parse(await readFile(candidateSource, "utf8"))
         : null;
       // A changed product revision changes the protocol hash, so its checkpoints must not be resumed.
-      const staleResume = Boolean(candidateReport) && manifest.sourceRevision && candidateReport.sourceRevision !== manifest.sourceRevision;
+      const armRevision = manifest.productRevision?.[job.role];
+      const staleResume = Boolean(candidateReport) && armRevision && candidateReport.sourceRevision !== armRevision;
       if (staleResume)
         console.log(
-          `drop ${job.id}: checkpoint is from ${candidateReport.sourceRevision?.slice(0, 8)}, arm is ${manifest.sourceRevision.slice(0, 8)}`,
+          `drop ${job.id}: checkpoint is from ${candidateReport.sourceRevision?.slice(0, 8)}, arm runs ${armRevision.slice(0, 8)}`,
         );
       const resumeSource = staleResume ? null : candidateSource;
       const resumeReport = staleResume ? null : candidateReport;
@@ -954,6 +955,8 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
         env: {
           ...process.env,
           PRISM_MEMORY_BENCH_VARIANTS: JSON.stringify(variants),
+          // The report's revision is the product bytes, so a harness commit cannot orphan a checkpoint.
+          ...(armRevision ? { PRISM_MEMORY_BENCH_SOURCE: armRevision } : {}),
           PRISM_MEMORY_BENCH_PYTHON: resolve(process.env.PRISM_MEMORY_BENCH_PYTHON ?? ".cache/memory-bench/python/bin/python3"),
           PRISM_MEMORY_BENCH_JOURNAL: journalPath,
           PRISM_MEMORY_BENCH_ATTEMPT: attempt.attemptId,

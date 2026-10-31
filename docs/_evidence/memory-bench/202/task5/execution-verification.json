@@ -2,18 +2,18 @@
   "kind": "202-task5-execution-verification",
   "gate": {
     "path": "docs/_evidence/memory-bench/202/task5/owner-gate.json",
-    "manifestHash": "0d0d309a74a04293cff375e48b91176765a5e9e9cb280772bfd9dbab6cccd80e",
+    "manifestHash": "c9c6b88b8682923b27f7bb47eb970b391c93a1814970c518e9866b0834043db1",
     "journal": "e3d8ac7d031aa5dcfad250b7dd7e84472fb517d8268eeafd2236b87dcf21ab32"
   },
   "journal": {
-    "campaignId": "campaign-42aa7a93ee64",
-    "status": "finished",
+    "campaignId": "campaign-e3d8ac7d031a",
+    "status": "setup-failure",
     "ceiling": 100000000
   },
   "product": {
     "control": "ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0",
     "candidate": "26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20",
-    "harness": "0bed0a5c6797e8000afb71104fc17c0f56a80c52c8cce77405b48ae2fd0916a7"
+    "harness": "d6c0702672575c09c4caa73024cfd01c490cf825055f599a330d3c312350522d"
   },
   "criteriaHash": "2ae02b79651b10990440df296dda34141a5eac86f366cc7e2213b714f57e4d1c",
   "evidenceProtocolHash": "4f9e62347045a4056fdfe56f3fe1cbb8c80ec8d988f9d1a1cac21fb83fb159b9",
@@ -22,10 +22,16 @@
     {
       "id": "202-task5.control.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
       "attemptId": "202-task5.control.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free@1",
-      "status": "failed",
-      "cause": "MemoryBenchAnswerError:400",
+      "status": "completed",
       "usageComplete": true,
-      "charged": 0
+      "reused": true,
+      "charged": 1102309
+    },
+    {
+      "id": "202-task5.candidate.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "attemptId": "202-task5.candidate.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free@2",
+      "status": "setup-failure",
+      "exit": 1
     }
   ],
   "provider": "openrouter",

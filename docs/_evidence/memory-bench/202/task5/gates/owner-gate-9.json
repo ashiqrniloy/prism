@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "kind": "202-task5-owner-gate",
+  "plan": 202,
+  "task": 5,
+  "subtask": "5.4.5",
+  "gate": 9,
+  "approved": true,
+  "approvedAt": "2026-10-31",
+  "approvedBy": "owner",
+  "text": "Complete next task - [ ] Task 5.4.5: Bounded wire smoke, then resume Task 5.4 and update the plan once done",
+  "supersedes": {
+    "gate": 8,
+    "manifestHash": "680b52e12fcce4aac4d4c111375028847d9cc4e9ebf314296e5cbea2bf254fdd",
+    "journalFingerprint": "e3d8ac7d031aa5dcfad250b7dd7e84472fb517d8268eeafd2236b87dcf21ab32",
+    "records": {
+      "manifest": "docs/_evidence/memory-bench/202/task5/gates/development-comparison-manifest-8.json",
+      "gate": "docs/_evidence/memory-bench/202/task5/gates/owner-gate-8.json",
+      "gateSha256": "9f572c8c2debbbe925e2aa90aa8c666a5c864a29f328deccd50b5a2de8abb325"
+    },
+    "changes": [
+      "cells.0.harnessHash",
+      "cells.0.productRevision",
+      "cells.0.worktreeRevision",
+      "cells.1.harnessHash",
+      "cells.1.productRevision",
+      "cells.2.harnessHash",
+      "cells.2.productRevision",
+      "cells.2.worktreeRevision",
+      "cells.3.harnessHash",
+      "cells.3.productRevision",
+      "cells.4.harnessHash",
+      "cells.4.productRevision",
+      "cells.4.worktreeRevision",
+      "cells.5.harnessHash",
+      "cells.5.productRevision",
+      "cells.6.harnessHash",
+      "cells.6.productRevision",
+      "cells.6.worktreeRevision",
+      "cells.7.harnessHash",
+      "cells.7.productRevision",
+      "cells.8.harnessHash",
+      "cells.8.productRevision",
+      "cells.8.worktreeRevision",
+      "cells.9.harnessHash",
+      "cells.9.productRevision",
+      "generatedAt",
+      "manifestHash",
+      "product.candidate.revision",
+      "product.control.revision",
+      "product.harnessHash"
+    ]
+  },
+  "proposal": {
+    "path": "docs/_evidence/memory-bench/202/task5/development-comparison-manifest.json",
+    "manifestHash": "48395537a565254f4deee41d6a04f06eb2ad7059fc2408c40ab32d68215044a2"
+  },
+  "journal": {
+    "path": ".cache/memory-bench/task5/journal.json",
+    "fingerprint": "e3d8ac7d031aa5dcfad250b7dd7e84472fb517d8268eeafd2236b87dcf21ab32"
+  },
+  "product": {
+    "control": "5355f41ed101f122b15e6973707782b017972dbb",
+    "controlSource": "5c2570df52a084b43120ee4e77921746a029480e",
+    "controlProductHash": "ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0",
+    "candidate": "076677a5c041187919a87534eb9ecb1df1e9a5c4",
+    "candidateProductHash": "26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20",
+    "harnessHash": "a7be89b4a10303446e4387a92061f4a8426d8195504cafe58e209f7ffda3eb0d"
+  },
+  "scope": {
+    "cells": 10,
+    "pairs": 5,
+    "questions": 210,
+    "suites": [
+      "beam-100k",
+      "locomo",
+      "memoryagentbench-cr",
+      "longmemeval-m",
+      "beam-1m"
+    ],
+    "roles": [
+      "control",
+      "candidate"
+    ],
+    "arm": {
+      "id": "preset-r1",
+      "config": "fabric-x-tools"
+    },
+    "answers": [
+      "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free"
+    ],
+    "judges": [
+      "openrouter/dots-studio/dots-3-note-preview:free",
+      "openrouter/cohere/north-mini-code:free"
+    ]
+  },
+  "billing": {
+    "mode": "free-openrouter",
+    "provider": "openrouter",
+    "freeProductsOnly": true,
+    "paidFallbacks": [],
+    "productUsd": 0,
+    "judgeUsd": 0,
+    "totalUsd": 0
+  },
+  "caps": {
+    "reservedInputTokens": 69000000,
+    "ceiling": 100000000,
+    "maxPhysicalCalls": 16800,
+    "concurrency": 1,
+    "wallTimeCapHours": 416
+  },
+  "preservation": {
+    "closedScreen": "closed-by-owner",
+    "priorCharges": "preserved",
+    "historicalControlsReused": 0,
+    "heldOutAccess": false,
+    "credentialValues": false
+  }
+}

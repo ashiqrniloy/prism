@@ -25,6 +25,7 @@ import {
   task5FreezeDiff,
   task5ManifestHash,
   task5OwnerGate,
+  task5PostFreezePaths,
   task5RefreezeAllowed,
   task5UncommittedPaths,
   task5UnexpectedPaths,
@@ -125,6 +126,10 @@ test("task5_refuses_uncommitted_candidate", async () => {
   // Another writer's plans and docs cannot change an arm's bytes: they are reported, not refused.
   const foreign = await assertTask5CandidateClean({ status: "?? plans/207-new-plan.md\n M docs/provider-kit.md\n M roadmap.md\n" });
   assert.deepEqual(foreign.ignored, ["plans/207-new-plan.md", "docs/provider-kit.md", "roadmap.md"]);
+  // A commit after the pin may carry plans and docs, but never code.
+  assert.deepEqual(task5PostFreezePaths(["plans/207-new-plan.md", "docs/provider-kit.md", "plans/README.md", "roadmap.md"]), []);
+  assert.deepEqual(task5PostFreezePaths(["docs/a.md", "scripts/memory-bench/run.mjs"]), ["scripts/memory-bench/run.mjs"]);
+  assert.deepEqual(task5PostFreezePaths(["packages/memory/core/src/x.ts", "docs/a.md"]), ["packages/memory/core/src/x.ts"]);
   // A dirty README inside a code root is still refused: the root is the unit, not the file type.
   await assert.rejects(assertTask5CandidateClean({ status: " M packages/memory/fabric/README.md\n" }), /uncommitted changes/);
 });

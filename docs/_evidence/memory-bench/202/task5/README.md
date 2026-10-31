@@ -53,6 +53,18 @@ complete and Task 5.5 has no paired outcomes to analyse.
   gate 8; gates 5-8 remain archived under `gates/`. Full campaign
   `campaign-e3d8ac7d031a` started afterwards and halts/resumes on the free daily quota.
 
+## Status log — 2026-10-31
+
+- Overnight leg 1 (gate 9): control `beam-100k` 40/40 completed (1,102,309 tokens),
+  candidate 9/40 then a real `429 Daily quota exhausted`. Journal `quota-daily`, $0.
+  Archived as `journal-campaign-e3d8ac7d031a-1.json`.
+- Resume blockers fixed at gates 10 and 11: dirty non-executable paths (plans/docs written by
+  another process) no longer block preflight; a checkpoint from another `sourceRevision` is
+  dropped instead of resumed (`MemoryBenchResumeMismatch`).
+- Gates 10 (`manifestHash c9c6b88b…`) and 11 (`manifestHash 90862ef1…`, candidate `d21b9305…`,
+  control r2 `51d23d4e…`) are archived alongside 5-9. Campaign restarted under gate 11 from a
+  fresh journal; no harness or product edit is allowed until it finishes.
+
 ## Task 5.4.4 — gate 6 replaces gate 5 (2026-10-31)
 
 - Re-frozen after the Task 5.4.3 harness change: `manifestHash dca330de…`, candidate

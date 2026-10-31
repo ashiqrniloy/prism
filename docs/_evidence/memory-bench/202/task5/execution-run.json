@@ -1,26 +1,34 @@
 {
-  "kind": "202-task5-smoke-run",
+  "kind": "202-task5-execution-run",
   "journal": {
-    "campaignId": "campaign-4db02152e8fb",
-    "status": "finished",
+    "campaignId": "campaign-e3d8ac7d031a",
+    "status": "setup-failure",
     "ceiling": 100000000,
-    "spend": 72705,
+    "spend": 8801403,
     "attempts": [
       {
         "attemptId": "202-task5.control.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free@1",
         "jobId": "202-task5.control.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
-        "status": "failed",
+        "status": "completed",
         "usageComplete": true,
         "reservedInputTokens": 7500000,
-        "confirmedInputTokens": 24119
+        "confirmedInputTokens": 1102309
       },
       {
         "attemptId": "202-task5.candidate.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free@1",
         "jobId": "202-task5.candidate.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
-        "status": "failed",
+        "status": "quota-daily",
         "usageComplete": true,
         "reservedInputTokens": 7500000,
-        "confirmedInputTokens": 48586
+        "confirmedInputTokens": 199094
+      },
+      {
+        "attemptId": "202-task5.candidate.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free@2",
+        "jobId": "202-task5.candidate.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+        "status": "setup-failure",
+        "usageComplete": false,
+        "reservedInputTokens": 7500000,
+        "confirmedInputTokens": 7500000
       }
     ]
   },
@@ -28,20 +36,16 @@
     {
       "id": "202-task5.control.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
       "attemptId": "202-task5.control.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free@1",
-      "answersDir": ".cache/memory-bench/task5/control/answers",
-      "status": "partial",
-      "cause": null,
+      "status": "completed",
       "usageComplete": true,
-      "charged": 24119
+      "reused": true,
+      "charged": 1102309
     },
     {
       "id": "202-task5.candidate.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
-      "attemptId": "202-task5.candidate.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free@1",
-      "answersDir": ".cache/memory-bench/task5/candidate/answers",
-      "status": "partial",
-      "cause": null,
-      "usageComplete": true,
-      "charged": 48586
+      "attemptId": "202-task5.candidate.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free@2",
+      "status": "setup-failure",
+      "exit": 1
     }
   ]
 }

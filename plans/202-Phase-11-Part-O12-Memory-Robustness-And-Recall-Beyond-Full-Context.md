@@ -23,6 +23,11 @@
 - Serve **coding** as well as conversation. Decisions and conventions accepted in past sessions ("use zod, not yup", "feature folders under `src/<feature>/`", "flush before retry") must reach the agent when they apply, stay current when corrected, and never leak across projects (Task 11). Codebase mapping is out of scope: other tools own it.
 - Use **decision models** (plans 195–196: `liquid-local/d1-3B`, hosted `d1` / `d1-ultra`, Jev, Laya) for the small yes/no and choice decisions the pipeline makes, where a per-decision bench shows they beat the incumbent at lower cost (Task 12).
 - Settle the memory's **structure** from evidence, not fashion. The answer is a combination of views over one verbatim store, not a knowledge graph (see "Structure decision"). The graph option stays measured and conditional (Task 13).
+  - **Amended 2026-10-31 (owner decision: three-tier memory ships in 0.13.0).** The owner added a model-written view on top: the ontology tier (plan 207), with one concept note per subject, every claim citing T1 notes, and incremental edits only. Plan 208 measures it against its own preset. See "Structure decision — 2026-10-31 amendment".
+- **Amended 2026-10-31 (owner decision after a first-principles assessment):**
+  - claims must reflect work as well as recall: plan 209 adds a pre-registered work-outcome suite (repeated corrected mistakes, convention adherence, re-asked questions, orientation cost) measured beside this plan's suites;
+  - standing rules become the centre of the memory (plan 209 Task 3, building on Task 11);
+  - before the freeze, plan 210 audits every memory feature and removes those that show no benefit and have no credible fix, so unmeasured mechanisms do not become permanent API-level-1 obligations.
 
 ## Expected Outcome
 
@@ -34,8 +39,8 @@
   - repeat variance and pass^k;
   - a failure-stage table for every suite, not only LongMemEval-S.
 - Comparators in every campaign: `full` (whole history, or truncated to the model window when it does not fit), `lexical-topk` (single-shot BM25 top-k over raw turns, no memory product, no tools), `preset-r1` (0.13.0), and the candidate revision.
-- A held-out acceptance on at least three answer models across at least two providers (one of them a small model). It gives one verdict per pre-registered criterion. Either 0.13.0 publishes `presetRevision: 2`, or the plan records which criterion failed and 0.13.0 publishes the last passing revision.
-- A safety verdict covering poisoning, cross-principal leakage, deletion cascade, false refusal and PII. Only a pass lets plan-end decide whether `conversational` or another memory default turns on.
+- A frozen candidate with development evidence for every executed lever, handed to plan 210. **Since 2026-10-31 the held-out acceptance and the preset-revision, default and claim decisions are plan 210 Tasks 9 and 10.** That acceptance runs on at least three answer models across at least two providers (one of them a small model) and gives one verdict per criterion in this plan's `robustness-criteria.json`. Either 0.13.0 publishes `presetRevision: 2`, or plan 210 records which criterion failed and 0.13.0 publishes the last passing revision.
+- A safety suite (Task 14) covering poisoning, cross-principal leakage, deletion cascade, false refusal and PII. Only a pass, re-run on plan 210's frozen product, lets plan 210 Task 10 decide whether `conversational` or another memory default turns on.
 - OM has measured quality, and its documented role is decided by data.
 - A `coding` preset with a `decision` note kind: confirmed decisions with rationale and path scope, delivered as path cues and core lines when they apply, superseded on correction, measured on the 12-persona coding lifecycle suite, MemoryCode and (if licensed) VibeMemBench.
 - `decisions: { model }` (opt-in) runs only the decision points that passed their bench in `docs/_evidence/memory-bench/202/decisions/`. Every other point keeps the incumbent path.
@@ -48,12 +53,25 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
 - it reuses plan 199's judge panels and calibration, and plan 200's dataset splits and injection suite;
 - it must land before plan 185 freezes the surface, because it adds tool parameters, note fields and config fields under the rules plan 188.11 wrote.
 
+**Three-tier insertion and sequential order (owner decisions 2026-10-31).** The memory train runs strictly one plan after another:
+
+1. **202** (step 17b), this plan: Tasks 1–17, ending with development evidence and a frozen candidate;
+2. **207** (17c): the ontology tier;
+3. **208** (17d): three-tier criteria, the claim-support audit, ontology safety probes and the ontology development screen;
+4. **209** (17e): standing rules, tool steps, cited lessons, the work-outcome suite and its development screen;
+5. **210** (17f): the end-of-build feature audit and removals, then the one held-out acceptance on the final product (formerly this plan's Task 18) and the preset revision, defaults and published claims (formerly Task 19);
+6. plan 184, then plan 185.
+
+**Tasks 18 and 19 moved to plan 210 (Tasks 9 and 10) on 2026-10-31.** Elsewhere in this plan, "Task 18" means plan 210 Task 9, "Task 19" means plan 210 Task 10, and "gate 3" is the held-out gate plan 210 Task 9 runs. The frozen product read on held-out partitions therefore includes plans 207–209 and plan 210's removals. `robustness-criteria.json` is unchanged and still judges the robustness rows; the ontology arms are judged by plan 208's `three-tier-criteria.json` and the work-outcome arms by plan 209's `work-outcome-criteria.json`.
+
+**Plan end.** After the last task the lever rule leaves (Task 17, or the last executed task before it), the executor runs plan end (Compromises, Further Actions, backlog hand-off) and lists, for plan 210's ledger, every feature of this plan whose development evidence is neutral, negative or missing: for example a closed lever, a decision point that failed its bench, or a lifecycle mechanism with no task benefit.
+
 **Review task included** (Task 1). Later tasks may add optional `VectorStore` methods, tool parameters, note fields and config fields.
 
 - **No embeddings and no new package.** Owner decision 2026-10-24: the memory system is not RAG-based. Recall is the agent searching and reading the verbatim archive with lexical tools. No task adds, uses or measures an embedding model. The existing opt-in `retrieval: "hybrid"` field stays accepted (188.11's compatibility promise), but the preset never uses it and this plan does not develop it.
 - **No kernel contract change.** If Task 1 finds one is needed, the plan stops and is re-cut.
-- **No version bump or publish here.** Every package ships in plan 187's lockstep 0.13.0 publish, with the preset revision Task 19 settles.
-- **Paid work is owner-gated three times:** before the baseline (Task 4), before the development screens of Tasks 5–17 (one shared gate), and before the held-out acceptance (Task 18).
+- **No version bump or publish here.** Every package ships in plan 187's lockstep 0.13.0 publish, with the preset revision plan 210 Task 10 settles.
+- **Paid work is owner-gated twice in this plan:** before the baseline (Task 4) and before the development screens of Tasks 5–17 (one shared gate). The held-out acceptance (gate 3) runs in plan 210 Task 9.
 - **Cache-stable product before any further paid run (added 2026-10-30).** Tasks 4.11–4.15 run first: session-epoch prefix snapshot, extractor cache key, cache hygiene, and live-run requirement updates.
   - Readiness refuses a manifest whose product hash lacks their cache-stability record.
   - The 23-cell screen stays the development baseline only if 4.15's offline equivalence attestation passes.
@@ -63,9 +81,9 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
 **Release gating** is pre-registered here; the owner may change it before Task 4.
 
 - 0.13.0 does not wait for a passing verdict.
-- The plan is complete when every task has run or been closed by the lever rule (Task 4), and Task 18's verdict is recorded.
-- One remediation round is allowed. If Task 18 misses, the levers may be revised once on development partitions, then measured once on the second, disjoint held-out partition Task 2 reserves (`heldout-b`).
-- A second miss ends the plan. Task 19 ships the last passing revision with claims limited to the criteria that passed.
+- This plan is complete when every task 1–17 has run or been closed by the lever rule (Task 4) and plan end is written. The held-out verdict is recorded by plan 210 Task 9.
+- One remediation round is allowed, run by plan 210 Task 9. If the held-out acceptance misses, the levers may be revised once on development partitions, then measured once on the second, disjoint held-out partition Task 2 reserves (`heldout-b`).
+- A second miss is final. Plan 210 Task 10 ships the last passing revision with claims limited to the criteria that passed.
 
 ## Critical review of the current system (2026-10-24, offline)
 
@@ -142,6 +160,30 @@ The question was whether memory should be a graph (the popular answer), a tree, 
 - Model-written summaries as replacements for raw content.
 
 Code-structure graphs (for example Graphify's tree-sitter graphs) are the right structure for **codebase mapping**, which the owner assigns to separate tools; they are not memory. The design matches complementary learning systems theory: fast verbatim episodes, slow and conservative consolidation into state and rules, and every consolidated item traceable to its episodes.
+
+### Structure decision — 2026-10-31 amendment (owner decision: three-tier memory)
+
+The owner decided that 0.13.0 ships memory as three tiers:
+
+- **T0, observation:** the session, the exchange archive and OM.
+- **T1, the fabric:** atomic, scoped notes.
+- **T2, the wiki as the ontology of the context it is built in:** one concept note per subject, with relations and cited claims.
+
+Plan 207 builds it and plan 208 measures it. The amendment keeps this section's rule and adds one view:
+
+| Structure | Helps | Costs or hurts | Evidence |
+| --- | --- | --- | --- |
+| **Ontology view** (concept per subject; sparse typed relations; itemized claims, each citing T1 notes; incremental edits only) | Coarse-to-fine entry for "what is / how does / why" questions; aggregation of scattered instances under one subject; schema-assisted binding at write time. | A background curator model call per changed subject. Risk of false generalization, measured by plan 208's claim-support row (O3). Risk of collapse under rewrites, avoided by construction (no rewrite operation). | Zep's episode → entity → community tiers with back-pointers (arXiv 2501.13956). ACE: itemized delta edits avoid context collapse (arXiv 2510.04618). Letta sleep-time consolidation. A-MEM linking and evolution (NeurIPS 2025). Karpathy's compiled LLM wiki (2026-04). Schema-accelerated consolidation (Tse et al. 2007). Gist and detail coexist (Winocur & Moscovitch 2011). Gist-driven false memory (DRM; fuzzy-trace theory). Combining raw, fact and episodic granularities beats any single one (arXiv 2605.19952). |
+
+Constraints that keep the verdict above intact:
+
+- The verbatim log stays the store of record. Concepts never replace, compress or delete T1 notes.
+- Every claim cites T1 notes. A claim whose citations are forgotten is removed deterministically; a claim whose citations are superseded is marked stale and never delivered.
+- Relations are sparse typed links on concept notes (`MemoryNoteLink`). There is no graph store, no graph-wide ranking, and no traversal beyond Task 13's one hop.
+- Retrieval stays lexical and agentic. There is still one recall tool, which ranks concepts first and drills down to notes and exchanges.
+- "Not adopted" above still holds: no entity-relation graph as the primary structure, and no model-written summary replacing raw content.
+
+The ontology tier is an opt-in package (`memory-wiki`). The `conversational` and `coding` presets' contracts are unchanged, and the tier's default follows plan 208's development evidence and plan 210's held-out verdict.
 
 ## Tasks
 
@@ -1390,6 +1432,9 @@ Code-structure graphs (for example Graphify's tree-sitter graphs) are the right 
         - **Smoke result (2 questions, 73k tokens, $0).** Control and candidate each answered one `beam-100k` question on `nvidia/nemotron-3-ultra-550b-a55b:free` — the exact route that returned `400 invalid function name memory.recall` on the Task 5.4 attempt. Both completed as `partial` (the capped-run status), the decoded traces carry `memory.recall` only, `execution-smoke-verification.json` records `hits: 20` from real returned notes (control 5, candidate 30 across the paired caches), and no trace or turn trace carries `memory_recall`. The question is an abstention row, so `memory.read` is offered but never called; any name that does appear is a product name, which is what the guard enforces.
         - **Control verification flake, handled rather than hidden.** Preflight now retries the control worktree's fabric/core suites up to three times and records every attempt in `docs/_evidence/memory-bench/202/task5/control-verification.json`. The fabric suite has a pre-existing cross-file isolation flake (`policy.reviewSession … a duplicate folds` reads a neighbour's ledger: 1 failure in 2 full-suite runs, 0 in 5 isolated runs); it cannot be fixed without editing the frozen product, so the retry is bounded evidence, not a silent pass. The gate-9 preflight passed on the first attempt.
         - **Gate 9** (`manifestHash 48395537…`, candidate `076677a5…`, control r2 `5355f41e…`, harness `a7be89b4…`; journal identity still `e3d8ac7d…`) authorizes this harness change, and supersedes gate 8 with the same diff discipline as 5.4.4. Gates 5–8 stay archived unedited under `gates/`.
+        - **Status check 2026-10-31 06:34Z.** The first overnight leg halted honestly: control `beam-100k` completed 40/40 (1,102,309 confirmed tokens), candidate reached 9/40 (199,094 confirmed) and then got a real `429 Daily quota exhausted` (`resumeAfter 2026-10-31T00:00:00Z`, already past by the time of the check), so the journal sat at `quota-daily` with $0 spent.
+        - **Two resume blockers found by that check, both now fixed.** (a) The resume was refused because a concurrent writer had uncommitted `plans/207-210`, `plans/README.md`, `roadmap.md` and `.agents/skills/…`: `assertTask5CandidateClean` now refuses dirty paths that can change an arm's bytes (`TASK5_PRODUCT_PATHS`, `TASK5_HARNESS_PATHS`, `src/`, `packages/`, `apps/`, `scripts/`) and reports the rest instead of failing, because plans and docs cannot change what an arm executes. (b) The resumed attempt died with `MemoryBenchResumeMismatch`: `protocolFingerprint` includes `sourceRevision`, so the gate-10 candidate amend invalidated the gate-9 checkpoint, and the campaign kept handing `--resume` a foreign protocol. The campaign manifest now carries `sourceRevision` and a checkpoint from another revision is dropped (and logged) instead of being resumed.
+        - **Freeze cost, stated plainly.** Each harness amend moved the candidate revision and therefore invalidated in-flight checkpoints: the 1.3M tokens of the first leg are spent and unusable, at $0. The stale journal is archived as `journal-campaign-e3d8ac7d031a-1.json`, and gates 10 (`manifestHash c9c6b88b…`, candidate `…`) and 11 (`manifestHash 90862ef1…`, candidate `d21b9305…`, control r2 `51d23d4e…`, harness `66aabefb…`) record the two fixes; gates 5-9 stay archived unedited. **No further harness or product edit may happen before the campaign finishes** — it would orphan every checkpoint again.
         - **Full campaign resumed.** `campaign.mjs --task5` started on 2026-10-31 under campaign `campaign-e3d8ac7d031a` after a clean preflight (control worktree rebuilt, suites and typecheck green). It is resumable by design: the 2,289-call estimate exceeds the 1,000 free requests/day, so it halts `quota-daily` and continues from its journal on the next day. Task 5.4 stays unchecked until the ten cells are actually complete; nothing in Task 5.5 may run before that.
     - [ ] Task 5.5: Compute the predeclared candidate-gap and ability verdict
       - Acceptance Criteria:
@@ -1747,6 +1792,7 @@ Code-structure graphs (for example Graphify's tree-sitter graphs) are the right 
     - Functional: Host impact: hosts opt in with `preset: "coding"`. No existing field changes meaning.
     - Performance: Cue matching is a glob match over active decisions in the scope (≤ 1 ms per turn for 500 decisions, measured). Delivery stays ≤ 300 cue tokens per turn plus the existing core budget. Confirmations are ≤ 1 per turn, batched.
     - Code Quality: The kind lives in `types.ts` and the lifecycle; capture in `exchanges.ts` next to the archive hook; delivery reuses `createFabricCues` and `createFabricCore`. No second cue mechanism.
+    - Code Quality (amended 2026-10-31): capture, confirmation and rule delivery are written as one preset-neutral module, `delivery/rules.ts`, that `coding` consumes. Plan 209 Task 3 generalizes it to preferences and procedures in every preset (`rules.capture`), makes the per-scope `core.md` an editable `rules.md`, and gives standing rules a fixed budget. Nothing in this task may make capture coding-only in a way plan 209 would have to undo.
     - Security:
       - Decisions are never captured from tool output (untrusted), only from user turns and the agent's own typed writes.
       - The trust scan runs on every decision write.
@@ -1896,6 +1942,7 @@ Code-structure graphs (for example Graphify's tree-sitter graphs) are the right 
       - Surfaces: `memory.read { id, follow: "links" }`, and an optional expansion of recall results within the rendered-token budget.
       - Not built: entity-relation extraction, a graph store, or graph-wide ranking.
     - Functional: Target, on development partitions: multi-hop accuracy +5 points with no ability regressing and injected tokens per turn ≤ +20%.
+    - Functional: **Three-tier note (2026-10-31).** Plan 207 later adds a `subject` binding on notes. If this task executed, plan 207 Task 3 reuses `same-subject` as the relation between notes bound to the same subject, and keeps the enrichment-key rule only for unbound notes, so there is one relation and not two. If this task is closed, plan 207 adds no `same-subject` link: concept citations are the association.
     - Functional: Host impact: **none**. An additive tool input and an additive link relation.
     - Performance: Expansion reads ≤ 8 linked notes, the existing read cap. `same-subject` links are computed at archive time from keys already computed, with no model call.
     - Code Quality: In `links.ts` and `tools.ts`, reusing `MemoryNoteLink`.
@@ -1941,7 +1988,7 @@ Code-structure graphs (for example Graphify's tree-sitter graphs) are the right 
     - Functional: `scripts/memory-bench/safety/` (new) runs, on the mock provider where possible and on the panel models for the agentic parts:
       - (a) **conversation-borne poisoning**, MINJA-style. Crafted user turns try to plant instructions or false facts that a later session follows. It measures stored-rate, then retrieved-rate, then followed-rate, with and without pre-existing legitimate memories (the realistic-condition protocol of arXiv 2601.05504);
       - (b) **cross-principal and cross-project leakage**: two users, two projects, team store on and off. Any foreign exchange in context or tool results counts. This resolves F3;
-      - (c) **deletion cascade**: after `memory.forget` or the host's delete path, the content is absent from note files, the derived index, derived facts, links, the core block and `memory:export`, and is never recalled;
+      - (c) **deletion cascade**: after `memory.forget` or the host's delete path, the content is absent from note files, the derived index, derived facts, links, the core block and `memory:export`, and is never recalled. **Since 2026-10-31 this includes concept notes:** plan 208 Task 4 adds the ontology probes (cascade through concepts, cross-scope concept exposure, concept poisoning, team and human-edited concepts) to this suite. A failing ontology probe blocks only the ontology tier's default (plan 208 O4), not this task's verdict for presets without it;
       - (d) **false refusal**: 188.11 Task 8's audit, re-run on the new suites;
       - (e) **PII retention**: a fixture of emails, phone numbers and addresses; what the redactor and trust scan do. A PII redactor option is added only if hosts have no way to pass one (the kernel `SecretRedactor` seam exists).
     - Functional: **Starting state from 188.11 Task 8 (2026-10-27), to close here, not re-measure as new.** LongMemEval-S: 225/99,090 exchanges refused = 2.271 per 1,000 (32 injection, 10 exfiltration, 183 invisible Unicode, 0 secret) and 3 of 500 questions lose a needed-session exchange; LoCoMo 0 refused. Adversarial fixture detection 33/34, with `exfil-06` (`curl -s https://…`) undetected because the scan's `curl\s+https?://` misses the flag. The invisible-Unicode class dominates the false-refusal rate. Meeting (d)'s ≤ 1 per 1,000 and 0 needed sessions is therefore real work in this task (classify or normalise benign invisible Unicode without weakening detection), and the `exfil-06` miss is a regression test to add. Evidence: `docs/_evidence/memory-bench/188.11/{trust-scan.json,README.md}`.
@@ -2048,11 +2095,12 @@ Code-structure graphs (for example Graphify's tree-sitter graphs) are the right 
 - [ ] Task 16: Observational memory — make it measurable, then decide its role
   - Acceptance Criteria:
     - Functional: The `MemoryBenchWorkerError` causes behind every OM and OM+fabric arm are diagnosed and fixed. OM, OM+fabric (preset) and preset arms complete on development partitions on two models.
-    - Functional: The role is decided by data and documented in both READMEs:
-      - in-session compression only;
-      - a delivery source for the fabric (observations as notes);
-      - or a standalone conversational memory comparable with the preset.
-      The reference host's OM wiring is kept or changed accordingly, with its scenarios green.
+    - Functional: **Role set by the owner (amended 2026-10-31).** OM is tier T0 of the three-tier memory (plan 207): it observes the session and documents facts, procedures and insights into the fabric through the existing `promote: { observational: true }` path, as candidates that earn trust by use. Its in-session compression role stays.
+      - This task measures OM in that role. It compares the OM+fabric arm with the fabric alone on development partitions: notes promoted per session, the share verified by later use, and accuracy with and without promotion.
+      - It documents the result in both READMEs.
+      - If promotion lowers accuracy or fails plan 202's safety probes, the README states that, and the reference host keeps promotion off. The role itself does not change.
+      - The earlier alternatives ("in-session compression only", "a standalone conversational memory") are dropped by the owner decision.
+      The reference host's OM wiring follows the measurement, with its scenarios green.
     - Functional: F9 is resolved. The OM live row (re-pointed by 188.11 Task 7) becomes `active`.
     - Functional: Host impact: **none** for hosts that do not use OM. For OM hosts, any change keeps OM's config contract fields (188.11 Task 6).
     - Performance: OM's observer and reflector cost per 10k message tokens measured and stated in its README.
@@ -2100,6 +2148,7 @@ Code-structure graphs (for example Graphify's tree-sitter graphs) are the right 
       - every fact cites its exchange (the existing link);
       - an opt-in preset `conversational-facts`, a new name because it adds a write-path model call per session, is accepted only if it beats `conversational` on the target abilities with no regression.
     - Functional: F4 is resolved.
+    - Functional: **Three-tier note (2026-10-31).** The ontology tier (plan 207) does not depend on this task: its curator cites whatever T1 holds (exchanges, decisions, OM promotions, files). Facts, if this task ships them, become one more citable input. The condition for executing this task is unchanged.
     - Functional: **Cache-stable product (Tasks 4.11–4.15, added 2026-10-30).** Every development screen of the extractor reports extractor `cacheReadTokens` and `cacheWriteTokens` under the `product-extract` role. The write-side cost per session is stated both with and without those cache reads.
     - Functional: Host impact: **none** for `conversational` hosts. Others adopt by changing the preset name only.
     - Performance: Cost per session and per 1k exchanges stated in the README.
@@ -2137,98 +2186,9 @@ Code-structure graphs (for example Graphify's tree-sitter graphs) are the right 
     - `docs/index.md` update: no
     - Documentation structure reference: `.claude/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 18: Held-out acceptance on the robustness suite (owner gate 3, paid)
-  - Acceptance Criteria:
-    - Functional: The candidate (`conversational` revision 2 = every executed lever task, frozen by product hash) runs against `preset-r1`, `full` / `full-truncated` and `lexical-topk`. The `coding` preset (Task 11, plus the Task 12 points that shipped) runs against memory-off and `conversational` on the coding suites.
-      - Every suite's `heldout-a` partition, read here for the first time. The one remediation round (header) uses `heldout-b` under the same manifest rules and a fresh owner gate.
-      - Every acceptance model (≥ 3 models, ≥ 2 providers, one small).
-      - The judge panel; repeats on the 100-item subset; the safety gate (Task 14) and growth criterion (Task 15) re-run on the frozen product.
-    - Functional: The verdict is one row per criterion in `robustness-criteria.json` (hash verified), computed by `acceptance-report.mjs --plan 202` with no hand-set value. The result is `robust`, `better-than-full-context`, both, or neither, with the failing rows named.
-    - Functional: A miss is reported as a miss. No post-hoc margin, partition or model swap; the manifest refuses criteria drift as 188.10's did.
-    - Functional: **Cache-stable product (Tasks 4.11–4.15, added 2026-10-30).**
-      - The frozen product hash includes Tasks 4.11–4.14.
-      - The readiness cache-stability pin passes for that hash.
-      - The live multi-turn cache probe runs once per acceptance route under this gate, and its `cacheStability` row is reported next to the verdict.
-      - The row is evidence for Task 19's cost wording only. It is never a criterion row, and BFC (iii) is computed exactly as `robustness-criteria.json` defines it.
-    - Performance: Budget stated at the gate. In-flight caps per arm; wall-time limit per suite stated and reported, with overruns recorded as deviations.
-    - Code Quality: Existing campaign and journal machinery with the `--plan 202` profile.
-    - Security: Keys as refs. No text in reports.
-  - Approach:
-    - Documentation Reviewed:
-      - Tasks 2–17;
-      - 188.10 Task 9 (manifest discipline).
-    - Options Considered:
-      - Accept on a subset of suites. Rejected: the definitions are the point.
-    - Chosen Approach:
-      - One pre-registered, multi-model, multi-suite held-out verdict.
-    - API Notes and Examples:
-      ```sh
-      timeout 28800 bun scripts/memory-bench/campaign.mjs --plan 202 --manifest
-      timeout 600 bun scripts/memory-bench/acceptance-report.mjs --plan 202
-      ```
-    - Files to Create/Edit:
-      - `scripts/memory-bench/{campaign,acceptance,acceptance-report}.mjs` and tests;
-      - `docs/_evidence/memory-bench/202/acceptance/*`.
-    - References:
-      - Task 2.
-  - Test Cases to Write:
-    - `acceptance_202_refuses_criteria_or_product_drift`.
-    - `verdict_rows_match_criteria_file`.
-    - `small_model_rows_present`.
-  - Documentation/Wiki Assessment:
-    - Public API or behavior impacted: no — evidence.
-    - Docs pages to create/edit:
-      - `docs/_evidence/memory-bench/202/README.md`.
-    - `docs/index.md` update: no
-    - Documentation structure reference: `.claude/skills/create-plan/references/prism-wiki.md`
+# Execute 207 and 208 before the next tasks
 
-- [ ] Task 19: Preset revision 2, defaults and the published claim
-  - Acceptance Criteria:
-    - Functional:
-      - If Task 18 passes **better-than-full-context** or **robust** (or both): `CONVERSATIONAL_PRESET_REVISION` becomes 2 and `conversational` resolves to the accepted candidate. Hosts on `preset: "conversational"` get it with **no config change**. A test asserts that a config written for revision 1 (the 188.11 README example) still validates and resolves to revision 2.
-      - If it fails, after the one remediation round, 0.13.0 ships the last passing revision. A lever that met its development target ships as a tuning-tier change only if Task 18 shows no regression for it. The README states the failing criteria.
-    - Functional: Defaults change only if the safety gate (Task 14) **and** the robust verdict both pass. The candidate default is installing the fabric with `preset: "conversational"` on. Otherwise defaults stay off, and the failed criterion is named in `scripts/memory-bench/defaults.json` and the README.
-    - Functional: The README claim is the verdict's wording, with models, judges, suites, cost and latency. "Better than full context" may appear only if that verdict row set passed.
-    - Functional: Release hand-off: plan 186's live journey scenario 11 (added by 188.11 Task 7) runs against the shipped revision, and plan 187's CHANGELOG and README claims are the ones this task writes. The 188.11 limitations register (`docs/_evidence/memory-bench/188.11/limitations.json`) is closed: each entry is marked resolved with evidence, or carried into the README's Known limitations.
-    - Functional: Plan end: Compromises, Further Actions and backlog hand-off. `coding` ships in 0.13.0 if Task 18 passes its rows of robust (viii). Otherwise the owner decides at Task 18 whether it ships as a documented, unaccepted opt-in or is withheld; either way the README states the failing rows.
-    - Performance: n/a.
-    - Code Quality: The preset table change is one object edit. Compat baselines are regenerated if `CONVERSATIONAL_PRESET_REVISION`'s value is in the baseline, with the attribution noted.
-    - Security: A default that stores conversation content is enabled only under the passed safety gate. The README states what is stored.
-  - Approach:
-    - Documentation Reviewed:
-      - 188.11 Tasks 3 and 6 (preset contract, stability tiers);
-      - Task 18 verdict.
-    - Options Considered:
-      - Ship revision 2 as a new preset name. Rejected: that defeats the stable-API goal. The contract allows improvement within the name.
-    - Chosen Approach:
-      - The revision bump hosts receive for free, and defaults only under the safety gate.
-    - API Notes and Examples:
-      ```ts
-      memoryFabric({ preset: "conversational", tools: { root } }); // unchanged host line → revision 2
-      ```
-    - Files to Create/Edit:
-      - `packages/memory/fabric/src/config.ts`;
-      - tests;
-      - `scripts/memory-bench/defaults.json`;
-      - `docs/_evidence/memory-bench/188.11/limitations.json`;
-      - fabric README;
-      - `CHANGELOG.md`;
-      - this plan;
-      - `plans/backlog.md`.
-    - References:
-      - Tasks 14, 18.
-  - Test Cases to Write:
-    - `host_config_from_0130_resolves_to_revision_2`.
-    - `defaults_change_only_with_safety_and_robust_verdicts`.
-    - `readme_claim_matches_verdict`.
-  - Documentation/Wiki Assessment:
-    - Public API or behavior impacted: yes — preset contents, and possibly defaults.
-    - Docs pages to create/edit:
-      - fabric README;
-      - `CHANGELOG.md`;
-      - evidence README.
-    - `docs/index.md` update: no
-    - Documentation structure reference: `.claude/skills/create-plan/references/prism-wiki.md`
+- Task 18 and Task 19: **moved to plan 210 on 2026-10-31** (owner decision: run 202, 207, 208, 209 and 210 one after another). The held-out acceptance is plan 210 Task 9 and the preset revision, defaults and published claim are plan 210 Task 10, both on the product plan 210's audit leaves. Their acceptance criteria, tests and docs assessments moved with them unchanged in substance.
 
 ## Verification (whole plan)
 
@@ -2253,9 +2213,8 @@ Code-structure graphs (for example Graphify's tree-sitter graphs) are the right 
 - Paid, in order, each after its owner gate. Tasks 4.11–4.15 and a passing readiness cache-stability pin come first:
   1. Task 4 baseline;
   2. the development screens of the executed lever tasks, each with one live cache probe on its answer route (≤ 12 requests);
-  3. Task 18 held-out acceptance, with one live cache probe per acceptance route (and, only after a miss, the one remediation round on `heldout-b`);
-  4. `acceptance-report.mjs --plan 202`;
-  5. confirm no owned paid process remains.
+  3. confirm no owned paid process remains.
+- The held-out acceptance and `acceptance-report.mjs --plan 202` run in plan 210 Task 9.
 
 ## Compromises Made
 

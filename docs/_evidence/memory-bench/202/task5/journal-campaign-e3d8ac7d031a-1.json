@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "campaignId": "campaign-e3d8ac7d031a",
+  "manifestHash": "e3d8ac7d031aa5dcfad250b7dd7e84472fb517d8268eeafd2236b87dcf21ab32",
+  "ceiling": 100000000,
+  "priorReservation": 0,
+  "provider": "openrouter",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "createdAt": "2026-10-30T20:38:57.328Z",
+  "updatedAt": "2026-10-31T06:41:33.171Z",
+  "status": "setup-failure",
+  "legacy": [],
+  "attempts": [
+    {
+      "attemptId": "202-task5.control.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free@1",
+      "jobId": "202-task5.control.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "manifestHash": "e3d8ac7d031aa5dcfad250b7dd7e84472fb517d8268eeafd2236b87dcf21ab32",
+      "status": "completed",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/202/task5/run-202-task5.control.beam-100k.preset-r1.openrouter.nvidia-nemotron-3-ultra-550b-a55b:free.json",
+      "maxInputTokens": 7000000,
+      "reservedInputTokens": 7500000,
+      "startedAt": "2026-10-30T20:38:57.332Z",
+      "confirmedInputTokens": 1102309,
+      "usageComplete": true,
+      "cacheReadTokens": 12960,
+      "outputTokens": 161330,
+      "endedAt": "2026-10-30T21:22:41.067Z"
+    },
+    {
+      "attemptId": "202-task5.candidate.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free@1",
+      "jobId": "202-task5.candidate.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "manifestHash": "e3d8ac7d031aa5dcfad250b7dd7e84472fb517d8268eeafd2236b87dcf21ab32",
+      "status": "quota-daily",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/202/task5/run-202-task5.candidate.beam-100k.preset-r1.openrouter.nvidia-nemotron-3-ultra-550b-a55b:free.json",
+      "maxInputTokens": 7000000,
+      "reservedInputTokens": 7500000,
+      "startedAt": "2026-10-30T21:22:41.071Z",
+      "confirmedInputTokens": 199094,
+      "usageComplete": true,
+      "cacheReadTokens": 0,
+      "outputTokens": 42340,
+      "cause": "quota-daily",
+      "endedAt": "2026-10-30T21:31:22.780Z"
+    },
+    {
+      "attemptId": "202-task5.candidate.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free@2",
+      "jobId": "202-task5.candidate.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "manifestHash": "e3d8ac7d031aa5dcfad250b7dd7e84472fb517d8268eeafd2236b87dcf21ab32",
+      "status": "setup-failure",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/202/task5/run-202-task5.candidate.beam-100k.preset-r1.openrouter.nvidia-nemotron-3-ultra-550b-a55b:free-2.json",
+      "maxInputTokens": 7000000,
+      "reservedInputTokens": 7500000,
+      "startedAt": "2026-10-31T06:41:32.849Z",
+      "confirmedInputTokens": 7500000,
+      "usageComplete": false,
+      "endedAt": "2026-10-31T06:41:33.171Z"
+    }
+  ],
+  "resumeAfter": "2026-10-31T00:00:00.000Z"
+}

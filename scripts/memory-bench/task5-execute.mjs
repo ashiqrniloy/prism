@@ -161,8 +161,6 @@ export async function verifyTask5Control(dir, { root = ".", attempts = 3 } = {})
 export function task5CampaignFingerprint(proposal) {
   return manifestFingerprint({
     criteriaHash: proposal.criteriaHash,
-    // A checkpoint from another product revision is not a resume: the protocol hash would refuse it.
-    sourceRevision: proposal.product.candidate.revision,
     ceiling: proposal.budgets.campaign.ceiling,
     provider: proposal.models.answers[0].split("/")[0],
     model: proposal.models.answers[0].split("/").slice(1).join("/"),
@@ -193,6 +191,12 @@ export async function buildTask5CampaignManifest({ root = ".", smoke = false } =
     status: "approved",
     gate: { path: TASK5_GATE, manifestHash: gate.proposal.manifestHash, journal: gate.journal.fingerprint },
     criteriaHash: proposal.criteriaHash,
+    // A checkpoint from another product is not a resume, but a harness commit must not invalidate
+    // one: the revision a report records is the product bytes an arm executed, never a commit sha.
+    productRevision: {
+      control: proposal.product.control.productHash,
+      candidate: proposal.product.candidate.productHash,
+    },
     evidenceProtocolHash: proposal.evidenceProtocolHash,
     analysisHash: proposal.analysisHash,
     ceiling: proposal.budgets.campaign.ceiling,

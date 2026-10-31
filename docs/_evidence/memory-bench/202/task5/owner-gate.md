@@ -1,19 +1,19 @@
-# Plan 202 Task 5.4.5 — owner gate 9
+# Plan 202 Task 5.4.5 — owner gate 11
 
 Status: **approved-by-owner** on 2026-10-31. The proposal itself stays `executable: false`; this gate is the authorization.
 
-Gate text (verbatim): Complete next task - [ ] Task 5.4.5: Bounded wire smoke, then resume Task 5.4 and update the plan once done
+Gate text (verbatim): Do a status check now
 
 ## Binding
 
-- Manifest: `48395537a565254f4deee41d6a04f06eb2ad7059fc2408c40ab32d68215044a2` ([docs/_evidence/memory-bench/202/task5/development-comparison-manifest.json](development-comparison-manifest.json)).
+- Manifest: `90862ef1c2f0f239f2a5d8b1097d0539872f8368f1e87ebbd999057e290719de` ([docs/_evidence/memory-bench/202/task5/development-comparison-manifest.json](development-comparison-manifest.json)).
 - Journal: `.cache/memory-bench/task5/journal.json`, fingerprint `e3d8ac7d031aa5dcfad250b7dd7e84472fb517d8268eeafd2236b87dcf21ab32` (campaign identity over criteria, ceiling, provider, model and jobs).
-- Arms: candidate `076677a5c041187919a87534eb9ecb1df1e9a5c4` (product `26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20`); control r2 `5355f41ed101f122b15e6973707782b017972dbb` (product `ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0` from `5c2570df52a084b43120ee4e77921746a029480e`); harness `a7be89b4a10303446e4387a92061f4a8426d8195504cafe58e209f7ffda3eb0d`.
+- Arms: candidate `d21b9305bbac078ebdd56e8251c69459c0202108` (product `26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20`); control r2 `51d23d4e77debf3ae5b2ec7e68d12656b2c8cd95` (product `ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0` from `5c2570df52a084b43120ee4e77921746a029480e`); harness `66aabefbea1bc21e4615b891ef5e4f0a016a3bc6671c24dd329ec21234e738a1`.
 - A changed manifest, cohort, criteria or journal identity is a refusal, not a re-approval.
 
-## Supersedes gate 8
+## Supersedes gate 10
 
-- Gate 8 stays unedited at `docs/_evidence/memory-bench/202/task5/gates/owner-gate-8.json` (sha256 `9f572c8c2debbbe925e2aa90aa8c666a5c864a29f328deccd50b5a2de8abb325`, manifest `680b52e12fcce4aac4d4c111375028847d9cc4e9ebf314296e5cbea2bf254fdd`); this gate replaces it.
+- Gate 10 stays unedited at `docs/_evidence/memory-bench/202/task5/gates/owner-gate-10.json` (sha256 `182bc909c4ff635d826009b7ab256f239a384ae16e16a3c9b1caedb706f745dc`, manifest `c9c6b88b8682923b27f7bb47eb970b391c93a1814970c518e9866b0834043db1`); this gate replaces it.
 - Journal identity is unchanged (`e3d8ac7d031aa5dcfad250b7dd7e84472fb517d8268eeafd2236b87dcf21ab32`) because the cohort, criteria, protocol, models, judges, budgets and caps did not move: only the fields below changed.
 
 - `cells.0.harnessHash`
