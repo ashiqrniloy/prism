@@ -319,6 +319,18 @@ export function resolveThinkingObject(request: ProviderRequest): JsonObject | un
 export const thinkingObject = resolveThinkingObject;
 
 /**
+ * Anthropic Messages `thinking` object for Claude 5.x and newer: the wire rejects
+ * `{type:"enabled"}` and asks for `adaptive` with `output_config.effort` (measured live in
+ * plan 205 Task 1b). An explicit `enabled` is upgraded; a reasoning model with no explicit
+ * choice defaults to adaptive.
+ */
+export function anthropicAdaptiveThinking(request: ProviderRequest): JsonObject | undefined {
+  const explicit = resolveThinkingObject(request);
+  if (explicit) return explicit.type === "enabled" ? { type: "adaptive", display: "summarized" } : explicit;
+  return request.model.capabilities?.reasoning === true ? { type: "adaptive", display: "summarized" } : undefined;
+}
+
+/**
  * Resolves upstream OpenAI-style reasoning object with effort snapped to declared levels.
  */
 export function resolveReasoningObject(request: ProviderRequest): JsonObject | undefined {

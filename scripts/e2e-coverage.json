@@ -716,6 +716,15 @@
         "mode": ""
       }
     },
+    "@arnilo/prism-provider-openrouter": {
+      ".": {
+        "suites": [
+          "packages/providers/openrouter/src/__tests__/openrouter.test.ts",
+          "packages/providers/openrouter/src/__tests__/live.test.ts"
+        ],
+        "mode": ""
+      }
+    },
     "@arnilo/prism-provider-commandcode": {
       ".": {
         "suites": [
@@ -727,11 +736,26 @@
         "mode": ""
       }
     },
-    "@arnilo/prism-provider-openrouter": {
+    "@arnilo/prism-provider-kilo": {
       ".": {
         "suites": [
-          "packages/providers/openrouter/src/__tests__/openrouter.test.ts",
-          "packages/providers/openrouter/src/__tests__/live.test.ts"
+          "packages/providers/kilo/src/__tests__/auth.test.ts",
+          "packages/providers/kilo/src/__tests__/cache-levers.test.ts",
+          "packages/providers/kilo/src/__tests__/kilo.test.ts",
+          "packages/providers/kilo/src/__tests__/live-agent.test.ts",
+          "packages/providers/kilo/src/__tests__/live.test.ts",
+          "packages/providers/kilo/src/__tests__/package.test.ts"
+        ],
+        "mode": ""
+      }
+    },
+    "@arnilo/prism-provider-litellm": {
+      ".": {
+        "suites": [
+          "packages/providers/litellm/src/__tests__/litellm.test.ts",
+          "packages/providers/litellm/src/__tests__/live.test.ts",
+          "packages/providers/litellm/src/__tests__/package.test.ts",
+          "packages/providers/litellm/src/__tests__/spend-logs.test.ts"
         ],
         "mode": ""
       }

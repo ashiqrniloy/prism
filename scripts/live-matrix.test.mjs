@@ -61,7 +61,7 @@ test("model selection: every provider suite reads its PRISM_LIVE_*_MODEL overrid
       if (isProvider) assert.equal(m.wired, true, `${suite.id}: ${m.env} must be wired after the Task 4 retrofit`);
     }
   }
-  assert.equal(providerSuites, 9, "all supported provider adapters have matrix entries (liquid ships two)");
+  assert.equal(providerSuites, 11, "all supported provider adapters have matrix entries (liquid ships two)");
   const hyperModel = matrix.suites.find((s) => s.id === "providers/hyper").model[0];
   assert.equal(hyperModel.env, "PRISM_LIVE_HYPER_CHAT_MODEL");
   assert.equal(hyperModel.wired, true);

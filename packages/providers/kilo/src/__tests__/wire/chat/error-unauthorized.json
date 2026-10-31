@@ -1,0 +1,17 @@
+{
+  "method": "POST",
+  "path": "/api/v1/chat/completions",
+  "requestBody": {
+    "model": "google/gemma-4-26b-a4b-it",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hi"
+      }
+    ],
+    "max_tokens": 8
+  },
+  "status": 401,
+  "contentType": "application/json",
+  "responseBody": "{\"error\":{\"code\":\"INVALID_TOKEN\",\"message\":\"Your authentication token is invalid. Please sign in again.\"},\"error_type\":\"authentication_required\"}"
+}

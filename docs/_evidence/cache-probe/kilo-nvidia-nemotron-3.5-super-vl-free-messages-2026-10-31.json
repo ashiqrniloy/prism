@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "provider": "kilo",
+  "model": "nvidia/nemotron-3.5-super-vl:free",
+  "affinity": true,
+  "requestedTurns": 4,
+  "requests": 4,
+  "stablePrefixTokens": 8571,
+  "stablePrefixTokensSource": "reported-first-request",
+  "minimumPrefixTokens": 8192,
+  "outputTokensLimit": 128,
+  "turns": [
+    {
+      "turn": 1,
+      "inputTokens": 8571,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": null,
+      "stablePrefixTokens": 8571,
+      "latencyMs": 2103.4292800000003
+    },
+    {
+      "turn": 2,
+      "inputTokens": 8592,
+      "cacheReadTokens": 4336,
+      "cacheWriteTokens": null,
+      "stablePrefixTokens": 8571,
+      "latencyMs": 18628.739657
+    },
+    {
+      "turn": 3,
+      "inputTokens": 8613,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": null,
+      "stablePrefixTokens": 8571,
+      "latencyMs": 1998.4008269999977
+    },
+    {
+      "turn": 4,
+      "inputTokens": 8634,
+      "cacheReadTokens": 4336,
+      "cacheWriteTokens": null,
+      "stablePrefixTokens": 8571,
+      "latencyMs": 1583.7192250000007
+    }
+  ],
+  "status": "measured",
+  "reuse": 0.3372613075098199
+}

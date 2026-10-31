@@ -1,0 +1,20 @@
+{
+  "method": "POST",
+  "path": "/chat/completions",
+  "requestBody": {
+    "model": "prism-free/priced",
+    "messages": [
+      {
+        "role": "user",
+        "content": "say pong"
+      }
+    ],
+    "max_tokens": 32
+  },
+  "status": 422,
+  "contentType": "application/json",
+  "headers": {
+    "content-type": "application/json"
+  },
+  "responseBody": "{\"error\":{\"message\":\"Budget has been exceeded! Key=p214-budget-priced-r4 (sk-...caig) Current cost: 0.00020199999999999998, Max budget: 1e-05\",\"type\":\"budget_exceeded\",\"param\":null,\"code\":\"422\"}}"
+}

@@ -23,7 +23,15 @@ import {
 } from "./replay.mjs";
 import { summarize } from "./report.mjs";
 import { CEILING_GRID, ceilingCells, ceilingScan, deliveryMetrics, restageReport } from "./retrieval-diagnostics.mjs";
-import { askJudge, createFreeRoutePace, createJudgePacer, isRetryableJudgeFailure, missingUsageCount, questionFailureDisposition, runBench } from "./run.mjs";
+import {
+  askJudge,
+  createFreeRoutePace,
+  createJudgePacer,
+  isRetryableJudgeFailure,
+  missingUsageCount,
+  questionFailureDisposition,
+  runBench,
+} from "./run.mjs";
 
 test("paid_bounded_wire_is_explicit_and_cannot_resume_unbounded_checkpoints", async () => {
   const { parseArgs, protocolFingerprint } = await import("./run.mjs");
@@ -2948,7 +2956,11 @@ test("free_route_pacer_is_shared_across_solver_and_judges", async () => {
   assert.deepEqual(slept, [3000, 3000], "three calls across roles are spaced 3s apart at 20/min");
   assert.throws(() => createFreeRoutePace({ perMinute: 25, freeOnly: true }), /at most 20 requests per minute/);
   assert.equal(createFreeRoutePace({ perMinute: "", freeOnly: false }), null, "paid routes keep the per-model pacer");
-  assert.equal(typeof createFreeRoutePace({ perMinute: "", freeOnly: true, sleep: async () => {} }), "function", "free routes default to 20/min");
+  assert.equal(
+    typeof createFreeRoutePace({ perMinute: "", freeOnly: true, sleep: async () => {} }),
+    "function",
+    "free routes default to 20/min",
+  );
 });
 
 test("a_dropped_socket_is_retried_for_both_answers_and_judges", async () => {
@@ -3079,6 +3091,25 @@ test("free_only_benchmark_routes_reject_unknown_and_paid_prices", async () => {
   assert.equal(isFreeBenchmarkModel({ provider: "commandcode", model: "poolside/laguna-s-2.1-free" }), true);
   assert.equal(isFreeBenchmarkModel({ provider: "commandcode", model: "gpt-5.6-luna" }), false);
   assert.equal(isFreeBenchmarkModel({ provider: "hyper", model: "free" }), false);
+  // Plan 214 Task 5b: the pool's group name is the authorization, and only at exactly zero cost.
+  assert.equal(isFreeBenchmarkModel({ provider: "litellm", model: "prism-free/gpt-oss-20b@groq", cost: { input: 0, output: 0 } }), true);
+  assert.equal(isFreeBenchmarkModel({ provider: "litellm", model: "gpt-oss-20b@groq", cost: { input: 0, output: 0 } }), false);
+  assert.equal(isFreeBenchmarkModel({ provider: "litellm", model: "prism-free/priced", cost: { input: 0, output: 2 } }), false);
+  assert.equal(isFreeBenchmarkModel({ provider: "litellm", model: "prism-free/unknown-cost" }), false);
+});
+
+test("provider_list_includes_the_litellm_pool", async () => {
+  const { PROVIDERS, liveProviders } = await import("./run.mjs");
+  const litellm = PROVIDERS.litellm;
+  assert.equal(litellm.create, "createLiteLLMProvider");
+  assert.equal(litellm.list, "listLiteLLMModels");
+  assert.equal(litellm.secret, "LITELLM_API_KEY");
+  assert.match(litellm.url, /^http:\/\/(127\.0\.0\.1|localhost):\d+$/);
+  // The refusal text names every supported provider, so a typo does not read as "unknown host".
+  await assert.rejects(
+    liveProviders([{ provider: "nope", model: "x" }], "/tmp"),
+    /hyper, opencode-go, openrouter, commandcode and litellm/,
+  );
 });
 
 test("free_product_only_keeps_paid_panel_separate_and_pins_answer_billing", async () => {

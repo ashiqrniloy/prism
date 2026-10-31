@@ -653,6 +653,7 @@ const FROZEN_PROVIDER_KIT_EXPORTS: readonly string[] = [
   "ProviderRequirementError",
   "ProviderTransportError",
   "RETRYABLE_STATUSES",
+  "anthropicAdaptiveThinking",
   "ResponsesMaxOutputTokensError",
   "StructuredOutputError",
   "SystemOneAbortedError",

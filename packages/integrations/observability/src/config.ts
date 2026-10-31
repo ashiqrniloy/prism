@@ -14,6 +14,16 @@ export interface ObservabilityConfig {
   readonly fieldPolicy?: ObservabilityFieldPolicyConfig;
   readonly metrics?: boolean;
   readonly enabled?: boolean;
+  /**
+   * `true` injects the current span as a W3C `traceparent`/`tracestate` into the outgoing provider
+   * request headers, so a gateway or proxy can join its spans to this run's trace. Default `false`.
+   */
+  readonly propagateTraceContext?: boolean;
+  /**
+   * Dotted paths into `Usage.metadata` whose scalars are exported as `prism.usage.<path>` on the chat
+   * span. An explicit allowlist: nothing is exported by default, and `fieldPolicy` still applies.
+   */
+  readonly usageMetadata?: readonly string[];
 }
 
 const pathList = { type: "array", items: { type: "string", minLength: 1, maxLength: 200 }, maxItems: 64 } as const;
@@ -30,6 +40,8 @@ export const observabilityConfigSchema = {
     },
     metrics: { type: "boolean" },
     enabled: { type: "boolean" },
+    propagateTraceContext: { type: "boolean" },
+    usageMetadata: { type: "array", items: { type: "string", minLength: 1, maxLength: 128 }, maxItems: 32 },
   },
   additionalProperties: false,
 } as const;

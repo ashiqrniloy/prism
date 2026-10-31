@@ -1,0 +1,24 @@
+{
+  "method": "POST",
+  "path": "/chat/completions",
+  "requestBody": {
+    "model": "prism-free/mixed",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Reply with the single word: pong"
+      }
+    ],
+    "max_tokens": 64,
+    "stream": true,
+    "stream_options": {
+      "include_usage": true
+    }
+  },
+  "status": 429,
+  "contentType": "application/json",
+  "headers": {
+    "content-type": "application/json"
+  },
+  "responseBody": "{\"error\":{\"message\":\"litellm.RateLimitError: RateLimitError: OpenrouterException - {\\\"error\\\":{\\\"message\\\":\\\"Provider returned error\\\",\\\"code\\\":429,\\\"metadata\\\":{\\\"raw\\\":\\\"xingchen-agi/xing4.0-29b-a4b:free is temporarily rate-limited upstream. Please retry shortly, or add your own key to accumulate your rate limits: https://openrouter.ai/settings/integrations\\\",\\\"provider_name\\\":\\\"Phala\\\",\\\"is_byok\\\":false,\\\"limit_source\\\":\\\"upstream_provider_shared_pool\\\",\\\"remedy_hint\\\":\\\"Retry shortly, add your own provider key (https://openrouter.ai/settings/integrations), or route to another provider with provider routing: https://openrouter.ai/docs/features/provider-routing\\\"}},\\\"user_id\\\":\\\"user_38beGeUTdu8N0wGlKUdxs57Hs45\\\"}\\n\\nLiteLLM: model group 'prism-free/mixed' failed with the error above. No fallback was attempted.\",\"type\":\"throttling_error\",\"param\":null,\"code\":\"429\"}}"
+}

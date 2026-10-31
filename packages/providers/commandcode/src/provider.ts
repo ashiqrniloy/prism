@@ -1,5 +1,6 @@
 import type { CredentialValueSource, JsonObject, ModelProvider, ProviderRequest } from "@arnilo/prism";
 import {
+  anthropicAdaptiveThinking,
   createRoutedProvider,
   providerHttpError,
   type RoutedProviderRoute,
@@ -25,16 +26,9 @@ export function commandCodeSession(request: ProviderRequest): Record<string, str
   return session ? { "x-client-request-id": session } : {};
 }
 
-/**
- * `thinking` object for the Messages wire. Claude 5.x rejects `{type: "enabled"}` with
- * `Use "thinking.type.adaptive" and "output_config.effort"` (measured live, plan 205
- * Task 1b), and `output_config.effort` comes from the model's thinking level. The request
- * hook upgrades an explicit `enabled` and defaults to adaptive for reasoning models.
- */
+/** The adaptive Messages hook now lives in provider-kit (plan 213 Task 2); this name stays public. */
 export function commandCodeThinking(request: ProviderRequest): JsonObject | undefined {
-  const explicit = resolveThinkingObject(request);
-  if (explicit) return explicit.type === "enabled" ? { type: "adaptive", display: "summarized" } : explicit;
-  return request.model.capabilities?.reasoning === true ? { type: "adaptive", display: "summarized" } : undefined;
+  return anthropicAdaptiveThinking(request);
 }
 
 export const COMMAND_CODE_CHAT_ROUTE: RoutedProviderRoute<"openai-chat"> = {

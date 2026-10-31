@@ -1,0 +1,67 @@
+{
+  "data": [
+    {
+      "model_name": "prism-free/chat",
+      "litellm_params": {
+        "model": "cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct"
+      },
+      "model_info": {
+        "id": "chat-scout",
+        "mode": "chat",
+        "max_input_tokens": 131000,
+        "max_output_tokens": 131000,
+        "input_cost_per_token": 2.7e-07,
+        "output_cost_per_token": 8.5e-07,
+        "cache_read_input_token_cost": null,
+        "cache_creation_input_token_cost": null,
+        "supports_function_calling": true,
+        "supports_vision": null,
+        "supports_reasoning": null,
+        "supports_response_schema": null,
+        "litellm_provider": "cloudflare"
+      }
+    },
+    {
+      "model_name": "prism-free/chat",
+      "litellm_params": {
+        "model": "cloudflare/@cf/nvidia/nemotron-3-120b-a12b"
+      },
+      "model_info": {
+        "id": "chat-nemotron",
+        "mode": "chat",
+        "max_input_tokens": 256000,
+        "max_output_tokens": 256000,
+        "input_cost_per_token": 5e-07,
+        "output_cost_per_token": 1.5e-06,
+        "cache_read_input_token_cost": null,
+        "cache_creation_input_token_cost": null,
+        "supports_function_calling": true,
+        "supports_vision": null,
+        "supports_reasoning": true,
+        "supports_response_schema": null,
+        "litellm_provider": "cloudflare"
+      }
+    },
+    {
+      "model_name": "prism-free/priced",
+      "litellm_params": {
+        "model": "cloudflare/@cf/qwen/qwen3.8-27b"
+      },
+      "model_info": {
+        "id": "priced-qwen",
+        "mode": null,
+        "max_input_tokens": null,
+        "max_output_tokens": null,
+        "input_cost_per_token": 2e-06,
+        "output_cost_per_token": 2e-06,
+        "cache_read_input_token_cost": null,
+        "cache_creation_input_token_cost": null,
+        "supports_function_calling": null,
+        "supports_vision": null,
+        "supports_reasoning": null,
+        "supports_response_schema": null,
+        "litellm_provider": "cloudflare"
+      }
+    }
+  ]
+}

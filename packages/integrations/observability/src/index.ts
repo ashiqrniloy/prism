@@ -14,12 +14,9 @@
 
 import manifest from "../package.json" with { type: "json" };
 import { type AgentEvent, definePackage, type PackageAPI } from "@arnilo/prism";
-import {
-  type ObservabilityConfig,
-  observabilityConfigSchema,
-  toFieldPolicy,
-} from "./config.js";
-import { createOpenTelemetryInstrumentation, wrapOpenTelemetryApi } from "./instrumentation.js";
+import { type ObservabilityConfig, observabilityConfigSchema, toFieldPolicy } from "./config.js";
+import { createInstrumentationParts, wrapOpenTelemetryApi } from "./instrumentation.js";
+import { activeTraceSpan, injectTraceContext } from "./propagation.js";
 
 export {
   type ObservabilityConfig,
@@ -27,6 +24,14 @@ export {
   observabilityConfigSchema,
   toFieldPolicy,
 } from "./config.js";
+export {
+  activeTraceSpan,
+  formatTraceparent,
+  injectTraceContext,
+  type OpenTelemetryPropagationApi,
+  TRACE_CONTEXT_HEADERS,
+  type TraceContextApi,
+} from "./propagation.js";
 export {
   type ActiveSpan,
   createInMemoryTelemetry,
@@ -48,6 +53,7 @@ export {
   type PrismSpanKind,
   type PrismSpanStatus,
   type PrismTracer,
+  rawOpenTelemetrySpan,
   type RecordedMetric,
   type RecordedSpan,
   type RunFeedbackTelemetry,
@@ -113,11 +119,15 @@ export interface OpenTelemetryApiModule {
   readonly trace: { getTracer(name: string): unknown; setSpan(context: unknown, span: unknown): unknown };
   readonly metrics: { getMeter(name: string): unknown };
   readonly context: { active(): unknown };
+  /** Present on the real API; optional here so a stub without it still works. */
+  readonly propagation?: {
+    inject?(context: unknown, carrier: Record<string, string>, setter?: unknown): void;
+    readonly defaultTextMapSetter?: unknown;
+  };
 }
 export type OpenTelemetryApiLoader = () => Promise<OpenTelemetryApiModule>;
 
-const loadOpenTelemetryApi: OpenTelemetryApiLoader = async () =>
-  (await import("@opentelemetry/api" as string)) as OpenTelemetryApiModule;
+const loadOpenTelemetryApi: OpenTelemetryApiLoader = async () => (await import("@opentelemetry/api" as string)) as OpenTelemetryApiModule;
 
 /** Events the instrumentation maps. `message.delta` is deliberately absent: it is the hot path and carries text. */
 const OBSERVED = [
@@ -143,7 +153,10 @@ async function setup(prism: PackageAPI<ObservabilityConfig>, load: OpenTelemetry
   try {
     api = await load();
   } catch {
-    prism.status.note("warn", "@opentelemetry/api is not installed; observability exports nothing. Install it and register an SDK tracer provider.");
+    prism.status.note(
+      "warn",
+      "@opentelemetry/api is not installed; observability exports nothing. Install it and register an SDK tracer provider.",
+    );
     return;
   }
   const serviceName = config.serviceName ?? "prism";
@@ -152,14 +165,23 @@ async function setup(prism: PackageAPI<ObservabilityConfig>, load: OpenTelemetry
     config.metrics === false ? undefined : (api.metrics.getMeter(serviceName) as Parameters<typeof wrapOpenTelemetryApi>[1]),
     { context: api.context, trace: api.trace } as Parameters<typeof wrapOpenTelemetryApi>[2],
   );
-  const instrumentation = createOpenTelemetryInstrumentation({
+  const { instrumentation, tracker } = createInstrumentationParts({
     tracer: wrapped.tracer,
     meter: wrapped.meter,
     fieldPolicy: toFieldPolicy(config.fieldPolicy),
     includeUsage: config.content === "metadata",
+    ...(config.usageMetadata ? { usageMetadata: config.usageMetadata } : {}),
     onExporterError: (error) => prism.log.warn("observability exporter error", { error: String(error) }),
   });
   for (const name of OBSERVED) prism.hooks.on(name, ((event: AgentEvent) => instrumentation.handleAgentEvent(event)) as never);
+  if (config.propagateTraceContext === true) {
+    // One header injection per provider attempt; the transform returns `undefined` (no change) when
+    // there is no span or the caller already set `traceparent`.
+    prism.hooks.on("model.request", (request, context) =>
+      injectTraceContext(request, { span: activeTraceSpan(tracker.active, context.runId), api }),
+    );
+    prism.status.note("info", "observability: W3C trace context is injected into provider request headers (traceparent, tracestate)");
+  }
 }
 
 /** Test seam: the same definition with a stubbed `@opentelemetry/api` loader. */

@@ -98,6 +98,8 @@ Set only the rows you want to run; everything else skips. Least-privilege scope 
 | `release/context-rot` | active | `HYPER_API_KEY` + `OPENCODE_GO_API_KEY` | `PRISM_LIVE_CONTEXT_ROT_HYPER_MODEL` (default `deepseek-v4-pro-0813`), `PRISM_LIVE_CONTEXT_ROT_OPENCODE_MODEL` (default `mimo-v2.5`) | Manual-only context-rot curve: 30 deterministic agent-shaped tasks after pinned stale tool history at 0/16k/32k/64k/96k tokens, with and without context-engineering fold batch mode, for one model each on Hyper and OpenCode Go. | About 45M input tokens per model at defaults (900 requests, mostly cache reads); --max-input-tokens defaults to 50M per model and leaves a partial report. Requires HYPER_API_KEY and OPENCODE_GO_API_KEY in the live-canaries environment. |
 | `release/memory-bench` | active | `PRISM_LIVE_MEMORY_BENCH_MANUAL` + `OPENCODE_GO_API_KEY` | `PRISM_LIVE_MEMORY_BENCH_MODEL` (default `mimo-v2.5`) | Manual-only pinned memory benchmark; full context, OM, fabric, fabric-agentic and OM+fabric over LongMemEval-S, LoCoMo (comparison only), MemoryAgentBench-CR and the lifecycle suite. | One durable campaign journal with a finite ceiling; 12M per LongMemEval arm, 2M per lifecycle arm, 5M elsewhere, plus one-question overshoot; includes workers, judges, retries and warm-cache replays. Every attempt keeps its reservation until a matched report reconciles it; --manifest is dry-run. Never scheduled. |
 | `release/eval-gate` | active | `PRISM_LIVE_EVAL_GATE_MANUAL` + `HYPER_API_KEY` | `PRISM_LIVE_EVAL_GATE_MODEL` (default `deepseek-v4-pro-0813`) | Manual-only reference-host evaluation gate on Hyper over the heldout split (coding approval, denied write, research citations, and web_fetch prompt injection) with trials: 4 and regression comparison against the last stored live report. | 4 heldout items x 4 trials (~32 provider turns); hard ceiling of 2M input tokens enforced by the test. Never scheduled. |
+| `providers/kilo` | active | `PRISM_LIVE_PROVIDER_TESTS` + `KILO_API_KEY` | `PRISM_LIVE_KILO_CHAT_MODEL` (default `google/gemma-4-26b-a4b-it`), `PRISM_LIVE_KILO_RESPONSES_MODEL` (default `openai/gpt-6-luna`), `PRISM_LIVE_KILO_MESSAGES_MODEL` (default `anthropic/claude-haiku-5.5`) | Three Kilo AI Gateway wires: Chat Completions, Responses, Anthropic Messages, one exemplar each. Per route: text, tool loop, structured output, abort, leak scan. The cache probe is separate: the gateway places its own breakpoints (plan 213 Task 1b), so it measures prefix reuse rather than a client lever. | ~25 generation requests across three wires: 2 per text/tool-loop pair plus structured and error, 9 kernel-smoke turns, and the anonymous/data-collection checks. The separate cache probe is 4 generation requests per wire (12 plus catalog discovery, plan 203 fixture). The reference account returned 402 on the paid exemplars (negative balance, 2026-10-31), so the accepted run used free ids (e.g. nvidia/nemotron-3.5-super-vl:free) at $0.00; free models are limited to 200 requests per hour. |
+| `providers/litellm` | active | `PRISM_LIVE_PROVIDER_TESTS` + `LITELLM_API_KEY` | `PRISM_LIVE_LITELLM_MODEL` (default `prism-free/gpt-oss-20b@groq`) | One Chat Completions route against a host-run LiteLLM Proxy: text, tool loop, abort, and a named error, plus the leak scan. The proxy must answer /health/liveliness at PRISM_LIVE_LITELLM_BASE_URL (default http://127.0.0.1:4000) or the suite skips with a reason. | ~8 generation requests at $0.00 on the prism-free pool (Groq, Cloudflare, Gemini, OpenRouter free tiers); a paid backend overall spends whatever the proxy forwards, and this suite makes no extra requests. |
 <!-- generated:live-matrix:end -->
 
 ## Strict CI workflow
@@ -233,6 +235,26 @@ timeout 600 bun scripts/cache-parity/provider-probe.mjs \
 
 - Add a suite: write the env-gated test (skip-not-fail), register it in `scripts/live-matrix.json` (`id`, `package`, `status`, `source`, `command`, `cwd`, `requires`/`requiresAny`, model wiring, least-privilege `scope`, `cost`), then run `node scripts/generate-live-docs.mjs --write` to refresh the table above. `scripts/live-doc-check.test.mjs` fails `npm test` when the doc drifts.
 - Add a credential: extend `scripts/live.env.example` and the relevant manifest `requires` list. Prefer `requiresAny` when a probe accepts several interchangeable providers.
+
+## LiteLLM free pool (local, opt-in)
+
+`scripts/litellm/up.mjs` starts a loopback-only LiteLLM proxy over free tiers (Groq, NVIDIA NIM,
+Google AI Studio, Cloudflare Workers AI) and mints a budget-capped virtual key. It is for wire and
+integration runs, **not** release evidence — that stays on Hyper and OpenCode Go, because a free tier
+can change models, throttle, or train on prompts without notice.
+
+```bash
+timeout 240 bun scripts/litellm/up.mjs --write-key   # sets LITELLM_API_KEY in the live env file
+timeout 240 bun scripts/litellm/reconcile.mjs --report <bench-report.json>
+timeout 60  bun scripts/litellm/down.mjs --purge
+```
+
+Only backends whose keys exist are deployed; groups are `prism-free/smoke` (mixed, wire tests only),
+`prism-free/gpt-oss-120b` (same model on several hosts) and `prism-free/<model>@<host>` single-host
+pins, which are the only groups a scored arm may use. `prism-free/priced` carries a fabricated price so
+a paid call actually accrues spend against the key's `max_budget`; the budget refuses it a flush later
+(`422 budget_exceeded`), so it is a tripwire, not a ceiling. Full details, quotas with dates, data-use
+notes and the data-only caveat are in `scripts/litellm/README.md`.
 
 ## Recording wire fixtures
 

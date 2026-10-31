@@ -1,0 +1,19 @@
+{
+  "method": "POST",
+  "path": "/chat/completions",
+  "requestBody": {
+    "model": "prism-free/single",
+    "messages": [
+      {
+        "role": "user",
+        "content": "a request that does not fit the model context window"
+      }
+    ]
+  },
+  "status": 413,
+  "contentType": "application/json",
+  "headers": {
+    "content-type": "application/json"
+  },
+  "responseBody": "{\"error\":{\"message\":\"litellm.BadRequestError: CloudflareException - {\\\"errors\\\":[{\\\"message\\\":\\\"AiError: Ai: The estimated number of input and maximum output tokens (27026) exceeded this model context window limit (24000). (a02daf01-309e-4c3b-a552-9917ef37589c)\\\",\\\"code\\\":5021}],\\\"success\\\":false,\\\"result\\\":{},\\\"messages\\\":[]}\\n\\nLiteLLM: model group 'prism-free/single' failed with the error above. No fallback was attempted.\",\"type\":\"invalid_request_error\",\"param\":null,\"code\":\"413\"}}"
+}

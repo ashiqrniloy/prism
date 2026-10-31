@@ -71,7 +71,7 @@ The 0.12 config fields and registries are removed, not aliased. Each maps to a h
 
 | 0.12 package | 0.13 package(s) |
 | --- | --- |
-| `@arnilo/prism-providers` | `@arnilo/prism-provider-{hyper, liquid, openai-codex, opencode-go, openrouter, typesafe, laya}` (the 16 other 0.3 vendors are not shipped in 0.13.0; for a ChatGPT plan use `openai-codex`, otherwise write a package on `@arnilo/prism/provider-kit`) |
+| `@arnilo/prism-providers` | `@arnilo/prism-provider-{hyper, kilo, litellm, liquid, openai-codex, opencode-go, openrouter, typesafe, laya}` (the 16 other 0.3 vendors are not shipped in 0.13.0; for a ChatGPT plan use `openai-codex`, otherwise write a package on `@arnilo/prism/provider-kit`) |
 | `@arnilo/prism-core` | the kernel `@arnilo/prism` plus the native packages below |
 | `@arnilo/prism-coding-tools` | `@arnilo/prism-tools-coding`, `@arnilo/prism-tools-openapi`, `@arnilo/prism-tools-computer-use`, `@arnilo/prism-approval`, `@arnilo/prism-devtools` |
 | `@arnilo/prism-web-tools` | `@arnilo/prism-tools-web`, `@arnilo/prism-tools-browser` |

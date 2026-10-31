@@ -1,0 +1,19 @@
+{
+  "method": "POST",
+  "path": "/chat/completions",
+  "requestBody": {
+    "model": "prism-free/does-not-exist",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hi"
+      }
+    ]
+  },
+  "status": 400,
+  "contentType": "application/json",
+  "headers": {
+    "content-type": "application/json"
+  },
+  "responseBody": "{\"error\":{\"message\":\"/chat/completions: Invalid model name passed in model=prism-free/does-not-exist. Call `/v1/models` to view available models for your key.\",\"type\":\"invalid_request_error\",\"param\":null,\"code\":\"400\",\"provider_specific_fields\":{\"error\":\"/chat/completions: Invalid model name passed in model=prism-free/does-not-exist. Call `/v1/models` to view available models for your key.\"}}}"
+}

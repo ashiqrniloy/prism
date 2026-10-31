@@ -160,7 +160,7 @@ where to look, while an ordinary `429` rate limit still backs off.
 
 ## Provider packages
 
-Prism 0.13.0 ships 7 provider packages: `@arnilo/prism-provider-{hyper, laya, liquid, openai-codex, opencode-go, openrouter, typesafe}`. `@arnilo/prism-provider-commandcode` (Chat, Responses, Messages) is built and live-tested in the same tree and ships in the first release after 0.13.0. Other providers can be built on `@arnilo/prism/provider-kit`. `@arnilo/prism-provider-liquid` registers two providers — hosted `liquid` (`d1.1`, `d1-ultra`) and `liquid-local` (`d1-3B` served by llama.cpp `llama-server`).
+Prism 0.13.0 ships 9 provider packages: `@arnilo/prism-provider-{hyper, kilo, laya, litellm, liquid, openai-codex, opencode-go, openrouter, typesafe}`. `@arnilo/prism-provider-commandcode` (Chat, Responses, Messages) is built and live-tested in the same tree and ships in the first release after 0.13.0. Other providers can be built on `@arnilo/prism/provider-kit`. `@arnilo/prism-provider-liquid` registers two providers — hosted `liquid` (`d1.1`, `d1-ultra`) and `liquid-local` (`d1-3B` served by llama.cpp `llama-server`).
 Listing one registers its provider(s); no package imports a sibling. `apiKey` (and every
 other credential field) is an `env:`/`keyring:` ref resolved per request through the `credentials` slot,
 OAuth methods go through `host.ui`, and `keyring:` refs resolve through `@arnilo/prism-credentials-keyring`.
@@ -171,6 +171,8 @@ The package README carries the config table, the named exports, and the vendor w
 | Package | README |
 | --- | --- |
 | `@arnilo/prism-provider-commandcode` | [README](../packages/providers/commandcode/README.md) |
+| `@arnilo/prism-provider-kilo` | [README](../packages/providers/kilo/README.md) |
+| `@arnilo/prism-provider-litellm` | [README](../packages/providers/litellm/README.md) |
 | `@arnilo/prism-provider-hyper` | [README](../packages/providers/hyper/README.md) |
 | `@arnilo/prism-provider-laya` | [README](../packages/providers/laya/README.md) |
 | `@arnilo/prism-provider-openai-codex` | [README](../packages/providers/openai-codex/README.md) |

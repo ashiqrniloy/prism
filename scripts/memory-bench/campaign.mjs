@@ -99,6 +99,7 @@ import {
   saveJournal,
 } from "./journal.mjs";
 import { robustnessCriteriaHash } from "./robustness.mjs";
+import { assertComparableServedDeployments } from "./served-model.mjs";
 import subsets from "./subsets.json" with { type: "json" };
 import { TASK5_EVIDENCE, TASK5_JOURNAL, writeTask5ComparisonManifest } from "./task5-comparison.mjs";
 import {
@@ -566,6 +567,8 @@ export async function writeScreenAVerdict(journal, manifest, path = SCREEN_A_VER
     reports[arm] = JSON.parse(await readFile(attempt.output, "utf8"));
     sources[arm] = { jobId: id, attemptId: attempt.attemptId };
   }
+  // Plan 214 Task 5b: two arms that a gateway served from different deployments are not a pair.
+  if (reports.x && reports["x-tools"]) assertComparableServedDeployments(reports["x-tools"], reports.x, { label: "stage-a" });
   const verdict = reports.x
     ? screenAVerdict({ reference: reports.x, arms: reports["x-tools"] ? { "x-tools": reports["x-tools"] } : {} })
     : { kind: "188.10-stage-a-verdict", incomplete: ["x"], arms: {}, selected: null, next: "stage-b" };

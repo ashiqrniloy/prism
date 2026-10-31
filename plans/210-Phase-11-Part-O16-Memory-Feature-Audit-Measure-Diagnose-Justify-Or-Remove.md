@@ -28,6 +28,7 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
 - It starts after plan 209 Task 6, when every memory plan has development evidence and has listed its unjustified features for the ledger.
 - It ends before plan 184 (cache parity, which measures the final product) and plan 185 (surface freeze).
 - **Amended 2026-10-31 by plans 211–212 (host adoption ships in 0.13.0).** When this plan is complete, continue with plan 211 (module skills; its memory skills are written on the surface this plan leaves), then plan 212, then plan 184.
+- **Amended 2026-11-01 by plan 202 Task 5.4.6 (owner disposition).** Plan 202 Task 5 (agentic lexical navigation and write-time keyword enrichment) closes on a bounded development screen: `beam-100k`, `locomo`, `memoryagentbench-cr` and a 14-question `beam-1m` slice. The candidate-gap halving rule is the screen's gate and the ability guard is descriptive only. The rest of Task 5's frozen target is handed here: `longmemeval-m`, the full `beam-1m` development cohort and the ability non-regression veto. Tasks 1, 5 and 9 carry it, and none of it may be dropped from this plan without a new owner decision.
 - **Audit before acceptance.** Removals happen on development evidence only, before any held-out item is read. The held-out acceptance then measures the product that ships, so no claim has to be re-pointed and no removal needs a second held-out read.
 
 **Scope:** `memory-observational`, `memory-fabric`, `memory-wiki` and the parts of `memory-core` only they use. `memory-rag` (document retrieval, a separate capability the owner keeps outside memory) and `memory-compaction` (measured by plan 194's rot curve) are out of scope; the ledger lists them as excluded with that reason.
@@ -62,6 +63,7 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
       - its evidence: every evidence file under `docs/_evidence/memory-bench/` that measured it (development partitions; no held-out read exists yet), with the effect, CI and hash;
       - its status.
       A feature whose claimed role is safety or inspectability is `safety-proven` only when a named test proves the property. Otherwise it is `unmeasured`.
+    - Functional: **Plan 202 Task 5 hand-off (2026-11-01).** The keyword-enrichment and agentic-navigation rows cite the Task 5 development-screen verdict (`docs/_evidence/memory-bench/202/task5/`, screen manifest and gate 15) as evidence for the screened suites only. On `longmemeval-m` and the full `beam-1m` cohort their status is `unmeasured`, whatever the screen returned, so both rows are always Task 2–5 candidates. Each row also records `deferredFrom: "202-task5.4.6"` and the full ten-cell manifest hash.
     - Functional: **Candidates** are rows with status `neutral`, `negative` or `unmeasured`, including every feature plans 202, 208 and 209 listed at their plan end. The ledger is committed before Task 2.
     - Performance: Built offline from code, READMEs and evidence files.
     - Code Quality: `scripts/memory-bench/feature-ledger.mjs` builds it from the config stability tables (`stability.test.ts` sources) plus a hand-maintained mechanism list. A test fails if a config field or kind is missing from the ledger.
@@ -88,6 +90,7 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
   - Test Cases to Write:
     - `ledger_covers_every_config_field_kind_tool_and_command`.
     - `safety_proven_requires_a_named_passing_test`.
+    - `ledger_marks_202_task5_deferred_suites_unmeasured`: fails if the enrichment or navigation row is not a candidate, or claims a status on `longmemeval-m` or full `beam-1m` from the screen.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: no — evidence.
     - Docs pages to create/edit:
@@ -238,18 +241,25 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
       - **fixed variants:** for each `fix-and-measure` verdict, the fix;
       - **alternative measurements:** for each `measure-elsewhere` verdict, its named measurement (for example 202's growth simulation, or the work-outcome long-horizon personas).
       Partitions: development partitions of the robustness suites and the work-outcome suite. Features with similar targets may share a factorial design (stated at the gate) to save cost. The gate also reserves the budget for Task 8's combined check.
+    - Functional: **Plan 202 Task 5 deferred arms (hand-off 2026-11-01).** Gate C-1 includes, whatever Tasks 2–4 conclude:
+      - a leave-one-out arm per feature, keyword enrichment off and agentic navigation (`memory.read` neighbour/session paging) off, each against the Task 8 candidate configuration;
+      - on the **full** `longmemeval-m` and `beam-1m` development cohorts frozen in `docs/_evidence/memory-bench/202/task5/development-comparison-manifest-full.json`, plus the screened suites so every applicable suite has a row;
+      - scored with the plan 202 Task 5.2 rules **as frozen**: the candidate-gap halving per suite, and the ability guard as a **veto** (every suite × ability stratum `>= -0.03`, missing strata unverified and blocking). Pin the original `criteriaHash` (version `202-task5-candidate-gap-v1`); a criteria drift is refused.
+      These rows are reported next to the `cleanup-criteria.json` verdict and feed it as evidence. They do not replace it, and the cleanup verdict does not override them. A Task 5.2 miss here is a plan 202 Task 5 miss: Task 6 records it, and the feature goes to fix-and-measure or removal under `cleanup-criteria.json`. The arms run on plan 202's providers per this plan's header; the model may differ from Task 5's free route, and the report names the change.
     - Functional: Every arm is paired against its base on the same items. The report gives the effect per target metric with clustered CIs (plan 198), cost and p95 latency deltas, and the Task 3 prediction scored as hit or miss.
     - Functional: The verdict per feature is computed by `acceptance-report.mjs --plan 210` from `cleanup-criteria.json`, with no hand-set value.
-    - Performance: Caps per arm stated and reported.
+    - Performance: Caps per arm stated and reported. The gate states the deferred arms' share separately: `longmemeval-m` ingest is hours per question, and Task 5.2 priced it at a 144 h wall cap per role.
     - Code Quality: Existing campaign machinery. Arms are expressed as config overrides; a feature without a toggle gets a test-only switch in `scripts/memory-bench`, never a new product config field.
     - Security: Keys as refs. No text in reports.
   - Approach:
     - Documentation Reviewed:
       - `scripts/memory-bench/{ablations,campaign,paired-sizing,stats}.mjs`;
       - plan 198 statistics;
-      - plan 188.6's ablation design.
+      - plan 188.6's ablation design;
+      - plan 202 Task 5.2 frozen criteria and Task 5.4.6 disposition (`scripts/memory-bench/task5-comparison.mjs:93–134`).
     - Options Considered:
       - Ablate every feature, including measured ones. Rejected: cost; features with accepted evidence are not candidates.
+      - Rescore 202 Task 5's deferred rows with `cleanup-criteria.json` only. Rejected: that would change Task 5's rules after its screen result was known; the frozen rules are carried as written.
     - Chosen Approach:
       - Targeted paired ablations on candidates, plus scored predictions.
     - API Notes and Examples:
@@ -259,13 +269,15 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
       ```
     - Files to Create/Edit:
       - `scripts/memory-bench/{ablations,campaign,acceptance-report}.mjs` and tests;
-      - `docs/_evidence/memory-bench/210/{gates,ablations}/*`.
+      - `docs/_evidence/memory-bench/210/{gates,ablations}/*`;
+      - `docs/_evidence/memory-bench/202/task5/README.md`: link the deferred rows' verdict back to Task 5.
     - References:
-      - Tasks 1–4.
+      - Tasks 1–4; plan 202 Task 5.4.6.
   - Test Cases to Write:
     - `plan_210_arms_paired_on_identical_items`.
     - `verdicts_computed_from_cleanup_criteria_only`.
     - `prediction_scoring_marks_hit_or_miss`.
+    - `plan_210_gate_c1_carries_202_task5_deferred_arms`: fails if the C-1 manifest lacks the enrichment-off or navigation-off arm, or the full `longmemeval-m` / `beam-1m` development ids, or pins a criteria hash other than Task 5.2's.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: no — evidence.
     - Docs pages to create/edit:
@@ -404,6 +416,7 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
       - every acceptance model (≥ 3 models, ≥ 2 providers, one small);
       - the judge panel, with repeats on the 100-item subset.
       Plan 202's safety gate (Task 14, including plan 208 Task 4's ontology probes) and growth criterion (Task 15) re-run on the frozen product.
+    - Functional: **Plan 202 Task 5 hand-off (2026-11-01).** Plan 202 Task 5 closed on a development screen that excluded `longmemeval-m` and most of `beam-1m`, so the robustness arms must include `heldout-a` of both suites with no subsetting. A manifest that omits either one, or samples it, is refused even under budget pressure. The acceptance report names which plan 202 Task 5 deferral each of those rows discharges.
     - Functional: One manifest pins the product hash, `robustness-criteria.json`, `three-tier-criteria.json` and `work-outcome-criteria.json`, with every hash verified. Each verdict is one row per criterion, computed with no hand-set value:
       - `acceptance-report.mjs --plan 202`: `robust`, `better-than-full-context`, both, or neither, with the failing rows named;
       - `--plan 208`: O1–O8 and the outcome class;
@@ -451,6 +464,7 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
     - `outcome_class_derived_without_hand_set_values`.
     - `acceptance_209_rows_match_criteria`.
     - `one_manifest_pins_all_three_criteria_hashes_and_the_freeze_hash`.
+    - `acceptance_202_refuses_missing_or_sampled_longmemeval_m_or_beam_1m`.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: no — evidence.
     - Docs pages to create/edit:

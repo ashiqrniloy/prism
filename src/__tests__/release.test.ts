@@ -50,7 +50,7 @@ const missing = async () => new Response("not found", { status: 404 });
 
 test("0.3.0 release graph is independent, publishable, and documented", () => {
   const release = loadRelease(process.cwd());
-  // 49 = root + 48 workspace packages, including channels, prism-hooks, agent-sdk,
+  // 50 = root + 49 workspace packages, including channels, prism-hooks, agent-sdk,
   // the twenty-one standalone provider packages under packages/providers/, the keyring package
   // under packages/credentials/ (plan 152 Tasks 3-7; the retired @arnilo/prism-providers umbrella
   // workspace was deleted in Task 8), the store packages under packages/stores/ (plan 153
@@ -69,8 +69,10 @@ test("0.3.0 release graph is independent, publishable, and documented", () => {
   // 46 workspaces at HEAD while this line still said 43, so one earlier addition had gone uncounted.
   // Plan 204 Task 8 re-anchors the check to the loaded graph (47 = root + 46 workspaces) instead of
   // guessing which plan owned that one; from here it catches any further drift.
-  assert.equal(release.packages.length, 48); // plan 205 Task 2 adds @arnilo/prism-provider-commandcode
-  assert.equal(new Set(release.packages.map((pkg: { manifest: { name: string } }) => pkg.manifest.name)).size, 48);
+  // Plan 213 Task 2 adds @arnilo/prism-provider-kilo (49) and plan 214 Task 2 adds
+  // @arnilo/prism-provider-litellm (50).
+  assert.equal(release.packages.length, 50);
+  assert.equal(new Set(release.packages.map((pkg: { manifest: { name: string } }) => pkg.manifest.name)).size, 50);
   assert.doesNotThrow(() =>
     validateReleaseIndependent(release, {
       baseline: "HEAD",
@@ -101,7 +103,7 @@ test("0.3.0 release graph is independent, publishable, and documented", () => {
   );
   const docs = readFileSync(join(process.cwd(), "docs/history/release-handoffs.md"), "utf8");
   assert.ok(docs.includes("### 0.1.2 publish handoff (plan 014 Task 6)"));
-  assert.ok(docs.includes("48 publishable manifests") || docs.includes("**48** manifests"));
+  assert.ok(docs.includes("49 publishable manifests") || docs.includes("**49** manifests"));
 });
 
 function published(manifest: unknown) {

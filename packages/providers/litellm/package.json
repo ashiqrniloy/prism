@@ -1,0 +1,52 @@
+{
+  "name": "@arnilo/prism-provider-litellm",
+  "version": "0.13.0",
+  "description": "LiteLLM Proxy provider package for Prism: one Chat route with per-call proxy telemetry and model discovery.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "!src/**/__tests__",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "bun ../../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 src",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": ">=0.13.0 <1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/providers/litellm"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/providers/litellm#readme",
+  "keywords": [
+    "prism",
+    "provider",
+    "litellm",
+    "litellm-proxy",
+    "chat-completions",
+    "gateway"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

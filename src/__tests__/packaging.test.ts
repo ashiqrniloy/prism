@@ -95,6 +95,8 @@ const packages: Array<{
   { dir: "packages/providers/liquid", name: "@arnilo/prism-provider-liquid", sourceExport: true },
   { dir: "packages/providers/openai-codex", name: "@arnilo/prism-provider-openai-codex", sourceExport: true },
   { dir: "packages/providers/commandcode", name: "@arnilo/prism-provider-commandcode", sourceExport: true },
+  { dir: "packages/providers/kilo", name: "@arnilo/prism-provider-kilo", sourceExport: true },
+  { dir: "packages/providers/litellm", name: "@arnilo/prism-provider-litellm", sourceExport: true },
   { dir: "packages/providers/opencode-go", name: "@arnilo/prism-provider-opencode-go", sourceExport: true },
   { dir: "packages/providers/openrouter", name: "@arnilo/prism-provider-openrouter", sourceExport: true },
   { dir: "packages/providers/typesafe", name: "@arnilo/prism-provider-typesafe", sourceExport: true },
@@ -450,7 +452,18 @@ describe("packaging guard", () => {
     // packages/providers/openai-codex/src before the shell exists; Task 5 adds the manifest, and this
     // list grows with it.
     const shipped = providerDirs.filter((name) => existsSync(join(repoRoot, "packages/providers", name, "package.json")));
-    assert.deepEqual(shipped, ["commandcode", "hyper", "laya", "liquid", "openai-codex", "opencode-go", "openrouter", "typesafe"]);
+    assert.deepEqual(shipped, [
+      "commandcode",
+      "hyper",
+      "kilo",
+      "laya",
+      "liquid",
+      "litellm",
+      "openai-codex",
+      "opencode-go",
+      "openrouter",
+      "typesafe",
+    ]);
     for (const vendor of providerDirs.filter((name) => !shipped.includes(name)))
       assert.equal(
         existsSync(join(repoRoot, "packages/providers", vendor, "src/index.ts")),
@@ -834,7 +847,7 @@ describe("packaging guard", () => {
   it("0.4 package set — 61 manifests in lockstep, no shims, family roots stay inert", () => {
     const root = readPkg(".");
     const names = packages.map((pkg) => pkg.name).sort();
-    assert.equal(names.length, 48, "48 active packages including root (Command Code, OpenRouter and OpenAI Codex restored)");
+    assert.equal(names.length, 50, "50 active packages including root (Kilo, then LiteLLM, added)");
     assert.ok(names.includes("@arnilo/prism-tools-work"), "work package must be present");
     assert.ok(!names.includes("@arnilo/prism-office"), "office package must be absent");
     // Plan 140 Task 1: the SDK is on its own version line (0.1.x).

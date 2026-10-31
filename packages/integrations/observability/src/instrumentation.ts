@@ -70,6 +70,8 @@ export interface OpenTelemetryInstrumentationOptions {
   readonly fieldPolicy?: TelemetryFieldPolicy;
   /** Adds token counts and the stop reason to chat spans. Never message text. */
   readonly includeUsage?: boolean;
+  /** Dotted `Usage.metadata` paths exported as `prism.usage.<path>` (allowlist, plan 214 Task 4). */
+  readonly usageMetadata?: readonly string[];
 }
 
 export interface RunFeedbackTelemetry {
@@ -226,6 +228,19 @@ function policyAttrs(
     // deny (and unparseable) attributes are dropped
   }
   return out;
+}
+
+/** Longest allowlisted path; anything longer is ignored rather than exported. */
+const USAGE_PATH_LIMIT = 128;
+
+/** Reads a dotted scalar out of `Usage.metadata`; objects and arrays never become attributes. */
+function usagePath(metadata: unknown, path: string): string | number | boolean | undefined {
+  let current: unknown = metadata;
+  for (const part of path.split(".")) {
+    if (typeof current !== "object" || current === null || Array.isArray(current)) return undefined;
+    current = (current as Record<string, unknown>)[part];
+  }
+  return typeof current === "string" || typeof current === "number" || typeof current === "boolean" ? current : undefined;
 }
 
 let tokenSeq = 0;
@@ -445,6 +460,11 @@ export function createInstrumentationParts(options: OpenTelemetryInstrumentation
             if (usage?.inputTokens !== undefined) known["gen_ai.usage.input_tokens"] = usage.inputTokens;
             if (usage?.outputTokens !== undefined) known["gen_ai.usage.output_tokens"] = usage.outputTokens;
             if (event.metadata!.stopReason) known["gen_ai.response.finish_reasons"] = String(event.metadata!.stopReason);
+            for (const path of options.usageMetadata ?? []) {
+              if (path === "" || path.length > USAGE_PATH_LIMIT) continue;
+              const value = usagePath(usage?.metadata, path);
+              if (value !== undefined) known[`prism.usage.${path}`] = value;
+            }
             for (const [name, value] of Object.entries(policyAttrs(known, options.fieldPolicy, "telemetry")))
               item.span.setAttribute(name, value);
           }
@@ -671,6 +691,14 @@ export interface OpenTelemetryTraceApi {
 }
 const rawSpan = Symbol("prism.otel.span");
 type WrappedSpan = PrismSpan & { [rawSpan]?: OpenTelemetrySpan };
+
+/**
+ * The OpenTelemetry span behind a span produced by {@link wrapOpenTelemetryApi}, so a propagator can be
+ * handed the real span (plan 214 Task 4). `undefined` for the in-memory tracer and any foreign span.
+ */
+export function rawOpenTelemetrySpan(span: PrismSpan): unknown {
+  return (span as Partial<WrappedSpan>)[rawSpan];
+}
 
 export function wrapOpenTelemetryApi(
   tracer: OpenTelemetryTracer,

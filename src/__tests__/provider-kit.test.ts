@@ -82,6 +82,7 @@ describe("provider-kit", () => {
 
   it("provider_kit_exports_match_inventory", () => {
     const expected = [
+      "anthropicAdaptiveThinking",
       "DEFAULT_MAX_ARGUMENT_BYTES",
       "DEFAULT_MAX_BUFFER_BYTES",
       "DEFAULT_MAX_EVENT_BYTES",

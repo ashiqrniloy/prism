@@ -834,6 +834,59 @@
       "scope": "Manual-only reference-host evaluation gate on Hyper over the heldout split (coding approval, denied write, research citations, and web_fetch prompt injection) with trials: 4 and regression comparison against the last stored live report.",
       "cost": "4 heldout items x 4 trials (~32 provider turns); hard ceiling of 2M input tokens enforced by the test. Never scheduled.",
       "notes": "Use workflow_dispatch with filter release/eval-gate and PRISM_LIVE_EVAL_GATE_MANUAL=1. Appends the content-free ExperimentReportRecord to the durable SQLite store."
+    },
+    {
+      "id": "providers/kilo",
+      "package": "@arnilo/prism-provider-kilo",
+      "status": "active",
+      "source": "packages/providers/kilo/src/__tests__/live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts src/__tests__/live-agent.test.ts",
+      "cwd": "packages/providers/kilo",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "KILO_API_KEY"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_KILO_CHAT_MODEL",
+          "default": "google/gemma-4-26b-a4b-it",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_KILO_RESPONSES_MODEL",
+          "default": "openai/gpt-6-luna",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_KILO_MESSAGES_MODEL",
+          "default": "anthropic/claude-haiku-5.5",
+          "wired": true
+        }
+      ],
+      "scope": "Three Kilo AI Gateway wires: Chat Completions, Responses, Anthropic Messages, one exemplar each. Per route: text, tool loop, structured output, abort, leak scan. The cache probe is separate: the gateway places its own breakpoints (plan 213 Task 1b), so it measures prefix reuse rather than a client lever.",
+      "cost": "~25 generation requests across three wires: 2 per text/tool-loop pair plus structured and error, 9 kernel-smoke turns, and the anonymous/data-collection checks. The separate cache probe is 4 generation requests per wire (12 plus catalog discovery, plan 203 fixture). The reference account returned 402 on the paid exemplars (negative balance, 2026-10-31), so the accepted run used free ids (e.g. nvidia/nemotron-3.5-super-vl:free) at $0.00; free models are limited to 200 requests per hour."
+    },
+    {
+      "id": "providers/litellm",
+      "package": "@arnilo/prism-provider-litellm",
+      "status": "active",
+      "source": "packages/providers/litellm/src/__tests__/live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts src/__tests__/live-agent.test.ts",
+      "cwd": "packages/providers/litellm",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "LITELLM_API_KEY"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_LITELLM_MODEL",
+          "default": "prism-free/gpt-oss-20b@groq",
+          "wired": true
+        }
+      ],
+      "scope": "One Chat Completions route against a host-run LiteLLM Proxy: text, tool loop, abort, and a named error, plus the leak scan. The proxy must answer /health/liveliness at PRISM_LIVE_LITELLM_BASE_URL (default http://127.0.0.1:4000) or the suite skips with a reason.",
+      "cost": "~8 generation requests at $0.00 on the prism-free pool (Groq, Cloudflare, Gemini, OpenRouter free tiers); a paid backend overall spends whatever the proxy forwards, and this suite makes no extra requests.",
+      "notes": "Includes multi-turn agent kernel smoke (live-agent.test.ts). Structured-output and warm-cache legs skip by design (no schema capability claimed; litellm exempt from cache parity cells for 0.13.0). Plan 214 Tasks 2 and 7."
     }
   ]
 }

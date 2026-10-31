@@ -413,6 +413,7 @@ export async function startWireProxy(options = {}) {
             usageLogFile: usageLog,
             cacheKey,
             secrets,
+            upstreamHeaders: upstreamResponse.headers,
           });
         })();
       } else {
@@ -429,6 +430,7 @@ export async function startWireProxy(options = {}) {
           usageLogFile: usageLog,
           cacheKey,
           secrets,
+          upstreamHeaders: upstreamResponse.headers,
         });
       }
 
@@ -457,6 +459,30 @@ export async function startWireProxy(options = {}) {
   };
 }
 
+/**
+ * The `x-litellm-*` response headers worth keeping: a call id to reconcile spend against, the
+ * deployment that answered, and LiteLLM's own cost figure. Everything else in that namespace
+ * (`x-litellm-model-api-base`, key labels) can name private infrastructure, so it is not copied.
+ */
+export const LITELLM_HEADERS = {
+  "x-litellm-call-id": "callId",
+  "x-litellm-model-id": "modelId",
+  "x-litellm-model-group": "modelGroup",
+  "x-litellm-response-cost": "responseCost",
+};
+
+export function litellmHeaders(headers) {
+  if (!headers) return {};
+  const get = (name) => (typeof headers.get === "function" ? headers.get(name) : headers[name]);
+  const out = {};
+  for (const [header, key] of Object.entries(LITELLM_HEADERS)) {
+    const value = get(header);
+    if (value === null || value === undefined || value === "") continue;
+    out[key] = key === "responseCost" ? Number(value) : String(value);
+  }
+  return out;
+}
+
 async function handleExchangeCompletion(params) {
   const {
     exchange,
@@ -471,7 +497,9 @@ async function handleExchangeCompletion(params) {
     usageLogFile,
     cacheKey,
     secrets,
+    upstreamHeaders,
   } = params;
+  const telemetry = litellmHeaders(upstreamHeaders);
 
   const exchangeRecord = {
     method,
@@ -524,6 +552,11 @@ async function handleExchangeCompletion(params) {
       cacheReadTokens: normalized?.cacheReadTokens ?? 0,
       cacheWriteTokens: normalized?.cacheWriteTokens ?? 0,
       totalTokens: normalized?.totalTokens ?? 0,
+      // Only the allow-listed LiteLLM fields, and only when the gateway actually sent one.
+      ...(telemetry.callId ? { callId: telemetry.callId } : {}),
+      ...(telemetry.modelId ? { modelId: telemetry.modelId } : {}),
+      ...(telemetry.modelGroup ? { modelGroup: telemetry.modelGroup } : {}),
+      ...(telemetry.responseCost !== undefined && Number.isFinite(telemetry.responseCost) ? { responseCost: telemetry.responseCost } : {}),
     };
     // The run may already be tearing its scratch directory down while a streamed reply finishes;
     // a lost usage line after teardown must not fail the run that is ending.

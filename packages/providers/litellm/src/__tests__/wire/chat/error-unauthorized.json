@@ -1,0 +1,19 @@
+{
+  "method": "POST",
+  "path": "/chat/completions",
+  "requestBody": {
+    "model": "prism-free/mixed",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hi"
+      }
+    ]
+  },
+  "status": 401,
+  "contentType": "application/json",
+  "headers": {
+    "content-type": "application/json"
+  },
+  "responseBody": "{\"error\":{\"message\":\"Authentication Error, Invalid proxy server token passed. Received API Key = sk-..., Key Hash (Token) =f31ad3f59df4480994844beebf960b504cb391834489a001ae766eb03c4727d0. Unable to find token in cache or `LiteLLM_VerificationTokenTable`\",\"type\":\"token_not_found_in_db\",\"param\":\"key\",\"code\":\"401\"}}"
+}

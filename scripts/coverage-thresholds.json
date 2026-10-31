@@ -147,6 +147,11 @@
       "branches": null,
       "functions": 97.92
     },
+    "@arnilo/prism-provider-kilo": {
+      "lines": 98.48,
+      "branches": null,
+      "functions": 100
+    },
     "@arnilo/prism-provider-laya": {
       "lines": 96.38,
       "branches": null,
@@ -156,6 +161,11 @@
       "lines": 97,
       "branches": null,
       "functions": 95.24
+    },
+    "@arnilo/prism-provider-litellm": {
+      "lines": 95.92,
+      "branches": null,
+      "functions": 99.41
     },
     "@arnilo/prism-provider-openai-codex": {
       "lines": 93.5,

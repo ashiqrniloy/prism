@@ -56,6 +56,13 @@ import {
 } from "./replay.mjs";
 import { summarize, writeReport } from "./report.mjs";
 import { robustnessCriteriaHash } from "./robustness.mjs";
+import {
+  assertFreeOnlyCost,
+  CALL_ID_INLINE_LIMIT,
+  recordServedDeployments,
+  servedDeploymentsFromRows,
+  servedModelGuard,
+} from "./served-model.mjs";
 import { PAIRED_ANALYSIS_VERSION } from "./stats.mjs";
 import { createGate, createTiming } from "./timing.mjs";
 import { boundedWireUsage, missingUsageCount, resolveRate, roleUsage } from "./usage.mjs";
@@ -63,7 +70,7 @@ import { variantProvenance } from "./variants.mjs";
 
 export { missingUsageCount };
 
-const PROVIDERS = {
+export const PROVIDERS = {
   hyper: { create: "createHyperProvider", list: "listHyperModels", secret: "HYPER_API_KEY", url: "https://hyper.charm.land/v1" },
   "opencode-go": {
     create: "createOpenCodeGoProvider",
@@ -82,6 +89,13 @@ const PROVIDERS = {
     list: "listCommandCodeModels",
     secret: "COMMAND_CODE_API_KEY",
     url: "https://api.commandcode.ai/provider/v1",
+  },
+  // A local gateway, so its URL comes from the environment: the pool binds loopback only.
+  litellm: {
+    create: "createLiteLLMProvider",
+    list: "listLiteLLMModels",
+    secret: "LITELLM_API_KEY",
+    url: process.env.PRISM_LIVE_LITELLM_BASE_URL ?? "http://127.0.0.1:4000",
   },
 };
 export function parseArgs(argv) {
@@ -227,6 +241,9 @@ export function benchmarkFetch({
 /** Free routing is explicit: unknown prices never become zero-cost authorization. */
 export function isFreeBenchmarkModel(model) {
   if (model.provider === "openrouter") return model.model.endsWith(":free") && model.cost?.input === 0 && model.cost?.output === 0;
+  // The pool's groups are the authorization: a `prism-free/` group the gateway prices at exactly
+  // zero. Unknown cost is refused, exactly as for the other paid hosts.
+  if (model.provider === "litellm") return model.model.startsWith("prism-free/") && model.cost?.input === 0 && model.cost?.output === 0;
   return model.provider === "commandcode" && /(?::free|-free)$/.test(model.model);
 }
 export async function liveProviders(refs, temp, fetchOptions) {
@@ -236,7 +253,7 @@ export async function liveProviders(refs, temp, fetchOptions) {
   try {
     for (const id of new Set(refs.map((ref) => ref.provider))) {
       const spec = PROVIDERS[id];
-      if (!spec) throw new Error("MemoryBenchProvider: supported providers are hyper, opencode-go, openrouter and commandcode");
+      if (!spec) throw new Error("MemoryBenchProvider: supported providers are hyper, opencode-go, openrouter, commandcode and litellm");
       const key = process.env[spec.secret] ?? (id === "opencode-go" ? process.env.OPENCODE_API_KEY : undefined);
       if (!key) throw new Error("MemoryBenchCredentials: provider credential unavailable");
       const module = await import(`@arnilo/prism-provider-${id}`);
@@ -917,6 +934,17 @@ export async function runBench(input = {}) {
               })),
           );
       }
+      // What actually answered each call, and LiteLLM's own charge for it. A stream's total cost
+      // lives in its usage chunk rather than a header, so both are read.
+      const served = servedDeploymentsFromRows(rows);
+      if (served.callIds.length > CALL_ID_INLINE_LIMIT) {
+        const sidecar = options.output ? `${options.output.replace(/\.json$/, "")}.callids.jsonl` : join(temp, "callids.jsonl");
+        await writeFile(sidecar, `${served.callIds.join("\n")}\n`, "utf8");
+        report.servedCallIds = { count: served.callIds.length, path: sidecar };
+        delete served.callIds;
+      }
+      recordServedDeployments(report, served, { sidecarPath: report.servedCallIds?.path });
+      assertFreeOnlyCost(report, { freeOnly: options.freeOnly === true || options.freeProductOnly === true });
       report.roleUsage = roleUsage(
         rows,
         prior?.roleUsage ??
@@ -1043,6 +1071,18 @@ export async function runBench(input = {}) {
       // providers, so pacing here spends the one free-route budget for every role (Task 5.4.3).
       providers = sharedFreePace ? live.providers.map((provider) => pacedProvider(provider, sharedFreePace)) : live.providers;
       options.modelConfig = live.models.get(`${options.provider}/${options.model}`);
+      // Plan 214 Task 5b guards 3 and 4 run before the first request: a pooled group that mixes
+      // models (or the smoke group) cannot score, and held-out subsets need one pinned deployment.
+      servedModelGuard(
+        { phase, model: options.model, subset: options.subset },
+        {
+          group: options.model,
+          phase,
+          subset: options.subset,
+          catalogModel: options.modelConfig,
+          deployments: options.modelConfig?.compat?.deployments,
+        },
+      );
       for (const ref of coding ? [] : judgeRefs)
         judgeAgents.set(
           ref,

@@ -10,7 +10,7 @@ const PROVIDER_TARBALL_SAMPLE = "arnilo-prism-provider-hyper";
 
 import { afterAll as after, beforeAll as before, describe, it, setDefaultTimeout } from "bun:test";
 
-// 47 manifests x one `npm pack` each no longer fits the 5 s default hook budget.
+// 48 manifests x one `npm pack` each no longer fits the 5 s default hook budget.
 setDefaultTimeout(180_000);
 
 import { dirname, join } from "node:path";
@@ -68,6 +68,8 @@ const packages: Array<{ dir: string; name: string; isCore?: boolean; isSubpaths?
   { dir: "packages/providers/liquid", name: "@arnilo/prism-provider-liquid" },
   { dir: "packages/providers/openai-codex", name: "@arnilo/prism-provider-openai-codex" },
   { dir: "packages/providers/commandcode", name: "@arnilo/prism-provider-commandcode" },
+  { dir: "packages/providers/kilo", name: "@arnilo/prism-provider-kilo" },
+  { dir: "packages/providers/litellm", name: "@arnilo/prism-provider-litellm" },
   { dir: "packages/providers/opencode-go", name: "@arnilo/prism-provider-opencode-go" },
   { dir: "packages/providers/openrouter", name: "@arnilo/prism-provider-openrouter" },
   { dir: "packages/providers/typesafe", name: "@arnilo/prism-provider-typesafe" },
@@ -196,6 +198,8 @@ before(() => {
     "@arnilo/prism-provider-liquid",
     "@arnilo/prism-provider-openai-codex",
     "@arnilo/prism-provider-commandcode",
+    "@arnilo/prism-provider-kilo",
+    "@arnilo/prism-provider-litellm",
     "@arnilo/prism-provider-opencode-go",
     "@arnilo/prism-provider-openrouter",
     "@arnilo/prism-provider-typesafe",

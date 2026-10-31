@@ -1,0 +1,52 @@
+{
+  "method": "POST",
+  "path": "/chat/completions",
+  "requestBody": {
+    "model": "prism-free/chat",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a concise assistant."
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "What colour? One word."
+          },
+          {
+            "type": "image",
+            "mimeType": "image/png",
+            "data": "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAWklEQVR42u3OMQEAAAgDoC251a3gLwSgOXLVkiRJkiRJkiRJkiRJkiRJkiRJkiRJkiRJkiRJkiRJkiRJkiRJkiRJkiRJkiRJkiRJkiRJkiRJkiRJkiRJkqRPC3UAAT8FyXQAAAAASUVORK5CYII="
+          }
+        ]
+      }
+    ],
+    "max_tokens": 16
+  },
+  "status": 200,
+  "contentType": "text/event-stream",
+  "headers": {
+    "content-type": "text/event-stream",
+    "x-litellm-call-id": "66440f9f-68c8-4553-91d2-e777c47d3866",
+    "x-litellm-model-id": "chat-scout",
+    "x-litellm-model-name": "cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct",
+    "x-litellm-version": "1.106.6",
+    "x-litellm-response-cost-original": "0.0",
+    "x-litellm-response-cost-discount-amount": "0.0",
+    "x-litellm-response-cost-margin-amount": "0.0",
+    "x-litellm-response-cost-margin-percent": "0.0",
+    "x-litellm-response-cost-input": "0.0",
+    "x-litellm-response-cost-output": "0.0",
+    "x-litellm-response-cost-tool-usage": "0.0",
+    "x-litellm-key-spend": "0.0",
+    "x-litellm-response-duration-ms": "589.9479389190674",
+    "x-litellm-overhead-duration-ms": "4.349",
+    "x-litellm-callback-duration-ms": "0.0",
+    "x-litellm-model-group": "prism-free/chat",
+    "x-litellm-attempted-retries": "0",
+    "x-litellm-attempted-fallbacks": "0"
+  },
+  "responseBody": "data: {\"id\":\"id-1793466257385\",\"object\":\"chat.completion.chunk\",\"created\":1793466257,\"model\":\"prism-free/chat\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"}}]}\n\ndata: {\"id\":\"id-1793466257385\",\"object\":\"chat.completion.chunk\",\"created\":1793466257,\"model\":\"prism-free/chat\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"White\"}}]}\n\ndata: {\"id\":\"id-1793466257385\",\"object\":\"chat.completion.chunk\",\"created\":1793466257,\"model\":\"prism-free/chat\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\".\"}}]}\n\ndata: {\"id\":\"id-1793466257385\",\"object\":\"chat.completion.chunk\",\"created\":1793466257,\"model\":\"prism-free/chat\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: {\"id\":\"id-1793466257385\",\"created\":1793466257,\"model\":\"prism-free/chat\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{}}],\"usage\":{\"completion_tokens\":3,\"prompt_tokens\":163,\"total_tokens\":166,\"completion_tokens_details\":{\"reasoning_tokens\":0,\"text_tokens\":3},\"prompt_tokens_details\":{\"cached_tokens\":0},\"cost\":0.00004656}}\n\ndata: [DONE]\n\n"
+}

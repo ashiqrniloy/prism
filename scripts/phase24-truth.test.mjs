@@ -101,13 +101,16 @@ test("counts match manifests at the truth graph", () => {
     // Plan 204 Task 5 adds the @arnilo/prism-provider-openai-codex provider package, so publishable
     // is 47, workspace 46, provider 7, capability 38, and codeWithPeer 46.
     // Plan 205 Task 2 adds the @arnilo/prism-provider-commandcode provider package, so publishable is
-    // 48, workspace 47, provider 8, and codeWithPeer 47.
-    assert.equal(t.counts.publishable, 48);
-    assert.equal(t.counts.workspace, 47);
-    assert.equal(t.counts.provider, 8);
+    // 48, workspace 47, provider 8, and codeWithPeer 47. Plan 213 Task 2 adds
+    // @arnilo/prism-provider-kilo: publishable 49, workspace 48, provider 9, codeWithPeer 48.
+    // Plan 214 Task 2 adds @arnilo/prism-provider-litellm: publishable 50, workspace 49, provider 10,
+    // codeWithPeer 49.
+    assert.equal(t.counts.publishable, 50);
+    assert.equal(t.counts.workspace, 49);
+    assert.equal(t.counts.provider, 10);
     assert.equal(t.counts.prismFamily, 1);
     assert.equal(t.counts.capability, 38);
-    assert.equal(t.counts.codeWithPeer, 47);
+    assert.equal(t.counts.codeWithPeer, 49);
     assert.equal(t.counts.pureManifest, 0);
   } else if (hasCodingToolsPackage) {
     assert.equal(t.counts.publishable, 17);
@@ -131,7 +134,7 @@ test("counts match manifests at the truth graph", () => {
     assert.equal(t.counts.provider, 17);
     assert.equal(t.counts.prismFamily, 10);
     assert.equal(t.counts.capability, 27 + added);
-    assert.equal(t.counts.codeWithPeer, 48 + added);
+    assert.equal(t.counts.codeWithPeer, 49 + added);
     assert.equal(t.counts.pureManifest, 6);
     assert.equal(t.providers.length, 17);
     assert.equal(t.family.length, 10);
@@ -166,7 +169,7 @@ test("profile closures match manifests", () => {
     assert.equal(t.profiles["prism-base"], undefined);
     assert.equal(t.profiles["prism-sdk"], undefined);
   } else {
-    assert.equal(t.profiles["prism-all"].length, 47);
+    assert.equal(t.profiles["prism-all"].length, 48);
     for (const name of ["@arnilo/prism-compaction", "@arnilo/prism-tool-validator-json-schema", "@arnilo/prism-compaction-llm"]) {
       assert.ok(t.profiles["prism-base"].includes(name), `prism-base closure includes ${name}`);
     }

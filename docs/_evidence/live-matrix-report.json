@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-27T20:52:55.350Z",
+  "generatedAt": "2026-10-31T20:55:37.092Z",
   "envFile": "/home/arn/.config/prism/live.env",
   "strict": true,
   "dryRun": false,
-  "filter": "providers/commandcode",
+  "filter": "providers/litellm",
   "totals": {
     "ran": 1,
     "skipped": 0,
@@ -13,35 +13,25 @@
   },
   "coverage": {
     "ok": true,
-    "total": 81,
-    "covered": 77,
+    "total": 83,
+    "covered": 79,
     "pending": 4,
     "mode": "baseline"
   },
   "results": [
     {
-      "id": "providers/commandcode",
-      "package": "@arnilo/prism-provider-commandcode",
+      "id": "providers/litellm",
+      "package": "@arnilo/prism-provider-litellm",
       "status": "ran",
       "reason": null,
       "exitCode": 0,
-      "durationMs": 35424,
+      "durationMs": 3143,
       "command": "bun test --timeout=0 src/__tests__/live.test.ts src/__tests__/live-agent.test.ts",
-      "cwd": "packages/providers/commandcode",
+      "cwd": "packages/providers/litellm",
       "models": [
         {
-          "env": "PRISM_LIVE_COMMANDCODE_CHAT_MODEL",
-          "value": "minimax/minimax-m3.1-flash",
-          "wired": true
-        },
-        {
-          "env": "PRISM_LIVE_COMMANDCODE_RESPONSES_MODEL",
-          "value": "gpt-5.6-luna",
-          "wired": true
-        },
-        {
-          "env": "PRISM_LIVE_COMMANDCODE_MESSAGES_MODEL",
-          "value": "claude-haiku-5-5",
+          "env": "PRISM_LIVE_LITELLM_MODEL",
+          "value": "prism-free/gpt-oss-20b@groq",
           "wired": true
         }
       ],

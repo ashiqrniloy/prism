@@ -581,6 +581,36 @@ Preflight reads `GET https://openrouter.ai/api/v1/key`, records the reduced tier
 `docs/_evidence/memory-bench/202/task5/free-key.json`, and refuses to start below the
 1,000-requests/day tier.
 
+## LiteLLM free pool (plan 214 Task 5b)
+
+`--provider litellm` runs an arm through the local gateway started by `scripts/litellm/up.mjs`,
+whose base URL comes from `PRISM_LIVE_LITELLM_BASE_URL` (default `http://127.0.0.1:4000`) and whose
+credential is the pool key in `LITELLM_API_KEY`. The gateway pools several free hosts behind group
+names, so the bench records what answered instead of trusting the name:
+
+- **Free-only authorization.** `--free-only` accepts a `litellm` model only when its group starts
+  with `prism-free/` **and** the catalog prices input and output at exactly `0`. A group without a
+  catalog price is refused; unknown cost never becomes free.
+- **Served-deployment record.** Every usage line keeps `callId`, `modelId`, `modelGroup` and the
+  gateway's own `responseCost` (the wire proxy's allow-list; `x-litellm-model-api-base` and key
+  labels are never copied). Reports gain `servedDeployments: { [modelId]: count }` and
+  `servedCallIds`, which becomes `{ count, path }` pointing at a sidecar JSONL past 1,000 ids.
+  `callId` is what `scripts/litellm/reconcile.mjs` joins spend rows against.
+- **Guards** (`scripts/memory-bench/served-model.mjs`, all fail closed with
+  `MemoryBenchServedModel`):
+  1. a `--free-only` arm that was charged anything aborts where it stands, so its per-question
+     checkpoint survives a fix-and-resume;
+  2. a paired comparison (Stage A control vs arm, and each Task 5 control/candidate cell) is refused
+     when the two arms' served-deployment sets differ;
+  3. a scored arm on `prism-free/smoke`, or on any group whose catalog reports more than one
+     deployment, is refused — smoke runs only with `--phase write` or the offline/wire tests;
+  4. held-out and confirmatory subsets refuse a group that served more than one deployment.
+
+Stream cost is not available as a header, so the guard reads the usage chunk's `cost` when the
+header is absent. The free-route pacer keeps its 20/minute default; the pool's per-group ceiling is
+passed explicitly with `--per-minute` and never raised automatically, because the pool's groups share
+one gateway but not one quota.
+
 ## Replay, accounting, and limits
 
 Source messages are linked session entries with stable source-derived ids, original role, source id,

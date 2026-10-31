@@ -455,6 +455,7 @@ agentId	export declare function agentId(agent: Agent): string
 agentRuntime	export declare function agentRuntime(agent: Agent): AgentRuntime
 agentSkillSource	export declare function agentSkillSource(agent: Agent): readonly Skill[]
 agentToolList	export declare function agentToolList(agent: Agent): readonly ToolDefinition[]
+anthropicAdaptiveThinking	export declare function anthropicAdaptiveThinking(request: ProviderRequest): JsonObject | undefined
 anthropicCacheEnabled	export declare function anthropicCacheEnabled(request: ProviderRequest): boolean
 anthropicMessagesBody	export declare function anthropicMessagesBody(request: ProviderRequest, hooks?: AnthropicMessagesRouteHooks): Promise<JsonObject>
 anthropicMessagesEvents	export declare function anthropicMessagesEvents(body: ReadableStream<Uint8Array>, signalOrOptions?: AbortSignal | AnthropicMessagesEventsOptions): AsyncIterable<ProviderEvent>

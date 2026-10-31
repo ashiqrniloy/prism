@@ -98,7 +98,7 @@ Prism's own packages are optional, just like third-party ones. None of them is i
 
 | Area | Packages |
 | --- | --- |
-| Model providers | `@arnilo/prism-provider-{hyper, opencode-go, typesafe, laya}` |
+| Model providers | `@arnilo/prism-provider-{hyper, kilo, laya, liquid, litellm, openai-codex, opencode-go, openrouter, typesafe}` |
 | Tools | `@arnilo/prism-tools-{coding, web, browser, work, computer-use, openapi}` |
 | Memory and context | `@arnilo/prism-memory-{compaction, observational, rag, wiki, fabric}`, `@arnilo/prism-context-{files, engineering}` |
 | Session stores | `@arnilo/prism-store-{jsonl, sqlite, postgres}` |

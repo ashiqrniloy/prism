@@ -490,6 +490,17 @@
         "@arnilo/prism": ">=0.13.0 <1.0.0",
       },
     },
+    "packages/providers/kilo": {
+      "name": "@arnilo/prism-provider-kilo",
+      "version": "0.13.0",
+      "devDependencies": {
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": ">=0.13.0 <1.0.0",
+      },
+    },
     "packages/providers/laya": {
       "name": "@arnilo/prism-provider-laya",
       "version": "0.13.0",
@@ -503,6 +514,17 @@
     },
     "packages/providers/liquid": {
       "name": "@arnilo/prism-provider-liquid",
+      "version": "0.13.0",
+      "devDependencies": {
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": ">=0.13.0 <1.0.0",
+      },
+    },
+    "packages/providers/litellm": {
+      "name": "@arnilo/prism-provider-litellm",
       "version": "0.13.0",
       "devDependencies": {
         "@types/node": "^22.20.0",
@@ -822,9 +844,13 @@
 
     "@arnilo/prism-provider-hyper": ["@arnilo/prism-provider-hyper@workspace:packages/providers/hyper"],
 
+    "@arnilo/prism-provider-kilo": ["@arnilo/prism-provider-kilo@workspace:packages/providers/kilo"],
+
     "@arnilo/prism-provider-laya": ["@arnilo/prism-provider-laya@workspace:packages/providers/laya"],
 
     "@arnilo/prism-provider-liquid": ["@arnilo/prism-provider-liquid@workspace:packages/providers/liquid"],
+
+    "@arnilo/prism-provider-litellm": ["@arnilo/prism-provider-litellm@workspace:packages/providers/litellm"],
 
     "@arnilo/prism-provider-openai-codex": ["@arnilo/prism-provider-openai-codex@workspace:packages/providers/openai-codex"],
 

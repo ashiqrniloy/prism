@@ -1,7 +1,7 @@
 # Provider packages
 
 Each vendor ships as its own package here: `packages/providers/<vendor>/` →
-`@arnilo/prism-provider-<vendor>`. The eight shipped adapters are Command Code, Hyper, Laya, Liquid, OpenAI Codex,
+`@arnilo/prism-provider-<vendor>`. The ten adapters in the tree are Command Code, Hyper, Kilo, Laya, LiteLLM, Liquid, OpenAI Codex,
 OpenCode Go, OpenRouter, and Typesafe; there is no provider family umbrella package.
 
 A provider package is a `definePackage` definition plus a named factory, both built on the shared

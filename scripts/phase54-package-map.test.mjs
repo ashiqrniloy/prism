@@ -68,6 +68,9 @@ test("phase54 package map: partitioning - every current manifest is accounted fo
     "@arnilo/prism-provider-openai-codex",
     // Plan 205 Task 2: Command Code reuses its retired name for the new adapter.
     "@arnilo/prism-provider-commandcode",
+    "@arnilo/prism-provider-kilo",
+    // Plan 214 Task 2: the LiteLLM Proxy adapter.
+    "@arnilo/prism-provider-litellm",
     // Plan 152 Task 7: the credentials-slot keyring package, added after the 0.4 consolidation.
     "@arnilo/prism-credentials-keyring",
     // Plan 153 Task 3: the JSONL session store package, moved out of the root `./node/` subpath.

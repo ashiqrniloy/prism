@@ -1,0 +1,20 @@
+{
+  "method": "POST",
+  "path": "/chat/completions",
+  "requestBody": {
+    "model": "prism-free/slow",
+    "messages": [
+      {
+        "role": "user",
+        "content": "say pong"
+      }
+    ],
+    "max_tokens": 32
+  },
+  "status": 429,
+  "contentType": "application/json",
+  "headers": {
+    "content-type": "application/json"
+  },
+  "responseBody": "{\"error\":{\"message\":\"Rate limit exceeded for api_key: 03212880321645e82a3708db302fbec075906674b9be17e649e4bb8bfa2d0340. Limit type: requests. Current limit: 18, Remaining: 0. Limit resets at: 2026-10-31 16:32:37 UTC\",\"type\":\"throttling_error\",\"param\":null,\"code\":\"429\"}}"
+}

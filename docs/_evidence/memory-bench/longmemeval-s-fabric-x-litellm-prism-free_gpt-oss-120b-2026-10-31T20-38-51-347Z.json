@@ -1,0 +1,487 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 2,
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "usageSource": "local",
+  "phase": "write",
+  "labelInjections": "on",
+  "concurrency": 4,
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "freeOnly": true,
+  "writeGeneration": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "generatedAt": "2026-10-31T20:38:51.347Z",
+  "suite": "longmemeval-s",
+  "subset": "base",
+  "ability": null,
+  "seed": null,
+  "config": "fabric-x",
+  "ingestion": "product-per-session",
+  "embeddings": null,
+  "provider": "litellm",
+  "model": "prism-free/gpt-oss-120b",
+  "judge": "litellm/prism-free/gpt-oss-20b@groq",
+  "judgePanel": [
+    "litellm/prism-free/gpt-oss-20b@groq"
+  ],
+  "judgeCalibration": null,
+  "repeats": 1,
+  "judgeProtocol": "enum-json-v1",
+  "dataset": {
+    "file": "longmemeval-s.json",
+    "bytes": 277383467,
+    "sha256": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+    "license": "MIT",
+    "url": "https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/resolve/98d7416c24c778c2fee6e6f3006e7a073259d48f/longmemeval_s_cleaned.json",
+    "licenseUrl": "https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/blob/98d7416c24c778c2fee6e6f3006e7a073259d48f/README.md"
+  },
+  "maxInputTokens": 15000000,
+  "ablations": [],
+  "sourceVariants": [],
+  "sourceRevision": "92e3af34a6c48982103d40353b794bb4697fe63c",
+  "protocol": {
+    "answerAttempts": 3,
+    "answerBackoffMs": [
+      2000,
+      10000
+    ],
+    "judgeAttempts": 8,
+    "judgeBackoffMs": [
+      1000,
+      2000
+    ],
+    "maxTurns": 8
+  },
+  "memoryConfig": {
+    "observational": null,
+    "fabric": {
+      "preset": {
+        "name": "conversational",
+        "revision": 1,
+        "overridden": []
+      },
+      "enabled": true,
+      "retrieval": "lexical",
+      "semantic": true,
+      "inject": {
+        "query": "task",
+        "kinds": [
+          "exchange"
+        ]
+      },
+      "directory": {
+        "maxTopics": 8,
+        "maxFiles": 10,
+        "maxTokens": 200
+      },
+      "core": {
+        "maxTokens": 600,
+        "scopes": [
+          "user",
+          "project"
+        ]
+      },
+      "cues": {
+        "budgetTokens": 300,
+        "maxPerTurn": 2
+      },
+      "team": false,
+      "scopes": {
+        "tenantId": "prism",
+        "threadId": "default",
+        "priors": {
+          "path": 0.15,
+          "project": 0.1,
+          "team": 0.075,
+          "agent": 0.05,
+          "user": 0
+        },
+        "active": [
+          {
+            "level": "project",
+            "resourceId": "projects/bench--00000000"
+          }
+        ],
+        "project": {
+          "resourceId": "projects/bench--00000000",
+          "source": "path"
+        }
+      },
+      "store": "memory",
+      "tools": {},
+      "exchanges": {
+        "enabled": true,
+        "scope": "project"
+      },
+      "lifecycle": {
+        "verifyAfterSessions": 2,
+        "decay": {
+          "working": 0.4,
+          "episode": 0.8,
+          "fact": 0.4,
+          "preference": 0.2,
+          "procedure": 0.4,
+          "file": 0.4,
+          "exchange": 0.5
+        },
+        "storageWeights": {
+          "explicit": 1,
+          "sessions": 0.5,
+          "helpful": 0.5,
+          "harmful": 1,
+          "outcome": 0.5
+        },
+        "recall": {
+          "retrieval": 0.05,
+          "storage": 0.05
+        },
+        "archive": {
+          "retrievalBelow": -2,
+          "storageBelow": 1,
+          "graceSessions": 10
+        },
+        "capacity": {
+          "user": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "agent": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "project": {
+            "notes": 500,
+            "tokens": 60000
+          }
+        },
+        "merge": {
+          "duplicateDice": 0.8
+        },
+        "widen": {
+          "minProjects": 2,
+          "minSiblings": 2,
+          "contradictionsToSupersede": 2
+        }
+      },
+      "promote": {
+        "enabled": false,
+        "minScore": 0.5,
+        "maxCandidates": 48,
+        "minTurnsBetween": 8,
+        "derivableFrom": [
+          "AGENTS.md",
+          "README.md",
+          "package.json",
+          "CLAUDE.md"
+        ]
+      }
+    }
+  },
+  "inputTokens": 0,
+  "cacheReadTokens": 0,
+  "cacheWriteTokens": 0,
+  "outputTokens": 0,
+  "calls": {
+    "observer": 0,
+    "reflector": 0,
+    "dropper": 0,
+    "embedding": 0,
+    "decider": 0,
+    "consolidate": 0,
+    "judge": 0,
+    "judgeAttempts": 0,
+    "gatewayRetries": 0,
+    "judgeCacheHits": 0,
+    "judgeCacheMisses": 0,
+    "concurrencyHalvings": 0,
+    "overloads": 0
+  },
+  "turns": 0,
+  "injectedContextTokens": 0,
+  "injections": [],
+  "attemptId": null,
+  "measurementVersion": "product-phases-delivery-v3",
+  "analysisVersion": "202-paired-cluster-v1",
+  "judgeTemplateVersion": "e3883a2aa5910f76c3f6b377f1758fd4a57ca6dda1449cd86291abd0eea5f306",
+  "gradedTemplateVersion": "f7ff5f9c24afd87f0a5e00bd168103019f6e7140d64031f3e5bec264043c24cb",
+  "protocolHash": "5dcf8727e98e6235736465f5f6237c761795d46eac14587c7ce0c68751c13794",
+  "resumedResults": 0,
+  "results": [
+    {
+      "id": "6071bd76",
+      "ability": "knowledge-update",
+      "cluster": "lme-7e64afbe0d7e",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 636
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 482,
+        "coveredSourceMessages": 482,
+        "eligibleExchanges": 241,
+        "refused": 0,
+        "unpairedSourceMessages": 0,
+        "sessions": 46,
+        "entries": 482,
+        "archived": 241,
+        "parts": 241,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    }
+  ],
+  "status": "partial",
+  "limitations": [
+    "Block-level injection accounting until item metadata lands in Tasks 4, 9, 11 and 12.",
+    "Injection token allocations are character estimates, not billing usage.",
+    "OpenCode Go and Hyper judges differ from the papers; scores are not directly comparable."
+  ],
+  "ratesAsOf": "2026-10-29",
+  "ratesStatus": "provider-catalog",
+  "inputCap": 125952,
+  "selectedQuestionIds": [
+    "6071bd76",
+    "80ec1f4f",
+    "65240037",
+    "fca70973",
+    "c8c3f81d",
+    "gpt4_e414231f",
+    "0ddfec37_abs",
+    "f685340e",
+    "6456829e",
+    "8464fc84",
+    "0edc2aef",
+    "bc8a6e93",
+    "gpt4_93f6379c",
+    "15745da0_abs",
+    "7e974930",
+    "a346bb18",
+    "4baee567",
+    "57f827a0",
+    "118b2229",
+    "71017276",
+    "29f2956b_abs",
+    "0f05491a",
+    "00ca467f",
+    "8752c811",
+    "32260d93",
+    "b86304ba",
+    "f0853d11",
+    "19b5f2b3_abs",
+    "ce6d2d27",
+    "gpt4_59c863d7",
+    "778164c6",
+    "06878be2",
+    "29f2956b",
+    "gpt4_f420262d",
+    "80ec1f4f_abs",
+    "2698e78f",
+    "gpt4_2f8be40d",
+    "0e5e2d1a",
+    "07b6f563",
+    "37d43f65",
+    "gpt4_c27434e8",
+    "e5ba910e_abs",
+    "031748ae",
+    "c2ac3c61",
+    "dc439ea3",
+    "35a27287",
+    "1faac195",
+    "c8090214",
+    "2133c1b5_abs",
+    "59524333",
+    "9aaed6a3",
+    "4388e9dd",
+    "195a1a1b",
+    "f4f1d8a4",
+    "4dfccbf8",
+    "0862e8bf_abs",
+    "41698283",
+    "0100672e",
+    "a40e080f",
+    "09d032c9",
+    "545bd2b5",
+    "gpt4_1d80365e",
+    "gpt4_fe651585_abs",
+    "affe2881",
+    "60bf93ed",
+    "4c36ccef",
+    "8a2466db",
+    "4100d0a0",
+    "gpt4_468eb064",
+    "bc8a6e93_abs"
+  ],
+  "runPathFingerprint": "08b455d2ea10f97d213a24bfbc7b54a43c18cb7d9d76b16e9842730aa2f3d500",
+  "measurementPolicy": {
+    "version": "product-phases-v1",
+    "judgeCallsPerHour": 450,
+    "injectionAnnotation": true,
+    "retriesAndBackoffIncluded": true,
+    "queueWaitIncluded": false,
+    "seedSnapshot": false
+  },
+  "timing": {
+    "wallMs": 1740.5,
+    "concurrency": {
+      "initial": 4,
+      "active": 4,
+      "floor": 1
+    },
+    "questions": {
+      "n": 1,
+      "wallMs": {
+        "p50": 643.4,
+        "p95": 643.4,
+        "mean": 643.4
+      }
+    },
+    "phases": {
+      "ingestion": {
+        "n": 1,
+        "wallMs": {
+          "p50": 636,
+          "p95": 636,
+          "mean": 636
+        }
+      },
+      "restore": {
+        "n": 0,
+        "wallMs": {
+          "p50": null,
+          "p95": null,
+          "mean": null
+        }
+      },
+      "answer": {
+        "n": 0,
+        "wallMs": {
+          "p50": null,
+          "p95": null,
+          "mean": null
+        }
+      },
+      "evaluation": {
+        "n": 0,
+        "wallMs": {
+          "p50": null,
+          "p95": null,
+          "mean": null
+        }
+      }
+    },
+    "policy": {
+      "answer": "after ingestion, before grading, annotation, final background settlement and disposal",
+      "queueWaitIncluded": false,
+      "retriesAndBackoffIncluded": true
+    },
+    "roles": {},
+    "calls": 0
+  },
+  "metricVersion": 2,
+  "abilities": {
+    "knowledge-update": {
+      "n": 1,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "knowledge-update",
+      "definition": "fraction of knowledge-update answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    }
+  },
+  "abilityGroups": {
+    "knowledge-update": {
+      "n": 1,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "knowledge-update",
+      "definition": "fraction of knowledge-update answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    }
+  },
+  "metricDefinitions": {
+    "knowledge-update": {
+      "definition": "fraction of knowledge-update answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    }
+  },
+  "runLimitRate": 0,
+  "errorRate": 0,
+  "cacheReadRatio": 0,
+  "cacheWriteRatio": 0,
+  "cost": {
+    "currency": "USD",
+    "unit": "per_million_tokens",
+    "rates": null,
+    "pricingStatus": "unpriced",
+    "measured": null,
+    "cachedPrefixSimulation": null,
+    "simulationAssumption": null,
+    "ratesAsOf": "2026-10-29",
+    "ratesStatus": "provider-catalog"
+  },
+  "injectionPrecision": {
+    "granularity": "block",
+    "tokensPerTurn": 0,
+    "irrelevantRate": null,
+    "citedIdRate": null,
+    "tokenAccounting": "estimated ceil(characters/4); billing is wire usage"
+  },
+  "injectionPrecisionReason": null,
+  "toolCalls": 0,
+  "toolCallsPerQuestion": 0,
+  "recallCalls": 0,
+  "retrievedSnippetTokens": 0,
+  "answerSessionHitAtK": null,
+  "evidenceRoundCoverage": null,
+  "evidenceAllRequired": null,
+  "fineEvidenceRecall": null,
+  "fineEvidencePrecision": null,
+  "legacyRetrievalRecallAtK": null,
+  "retrievalRecallAtK": null
+}

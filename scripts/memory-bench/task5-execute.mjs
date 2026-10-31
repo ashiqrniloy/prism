@@ -10,7 +10,8 @@ import { cp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { assertCacheStabilityPin } from "./audit/readiness.mjs";
-import { manifestFingerprint } from "./journal.mjs";
+import { latestAttempt, manifestFingerprint } from "./journal.mjs";
+import { assertComparableServedDeployments } from "./served-model.mjs";
 import {
   assertTask5CandidateClean,
   assertTask5OwnerGate,
@@ -319,10 +320,29 @@ export async function verifyTask5Smoke(manifest, { root = "." } = {}) {
 }
 
 /** Post-execution provenance: the same pins must still hold, and the journal owns the spend. */
+/**
+ * Plan 214 Task 5b guard 2: the control and candidate arms of one suite must have been served by
+ * the same deployment set, or the pair measures a gateway's shuffle instead of the product.
+ */
+export async function assertTask5ServedDeployments(manifest, journal) {
+  const bySuite = new Map();
+  for (const job of manifest.jobs ?? []) {
+    const attempt = latestAttempt(journal, job.id);
+    if (!attempt?.output || !existsSync(attempt.output)) continue;
+    const report = JSON.parse(await readFile(attempt.output, "utf8"));
+    const arms = bySuite.get(job.suite) ?? {};
+    arms[job.role ?? "arm"] = report;
+    bySuite.set(job.suite, arms);
+  }
+  for (const [suite, arms] of bySuite)
+    if (arms.control && arms.candidate) assertComparableServedDeployments(arms.candidate, arms.control, { label: `task5 ${suite}` });
+}
+
 export async function postflightTask5(manifest, journal, { root = "." } = {}) {
   const proposal = await readTask5Proposal(root);
   assertTask5OwnerGate(JSON.parse(await readFile(join(root, TASK5_GATE), "utf8")), proposal);
   await auditTask5Comparison(proposal, { root });
+  await assertTask5ServedDeployments(manifest, journal);
   const record = {
     kind: "202-task5-execution-verification",
     gate: manifest.gate,

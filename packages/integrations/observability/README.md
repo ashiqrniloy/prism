@@ -33,6 +33,40 @@ const agent = await createAgent({
 | `fieldPolicy` | `{ drop?: string[]; hash?: string[] }` | none | Attribute paths (exact, or a prefix ending in `*`) to drop or replace with a token. |
 | `metrics` | `boolean` | `true` | Record duration and token-usage histograms. |
 | `enabled` | `boolean` | `true` | `false` registers nothing. |
+| `propagateTraceContext` | `boolean` | `false` | Inject the current span as a W3C `traceparent`/`tracestate` into the outgoing provider request headers, so a gateway can join its spans to this run. |
+| `usageMetadata` | `string[]` (≤32 items, each ≤128 chars) | `[]` | Dotted paths into `Usage.metadata` exported as `prism.usage.<path>` on the chat span. An allowlist: nothing is exported unless named, and `fieldPolicy` still applies. |
+
+## Joining a gateway's traces
+
+Nothing is propagated by default. A gateway (LiteLLM, or any proxy that honours W3C trace context) can only
+join its spans to yours when the request carries the current trace:
+
+```ts
+observability({
+  serviceName: "bench",
+  content: "metadata",
+  propagateTraceContext: true,
+  usageMetadata: ["litellm.callId", "litellm.modelId"],
+})
+```
+
+- **What is sent.** One `model.request` transform writes `traceparent` (and `tracestate` when the propagator
+  produces one) through the API's `propagation.inject`; nothing else in the headers is touched, and
+  `authorization` is never read or rewritten. The transform runs once per provider attempt and costs no
+  request. Without a registered propagator it formats `traceparent` from the span's ids, and a throwing
+  propagator falls back the same way instead of failing the run.
+- **Which span.** The most recent chat attempt for the run, else the run span (the first `model.request`
+  fires before the first chat span opens, so the first header names the run span), else a workflow span.
+- **Never overwritten.** A caller-set `traceparent` wins; the transform returns no change rather than
+  replacing it, so a host that already propagates keeps its own trace.
+- **What comes back.** Point the same `usageMetadata` allowlist at whatever the provider put on
+  `Usage.metadata` and the chat span carries `prism.usage.<path>` scalars — for LiteLLM, `usage.metadata.litellm`
+  holds `callId`, `modelId`, `modelGroup`, `cost`, and friends (see `@arnilo/prism-provider-litellm`).
+  With `content: "none"` no usage attribute is added at all; `fieldPolicy` (`drop`/`hash`) applies to these
+  paths like any other attribute, and an object or absent path adds nothing.
+- **Pairing with the proxy.** LiteLLM's `otel` callback exports its own spans; with the header above its
+  `Received Proxy Server Request` span nests under your chat span AND its `litellm_request` child carries the
+  cost headers' values, so a trace shows both sides of the call.
 
 ## Spans and metrics
 

@@ -1,11 +1,11 @@
 # Live matrix report
 
-- generated: 2026-10-27T20:52:55.350Z
+- generated: 2026-10-31T20:55:37.092Z
 - env file: /home/arn/.config/prism/live.env
-- filter: providers/commandcode
+- filter: providers/litellm
 - mode: strict (skips fail the run)
 - totals: 1 ran, 0 skipped, 0 failed, 0 planned
 
 | suite | status | ms | detail |
 |---|---|---|---|
-| providers/commandcode | ran | 35424 | PRISM_LIVE_COMMANDCODE_CHAT_MODEL=minimax/minimax-m3.1-flash, PRISM_LIVE_COMMANDCODE_RESPONSES_MODEL=gpt-5.6-luna, PRISM_LIVE_COMMANDCODE_MESSAGES_MODEL=claude-haiku-5-5 |
+| providers/litellm | ran | 3143 | PRISM_LIVE_LITELLM_MODEL=prism-free/gpt-oss-20b@groq |

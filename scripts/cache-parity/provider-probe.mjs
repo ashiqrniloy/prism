@@ -31,7 +31,7 @@ export function parseArgs(argv) {
     options[flag.slice(2)] = argv[++i];
   }
   validProvider(options.provider);
-  if (!/^[A-Za-z0-9][A-Za-z0-9._:/~-]{0,255}$/.test(options.model ?? "")) throw new Error("ProviderProbe: invalid model id");
+  if (!/^[A-Za-z0-9][A-Za-z0-9._:/~@-]{0,255}$/.test(options.model ?? "")) throw new Error("ProviderProbe: invalid model id");
   if (options.credential !== undefined && !/^keyring:[A-Za-z0-9._:-]{1,128}$/.test(options.credential))
     throw new Error("ProviderProbe: --credential must be a writable keyring: ref");
   if (options.provider === "openrouter" && /^openrouter\/(free|auto)$/.test(options.model))
