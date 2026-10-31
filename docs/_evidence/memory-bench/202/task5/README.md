@@ -62,8 +62,16 @@ complete and Task 5.5 has no paired outcomes to analyse.
   another process) no longer block preflight; a checkpoint from another `sourceRevision` is
   dropped instead of resumed (`MemoryBenchResumeMismatch`).
 - Gates 10 (`manifestHash c9c6b88b…`) and 11 (`manifestHash 90862ef1…`, candidate `d21b9305…`,
-  control r2 `51d23d4e…`) are archived alongside 5-9. Campaign restarted under gate 11 from a
-  fresh journal; no harness or product edit is allowed until it finishes.
+  control r2 `51d23d4e…`) are archived alongside 5-9; the campaign restarted under gate 11 from a
+  fresh journal.
+- Leg 2 (gate 11): control and candidate `beam-100k` completed, control `locomo` 60/60,
+  candidate `locomo` 55/60, then a genuine daily 429 (`resumeAfter 2026-11-01T00:00:00Z`).
+- Gates 12-14 fix two more guards: a commit after the pin may touch plans and docs
+  (`task5PostFreezePaths` filters executable paths only, like the clean check), and a report's
+  revision is the arm's product hash (`PRISM_MEMORY_BENCH_SOURCE`), not its worktree commit, so a
+  harness amend can no longer orphan a checkpoint. The campaign manifest carries `productRevision`.
+- Cost of the churn: 6.7M free-quota tokens orphaned across two legs, $0 spent. Latest gate 14
+  (`manifestHash 2694bf39…`). No harness or product edit from here until the campaign finishes.
 
 ## Task 5.4.4 — gate 6 replaces gate 5 (2026-10-31)
 
