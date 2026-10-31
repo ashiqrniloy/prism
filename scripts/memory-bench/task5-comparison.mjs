@@ -1277,9 +1277,14 @@ export const TASK5_TRANSPORT_REVISION_ALLOWED = [
   "evidenceProtocol.criteriaHash",
   "evidenceProtocolHash",
   "stopResume.manifestFingerprint",
+  // A re-pin moves the candidate/control commits and the harness, never the product bytes.
+  "product.candidate.revision",
+  "product.control.revision",
+  "product.harnessHash",
   /^criteria\./,
   /^models\./,
-  /^cells\.\d+\.(id|provider)$/,
+  /^cells\.\d+\.(id|provider|judges|criteriaHash|evidenceProtocolHash|harnessHash|productRevision|worktreeRevision)$/,
+  /^comparison\.(candidateCells|controlCells)\.\d+$/,
 ];
 
 export function task5TransportRevisionAllowed(path) {
