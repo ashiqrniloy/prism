@@ -1,6 +1,6 @@
 # Plan 202 Task 5.2 — frozen paired development-screen manifest
 
-Status: **proposed-awaiting-owner-gate**, `executable: false`. Task 5.3 must record the owner gate against manifest hash `0dea417b67a019de…` before any provider call.
+Status: **proposed-awaiting-owner-gate**, `executable: false`. Task 5.3 must record the owner gate against manifest hash `8828ec96fa4efde2…` before any provider call.
 
 Manifest: [docs/_evidence/memory-bench/202/task5/development-screen-manifest.json](development-screen-manifest.json) (ids, counts, hashes and budgets only).
 
@@ -8,10 +8,10 @@ Screen scope (plan 202 Task 5.4.6): beam-100k, locomo, memoryagentbench-cr, beam
 
 ## Product pins
 
-- Control: revision `5ed8a63e856d472afee748ad5b9e49e3e10873ff` (r2 = candidate tree with product paths from `5c2570df52a084b43120ee4e77921746a029480e`), product `ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0` (reproduces the closed screen's revision-1 fabric hash `57aa47d94eb3cad629e232372f220296131583ea7ac06189d6f589b39c825799`).
-- Candidate: committed revision `9d5a7c656bdc27c6a67166fb2aeb826954118927`, product `26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20`.
+- Control: revision `c765c8dc4b925a2a847fb1110f45bd23c099160e` (r2 = candidate tree with product paths from `5c2570df52a084b43120ee4e77921746a029480e`), product `ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0` (reproduces the closed screen's revision-1 fabric hash `57aa47d94eb3cad629e232372f220296131583ea7ac06189d6f589b39c825799`).
+- Candidate: committed revision `133792dba3de9d4ac27dc4d5554009e8218d399c`, product `26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20`.
 - The two arms differ only under `packages/memory/fabric/src` and `packages/memory/core/src`; a git diff outside those paths is a refusal, and so is an uncommitted candidate.
-- Harness `196a21ee6dafcef2a30d4eff0b700573bcd9695be9d49eb396840fc3220a62bd`; unchanged for both roles so only the product is the treatment.
+- Harness `1d3c852551a14dca369a5e5698f6b42e1861916c29f0a0d00bb14a32359bb4c6`; unchanged for both roles so only the product is the treatment.
 
 ## Cohort and cells
 
@@ -22,7 +22,7 @@ Screen scope (plan 202 Task 5.4.6): beam-100k, locomo, memoryagentbench-cr, beam
 | memoryagentbench-cr | 20 | 2 | fresh | fresh | 0 known (all null) |
 | beam-1m | 14 | 10 | fresh | fresh | 0 known (all null) |
 
-8 cells (4 pairs). Answer model `openrouter/nvidia/nemotron-3-ultra-550b-a55b:free`; judges `openrouter/dots-studio/dots-3-note-preview:free` + `openrouter/cohere/north-mini-code:free`. Both roles share question ids, mapping, model, judges and budgets.
+8 cells (4 pairs). Answer model `kilo/nvidia/nemotron-3-ultra-550b-a55b:free`; judges `kilo/dots-studio/dots-3-note-preview:free` + `kilo/cohere/north-mini-code:free`. Both roles share question ids, mapping, model, judges and budgets.
 
 ## Budgets and cost
 

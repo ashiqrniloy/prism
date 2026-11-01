@@ -1,0 +1,1262 @@
+{
+  "schemaVersion": 1,
+  "kind": "202-task5-development-comparison",
+  "plan": 202,
+  "task": 5,
+  "subtask": 5.2,
+  "generatedAt": "2026-10-31T22:38:59.471Z",
+  "status": "proposed-awaiting-owner-gate",
+  "executable": false,
+  "ownerGate": {
+    "required": true,
+    "task": 5.3,
+    "approved": false,
+    "binds": "manifestHash plus journal identity",
+    "note": "planning approval does not authorize provider or model calls"
+  },
+  "scope": "paired-revision1-control-vs-task5-candidate",
+  "scopeAuthorization": "Complete Task 5.2 from plan 202: freeze a bounded, paired development-comparison manifest",
+  "claim": "development-only paired comparison under one free answer model and two free judges; no held-out, cross-model, cross-provider or Task 18 robustness claim",
+  "product": {
+    "paths": [
+      "packages/memory/fabric/src",
+      "packages/memory/core/src"
+    ],
+    "harnessPaths": [
+      "scripts/memory-bench"
+    ],
+    "harnessHash": "196a21ee6dafcef2a30d4eff0b700573bcd9695be9d49eb396840fc3220a62bd",
+    "control": {
+      "revision": "5ed8a63e856d472afee748ad5b9e49e3e10873ff",
+      "sourceRevision": "5c2570df52a084b43120ee4e77921746a029480e",
+      "productHash": "ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0",
+      "historicalFabricOnlyHash": "57aa47d94eb3cad629e232372f220296131583ea7ac06189d6f589b39c825799",
+      "worktree": ".cache/memory-bench/task5/control-worktree"
+    },
+    "candidate": {
+      "revision": "9d5a7c656bdc27c6a67166fb2aeb826954118927",
+      "productHash": "26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20",
+      "dirty": false
+    }
+  },
+  "cohort": {
+    "partition": "dev",
+    "questionCount": 134,
+    "idsHash": "9961454adfdd3dfc439f21da0c23212bdd877d7f50ce544b30fc49a10c8d6746",
+    "suites": [
+      {
+        "suite": "beam-100k",
+        "questions": 40,
+        "abilities": {
+          "abstention": 4,
+          "contradiction_resolution": 4,
+          "event_ordering": 4,
+          "information_extraction": 4,
+          "instruction_following": 4,
+          "knowledge_update": 4,
+          "multi_session_reasoning": 4,
+          "preference_following": 4,
+          "summarization": 4,
+          "temporal_reasoning": 4
+        },
+        "idsHash": "f351414b233f4efbfef33fc947252ff7bec6578d04c974b9d3af6197a82767d8",
+        "dataset": {
+          "file": "beam-100k.parquet",
+          "sha256": "c0519be25907005ba873c927c50877471d550873039d96c041554d0075a78ace"
+        },
+        "historical": {
+          "jobId": "202-baseline.beam-100k.preset-r1.commandcode.meta/muse-spark-1.3-contributor",
+          "questions": 40,
+          "toolSurfacingKnown": 0,
+          "mappedGoldQuestions": 36,
+          "unresolvedGoldQuestions": 0,
+          "noFineGoldQuestions": 4,
+          "ingestValid": true,
+          "reuseEligible": false
+        }
+      },
+      {
+        "suite": "locomo",
+        "questions": 60,
+        "abilities": {
+          "multi-hop": 12,
+          "temporal": 12,
+          "open-domain": 12,
+          "single-hop": 12,
+          "adversarial": 12
+        },
+        "idsHash": "6c773dd036bc5e809e2593734b2ea7a542c89fb5d8d9b0ff0e4ecd71fc4ea651",
+        "dataset": {
+          "file": "locomo.json",
+          "sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4"
+        },
+        "historical": {
+          "jobId": "202-baseline.locomo.preset-r1.commandcode.meta/muse-spark-1.3-contributor",
+          "questions": 60,
+          "toolSurfacingKnown": 0,
+          "mappedGoldQuestions": 60,
+          "unresolvedGoldQuestions": 0,
+          "noFineGoldQuestions": 0,
+          "ingestValid": true,
+          "reuseEligible": false
+        }
+      },
+      {
+        "suite": "memoryagentbench-cr",
+        "questions": 20,
+        "abilities": {
+          "conflict-resolution-single-hop": 10,
+          "conflict-resolution-multi-hop": 10
+        },
+        "idsHash": "f63b6b201909060a334f8b1ec69a33917a378ba991b7aae1f2a1dbacf89e3d4b",
+        "dataset": {
+          "file": "memoryagentbench-cr.parquet",
+          "sha256": "24d5c3f09ce0ce15625cb9f8a98f44f0d864ca6c94d7b4ad04eb697ca3a5ff45"
+        },
+        "historical": {
+          "jobId": "202-baseline.memoryagentbench-cr.preset-r1.commandcode.meta/muse-spark-1.3-contributor",
+          "questions": 20,
+          "toolSurfacingKnown": 0,
+          "mappedGoldQuestions": 0,
+          "unresolvedGoldQuestions": 0,
+          "noFineGoldQuestions": 20,
+          "ingestValid": false,
+          "reuseEligible": false
+        }
+      },
+      {
+        "suite": "beam-1m",
+        "questions": 14,
+        "abilities": {
+          "abstention": 2,
+          "contradiction_resolution": 1,
+          "event_ordering": 1,
+          "information_extraction": 2,
+          "instruction_following": 1,
+          "knowledge_update": 0,
+          "multi_session_reasoning": 2,
+          "preference_following": 2,
+          "summarization": 1,
+          "temporal_reasoning": 2
+        },
+        "idsHash": "c5dd4e45e5fb4860721ca640eacf0bad27fcb9025b6ca36055ccb7c84c740afe",
+        "dataset": {
+          "file": "beam-1m.parquet",
+          "sha256": "41b5acbbb55a586b1305514ef9d9fb03365d9b3331b598a1c2dd7603d93ef533"
+        },
+        "historical": {
+          "jobId": "202-baseline.beam-1m.preset-r1.commandcode.meta/muse-spark-1.3-contributor",
+          "questions": 40,
+          "toolSurfacingKnown": 0,
+          "mappedGoldQuestions": 33,
+          "unresolvedGoldQuestions": 3,
+          "noFineGoldQuestions": 4,
+          "ingestValid": true,
+          "reuseEligible": false
+        }
+      }
+    ],
+    "mapping": {
+      "rule": "repaired causalSessions/sessionRounds/extractEvidence note-to-round map on frozen dev ids; cached datasets, fetching disabled",
+      "source": [
+        {
+          "path": "scripts/memory-bench/audit/task5-traces.mjs",
+          "sha256": "c338c182e6ba047c469652f4cc1c9803981b14f1f61d859968ec425fba9978c9"
+        },
+        {
+          "path": "scripts/memory-bench/replay.mjs",
+          "sha256": "cf5289c3f6ff0f34aca634fb49d2d560b04ab153e5a0e1d90f85847c3cf7a440"
+        },
+        {
+          "path": "scripts/memory-bench/retrieval-diagnostics.mjs",
+          "sha256": "320b1de0d6828b86eea4697a941575135f88ae12bac3d1d490512f9d30f8ce73"
+        },
+        {
+          "path": "scripts/memory-bench/baseline.mjs",
+          "sha256": "6e80a6ddac69f72b3ae42100b70247b00e309c83797bcdad850ebd971e20dd0d"
+        },
+        {
+          "path": "scripts/memory-bench/datasets.mjs",
+          "sha256": "2949eb1249af856f64afaf99bb72df09dc389659a827da96dd689743f8840a14"
+        },
+        {
+          "path": "scripts/memory-bench/judge.mjs",
+          "sha256": "c6a5bd6412b347188441ffe152ba0c19247de17e2cdc22d3667ee41279b3017b"
+        },
+        {
+          "path": ".cache/memory-bench/frozen-muse-v5/scripts/memory-bench/replay.mjs",
+          "sha256": "40701aea528aff0c1f7de5f6bd47fd4191c1bd66aabd5a2d7f35879a80baf5d8"
+        },
+        {
+          "path": ".cache/memory-bench/frozen-muse-v5/scripts/memory-bench/run.mjs",
+          "sha256": "ad3becb306d9f944d1331e95e52b9d786188a11ec135ea9105eb9bda33054e61"
+        }
+      ],
+      "inventorySha256": "9d0117508db75d1e41a6070eaff427e05980fea0e4ec801643124bfab3cfdd42",
+      "labels": {
+        "mapped": 129,
+        "unresolved": 3,
+        "noFineGold": 28
+      }
+    }
+  },
+  "cells": [
+    {
+      "id": "202-task5.control.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "role": "control",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": null,
+      "arm": "preset-r1",
+      "config": "fabric-x-tools",
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "judges": "openrouter/dots-studio/dots-3-note-preview:free,openrouter/cohere/north-mini-code:free",
+      "judgeText": true,
+      "judgeProtocol": "plain-text-v1",
+      "labelInjections": "off",
+      "questions": 40,
+      "questionIds": [
+        "5:abstention:1",
+        "9:abstention:1",
+        "10:abstention:0",
+        "20:abstention:1",
+        "8:contradiction_resolution:1",
+        "3:contradiction_resolution:1",
+        "7:contradiction_resolution:0",
+        "9:contradiction_resolution:0",
+        "13:event_ordering:0",
+        "5:event_ordering:0",
+        "1:event_ordering:1",
+        "1:event_ordering:0",
+        "16:information_extraction:0",
+        "16:information_extraction:1",
+        "9:information_extraction:0",
+        "19:information_extraction:0",
+        "18:instruction_following:0",
+        "9:instruction_following:1",
+        "13:instruction_following:1",
+        "8:instruction_following:1",
+        "4:knowledge_update:0",
+        "7:knowledge_update:1",
+        "2:knowledge_update:0",
+        "17:knowledge_update:1",
+        "6:multi_session_reasoning:1",
+        "2:multi_session_reasoning:0",
+        "9:multi_session_reasoning:1",
+        "13:multi_session_reasoning:1",
+        "10:preference_following:1",
+        "11:preference_following:0",
+        "18:preference_following:1",
+        "14:preference_following:0",
+        "10:summarization:0",
+        "17:summarization:0",
+        "1:summarization:1",
+        "8:summarization:1",
+        "18:temporal_reasoning:0",
+        "19:temporal_reasoning:1",
+        "14:temporal_reasoning:1",
+        "17:temporal_reasoning:0"
+      ],
+      "idsHash": "f351414b233f4efbfef33fc947252ff7bec6578d04c974b9d3af6197a82767d8",
+      "dataset": {
+        "file": "beam-100k.parquet",
+        "sha256": "c0519be25907005ba873c927c50877471d550873039d96c041554d0075a78ace"
+      },
+      "productHash": "ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0",
+      "productRevision": "5ed8a63e856d472afee748ad5b9e49e3e10873ff",
+      "cwd": ".cache/memory-bench/task5/control-worktree",
+      "worktreeRevision": "5ed8a63e856d472afee748ad5b9e49e3e10873ff",
+      "harnessHash": "196a21ee6dafcef2a30d4eff0b700573bcd9695be9d49eb396840fc3220a62bd",
+      "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
+      "criteriaHash": "faa72035b9aaeb70662862b102e653269c4222f098f987ef1056a8296e299f07",
+      "evidenceProtocolHash": "421b137749293ceda87c1fc9763bced5a7faabb5e056cbd066ca12a919b9e0c5",
+      "maxInputTokens": 7000000,
+      "maxOutputTokens": 8192,
+      "maxTurns": 8,
+      "maxAttempts": 2,
+      "concurrency": 1,
+      "wallTimeCapHours": 6,
+      "freeOnly": true,
+      "freeProductOnly": true,
+      "boundedWire": true,
+      "output": "docs/_evidence/memory-bench/202/task5/reports/control/beam-100k.json",
+      "answersDir": ".cache/memory-bench/task5/control/answers",
+      "judgeCacheDir": ".cache/memory-bench/task5/control/judges",
+      "estimate": {
+        "productInputTokens": 1186720,
+        "productOutputTokens": 75280,
+        "judgeInputTokens": 320000,
+        "judgeOutputTokens": 8000,
+        "inputTokens": 1506720,
+        "outputTokens": 83280,
+        "usd": 0
+      },
+      "cost": {
+        "productUsd": 0,
+        "judgeUsd": 0,
+        "totalUsd": 0
+      },
+      "reuse": {
+        "eligible": false,
+        "reason": "Task 5.1 recovered no revision-1 tool traces; every control and candidate cell is fresh"
+      }
+    },
+    {
+      "id": "202-task5.candidate.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "role": "candidate",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "ability": null,
+      "arm": "preset-r1",
+      "config": "fabric-x-tools",
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "judges": "openrouter/dots-studio/dots-3-note-preview:free,openrouter/cohere/north-mini-code:free",
+      "judgeText": true,
+      "judgeProtocol": "plain-text-v1",
+      "labelInjections": "off",
+      "questions": 40,
+      "questionIds": [
+        "5:abstention:1",
+        "9:abstention:1",
+        "10:abstention:0",
+        "20:abstention:1",
+        "8:contradiction_resolution:1",
+        "3:contradiction_resolution:1",
+        "7:contradiction_resolution:0",
+        "9:contradiction_resolution:0",
+        "13:event_ordering:0",
+        "5:event_ordering:0",
+        "1:event_ordering:1",
+        "1:event_ordering:0",
+        "16:information_extraction:0",
+        "16:information_extraction:1",
+        "9:information_extraction:0",
+        "19:information_extraction:0",
+        "18:instruction_following:0",
+        "9:instruction_following:1",
+        "13:instruction_following:1",
+        "8:instruction_following:1",
+        "4:knowledge_update:0",
+        "7:knowledge_update:1",
+        "2:knowledge_update:0",
+        "17:knowledge_update:1",
+        "6:multi_session_reasoning:1",
+        "2:multi_session_reasoning:0",
+        "9:multi_session_reasoning:1",
+        "13:multi_session_reasoning:1",
+        "10:preference_following:1",
+        "11:preference_following:0",
+        "18:preference_following:1",
+        "14:preference_following:0",
+        "10:summarization:0",
+        "17:summarization:0",
+        "1:summarization:1",
+        "8:summarization:1",
+        "18:temporal_reasoning:0",
+        "19:temporal_reasoning:1",
+        "14:temporal_reasoning:1",
+        "17:temporal_reasoning:0"
+      ],
+      "idsHash": "f351414b233f4efbfef33fc947252ff7bec6578d04c974b9d3af6197a82767d8",
+      "dataset": {
+        "file": "beam-100k.parquet",
+        "sha256": "c0519be25907005ba873c927c50877471d550873039d96c041554d0075a78ace"
+      },
+      "productHash": "26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20",
+      "productRevision": "9d5a7c656bdc27c6a67166fb2aeb826954118927",
+      "harnessHash": "196a21ee6dafcef2a30d4eff0b700573bcd9695be9d49eb396840fc3220a62bd",
+      "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
+      "criteriaHash": "faa72035b9aaeb70662862b102e653269c4222f098f987ef1056a8296e299f07",
+      "evidenceProtocolHash": "421b137749293ceda87c1fc9763bced5a7faabb5e056cbd066ca12a919b9e0c5",
+      "maxInputTokens": 7000000,
+      "maxOutputTokens": 8192,
+      "maxTurns": 8,
+      "maxAttempts": 2,
+      "concurrency": 1,
+      "wallTimeCapHours": 6,
+      "freeOnly": true,
+      "freeProductOnly": true,
+      "boundedWire": true,
+      "output": "docs/_evidence/memory-bench/202/task5/reports/candidate/beam-100k.json",
+      "answersDir": ".cache/memory-bench/task5/candidate/answers",
+      "judgeCacheDir": ".cache/memory-bench/task5/candidate/judges",
+      "estimate": {
+        "productInputTokens": 1186720,
+        "productOutputTokens": 75280,
+        "judgeInputTokens": 320000,
+        "judgeOutputTokens": 8000,
+        "inputTokens": 1506720,
+        "outputTokens": 83280,
+        "usd": 0
+      },
+      "cost": {
+        "productUsd": 0,
+        "judgeUsd": 0,
+        "totalUsd": 0
+      },
+      "reuse": {
+        "eligible": false,
+        "reason": "Task 5.1 recovered no revision-1 tool traces; every control and candidate cell is fresh"
+      }
+    },
+    {
+      "id": "202-task5.control.locomo.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "role": "control",
+      "suite": "locomo",
+      "subset": "dev",
+      "ability": null,
+      "arm": "preset-r1",
+      "config": "fabric-x-tools",
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "judges": "openrouter/dots-studio/dots-3-note-preview:free,openrouter/cohere/north-mini-code:free",
+      "judgeText": true,
+      "judgeProtocol": "plain-text-v1",
+      "labelInjections": "off",
+      "questions": 60,
+      "questionIds": [
+        "conv-41:21",
+        "conv-44:24",
+        "conv-49:21",
+        "conv-44:32",
+        "conv-49:78",
+        "conv-26:38",
+        "conv-42:34",
+        "conv-43:4",
+        "conv-43:48",
+        "conv-43:43",
+        "conv-47:9",
+        "conv-42:42",
+        "conv-48:81",
+        "conv-44:30",
+        "conv-42:29",
+        "conv-44:1",
+        "conv-49:52",
+        "conv-42:32",
+        "conv-42:21",
+        "conv-41:4",
+        "conv-26:57",
+        "conv-41:16",
+        "conv-50:65",
+        "conv-48:55",
+        "conv-48:36",
+        "conv-26:50",
+        "conv-48:23",
+        "conv-43:5",
+        "conv-43:8",
+        "conv-26:81",
+        "conv-48:11",
+        "conv-26:14",
+        "conv-44:44",
+        "conv-47:44",
+        "conv-50:21",
+        "conv-42:0",
+        "conv-26:82",
+        "conv-26:103",
+        "conv-49:111",
+        "conv-49:121",
+        "conv-47:128",
+        "conv-47:131",
+        "conv-43:123",
+        "conv-42:185",
+        "conv-42:175",
+        "conv-48:159",
+        "conv-47:98",
+        "conv-50:91",
+        "conv-41:163",
+        "conv-43:183",
+        "conv-43:212",
+        "conv-44:154",
+        "conv-49:164",
+        "conv-49:185",
+        "conv-43:234",
+        "conv-50:180",
+        "conv-41:175",
+        "conv-43:214",
+        "conv-48:227",
+        "conv-43:224"
+      ],
+      "idsHash": "6c773dd036bc5e809e2593734b2ea7a542c89fb5d8d9b0ff0e4ecd71fc4ea651",
+      "dataset": {
+        "file": "locomo.json",
+        "sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4"
+      },
+      "productHash": "ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0",
+      "productRevision": "5ed8a63e856d472afee748ad5b9e49e3e10873ff",
+      "cwd": ".cache/memory-bench/task5/control-worktree",
+      "worktreeRevision": "5ed8a63e856d472afee748ad5b9e49e3e10873ff",
+      "harnessHash": "196a21ee6dafcef2a30d4eff0b700573bcd9695be9d49eb396840fc3220a62bd",
+      "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
+      "criteriaHash": "faa72035b9aaeb70662862b102e653269c4222f098f987ef1056a8296e299f07",
+      "evidenceProtocolHash": "421b137749293ceda87c1fc9763bced5a7faabb5e056cbd066ca12a919b9e0c5",
+      "maxInputTokens": 7500000,
+      "maxOutputTokens": 8192,
+      "maxTurns": 8,
+      "maxAttempts": 2,
+      "concurrency": 1,
+      "wallTimeCapHours": 4,
+      "freeOnly": true,
+      "freeProductOnly": true,
+      "boundedWire": true,
+      "output": "docs/_evidence/memory-bench/202/task5/reports/control/locomo.json",
+      "answersDir": ".cache/memory-bench/task5/control/answers",
+      "judgeCacheDir": ".cache/memory-bench/task5/control/judges",
+      "estimate": {
+        "productInputTokens": 1780080,
+        "productOutputTokens": 112920,
+        "judgeInputTokens": 480000,
+        "judgeOutputTokens": 12000,
+        "inputTokens": 2260080,
+        "outputTokens": 124920,
+        "usd": 0
+      },
+      "cost": {
+        "productUsd": 0,
+        "judgeUsd": 0,
+        "totalUsd": 0
+      },
+      "reuse": {
+        "eligible": false,
+        "reason": "Task 5.1 recovered no revision-1 tool traces; every control and candidate cell is fresh"
+      }
+    },
+    {
+      "id": "202-task5.candidate.locomo.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "role": "candidate",
+      "suite": "locomo",
+      "subset": "dev",
+      "ability": null,
+      "arm": "preset-r1",
+      "config": "fabric-x-tools",
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "judges": "openrouter/dots-studio/dots-3-note-preview:free,openrouter/cohere/north-mini-code:free",
+      "judgeText": true,
+      "judgeProtocol": "plain-text-v1",
+      "labelInjections": "off",
+      "questions": 60,
+      "questionIds": [
+        "conv-41:21",
+        "conv-44:24",
+        "conv-49:21",
+        "conv-44:32",
+        "conv-49:78",
+        "conv-26:38",
+        "conv-42:34",
+        "conv-43:4",
+        "conv-43:48",
+        "conv-43:43",
+        "conv-47:9",
+        "conv-42:42",
+        "conv-48:81",
+        "conv-44:30",
+        "conv-42:29",
+        "conv-44:1",
+        "conv-49:52",
+        "conv-42:32",
+        "conv-42:21",
+        "conv-41:4",
+        "conv-26:57",
+        "conv-41:16",
+        "conv-50:65",
+        "conv-48:55",
+        "conv-48:36",
+        "conv-26:50",
+        "conv-48:23",
+        "conv-43:5",
+        "conv-43:8",
+        "conv-26:81",
+        "conv-48:11",
+        "conv-26:14",
+        "conv-44:44",
+        "conv-47:44",
+        "conv-50:21",
+        "conv-42:0",
+        "conv-26:82",
+        "conv-26:103",
+        "conv-49:111",
+        "conv-49:121",
+        "conv-47:128",
+        "conv-47:131",
+        "conv-43:123",
+        "conv-42:185",
+        "conv-42:175",
+        "conv-48:159",
+        "conv-47:98",
+        "conv-50:91",
+        "conv-41:163",
+        "conv-43:183",
+        "conv-43:212",
+        "conv-44:154",
+        "conv-49:164",
+        "conv-49:185",
+        "conv-43:234",
+        "conv-50:180",
+        "conv-41:175",
+        "conv-43:214",
+        "conv-48:227",
+        "conv-43:224"
+      ],
+      "idsHash": "6c773dd036bc5e809e2593734b2ea7a542c89fb5d8d9b0ff0e4ecd71fc4ea651",
+      "dataset": {
+        "file": "locomo.json",
+        "sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4"
+      },
+      "productHash": "26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20",
+      "productRevision": "9d5a7c656bdc27c6a67166fb2aeb826954118927",
+      "harnessHash": "196a21ee6dafcef2a30d4eff0b700573bcd9695be9d49eb396840fc3220a62bd",
+      "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
+      "criteriaHash": "faa72035b9aaeb70662862b102e653269c4222f098f987ef1056a8296e299f07",
+      "evidenceProtocolHash": "421b137749293ceda87c1fc9763bced5a7faabb5e056cbd066ca12a919b9e0c5",
+      "maxInputTokens": 7500000,
+      "maxOutputTokens": 8192,
+      "maxTurns": 8,
+      "maxAttempts": 2,
+      "concurrency": 1,
+      "wallTimeCapHours": 4,
+      "freeOnly": true,
+      "freeProductOnly": true,
+      "boundedWire": true,
+      "output": "docs/_evidence/memory-bench/202/task5/reports/candidate/locomo.json",
+      "answersDir": ".cache/memory-bench/task5/candidate/answers",
+      "judgeCacheDir": ".cache/memory-bench/task5/candidate/judges",
+      "estimate": {
+        "productInputTokens": 1780080,
+        "productOutputTokens": 112920,
+        "judgeInputTokens": 480000,
+        "judgeOutputTokens": 12000,
+        "inputTokens": 2260080,
+        "outputTokens": 124920,
+        "usd": 0
+      },
+      "cost": {
+        "productUsd": 0,
+        "judgeUsd": 0,
+        "totalUsd": 0
+      },
+      "reuse": {
+        "eligible": false,
+        "reason": "Task 5.1 recovered no revision-1 tool traces; every control and candidate cell is fresh"
+      }
+    },
+    {
+      "id": "202-task5.control.memoryagentbench-cr.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "role": "control",
+      "suite": "memoryagentbench-cr",
+      "subset": "dev",
+      "ability": null,
+      "arm": "preset-r1",
+      "config": "fabric-x-tools",
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "judges": "openrouter/dots-studio/dots-3-note-preview:free,openrouter/cohere/north-mini-code:free",
+      "judgeText": true,
+      "judgeProtocol": "plain-text-v1",
+      "labelInjections": "off",
+      "questions": 20,
+      "questionIds": [
+        "5:69",
+        "5:25",
+        "6:44",
+        "6:99",
+        "6:84",
+        "6:68",
+        "5:67",
+        "5:72",
+        "7:47",
+        "7:97",
+        "3:49",
+        "0:24",
+        "2:20",
+        "0:30",
+        "1:42",
+        "0:99",
+        "0:90",
+        "2:66",
+        "3:46",
+        "2:86"
+      ],
+      "idsHash": "f63b6b201909060a334f8b1ec69a33917a378ba991b7aae1f2a1dbacf89e3d4b",
+      "dataset": {
+        "file": "memoryagentbench-cr.parquet",
+        "sha256": "24d5c3f09ce0ce15625cb9f8a98f44f0d864ca6c94d7b4ad04eb697ca3a5ff45"
+      },
+      "productHash": "ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0",
+      "productRevision": "5ed8a63e856d472afee748ad5b9e49e3e10873ff",
+      "cwd": ".cache/memory-bench/task5/control-worktree",
+      "worktreeRevision": "5ed8a63e856d472afee748ad5b9e49e3e10873ff",
+      "harnessHash": "196a21ee6dafcef2a30d4eff0b700573bcd9695be9d49eb396840fc3220a62bd",
+      "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
+      "criteriaHash": "faa72035b9aaeb70662862b102e653269c4222f098f987ef1056a8296e299f07",
+      "evidenceProtocolHash": "421b137749293ceda87c1fc9763bced5a7faabb5e056cbd066ca12a919b9e0c5",
+      "maxInputTokens": 6000000,
+      "maxOutputTokens": 8192,
+      "maxTurns": 8,
+      "maxAttempts": 2,
+      "concurrency": 1,
+      "wallTimeCapHours": 6,
+      "freeOnly": true,
+      "freeProductOnly": true,
+      "boundedWire": true,
+      "output": "docs/_evidence/memory-bench/202/task5/reports/control/memoryagentbench-cr.json",
+      "answersDir": ".cache/memory-bench/task5/control/answers",
+      "judgeCacheDir": ".cache/memory-bench/task5/control/judges",
+      "estimate": {
+        "productInputTokens": 593360,
+        "productOutputTokens": 37640,
+        "judgeInputTokens": 160000,
+        "judgeOutputTokens": 4000,
+        "inputTokens": 753360,
+        "outputTokens": 41640,
+        "usd": 0
+      },
+      "cost": {
+        "productUsd": 0,
+        "judgeUsd": 0,
+        "totalUsd": 0
+      },
+      "reuse": {
+        "eligible": false,
+        "reason": "Task 5.1 recovered no revision-1 tool traces; every control and candidate cell is fresh"
+      }
+    },
+    {
+      "id": "202-task5.candidate.memoryagentbench-cr.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "role": "candidate",
+      "suite": "memoryagentbench-cr",
+      "subset": "dev",
+      "ability": null,
+      "arm": "preset-r1",
+      "config": "fabric-x-tools",
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "judges": "openrouter/dots-studio/dots-3-note-preview:free,openrouter/cohere/north-mini-code:free",
+      "judgeText": true,
+      "judgeProtocol": "plain-text-v1",
+      "labelInjections": "off",
+      "questions": 20,
+      "questionIds": [
+        "5:69",
+        "5:25",
+        "6:44",
+        "6:99",
+        "6:84",
+        "6:68",
+        "5:67",
+        "5:72",
+        "7:47",
+        "7:97",
+        "3:49",
+        "0:24",
+        "2:20",
+        "0:30",
+        "1:42",
+        "0:99",
+        "0:90",
+        "2:66",
+        "3:46",
+        "2:86"
+      ],
+      "idsHash": "f63b6b201909060a334f8b1ec69a33917a378ba991b7aae1f2a1dbacf89e3d4b",
+      "dataset": {
+        "file": "memoryagentbench-cr.parquet",
+        "sha256": "24d5c3f09ce0ce15625cb9f8a98f44f0d864ca6c94d7b4ad04eb697ca3a5ff45"
+      },
+      "productHash": "26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20",
+      "productRevision": "9d5a7c656bdc27c6a67166fb2aeb826954118927",
+      "harnessHash": "196a21ee6dafcef2a30d4eff0b700573bcd9695be9d49eb396840fc3220a62bd",
+      "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
+      "criteriaHash": "faa72035b9aaeb70662862b102e653269c4222f098f987ef1056a8296e299f07",
+      "evidenceProtocolHash": "421b137749293ceda87c1fc9763bced5a7faabb5e056cbd066ca12a919b9e0c5",
+      "maxInputTokens": 6000000,
+      "maxOutputTokens": 8192,
+      "maxTurns": 8,
+      "maxAttempts": 2,
+      "concurrency": 1,
+      "wallTimeCapHours": 6,
+      "freeOnly": true,
+      "freeProductOnly": true,
+      "boundedWire": true,
+      "output": "docs/_evidence/memory-bench/202/task5/reports/candidate/memoryagentbench-cr.json",
+      "answersDir": ".cache/memory-bench/task5/candidate/answers",
+      "judgeCacheDir": ".cache/memory-bench/task5/candidate/judges",
+      "estimate": {
+        "productInputTokens": 593360,
+        "productOutputTokens": 37640,
+        "judgeInputTokens": 160000,
+        "judgeOutputTokens": 4000,
+        "inputTokens": 753360,
+        "outputTokens": 41640,
+        "usd": 0
+      },
+      "cost": {
+        "productUsd": 0,
+        "judgeUsd": 0,
+        "totalUsd": 0
+      },
+      "reuse": {
+        "eligible": false,
+        "reason": "Task 5.1 recovered no revision-1 tool traces; every control and candidate cell is fresh"
+      }
+    },
+    {
+      "id": "202-task5.control.beam-1m.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "role": "control",
+      "suite": "beam-1m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "preset-r1",
+      "config": "fabric-x-tools",
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "judges": "openrouter/dots-studio/dots-3-note-preview:free,openrouter/cohere/north-mini-code:free",
+      "judgeText": true,
+      "judgeProtocol": "plain-text-v1",
+      "labelInjections": "off",
+      "questions": 14,
+      "questionIds": [
+        "15:abstention:0",
+        "10:abstention:1",
+        "15:contradiction_resolution:1",
+        "12:event_ordering:0",
+        "10:information_extraction:0",
+        "25:information_extraction:0",
+        "12:instruction_following:0",
+        "25:multi_session_reasoning:0",
+        "15:multi_session_reasoning:1",
+        "12:preference_following:1",
+        "10:preference_following:0",
+        "10:summarization:0",
+        "12:temporal_reasoning:1",
+        "25:temporal_reasoning:0"
+      ],
+      "idsHash": "c5dd4e45e5fb4860721ca640eacf0bad27fcb9025b6ca36055ccb7c84c740afe",
+      "dataset": {
+        "file": "beam-1m.parquet",
+        "sha256": "41b5acbbb55a586b1305514ef9d9fb03365d9b3331b598a1c2dd7603d93ef533"
+      },
+      "productHash": "ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0",
+      "productRevision": "5ed8a63e856d472afee748ad5b9e49e3e10873ff",
+      "cwd": ".cache/memory-bench/task5/control-worktree",
+      "worktreeRevision": "5ed8a63e856d472afee748ad5b9e49e3e10873ff",
+      "harnessHash": "196a21ee6dafcef2a30d4eff0b700573bcd9695be9d49eb396840fc3220a62bd",
+      "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
+      "criteriaHash": "faa72035b9aaeb70662862b102e653269c4222f098f987ef1056a8296e299f07",
+      "evidenceProtocolHash": "421b137749293ceda87c1fc9763bced5a7faabb5e056cbd066ca12a919b9e0c5",
+      "maxInputTokens": 6000000,
+      "maxOutputTokens": 8192,
+      "maxTurns": 8,
+      "maxAttempts": 2,
+      "concurrency": 1,
+      "wallTimeCapHours": 12,
+      "freeOnly": true,
+      "freeProductOnly": true,
+      "boundedWire": true,
+      "output": "docs/_evidence/memory-bench/202/task5/reports/control/beam-1m.json",
+      "answersDir": ".cache/memory-bench/task5/control/answers",
+      "judgeCacheDir": ".cache/memory-bench/task5/control/judges",
+      "estimate": {
+        "productInputTokens": 415352,
+        "productOutputTokens": 26348,
+        "judgeInputTokens": 112000,
+        "judgeOutputTokens": 2800,
+        "inputTokens": 527352,
+        "outputTokens": 29148,
+        "usd": 0
+      },
+      "cost": {
+        "productUsd": 0,
+        "judgeUsd": 0,
+        "totalUsd": 0
+      },
+      "reuse": {
+        "eligible": false,
+        "reason": "Task 5.1 recovered no revision-1 tool traces; every control and candidate cell is fresh"
+      }
+    },
+    {
+      "id": "202-task5.candidate.beam-1m.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "role": "candidate",
+      "suite": "beam-1m",
+      "subset": "dev",
+      "ability": null,
+      "arm": "preset-r1",
+      "config": "fabric-x-tools",
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "judges": "openrouter/dots-studio/dots-3-note-preview:free,openrouter/cohere/north-mini-code:free",
+      "judgeText": true,
+      "judgeProtocol": "plain-text-v1",
+      "labelInjections": "off",
+      "questions": 14,
+      "questionIds": [
+        "15:abstention:0",
+        "10:abstention:1",
+        "15:contradiction_resolution:1",
+        "12:event_ordering:0",
+        "10:information_extraction:0",
+        "25:information_extraction:0",
+        "12:instruction_following:0",
+        "25:multi_session_reasoning:0",
+        "15:multi_session_reasoning:1",
+        "12:preference_following:1",
+        "10:preference_following:0",
+        "10:summarization:0",
+        "12:temporal_reasoning:1",
+        "25:temporal_reasoning:0"
+      ],
+      "idsHash": "c5dd4e45e5fb4860721ca640eacf0bad27fcb9025b6ca36055ccb7c84c740afe",
+      "dataset": {
+        "file": "beam-1m.parquet",
+        "sha256": "41b5acbbb55a586b1305514ef9d9fb03365d9b3331b598a1c2dd7603d93ef533"
+      },
+      "productHash": "26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20",
+      "productRevision": "9d5a7c656bdc27c6a67166fb2aeb826954118927",
+      "harnessHash": "196a21ee6dafcef2a30d4eff0b700573bcd9695be9d49eb396840fc3220a62bd",
+      "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
+      "criteriaHash": "faa72035b9aaeb70662862b102e653269c4222f098f987ef1056a8296e299f07",
+      "evidenceProtocolHash": "421b137749293ceda87c1fc9763bced5a7faabb5e056cbd066ca12a919b9e0c5",
+      "maxInputTokens": 6000000,
+      "maxOutputTokens": 8192,
+      "maxTurns": 8,
+      "maxAttempts": 2,
+      "concurrency": 1,
+      "wallTimeCapHours": 12,
+      "freeOnly": true,
+      "freeProductOnly": true,
+      "boundedWire": true,
+      "output": "docs/_evidence/memory-bench/202/task5/reports/candidate/beam-1m.json",
+      "answersDir": ".cache/memory-bench/task5/candidate/answers",
+      "judgeCacheDir": ".cache/memory-bench/task5/candidate/judges",
+      "estimate": {
+        "productInputTokens": 415352,
+        "productOutputTokens": 26348,
+        "judgeInputTokens": 112000,
+        "judgeOutputTokens": 2800,
+        "inputTokens": 527352,
+        "outputTokens": 29148,
+        "usd": 0
+      },
+      "cost": {
+        "productUsd": 0,
+        "judgeUsd": 0,
+        "totalUsd": 0
+      },
+      "reuse": {
+        "eligible": false,
+        "reason": "Task 5.1 recovered no revision-1 tool traces; every control and candidate cell is fresh"
+      }
+    }
+  ],
+  "comparison": {
+    "controlCells": [
+      "202-task5.control.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "202-task5.control.locomo.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "202-task5.control.memoryagentbench-cr.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "202-task5.control.beam-1m.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free"
+    ],
+    "candidateCells": [
+      "202-task5.candidate.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "202-task5.candidate.locomo.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "202-task5.candidate.memoryagentbench-cr.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "202-task5.candidate.beam-1m.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free"
+    ],
+    "pairs": 4,
+    "pairing": "control and candidate share suite, question ids, mapping, model, judges, budgets and scoring rules",
+    "checkpointValidator": "validateBaselineCheckpoint",
+    "requiredPerCellHashes": [
+      "harnessHash",
+      "analysisHash",
+      "criteriaHash",
+      "evidenceProtocolHash",
+      "idsHash"
+    ]
+  },
+  "models": {
+    "answers": [
+      "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free"
+    ],
+    "judges": [
+      "openrouter/dots-studio/dots-3-note-preview:free",
+      "openrouter/cohere/north-mini-code:free"
+    ],
+    "families": {
+      "answers": [
+        "nvidia"
+      ],
+      "judges": [
+        "dots",
+        "cohere"
+      ]
+    },
+    "judgesDoNotAnswer": true,
+    "freeOnly": true,
+    "paidFallbacks": [],
+    "crossProviderClaim": false,
+    "credentialRefs": [
+      "OPENROUTER_API_KEY"
+    ],
+    "restriction": "the current user restriction permits free OpenRouter models only for later live work"
+  },
+  "budgets": {
+    "perCell": {
+      "maxInputTokensReservation": 10000000,
+      "maxOutputTokensPerCall": 8192,
+      "maxTurns": 8,
+      "answerAttempts": 3,
+      "judgeAttempts": 8,
+      "maxAttemptsPerJob": 2,
+      "concurrency": 1,
+      "wallTimeCapHoursBySuite": {
+        "beam-100k": 6,
+        "locomo": 4,
+        "memoryagentbench-cr": 6,
+        "beam-1m": 12
+      }
+    },
+    "campaign": {
+      "expectedPhysicalCalls": 1461,
+      "expectedPhysicalCallsRange": {
+        "low": 1461,
+        "high": 1675
+      },
+      "physicalCallEstimate": {
+        "questionRuns": 268,
+        "source": "docs/_evidence/memory-bench/202/baseline/report-202-baseline.beam-100k.preset-r1.openrouter.nvidia-nemotron-3.5-lightning:free.json (timing.roles: solver 127, judge 90, 40 questions, labelInjections off)",
+        "solver": 3.2,
+        "solverHigh": 4,
+        "judge": 2.25,
+        "solverPerQuestionSource": {
+          "calls": 127,
+          "questions": 40
+        },
+        "judgePerQuestionSource": {
+          "calls": 90,
+          "questions": 40
+        },
+        "labelInjections": "off",
+        "injectionCalls": 0,
+        "note": "measured on the frozen preset-r1 baseline; labelInjections off, so no injection-label calls"
+      },
+      "maxPhysicalCalls": 16800,
+      "physicalCallRule": "stop before exceeding the cap; an incomplete run is reported incomplete, never silently completed",
+      "reservedInputTokens": 53000000,
+      "estimatedInputTokens": 10095024,
+      "estimatedOutputTokens": 557976,
+      "ceiling": 100000000,
+      "wallTimeCapHours": 56,
+      "wallTimeNote": "the beam-1m slice is capped at 12 h per role; LongMemEval-M, which dominated the full run's wall time, is deferred to plan 210"
+    }
+  },
+  "cost": {
+    "mode": "free",
+    "pricingStatus": "provider-catalog",
+    "ratesAsOf": "2026-10-29",
+    "productUsd": 0,
+    "judgeUsd": 0,
+    "totalUsd": 0,
+    "note": "both answerer and judges are OpenRouter :free routes; quotas and caps, not USD, bind execution"
+  },
+  "criteria": {
+    "version": "202-task5-candidate-gap-v1-screen",
+    "candidateGap": {
+      "unit": "question",
+      "neededRounds": "repaired fine-gold round ids (causalSessions -> sessionRounds -> extractEvidence.fineGoldIds)",
+      "numerator": "questions whose needed round set has no member returned in any successful memory.recall hit or memory.read note on the selected answer attempt",
+      "denominator": "paired questions carrying >=1 mapped needed round in both roles with complete retained tool traces in both roles",
+      "evidenceSource": "successful tool results only; hidden candidates, rankings, passive injection, recalledIds and progress logs never count",
+      "failures": "answer run-limit/transport/setup failures count as not-surfaced in the worst-case bound and are excluded from the primary estimate; never zero",
+      "missingness": "no fine-round labels or an unresolved gold reference are unmeasurable by suite and excluded from every estimate; never zero",
+      "zeroGapBaseline": "control gap 0 requires candidate gap 0 on the same paired questions; no halving claim, pass only on exact no-loss",
+      "halving": "positive control gap requires candidateGap <= 0.5 * controlGap",
+      "pooled": "per-suite rows are the claim; a pooled-only verdict is not a pass",
+      "uncertainty": "10000 whole-conversation cluster bootstrap draws on paired gap differences with two-sided cluster sign-flip p; reported, not substituted for the frozen rules",
+      "verdicts": [
+        "pass",
+        "miss",
+        "inconclusive"
+      ],
+      "inconclusive": "too few complete pairs to distinguish, or the worst-case bound fails while the best-case bound passes"
+    },
+    "abilityGuard": {
+      "metric": "frozen binary correctness from the two-judge panel",
+      "margin": 0.03,
+      "rule": "every suite x ability stratum must satisfy candidate - control >= -0.03 on the observed paired accuracy",
+      "uncertainty": "exact paired cluster sign-flip p and cluster-bootstrap CI reported; the veto is the frozen margin, not the p-value",
+      "multiplicity": "Holm across each suite's ability strata for description only; strata are underpowered and no equivalence claim follows",
+      "missing": "a stratum with no comparable pairs is reported as unverified and blocks closure",
+      "role": "descriptive"
+    },
+    "paired": {
+      "analysisVersion": "202-paired-cluster-v1",
+      "pairing": "unique question ids, frozen conversation clusters and abilities",
+      "seed": 7,
+      "iterations": 10000
+    }
+  },
+  "criteriaHash": "faa72035b9aaeb70662862b102e653269c4222f098f987ef1056a8296e299f07",
+  "analysis": {
+    "analysisVersion": "202-paired-cluster-v1",
+    "analysisHash": "5d111a1069a98ec4682f5de51d91849406974255b7f4221099ef3800b635abb9",
+    "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+    "datasets": {
+      "beam-100k": {
+        "datasetSha256": "c0519be25907005ba873c927c50877471d550873039d96c041554d0075a78ace",
+        "idsHash": "8ead1f2d43bb523d25a0d7bea18e602b00122b2870e04ca0d7162928ac1d3567"
+      },
+      "locomo": {
+        "datasetSha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+        "idsHash": "f8462784b7acf89a4b82a40d68369c2abf35f3e69d69e39b4b2b118b4c714dbf"
+      },
+      "memoryagentbench-cr": {
+        "datasetSha256": "24d5c3f09ce0ce15625cb9f8a98f44f0d864ca6c94d7b4ad04eb697ca3a5ff45",
+        "idsHash": "b96dba43ea61072d4bb290df35f82a56800cb7052cd2b3347a45307f01c4b842"
+      },
+      "longmemeval-m": {
+        "datasetSha256": "9d79e5524794a2e6900a3aa9cb7d9152c5a3e8319c9a87c25494ba1eacee495f",
+        "idsHash": "80f5ded49f8ebe8ad09948d879d048849c8a0d6a168f2a532acd6ad9dba4bab5"
+      },
+      "beam-1m": {
+        "datasetSha256": "41b5acbbb55a586b1305514ef9d9fb03365d9b3331b598a1c2dd7603d93ef533",
+        "idsHash": "9ee618b8ed072b2ecf541fcf48737328aa2211d6d510583b222a6e3ae9562f55"
+      }
+    },
+    "normalization": {
+      "version": "beam-source-annotations-v1",
+      "sourceHash": "9817eae4665624c91c90824b9819a1913c1ff7fde9ecaec3c751b6de601dd43b"
+    },
+    "judges": {
+      "binaryTemplate": "e3883a2aa5910f76c3f6b377f1758fd4a57ca6dda1449cd86291abd0eea5f306",
+      "gradedTemplate": "f7ff5f9c24afd87f0a5e00bd168103019f6e7140d64031f3e5bec264043c24cb",
+      "sourceHash": "547ee6270029661e33267acbadd99cf0846c7d00240fea938df388ce5088bf07"
+    },
+    "context": {
+      "policyVersion": 1,
+      "measurementVersion": "product-phases-attribution-v2",
+      "sourceHash": "2628b48633e1156fd078328cb119e06669162883d78f837878c88dd731b4df62"
+    },
+    "pairing": "unique question ids, matching conversation clusters and abilities; incomplete comparisons have no gap",
+    "screening": "item-weighted paired mean; 10000 whole-cluster bootstrap draws; two-sided cluster sign-flips; seed 7",
+    "multiplicity": "Holm across all emitted overall, ability-binary and ability-graded tests in one baseline summary; pointwise CIs; descriptive only",
+    "acceptance": {
+      "metric": "frozen binary",
+      "margin": 0.03,
+      "null": "candidate - comparator <= -0.03",
+      "trueDiff": 0,
+      "alpha": 0.025,
+      "targetPower": 0.8,
+      "method": "paired-cluster-Wald-planning-approximation",
+      "multiplicity": "BFC is a conjunction: every required suite/model NI row and superiority row must pass its frozen bound; no selectable-row claims. Any subset claim needs prospective multiplicity registration.",
+      "warning": "Sizing is conditional on discordance and within-conversation paired-difference ICC; not an acceptance verdict. Normal approximation is optimistic with few clusters."
+    },
+    "resumption": "not authorized; Task 4.7 pilot and Task 4.8 readiness must freeze current models, judges, limits, product and this protocol"
+  },
+  "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
+  "evidenceProtocol": {
+    "version": "202-task5-evidence-protocol-v1",
+    "measurementVersion": "product-phases-attribution-v2",
+    "traceRetention": "answer/query/tool-result/excerpt retention with retry evidence reset",
+    "toolSurfacing": "2628b48633e1156fd078328cb119e06669162883d78f837878c88dd731b4df62",
+    "mapping": "926bcc1f865cdf5ba88a23b030d2df57c7c1c77b80b7bb065688207d25d9d20f",
+    "judges": "547ee6270029661e33267acbadd99cf0846c7d00240fea938df388ce5088bf07",
+    "judgeTemplate": "e3883a2aa5910f76c3f6b377f1758fd4a57ca6dda1449cd86291abd0eea5f306",
+    "gradedTemplate": "f7ff5f9c24afd87f0a5e00bd168103019f6e7140d64031f3e5bec264043c24cb",
+    "analysisVersion": "202-paired-cluster-v1",
+    "criteriaHash": "faa72035b9aaeb70662862b102e653269c4222f098f987ef1056a8296e299f07"
+  },
+  "evidenceProtocolHash": "421b137749293ceda87c1fc9763bced5a7faabb5e056cbd066ca12a919b9e0c5",
+  "isolation": {
+    "controlArtifacts": ".cache/memory-bench/task5/control",
+    "candidateArtifacts": ".cache/memory-bench/task5/candidate",
+    "answerCacheSeparated": true,
+    "judgeCacheSeparated": true,
+    "writeSideKeyedByProductHash": true,
+    "note": "control and candidate never share answer checkpoints, judge caches, stores or logs; enrichment cannot leak into the control"
+  },
+  "baselineReuse": {
+    "eligible": false,
+    "reusedCells": 0,
+    "reason": "Task 5.1 established that no historical revision-1 run retained compatible tool-result traces; the owner-closed 23-cell screen stays immutable"
+  },
+  "coverage": {
+    "applicableSuites": [
+      "beam-100k",
+      "locomo",
+      "memoryagentbench-cr",
+      "beam-1m"
+    ],
+    "outOfScope": [
+      {
+        "suites": [
+          "memorycode",
+          "coding-longitudinal",
+          "vibemembench",
+          "dreambench-swe"
+        ],
+        "reason": "coding suites use coding arms and are Task 11, not preset-r1"
+      },
+      {
+        "suites": [
+          "beam-500k",
+          "beam-10m"
+        ],
+        "reason": "optional plan suites; not drawn for the Task-5 development cohort"
+      },
+      {
+        "suites": [
+          "longmemeval-s"
+        ],
+        "reason": "development-only suite with no revision-1 tool evidence; not an applicable Task-5 suite"
+      },
+      {
+        "suites": [
+          "longmemeval-m"
+        ],
+        "reason": "deferred to plan 210 by the plan 202 Task 5.4.6 owner disposition; the full target is postponed, not dropped"
+      }
+    ],
+    "allApplicableSuiteTarget": false,
+    "note": "development screen on four suites; the full target (LongMemEval-M, the full beam-1m cohort and the ability veto) is plan 210's"
+  },
+  "stopResume": {
+    "preflight": [
+      "manifestHash equals the Task 5.3 gate record",
+      "control git tree reproduces the historical fabric product hash",
+      "candidate product, harness, analysis, criteria and evidence-protocol hashes match",
+      "cache-stability pin passes"
+    ],
+    "stopOn": [
+      "a budget or physical-call cap reached",
+      "classified quota refusal (retain usage, resume after the window)",
+      "product/cohort/protocol drift",
+      "a held lock or an owned process already running"
+    ],
+    "resume": "journal attempts only; completed cells are reused by matching run-path fingerprint; completed answers are never regenerated; failed attempts keep their evidence",
+    "journalPath": ".cache/memory-bench/task5/journal.json",
+    "manifestFingerprint": "ecb83564868cece9e82d24c6fc86d05fa1f94fef0cf4c3dbd72a931c096a3809"
+  },
+  "security": {
+    "partition": "dev",
+    "heldoutAccess": false,
+    "heldoutContent": false,
+    "questionText": false,
+    "answerText": false,
+    "credentialRefsOnly": true,
+    "publicFields": "ids, counts, hashes and budgets only"
+  },
+  "heldOutGuard": {
+    "partitions": [
+      "heldout-a",
+      "heldout-b"
+    ],
+    "refusedBy": [
+      "retrieval-diagnostics",
+      "ceilingScan",
+      "multiSessionDiagnostic"
+    ],
+    "heldoutBUse": "one remediation round after a Task 18 miss, then end of plan"
+  },
+  "manifestHash": "0dea417b67a019deea5a32912103225c28bd7a18ef181a1c1980f778446dbdb3"
+}

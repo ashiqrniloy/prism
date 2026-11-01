@@ -1,5 +1,34 @@
 # Plan 202 Task 5 evidence
 
+## Task 5.4 — Kilo transport, gate 16, and the live screen (2026-11-01)
+
+Owner instruction (verbatim): **"Use Kilo Gateways free models"**. The panel itself did not
+change: answer `nvidia/nemotron-3-ultra-550b-a55b:free`, judges
+`dots-studio/dots-3-note-preview:free` and `cohere/north-mini-code:free`. Only the gateway moved
+(OpenRouter → Kilo AI Gateway), because the OpenRouter key is not available in this environment.
+[free-key.json](free-key.json) (kind `202-task5-free-panel`) records the live catalog check that
+each row is present, priced at exactly $0 and tool-capable; Kilo's free rows are reachable
+without a credential, so the old 1,000-requests/day account probe has nothing to read.
+
+- Criteria v2 is `202-task5-candidate-gap-v2`; it records the transport in `criteria.transport`.
+  Every rule — numerator, denominator, evidence source, failure and missingness handling,
+  zero-gap baseline, halving factor, uncertainty, multiplicity — the cohort, caps and protocol
+  are byte-identical to v1. The screen stays `202-task5-candidate-gap-v2-screen` with a
+  descriptive ability role.
+- Gate 16 ([owner-gate.json](owner-gate.json)) supersedes gate 15 under a **transport-revision**
+  guard: model ids, prices, rules, cohort, caps and treatment must be unchanged, or the record is
+  refused. Gate 15 and its screen stay unedited under
+  `gates/owner-gate-15.json` / `gates/development-screen-manifest-15.json`.
+- Full manifest `a19a5ab7…`; screen `8828ec96…`; journal identity `7654e9d0…`; 8 cells / 4 pairs /
+  134 questions (268 question runs), 53M reserved tokens, 1,461–1,675 expected physical calls,
+  56 h wall cap, $0.
+- The smoke (`campaign.mjs --task5-smoke`, journal `journal-smoke.json`) answered both
+  `beam-100k` arms on Kilo: statuses `partial` (1/40), observed tool name `memory.recall` only,
+  no `memory_recall` wire leak. `control-verification.json` passes after retrying the known
+  fabric cross-file isolation flake once, and typecheck passes.
+- The locomo F1 scorer needs `scripts/memory-bench/requirements.txt` (pyarrow, nltk); the run
+  used `.cache/memory-bench/venv` through `PRISM_MEMORY_BENCH_PYTHON`.
+
 ## Task 5.4.6 — owner disposition and bounded development screen (2026-11-01)
 
 The owner re-scoped Task 5.4 to a development screen and deferred the hard test until plans

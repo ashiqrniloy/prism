@@ -1,15 +1,15 @@
 # Plan 202 Task 5.2 — frozen paired development-comparison manifest
 
-Status: **proposed-awaiting-owner-gate**, `executable: false`. Task 5.3 must record the owner gate against manifest hash `2694bf3945d19e9b…` before any provider call.
+Status: **proposed-awaiting-owner-gate**, `executable: false`. Task 5.3 must record the owner gate against manifest hash `461167afba76b95d…` before any provider call.
 
 Manifest: [docs/_evidence/memory-bench/202/task5/development-comparison-manifest.json](development-comparison-manifest.json) (ids, counts, hashes and budgets only).
 
 ## Product pins
 
-- Control: revision `5ed8a63e856d472afee748ad5b9e49e3e10873ff` (r2 = candidate tree with product paths from `5c2570df52a084b43120ee4e77921746a029480e`), product `ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0` (reproduces the closed screen's revision-1 fabric hash `57aa47d94eb3cad629e232372f220296131583ea7ac06189d6f589b39c825799`).
-- Candidate: committed revision `9d5a7c656bdc27c6a67166fb2aeb826954118927`, product `26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20`.
+- Control: revision `c765c8dc4b925a2a847fb1110f45bd23c099160e` (r2 = candidate tree with product paths from `5c2570df52a084b43120ee4e77921746a029480e`), product `ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0` (reproduces the closed screen's revision-1 fabric hash `57aa47d94eb3cad629e232372f220296131583ea7ac06189d6f589b39c825799`).
+- Candidate: committed revision `133792dba3de9d4ac27dc4d5554009e8218d399c`, product `26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20`.
 - The two arms differ only under `packages/memory/fabric/src` and `packages/memory/core/src`; a git diff outside those paths is a refusal, and so is an uncommitted candidate.
-- Harness `196a21ee6dafcef2a30d4eff0b700573bcd9695be9d49eb396840fc3220a62bd`; unchanged for both roles so only the product is the treatment.
+- Harness `1d3c852551a14dca369a5e5698f6b42e1861916c29f0a0d00bb14a32359bb4c6`; unchanged for both roles so only the product is the treatment.
 
 ## Cohort and cells
 
@@ -21,7 +21,7 @@ Manifest: [docs/_evidence/memory-bench/202/task5/development-comparison-manifest
 | longmemeval-m | 50 | 7 | fresh | fresh | 0 known (all null) |
 | beam-1m | 40 | 10 | fresh | fresh | 0 known (all null) |
 
-10 cells (5 pairs). Answer model `openrouter/nvidia/nemotron-3-ultra-550b-a55b:free`; judges `openrouter/dots-studio/dots-3-note-preview:free` + `openrouter/cohere/north-mini-code:free`. Both roles share question ids, mapping, model, judges and budgets.
+10 cells (5 pairs). Answer model `kilo/nvidia/nemotron-3-ultra-550b-a55b:free`; judges `kilo/dots-studio/dots-3-note-preview:free` + `kilo/cohere/north-mini-code:free`. Both roles share question ids, mapping, model, judges and budgets.
 
 ## Budgets and cost
 
@@ -34,7 +34,7 @@ Manifest: [docs/_evidence/memory-bench/202/task5/development-comparison-manifest
 
 - Candidate gap: questions whose needed round set has no member returned in any successful memory.recall hit or memory.read note on the selected answer attempt. Denominator: paired questions carrying >=1 mapped needed round in both roles with complete retained tool traces in both roles.
 - Halving: positive control gap requires candidateGap <= 0.5 * controlGap. Zero-gap baseline: control gap 0 requires candidate gap 0 on the same paired questions; no halving claim, pass only on exact no-loss.
-- Ability guard: every suite x ability stratum must satisfy candidate - control >= -0.03 on the observed paired accuracy.
+- Ability guard (veto): every suite x ability stratum must satisfy candidate - control >= -0.03 on the observed paired accuracy.
 - Failures/missingness are never zero: no fine-round labels or an unresolved gold reference are unmeasurable by suite and excluded from every estimate; never zero.
 
 ## Reuse, isolation and coverage

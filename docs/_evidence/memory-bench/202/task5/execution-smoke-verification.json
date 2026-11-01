@@ -3,21 +3,21 @@
   "toolNames": [
     "memory.recall"
   ],
-  "hits": 20,
+  "hits": 10,
   "reports": 4,
   "statuses": [
     {
-      "id": "202-task5.control.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "id": "202-task5.control.beam-100k.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free",
       "status": "partial"
     },
     {
-      "id": "202-task5.candidate.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "id": "202-task5.candidate.beam-100k.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free",
       "status": "partial"
     }
   ],
   "gate": {
     "path": "docs/_evidence/memory-bench/202/task5/owner-gate.json",
-    "manifestHash": "680b52e12fcce4aac4d4c111375028847d9cc4e9ebf314296e5cbea2bf254fdd",
-    "journal": "e3d8ac7d031aa5dcfad250b7dd7e84472fb517d8268eeafd2236b87dcf21ab32"
+    "manifestHash": "8828ec96fa4efde255ca7b07d4d855123486a14a6b2531dc461df3d4476c26a7",
+    "journal": "7654e9d0c5d1f954bd49313b03868e1702ef8e469ddcb30065c7da1cfcb19fdf"
   }
 }

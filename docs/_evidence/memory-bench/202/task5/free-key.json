@@ -1,8 +1,22 @@
 {
-  "kind": "202-task5-free-key-tier",
-  "checkedAt": "2026-10-31T06:46:53.862Z",
-  "paidTier": true,
-  "dailyFreeRequests": 1000,
-  "limitRemainingUsd": 49.9402406,
-  "usageUsd": 0.0597594
+  "kind": "202-task5-free-panel",
+  "checkedAt": "2026-11-01T00:14:59.808Z",
+  "provider": "kilo",
+  "panel": [
+    {
+      "ref": "kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "contextWindow": 1000000,
+      "maxOutputTokens": 65536
+    },
+    {
+      "ref": "kilo/dots-studio/dots-3-note-preview:free",
+      "contextWindow": 512000,
+      "maxOutputTokens": 460800
+    },
+    {
+      "ref": "kilo/cohere/north-mini-code:free",
+      "contextWindow": 256000,
+      "maxOutputTokens": 64000
+    }
+  ]
 }

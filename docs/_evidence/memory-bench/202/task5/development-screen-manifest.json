@@ -4,7 +4,7 @@
   "plan": 202,
   "task": 5,
   "subtask": 5.2,
-  "generatedAt": "2026-10-31T22:38:59.471Z",
+  "generatedAt": "2026-10-31T22:56:59.316Z",
   "status": "proposed-awaiting-owner-gate",
   "executable": false,
   "ownerGate": {
@@ -25,16 +25,16 @@
     "harnessPaths": [
       "scripts/memory-bench"
     ],
-    "harnessHash": "196a21ee6dafcef2a30d4eff0b700573bcd9695be9d49eb396840fc3220a62bd",
+    "harnessHash": "1d3c852551a14dca369a5e5698f6b42e1861916c29f0a0d00bb14a32359bb4c6",
     "control": {
-      "revision": "5ed8a63e856d472afee748ad5b9e49e3e10873ff",
+      "revision": "c765c8dc4b925a2a847fb1110f45bd23c099160e",
       "sourceRevision": "5c2570df52a084b43120ee4e77921746a029480e",
       "productHash": "ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0",
       "historicalFabricOnlyHash": "57aa47d94eb3cad629e232372f220296131583ea7ac06189d6f589b39c825799",
       "worktree": ".cache/memory-bench/task5/control-worktree"
     },
     "candidate": {
-      "revision": "9d5a7c656bdc27c6a67166fb2aeb826954118927",
+      "revision": "133792dba3de9d4ac27dc4d5554009e8218d399c",
       "productHash": "26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20",
       "dirty": false
     }
@@ -202,16 +202,16 @@
   },
   "cells": [
     {
-      "id": "202-task5.control.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "id": "202-task5.control.beam-100k.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free",
       "role": "control",
       "suite": "beam-100k",
       "subset": "dev",
       "ability": null,
       "arm": "preset-r1",
       "config": "fabric-x-tools",
-      "provider": "openrouter",
+      "provider": "kilo",
       "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
-      "judges": "openrouter/dots-studio/dots-3-note-preview:free,openrouter/cohere/north-mini-code:free",
+      "judges": "kilo/dots-studio/dots-3-note-preview:free,kilo/cohere/north-mini-code:free",
       "judgeText": true,
       "judgeProtocol": "plain-text-v1",
       "labelInjections": "off",
@@ -264,13 +264,13 @@
         "sha256": "c0519be25907005ba873c927c50877471d550873039d96c041554d0075a78ace"
       },
       "productHash": "ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0",
-      "productRevision": "5ed8a63e856d472afee748ad5b9e49e3e10873ff",
+      "productRevision": "c765c8dc4b925a2a847fb1110f45bd23c099160e",
       "cwd": ".cache/memory-bench/task5/control-worktree",
-      "worktreeRevision": "5ed8a63e856d472afee748ad5b9e49e3e10873ff",
-      "harnessHash": "196a21ee6dafcef2a30d4eff0b700573bcd9695be9d49eb396840fc3220a62bd",
+      "worktreeRevision": "c765c8dc4b925a2a847fb1110f45bd23c099160e",
+      "harnessHash": "1d3c852551a14dca369a5e5698f6b42e1861916c29f0a0d00bb14a32359bb4c6",
       "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
-      "criteriaHash": "faa72035b9aaeb70662862b102e653269c4222f098f987ef1056a8296e299f07",
-      "evidenceProtocolHash": "421b137749293ceda87c1fc9763bced5a7faabb5e056cbd066ca12a919b9e0c5",
+      "criteriaHash": "25922ea9280c15c38277c7ca53d8606eef8374b3cb5a81e6bdb58fabbe9260f0",
+      "evidenceProtocolHash": "bc9aa07ca9fedadd8eee71effa8d9da9d577c42a6139f83f742fe9689d9d2d0c",
       "maxInputTokens": 7000000,
       "maxOutputTokens": 8192,
       "maxTurns": 8,
@@ -303,16 +303,16 @@
       }
     },
     {
-      "id": "202-task5.candidate.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "id": "202-task5.candidate.beam-100k.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free",
       "role": "candidate",
       "suite": "beam-100k",
       "subset": "dev",
       "ability": null,
       "arm": "preset-r1",
       "config": "fabric-x-tools",
-      "provider": "openrouter",
+      "provider": "kilo",
       "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
-      "judges": "openrouter/dots-studio/dots-3-note-preview:free,openrouter/cohere/north-mini-code:free",
+      "judges": "kilo/dots-studio/dots-3-note-preview:free,kilo/cohere/north-mini-code:free",
       "judgeText": true,
       "judgeProtocol": "plain-text-v1",
       "labelInjections": "off",
@@ -365,11 +365,11 @@
         "sha256": "c0519be25907005ba873c927c50877471d550873039d96c041554d0075a78ace"
       },
       "productHash": "26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20",
-      "productRevision": "9d5a7c656bdc27c6a67166fb2aeb826954118927",
-      "harnessHash": "196a21ee6dafcef2a30d4eff0b700573bcd9695be9d49eb396840fc3220a62bd",
+      "productRevision": "133792dba3de9d4ac27dc4d5554009e8218d399c",
+      "harnessHash": "1d3c852551a14dca369a5e5698f6b42e1861916c29f0a0d00bb14a32359bb4c6",
       "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
-      "criteriaHash": "faa72035b9aaeb70662862b102e653269c4222f098f987ef1056a8296e299f07",
-      "evidenceProtocolHash": "421b137749293ceda87c1fc9763bced5a7faabb5e056cbd066ca12a919b9e0c5",
+      "criteriaHash": "25922ea9280c15c38277c7ca53d8606eef8374b3cb5a81e6bdb58fabbe9260f0",
+      "evidenceProtocolHash": "bc9aa07ca9fedadd8eee71effa8d9da9d577c42a6139f83f742fe9689d9d2d0c",
       "maxInputTokens": 7000000,
       "maxOutputTokens": 8192,
       "maxTurns": 8,
@@ -402,16 +402,16 @@
       }
     },
     {
-      "id": "202-task5.control.locomo.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "id": "202-task5.control.locomo.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free",
       "role": "control",
       "suite": "locomo",
       "subset": "dev",
       "ability": null,
       "arm": "preset-r1",
       "config": "fabric-x-tools",
-      "provider": "openrouter",
+      "provider": "kilo",
       "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
-      "judges": "openrouter/dots-studio/dots-3-note-preview:free,openrouter/cohere/north-mini-code:free",
+      "judges": "kilo/dots-studio/dots-3-note-preview:free,kilo/cohere/north-mini-code:free",
       "judgeText": true,
       "judgeProtocol": "plain-text-v1",
       "labelInjections": "off",
@@ -484,13 +484,13 @@
         "sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4"
       },
       "productHash": "ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0",
-      "productRevision": "5ed8a63e856d472afee748ad5b9e49e3e10873ff",
+      "productRevision": "c765c8dc4b925a2a847fb1110f45bd23c099160e",
       "cwd": ".cache/memory-bench/task5/control-worktree",
-      "worktreeRevision": "5ed8a63e856d472afee748ad5b9e49e3e10873ff",
-      "harnessHash": "196a21ee6dafcef2a30d4eff0b700573bcd9695be9d49eb396840fc3220a62bd",
+      "worktreeRevision": "c765c8dc4b925a2a847fb1110f45bd23c099160e",
+      "harnessHash": "1d3c852551a14dca369a5e5698f6b42e1861916c29f0a0d00bb14a32359bb4c6",
       "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
-      "criteriaHash": "faa72035b9aaeb70662862b102e653269c4222f098f987ef1056a8296e299f07",
-      "evidenceProtocolHash": "421b137749293ceda87c1fc9763bced5a7faabb5e056cbd066ca12a919b9e0c5",
+      "criteriaHash": "25922ea9280c15c38277c7ca53d8606eef8374b3cb5a81e6bdb58fabbe9260f0",
+      "evidenceProtocolHash": "bc9aa07ca9fedadd8eee71effa8d9da9d577c42a6139f83f742fe9689d9d2d0c",
       "maxInputTokens": 7500000,
       "maxOutputTokens": 8192,
       "maxTurns": 8,
@@ -523,16 +523,16 @@
       }
     },
     {
-      "id": "202-task5.candidate.locomo.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "id": "202-task5.candidate.locomo.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free",
       "role": "candidate",
       "suite": "locomo",
       "subset": "dev",
       "ability": null,
       "arm": "preset-r1",
       "config": "fabric-x-tools",
-      "provider": "openrouter",
+      "provider": "kilo",
       "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
-      "judges": "openrouter/dots-studio/dots-3-note-preview:free,openrouter/cohere/north-mini-code:free",
+      "judges": "kilo/dots-studio/dots-3-note-preview:free,kilo/cohere/north-mini-code:free",
       "judgeText": true,
       "judgeProtocol": "plain-text-v1",
       "labelInjections": "off",
@@ -605,11 +605,11 @@
         "sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4"
       },
       "productHash": "26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20",
-      "productRevision": "9d5a7c656bdc27c6a67166fb2aeb826954118927",
-      "harnessHash": "196a21ee6dafcef2a30d4eff0b700573bcd9695be9d49eb396840fc3220a62bd",
+      "productRevision": "133792dba3de9d4ac27dc4d5554009e8218d399c",
+      "harnessHash": "1d3c852551a14dca369a5e5698f6b42e1861916c29f0a0d00bb14a32359bb4c6",
       "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
-      "criteriaHash": "faa72035b9aaeb70662862b102e653269c4222f098f987ef1056a8296e299f07",
-      "evidenceProtocolHash": "421b137749293ceda87c1fc9763bced5a7faabb5e056cbd066ca12a919b9e0c5",
+      "criteriaHash": "25922ea9280c15c38277c7ca53d8606eef8374b3cb5a81e6bdb58fabbe9260f0",
+      "evidenceProtocolHash": "bc9aa07ca9fedadd8eee71effa8d9da9d577c42a6139f83f742fe9689d9d2d0c",
       "maxInputTokens": 7500000,
       "maxOutputTokens": 8192,
       "maxTurns": 8,
@@ -642,16 +642,16 @@
       }
     },
     {
-      "id": "202-task5.control.memoryagentbench-cr.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "id": "202-task5.control.memoryagentbench-cr.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free",
       "role": "control",
       "suite": "memoryagentbench-cr",
       "subset": "dev",
       "ability": null,
       "arm": "preset-r1",
       "config": "fabric-x-tools",
-      "provider": "openrouter",
+      "provider": "kilo",
       "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
-      "judges": "openrouter/dots-studio/dots-3-note-preview:free,openrouter/cohere/north-mini-code:free",
+      "judges": "kilo/dots-studio/dots-3-note-preview:free,kilo/cohere/north-mini-code:free",
       "judgeText": true,
       "judgeProtocol": "plain-text-v1",
       "labelInjections": "off",
@@ -684,13 +684,13 @@
         "sha256": "24d5c3f09ce0ce15625cb9f8a98f44f0d864ca6c94d7b4ad04eb697ca3a5ff45"
       },
       "productHash": "ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0",
-      "productRevision": "5ed8a63e856d472afee748ad5b9e49e3e10873ff",
+      "productRevision": "c765c8dc4b925a2a847fb1110f45bd23c099160e",
       "cwd": ".cache/memory-bench/task5/control-worktree",
-      "worktreeRevision": "5ed8a63e856d472afee748ad5b9e49e3e10873ff",
-      "harnessHash": "196a21ee6dafcef2a30d4eff0b700573bcd9695be9d49eb396840fc3220a62bd",
+      "worktreeRevision": "c765c8dc4b925a2a847fb1110f45bd23c099160e",
+      "harnessHash": "1d3c852551a14dca369a5e5698f6b42e1861916c29f0a0d00bb14a32359bb4c6",
       "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
-      "criteriaHash": "faa72035b9aaeb70662862b102e653269c4222f098f987ef1056a8296e299f07",
-      "evidenceProtocolHash": "421b137749293ceda87c1fc9763bced5a7faabb5e056cbd066ca12a919b9e0c5",
+      "criteriaHash": "25922ea9280c15c38277c7ca53d8606eef8374b3cb5a81e6bdb58fabbe9260f0",
+      "evidenceProtocolHash": "bc9aa07ca9fedadd8eee71effa8d9da9d577c42a6139f83f742fe9689d9d2d0c",
       "maxInputTokens": 6000000,
       "maxOutputTokens": 8192,
       "maxTurns": 8,
@@ -723,16 +723,16 @@
       }
     },
     {
-      "id": "202-task5.candidate.memoryagentbench-cr.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "id": "202-task5.candidate.memoryagentbench-cr.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free",
       "role": "candidate",
       "suite": "memoryagentbench-cr",
       "subset": "dev",
       "ability": null,
       "arm": "preset-r1",
       "config": "fabric-x-tools",
-      "provider": "openrouter",
+      "provider": "kilo",
       "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
-      "judges": "openrouter/dots-studio/dots-3-note-preview:free,openrouter/cohere/north-mini-code:free",
+      "judges": "kilo/dots-studio/dots-3-note-preview:free,kilo/cohere/north-mini-code:free",
       "judgeText": true,
       "judgeProtocol": "plain-text-v1",
       "labelInjections": "off",
@@ -765,11 +765,11 @@
         "sha256": "24d5c3f09ce0ce15625cb9f8a98f44f0d864ca6c94d7b4ad04eb697ca3a5ff45"
       },
       "productHash": "26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20",
-      "productRevision": "9d5a7c656bdc27c6a67166fb2aeb826954118927",
-      "harnessHash": "196a21ee6dafcef2a30d4eff0b700573bcd9695be9d49eb396840fc3220a62bd",
+      "productRevision": "133792dba3de9d4ac27dc4d5554009e8218d399c",
+      "harnessHash": "1d3c852551a14dca369a5e5698f6b42e1861916c29f0a0d00bb14a32359bb4c6",
       "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
-      "criteriaHash": "faa72035b9aaeb70662862b102e653269c4222f098f987ef1056a8296e299f07",
-      "evidenceProtocolHash": "421b137749293ceda87c1fc9763bced5a7faabb5e056cbd066ca12a919b9e0c5",
+      "criteriaHash": "25922ea9280c15c38277c7ca53d8606eef8374b3cb5a81e6bdb58fabbe9260f0",
+      "evidenceProtocolHash": "bc9aa07ca9fedadd8eee71effa8d9da9d577c42a6139f83f742fe9689d9d2d0c",
       "maxInputTokens": 6000000,
       "maxOutputTokens": 8192,
       "maxTurns": 8,
@@ -802,16 +802,16 @@
       }
     },
     {
-      "id": "202-task5.control.beam-1m.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "id": "202-task5.control.beam-1m.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free",
       "role": "control",
       "suite": "beam-1m",
       "subset": "dev",
       "ability": null,
       "arm": "preset-r1",
       "config": "fabric-x-tools",
-      "provider": "openrouter",
+      "provider": "kilo",
       "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
-      "judges": "openrouter/dots-studio/dots-3-note-preview:free,openrouter/cohere/north-mini-code:free",
+      "judges": "kilo/dots-studio/dots-3-note-preview:free,kilo/cohere/north-mini-code:free",
       "judgeText": true,
       "judgeProtocol": "plain-text-v1",
       "labelInjections": "off",
@@ -838,13 +838,13 @@
         "sha256": "41b5acbbb55a586b1305514ef9d9fb03365d9b3331b598a1c2dd7603d93ef533"
       },
       "productHash": "ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0",
-      "productRevision": "5ed8a63e856d472afee748ad5b9e49e3e10873ff",
+      "productRevision": "c765c8dc4b925a2a847fb1110f45bd23c099160e",
       "cwd": ".cache/memory-bench/task5/control-worktree",
-      "worktreeRevision": "5ed8a63e856d472afee748ad5b9e49e3e10873ff",
-      "harnessHash": "196a21ee6dafcef2a30d4eff0b700573bcd9695be9d49eb396840fc3220a62bd",
+      "worktreeRevision": "c765c8dc4b925a2a847fb1110f45bd23c099160e",
+      "harnessHash": "1d3c852551a14dca369a5e5698f6b42e1861916c29f0a0d00bb14a32359bb4c6",
       "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
-      "criteriaHash": "faa72035b9aaeb70662862b102e653269c4222f098f987ef1056a8296e299f07",
-      "evidenceProtocolHash": "421b137749293ceda87c1fc9763bced5a7faabb5e056cbd066ca12a919b9e0c5",
+      "criteriaHash": "25922ea9280c15c38277c7ca53d8606eef8374b3cb5a81e6bdb58fabbe9260f0",
+      "evidenceProtocolHash": "bc9aa07ca9fedadd8eee71effa8d9da9d577c42a6139f83f742fe9689d9d2d0c",
       "maxInputTokens": 6000000,
       "maxOutputTokens": 8192,
       "maxTurns": 8,
@@ -877,16 +877,16 @@
       }
     },
     {
-      "id": "202-task5.candidate.beam-1m.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "id": "202-task5.candidate.beam-1m.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free",
       "role": "candidate",
       "suite": "beam-1m",
       "subset": "dev",
       "ability": null,
       "arm": "preset-r1",
       "config": "fabric-x-tools",
-      "provider": "openrouter",
+      "provider": "kilo",
       "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
-      "judges": "openrouter/dots-studio/dots-3-note-preview:free,openrouter/cohere/north-mini-code:free",
+      "judges": "kilo/dots-studio/dots-3-note-preview:free,kilo/cohere/north-mini-code:free",
       "judgeText": true,
       "judgeProtocol": "plain-text-v1",
       "labelInjections": "off",
@@ -913,11 +913,11 @@
         "sha256": "41b5acbbb55a586b1305514ef9d9fb03365d9b3331b598a1c2dd7603d93ef533"
       },
       "productHash": "26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20",
-      "productRevision": "9d5a7c656bdc27c6a67166fb2aeb826954118927",
-      "harnessHash": "196a21ee6dafcef2a30d4eff0b700573bcd9695be9d49eb396840fc3220a62bd",
+      "productRevision": "133792dba3de9d4ac27dc4d5554009e8218d399c",
+      "harnessHash": "1d3c852551a14dca369a5e5698f6b42e1861916c29f0a0d00bb14a32359bb4c6",
       "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
-      "criteriaHash": "faa72035b9aaeb70662862b102e653269c4222f098f987ef1056a8296e299f07",
-      "evidenceProtocolHash": "421b137749293ceda87c1fc9763bced5a7faabb5e056cbd066ca12a919b9e0c5",
+      "criteriaHash": "25922ea9280c15c38277c7ca53d8606eef8374b3cb5a81e6bdb58fabbe9260f0",
+      "evidenceProtocolHash": "bc9aa07ca9fedadd8eee71effa8d9da9d577c42a6139f83f742fe9689d9d2d0c",
       "maxInputTokens": 6000000,
       "maxOutputTokens": 8192,
       "maxTurns": 8,
@@ -952,16 +952,16 @@
   ],
   "comparison": {
     "controlCells": [
-      "202-task5.control.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
-      "202-task5.control.locomo.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
-      "202-task5.control.memoryagentbench-cr.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
-      "202-task5.control.beam-1m.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free"
+      "202-task5.control.beam-100k.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "202-task5.control.locomo.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "202-task5.control.memoryagentbench-cr.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "202-task5.control.beam-1m.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free"
     ],
     "candidateCells": [
-      "202-task5.candidate.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
-      "202-task5.candidate.locomo.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
-      "202-task5.candidate.memoryagentbench-cr.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
-      "202-task5.candidate.beam-1m.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free"
+      "202-task5.candidate.beam-100k.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "202-task5.candidate.locomo.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "202-task5.candidate.memoryagentbench-cr.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "202-task5.candidate.beam-1m.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free"
     ],
     "pairs": 4,
     "pairing": "control and candidate share suite, question ids, mapping, model, judges, budgets and scoring rules",
@@ -976,11 +976,11 @@
   },
   "models": {
     "answers": [
-      "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free"
+      "kilo/nvidia/nemotron-3-ultra-550b-a55b:free"
     ],
     "judges": [
-      "openrouter/dots-studio/dots-3-note-preview:free",
-      "openrouter/cohere/north-mini-code:free"
+      "kilo/dots-studio/dots-3-note-preview:free",
+      "kilo/cohere/north-mini-code:free"
     ],
     "families": {
       "answers": [
@@ -1060,7 +1060,13 @@
     "note": "both answerer and judges are OpenRouter :free routes; quotas and caps, not USD, bind execution"
   },
   "criteria": {
-    "version": "202-task5-candidate-gap-v1-screen",
+    "version": "202-task5-candidate-gap-v2-screen",
+    "transport": {
+      "provider": "kilo",
+      "gateway": "https://ai-gateway.kilo.ai/api/v1",
+      "reason": "owner instruction 2026-11-01: run the free panel on the Kilo AI Gateway; the OpenRouter key is not available in this environment",
+      "substitution": "same answer and judge model ids at $0, same rules, cohort, protocol, caps and journal accounting; only the transport changed"
+    },
     "candidateGap": {
       "unit": "question",
       "neededRounds": "repaired fine-gold round ids (causalSessions -> sessionRounds -> extractEvidence.fineGoldIds)",
@@ -1096,7 +1102,7 @@
       "iterations": 10000
     }
   },
-  "criteriaHash": "faa72035b9aaeb70662862b102e653269c4222f098f987ef1056a8296e299f07",
+  "criteriaHash": "25922ea9280c15c38277c7ca53d8606eef8374b3cb5a81e6bdb58fabbe9260f0",
   "analysis": {
     "analysisVersion": "202-paired-cluster-v1",
     "analysisHash": "5d111a1069a98ec4682f5de51d91849406974255b7f4221099ef3800b635abb9",
@@ -1164,9 +1170,9 @@
     "judgeTemplate": "e3883a2aa5910f76c3f6b377f1758fd4a57ca6dda1449cd86291abd0eea5f306",
     "gradedTemplate": "f7ff5f9c24afd87f0a5e00bd168103019f6e7140d64031f3e5bec264043c24cb",
     "analysisVersion": "202-paired-cluster-v1",
-    "criteriaHash": "faa72035b9aaeb70662862b102e653269c4222f098f987ef1056a8296e299f07"
+    "criteriaHash": "25922ea9280c15c38277c7ca53d8606eef8374b3cb5a81e6bdb58fabbe9260f0"
   },
-  "evidenceProtocolHash": "421b137749293ceda87c1fc9763bced5a7faabb5e056cbd066ca12a919b9e0c5",
+  "evidenceProtocolHash": "bc9aa07ca9fedadd8eee71effa8d9da9d577c42a6139f83f742fe9689d9d2d0c",
   "isolation": {
     "controlArtifacts": ".cache/memory-bench/task5/control",
     "candidateArtifacts": ".cache/memory-bench/task5/candidate",
@@ -1235,7 +1241,7 @@
     ],
     "resume": "journal attempts only; completed cells are reused by matching run-path fingerprint; completed answers are never regenerated; failed attempts keep their evidence",
     "journalPath": ".cache/memory-bench/task5/journal.json",
-    "manifestFingerprint": "ecb83564868cece9e82d24c6fc86d05fa1f94fef0cf4c3dbd72a931c096a3809"
+    "manifestFingerprint": "7654e9d0c5d1f954bd49313b03868e1702ef8e469ddcb30065c7da1cfcb19fdf"
   },
   "security": {
     "partition": "dev",
@@ -1258,5 +1264,5 @@
     ],
     "heldoutBUse": "one remediation round after a Task 18 miss, then end of plan"
   },
-  "manifestHash": "0dea417b67a019deea5a32912103225c28bd7a18ef181a1c1980f778446dbdb3"
+  "manifestHash": "8828ec96fa4efde255ca7b07d4d855123486a14a6b2531dc461df3d4476c26a7"
 }
