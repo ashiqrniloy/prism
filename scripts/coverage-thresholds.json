@@ -172,6 +172,11 @@
       "branches": null,
       "functions": 90.39
     },
+    "@arnilo/prism-provider-ollama-cloud": {
+      "lines": 92.16,
+      "branches": null,
+      "functions": 98.53
+    },
     "@arnilo/prism-provider-opencode-go": {
       "lines": 90.99,
       "branches": null,

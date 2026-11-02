@@ -52,16 +52,17 @@ describe("the conversational preset (plan 188.11 Task 3)", () => {
   });
 
   it("preset_unknown_value_fails_closed", async () => {
-    assert.equal(validateJsonSchema(memoryFabricConfigSchema, { preset: "coding" }).ok, false);
+    assert.equal(validateJsonSchema(memoryFabricConfigSchema, { preset: "unknown" }).ok, false);
     assert.equal(validateJsonSchema(memoryFabricConfigSchema, { preset: "conversational" }).ok, true);
+    assert.equal(validateJsonSchema(memoryFabricConfigSchema, { preset: "coding" }).ok, true);
     assert.throws(
-      () => resolveMemoryFabricConfig({ preset: "coding" as "conversational" }),
-      (error: unknown) => error instanceof MemoryValidationError && /preset must be one of conversational/.test(error.message),
+      () => resolveMemoryFabricConfig({ preset: "unknown" as "conversational" }),
+      (error: unknown) => error instanceof MemoryValidationError && /preset must be one of conversational, coding/.test(error.message),
     );
     await assert.rejects(
       createAgent({
         model: { provider: "mock", model: "main" },
-        packages: [mockProvider([[providerTextDelta("ok"), providerDone()]]), memoryFabric({ preset: "coding" as "conversational" })],
+        packages: [mockProvider([[providerTextDelta("ok"), providerDone()]]), memoryFabric({ preset: "unknown" as "conversational" })],
       }),
     );
   });

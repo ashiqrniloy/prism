@@ -12,7 +12,11 @@ live test during `bun run test`; the offline smoke needs only Bun.
 ```sh
 timeout 60 bun scripts/memory-bench/run.mjs --offline
 timeout 900 bun scripts/memory-bench/trust-scan-audit.mjs --output docs/_evidence/memory-bench/188.11/trust-scan.json
-timeout 300 bun test --timeout=0 scripts/memory-bench/run.test.mjs
+timeout 900 bun scripts/memory-bench/safety/run.mjs --output docs/_evidence/memory-bench/202/safety.json
+timeout 1800 bun scripts/memory-bench/growth.mjs --suite longmemeval-m --questions 3 --output docs/_evidence/memory-bench/202/growth.json
+timeout 900 bun scripts/memory-bench/exchange-scale.mjs --exchanges 100000 --output docs/_evidence/memory-bench/202/exchange-scale.json
+timeout 1800 bun scripts/memory-bench/observational-role.mjs --seeds 7,11,19,23,29,31,37 --output docs/_evidence/memory-bench/202/observational/role.json
+timeout 300 bun test --timeout=0 scripts/memory-bench/run.test.mjs scripts/memory-bench/safety/safety.test.mjs scripts/memory-bench/growth.test.mjs scripts/memory-bench/exchange-scale.test.mjs scripts/memory-bench/observational-role.test.mjs
 
 # Live benchmark tooling, isolated from all Prism packages:
 timeout 60 python3 -m venv /tmp/memory-bench-python
@@ -26,6 +30,27 @@ timeout 7200 bun scripts/memory-bench/run.mjs --suite longmemeval-s --config om 
 
 timeout 30 bun scripts/memory-bench/report.mjs --compare a.json b.json
 ```
+
+The Task 14 safety gate is `bun scripts/memory-bench/safety/run.mjs`. It runs offline:
+poisoning through the real exchange archive with a deterministic follower mock, two-user/two-project
+leakage with the team store on and off, deletion through markdown files/index/derived facts/links/core/export,
+the full LongMemEval-S/LoCoMo false-refusal audit, and PII handling. Thresholds are pre-registered in
+`safety/criteria.json` (kept separate because `robustness-criteria.json`'s Task 18 hash is frozen).
+It writes only ids, counts, classes and booleans; no corpus text and zero model calls.
+
+Task 16's role harness is `bun scripts/memory-bench/observational-role.mjs`. It runs four offline
+lifecycle arms (fabric and OM+fabric, promotion off/on) across several seeds, writes promotion,
+later-use and accuracy metrics, and makes zero model calls. The opt-in live worker smoke is
+`PRISM_LIVE_OBSERVATIONAL_MEMORY_TESTS=1 bun test scripts/memory-bench/observational-live.test.mjs`.
+A worker failure is background-only by product contract: the benchmark retains its cause, treats a
+token ceiling as a budget stop, and records other worker failures instead of aborting the arm.
+
+Task 15's growth harness is `bun scripts/memory-bench/growth.mjs`. It streams dated LongMemEval-M
+sessions into one store over 12 simulated months, calls `fabric.maintain()` after each month, and asks
+the same month-1 questions at months 1, 6 and 12. `--hot-tokens` and `--grace-sessions` let the
+operator isolate the exchange tier; accuracy is offline lexical retrieval of the expected exchange and
+makes zero model calls. `exchange-scale.mjs` measures the 100k-exchange p95 store envelope on SQLite
+and on `PRISM_TEST_POSTGRES_URL` (isolated throwaway schema).
 
 The suites are `longmemeval-s`, `locomo`, and `memoryagentbench-cr`; configurations
 are `full`, `om`, `fabric`, `fabric-hybrid`, `fabric-agentic`, `om+fabric`, and the
@@ -873,11 +898,12 @@ to each question date, and the 0.35 coverage floor. The committed pre-fix v1
 baseline retains its frozen wall-clock reference `2026-10-22T00:00:00.000Z`
 and date-prefixed query; rerunning the command above produces v2 evidence. Injection
 visibility comes from the product's own rendering decision (`fitInjection` in
-`packages/memory/fabric/src/excerpt.ts`), not a copy: whole notes by rank until the
-budget runs out, a skipped note rather than a truncated one, the best hit excerpted
-only when it alone exceeds the budget, and time-ordered delivery. Diagnosis uses the
-shipped defaults (plan 188.9 Task 5: `budgetTokens 4000`, `topK 12`,
-`minSimilarity 0.2`), so a diagnostic cell describes what an opted-in host receives. A
+`packages/memory/fabric/src/excerpt.ts`), not a copy: confidence floors, pointer
+cards, whole notes by rank until the budget runs out, a skipped note rather than a
+truncated one, the best hit excerpted only when it alone exceeds the budget, and
+time-ordered delivery. Diagnosis uses the shipped defaults (plan 188.9 Task 5 and
+plan 202 Task 8: `budgetTokens 4000`, `topK 12`, `minSimilarity 0.2`, `minScore 0.2`,
+`fullTextScore 0.35`), so a diagnostic cell describes what an opted-in host receives. A
 regression compares its ids and rendered lines with the real `createFabricContext`
 output. Gold never enters a
 query. Two separate date-free ranking ablations retain and remove the coverage

@@ -30,6 +30,8 @@ import {
   type ResolvedFabricDirectoryOptions,
   resolveFabricDirectoryOptions,
 } from "./directory.js";
+import { MAX_BIND_THRESHOLD, resolveBindThreshold } from "./ontology/bind.js";
+import { MAX_CLAIMS_RENDERED_LIMIT, MAX_CONCEPT_PRIOR, resolveConceptPrior, resolveMaxClaimsRendered } from "./ontology/render.js";
 
 export type {
   MemoryFabricCoreConfig,
@@ -40,6 +42,7 @@ export type {
   ResolvedFabricTeamOptions,
 };
 
+import { DECISION_POINTS, type MemoryFabricDecisionsConfig, type ResolvedDecisionsConfig, resolveDecisionsConfig } from "./decisions.js";
 import { type MemoryFabricTeamConfig, type ResolvedFabricTeamOptions, resolveFabricTeamOptions } from "./delivery/team.js";
 import {
   type ArchiveConfig,
@@ -49,10 +52,12 @@ import {
   DEFAULT_DECAY,
   DEFAULT_DUPLICATE_DICE,
   DEFAULT_EPISODE_MIN_CLUSTER,
+  DEFAULT_EXCHANGE_CAPACITY,
   DEFAULT_STORAGE_WEIGHTS,
   DEFAULT_STRENGTH_WEIGHTS,
   DEFAULT_VERIFY_AFTER_SESSIONS,
   DEFAULT_WIDEN_CONFIG,
+  type ExchangeCapacityLimits,
   HARD_VERIFY_AFTER_SESSIONS,
   MAX_ARCHIVE_BELOW,
   MAX_DUPLICATE_DICE,
@@ -74,6 +79,10 @@ import {
   type StrengthWeights,
 } from "./lifecycle/index.js";
 import { type MemoryFabricPromoteConfig, memoryFabricPromoteSchema, type ResolvedPromoteConfig, resolvePromoteConfig } from "./promote.js";
+import { type MemoryFabricStateConfig, type ResolvedStateConfig, resolveStateConfig } from "./state.js";
+
+export type { MemoryFabricStateConfig, ResolvedStateConfig } from "./state.js";
+
 import { projectResourceId, resolveProjectIdentity } from "./scope/identity.js";
 import { resolveScopePriors, type ScopePriors } from "./scope/recall.js";
 import type { FabricScopeLevel, MemoryFabricConsolidationOptions, MemoryNoteKind } from "./types.js";
@@ -150,11 +159,15 @@ export interface MemoryFabricScopedConfig {
 
 export interface MemoryFabricInjectConfig {
   /**
-   * Relevance floor for a passively injected hit. Default `0.2`, chosen with the other two defaults
-   * by the plan 188.9 Task 5 rule (cheapest cell at the evidence-sized cost whose per-ability
-   * answer visibility does not fall below the 600/3/0.35 control).
+   * Relevance floor for a passively injected hit. Default `0.2`, chosen by the plan 188.9 Task 5
+   * rule (cheapest cell at the evidence-sized cost whose per-ability answer visibility does not
+   * fall below the 600/3/0.35 control).
    */
   readonly minSimilarity?: number;
+  /** Minimum confidence for any passively injected hit. Default `0.2`; below it only the cue is shown. */
+  readonly minScore?: number;
+  /** At or above this confidence a hit renders full text; below it renders a pointer card. Default `0.35`. */
+  readonly fullTextScore?: number;
   /** Whole notes delivered per turn, best first. Default `12`. */
   readonly topK?: number;
   /**
@@ -198,6 +211,11 @@ export interface MemoryFabricLifecycleConfig {
    */
   readonly capacity?: Partial<Record<"user" | "agent" | "project", { readonly notes?: number; readonly tokens?: number }>>;
   /**
+   * The raw-history tier, separate from fact/preference/procedure capacity: exchanges above
+   * `hotTokens` are demoted to the searchable archive, never deleted. Default 200,000 tokens.
+   */
+  readonly exchangeCapacity?: { readonly hotTokens?: number };
+  /**
    * Merging: duplicate folds always, episode clusters only when `episodes` is set (off until plan
    * 188.6 fits the rules) — one model call per cluster.
    */
@@ -237,11 +255,12 @@ export interface ResolvedLifecycleConfig {
   readonly recall: StrengthWeights;
   readonly archive: ArchiveConfig;
   readonly capacity: Readonly<Record<"user" | "agent" | "project", CapacityLimits>>;
+  readonly exchangeCapacity: ExchangeCapacityLimits;
   readonly merge: ResolvedMergeConfig;
   readonly widen: ResolvedWidenConfig;
 }
 
-const DECAY_KINDS = ["episode", "fact", "preference", "procedure", "exchange"] as const;
+const DECAY_KINDS = ["episode", "fact", "preference", "procedure", "decision", "exchange"] as const;
 const CAPACITY_LEVELS = ["user", "agent", "project"] as const;
 const STORAGE_TERMS = ["explicit", "sessions", "helpful", "harmful", "outcome"] as const;
 
@@ -300,6 +319,13 @@ export const memoryFabricLifecycleSchema: JsonSchema = {
         ]),
       ),
     },
+    exchangeCapacity: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        hotTokens: { type: "integer", minimum: 1, maximum: MAX_FABRIC_CAPACITY_TOKENS },
+      },
+    },
     merge: {
       type: "object",
       additionalProperties: false,
@@ -335,7 +361,7 @@ export function resolveLifecycleConfig(value: MemoryFabricLifecycleConfig | unde
   if (!Number.isSafeInteger(verifyAfterSessions) || verifyAfterSessions < 1 || verifyAfterSessions > HARD_VERIFY_AFTER_SESSIONS) {
     throw new MemoryValidationError(`lifecycle.verifyAfterSessions must be an integer in [1,${HARD_VERIFY_AFTER_SESSIONS}]`);
   }
-  const decay: Record<MemoryNoteKind, number> = { ...DEFAULT_DECAY };
+  const decay: Record<Exclude<MemoryNoteKind, "concept">, number> = { ...DEFAULT_DECAY };
   for (const kind of DECAY_KINDS) {
     const input = value?.decay?.[kind];
     if (input !== undefined) decay[kind] = bounded(`lifecycle.decay.${kind}`, input, 0, 1, true);
@@ -389,6 +415,16 @@ export function resolveLifecycleConfig(value: MemoryFabricLifecycleConfig | unde
       capacity[level] = { ...capacityFor(level), tokens: input.tokens };
     }
   }
+  const exchangeCapacity = {
+    hotTokens: value?.exchangeCapacity?.hotTokens ?? DEFAULT_EXCHANGE_CAPACITY.hotTokens,
+  };
+  if (
+    !Number.isSafeInteger(exchangeCapacity.hotTokens) ||
+    exchangeCapacity.hotTokens < 1 ||
+    exchangeCapacity.hotTokens > MAX_FABRIC_CAPACITY_TOKENS
+  ) {
+    throw new MemoryValidationError(`lifecycle.exchangeCapacity.hotTokens must be an integer in [1,${MAX_FABRIC_CAPACITY_TOKENS}]`);
+  }
   const merge = resolveMergeConfig(value?.merge);
   const widen = resolveWidenConfig(value?.widen);
   return {
@@ -398,6 +434,7 @@ export function resolveLifecycleConfig(value: MemoryFabricLifecycleConfig | unde
     recall,
     archive,
     capacity: capacity as unknown as Readonly<Record<"user" | "agent" | "project", CapacityLimits>>,
+    exchangeCapacity,
     merge,
     widen,
   };
@@ -467,13 +504,14 @@ export interface ResolvedFabricExchangesOptions {
 }
 
 /** The preset names. A later name is additive; each one is a written contract (README `## Conversational preset`). */
-export type MemoryFabricPresetName = "conversational";
+export type MemoryFabricPresetName = "conversational" | "coding";
 
 /**
  * Bumped when a preset's contents change inside its contract (ranking, budgets, delivery, read path).
  * `memory:status` and the setup status note report it, so a measurement is attributable to a revision.
  */
 export const CONVERSATIONAL_PRESET_REVISION = 1;
+export const CODING_PRESET_REVISION = 1;
 
 /** Validated `packageConfig` for `@arnilo/prism-memory-fabric`. */
 export interface MemoryFabricConfig {
@@ -542,11 +580,20 @@ export interface MemoryFabricConfig {
   readonly exchanges?: boolean | MemoryFabricExchangesConfig;
   /** The note lifecycle: verification by use across sessions. */
   readonly lifecycle?: MemoryFabricLifecycleConfig;
+  /** The ontology tier's write-path knobs (plan 207). Nothing here turns the tier on: concepts do. */
+  readonly ontology?: MemoryFabricOntologyConfig;
   /**
    * Session consolidation. `false` or absent (the default) makes no
    * model call; an object enables the opt-in extractor pass and configures acceptance.
    */
   readonly promote?: false | MemoryFabricPromoteConfig;
+  /** Opt-in read-time current-state table; one model call per explicit `memory.recall`. */
+  readonly state?: boolean | MemoryFabricStateConfig;
+  /**
+   * Opt-in decision-model gates. Absent keeps every incumbent path and makes no decision call. The
+   * model must declare the `decisions` capability; only already-scoped text is sent.
+   */
+  readonly decisions?: false | MemoryFabricDecisionsConfig;
   readonly workerLimits?: MemoryWorkerLimitOptions;
 }
 
@@ -558,6 +605,21 @@ export type ResolvedMemoryFabricStore =
   | { readonly postgres: MemoryFabricPostgresStoreConfig };
 
 /** {@link MemoryFabricConfig} with every default applied, so `setup` reads one shape. */
+export interface MemoryFabricOntologyConfig {
+  /**
+   * Matched tokens of one subject name (slug, title or alias) that bind a new note to that subject, when exactly
+   * one subject qualifies; a whole multi-token name always qualifies. Default 2, in [1,8].
+   */
+  readonly bindThreshold?: number;
+  /**
+   * Added to a concept hit's score after fusion and the scope prior, so a matching concept ranks above its own
+   * evidence but not above a better-matching note. Default 0.1, in [0,0.5].
+   */
+  readonly conceptPrior?: number;
+  /** Claims one concept hit shows in `memory.recall`, chosen by term overlap with the query. Default 8, in [1,32]. */
+  readonly maxClaimsRendered?: number;
+}
+
 export interface ResolvedMemoryFabricConfig {
   /** The preset this config expanded, with its revision; absent when none was named. */
   readonly preset?: { readonly name: MemoryFabricPresetName; readonly revision: number; readonly overridden: readonly string[] };
@@ -601,7 +663,12 @@ export interface ResolvedMemoryFabricConfig {
   /** The exchange archive, with its write scope resolved from the raw config. */
   readonly exchanges: ResolvedFabricExchangesOptions;
   readonly lifecycle: ResolvedLifecycleConfig;
+  readonly ontology: { readonly bindThreshold: number; readonly conceptPrior: number; readonly maxClaimsRendered: number };
   readonly promote: ResolvedPromoteConfig;
+  /** Opt-in read-time state table; `false` keeps the read path model-free. */
+  readonly state: false | ResolvedStateConfig;
+  /** Opt-in decision gates; `false` keeps every incumbent path. */
+  readonly decisions: false | ResolvedDecisionsConfig;
   readonly workerLimits?: MemoryWorkerLimitOptions;
 }
 
@@ -625,7 +692,7 @@ const fabricConfigSchema: JsonSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
-    preset: { enum: ["conversational"] },
+    preset: { enum: ["conversational", "coding"] },
     enabled: { type: "boolean", default: true },
     retrieval: { enum: ["lexical", "hybrid"], default: "lexical" },
     inject: {
@@ -636,10 +703,16 @@ const fabricConfigSchema: JsonSchema = {
           additionalProperties: false,
           properties: {
             minSimilarity: { type: "number", minimum: -1, maximum: 1, default: 0.2 },
+            minScore: { type: "number", minimum: 0, maximum: 1, default: 0.2 },
+            fullTextScore: { type: "number", minimum: 0, maximum: 1, default: 0.35 },
             topK: { type: "integer", minimum: 1, maximum: HARD_TOP_K_CAP, default: 12 },
             budgetTokens: { type: "integer", minimum: 1, default: 4000 },
             query: { enum: ["task", "user"] },
-            kinds: { type: "array", minItems: 1, items: { enum: ["fact", "file", "procedure", "episode", "working", "exchange"] } },
+            kinds: {
+              type: "array",
+              minItems: 1,
+              items: { enum: ["fact", "file", "procedure", "episode", "working", "decision", "exchange"] },
+            },
           },
         },
       ],
@@ -653,6 +726,12 @@ const fabricConfigSchema: JsonSchema = {
     core: flagOrObject({
       maxTokens: { type: "integer", minimum: 1, maximum: HARD_CORE_TOKENS },
       scopes: { type: "array", minItems: 1, maxItems: 2, items: { enum: ["user", "project"] } },
+      kinds: {
+        type: "array",
+        minItems: 1,
+        maxItems: 4,
+        items: { enum: ["fact", "preference", "procedure", "decision"] },
+      },
     }),
     cues: flagOrObject({
       budgetTokens: { type: "integer", minimum: 1, maximum: HARD_CUE_TOKENS },
@@ -822,8 +901,41 @@ const fabricConfigSchema: JsonSchema = {
     }),
     passive: { type: "boolean" },
     exchanges: flagOrObject({ enabled: { type: "boolean" } }),
+    ontology: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        bindThreshold: { type: "integer", minimum: 1, maximum: MAX_BIND_THRESHOLD },
+        conceptPrior: { type: "number", minimum: 0, maximum: MAX_CONCEPT_PRIOR },
+        maxClaimsRendered: { type: "integer", minimum: 1, maximum: MAX_CLAIMS_RENDERED_LIMIT },
+      },
+    },
     lifecycle: memoryFabricLifecycleSchema,
     promote: memoryFabricPromoteSchema,
+    state: {
+      anyOf: [
+        { type: "boolean" },
+        {
+          type: "object",
+          additionalProperties: false,
+          properties: { model: { type: "string", minLength: 1, maxLength: 4096 } },
+        },
+      ],
+    },
+    decisions: {
+      anyOf: [
+        { const: false },
+        {
+          type: "object",
+          additionalProperties: false,
+          required: ["model"],
+          properties: {
+            model: { type: "string", minLength: 1, maxLength: 4096 },
+            points: { type: "array", minItems: 1, maxItems: DECISION_POINTS.length, items: { enum: [...DECISION_POINTS] } },
+          },
+        },
+      ],
+    },
     workerLimits: { type: "object", additionalProperties: true },
   },
 };
@@ -835,11 +947,16 @@ const fabricConfigSchema: JsonSchema = {
  */
 const TUNING_CONFIG_FIELDS: ReadonlySet<string> = new Set([
   "inject.minSimilarity",
+  "inject.minScore",
+  "inject.fullTextScore",
   "inject.topK",
   "inject.budgetTokens",
   "directory.maxTopics",
   "directory.maxFiles",
   "directory.maxTokens",
+  "ontology.bindThreshold",
+  "ontology.conceptPrior",
+  "ontology.maxClaimsRendered",
   "core.maxTokens",
   "cues.budgetTokens",
   "cues.maxPerTurn",
@@ -884,6 +1001,7 @@ const TUNING_CONFIG_FIELDS: ReadonlySet<string> = new Set([
   "lifecycle.capacity.agent.tokens",
   "lifecycle.capacity.project.notes",
   "lifecycle.capacity.project.tokens",
+  "lifecycle.exchangeCapacity.hotTokens",
   "lifecycle.merge.duplicateDice",
   "lifecycle.merge.episodes.minCluster",
   "lifecycle.widen.minProjects",
@@ -941,9 +1059,21 @@ const PRESETS: Readonly<Record<MemoryFabricPresetName, Readonly<MemoryFabricConf
     semantic: true,
     promote: false,
   }),
+  // Conversational history plus standing coding rules: decisions in the core, path rules as cues.
+  coding: Object.freeze({
+    exchanges: Object.freeze({}),
+    inject: Object.freeze({ query: "task", kinds: Object.freeze(["exchange"] as const) }),
+    semantic: true,
+    promote: false,
+    core: Object.freeze({ kinds: Object.freeze(["decision", "preference"] as const) }),
+    cues: Object.freeze({ budgetTokens: 300, maxPerTurn: 3 }),
+  }),
 });
 
-const PRESET_REVISIONS: Readonly<Record<MemoryFabricPresetName, number>> = { conversational: CONVERSATIONAL_PRESET_REVISION };
+const PRESET_REVISIONS: Readonly<Record<MemoryFabricPresetName, number>> = {
+  conversational: CONVERSATIONAL_PRESET_REVISION,
+  coding: CODING_PRESET_REVISION,
+};
 
 /** The preset's own fields, cloned so a caller may mutate them (the bench ablations do). */
 export function presetFields(name: MemoryFabricPresetName): MemoryFabricConfig {
@@ -1023,7 +1153,14 @@ function resolveExpandedConfig(config: MemoryFabricConfig, preset: ResolvedMemor
     ...(config.passive === undefined ? {} : { passive: config.passive }),
     exchanges: resolveExchangesConfig(config, resolvedScopes.scopes.active),
     lifecycle: resolveLifecycleConfig(config.lifecycle),
+    ontology: {
+      bindThreshold: resolveBindThreshold(config.ontology?.bindThreshold),
+      conceptPrior: resolveConceptPrior(config.ontology?.conceptPrior),
+      maxClaimsRendered: resolveMaxClaimsRendered(config.ontology?.maxClaimsRendered),
+    },
     promote: resolvePromoteConfig(config.promote),
+    state: resolveStateConfig(config.state),
+    decisions: resolveDecisionsConfig(config.decisions),
     ...(config.workerLimits === undefined ? {} : { workerLimits: config.workerLimits }),
   };
 }

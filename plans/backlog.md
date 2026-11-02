@@ -1200,3 +1200,36 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Source: plans/188.11-Phase-11-Part-O11-Memory-Release-Readiness-Stable-Surface-Preset-And-Honest-Claims.md
 - What: Plan 202 Task 2 — broaden the evidence base (second benchmark family; held-out preference/abstention). Task 3 — cross-family judging. Task 5 — lift the lexical top-32 candidate ceiling (11/30 multi-session questions). Task 6 — temporal reasoning (12/20). Task 8 — precision-first injection (78% irrelevant). Task 15 — capacity under a growing archive. Task 14 — close F3 (13/24 foreign-context exposure) and F7 (12-persona safety power not reached), and tune the trust scan (2.271/1,000; 3/500 needed sessions; `exfil-06` `curl -s https://…` undetected). Task 17 — reliable extraction (F4). Task 16 — make OM measurable (F9 `om+fabric` never completed). plan 210 Task 10 (formerly plan 202 Task 19) — publish the final claim and close the limitations register mechanically.
 - Why: Each entry in `docs/_evidence/memory-bench/188.11/limitations.json` carries the owning plan 202 task, so closing them is mechanical once plan 202's evidence lands.
+- Handoff (2026-11-02): Plan 202 is closed by owner disposition. Unresolved limitations, including F4, now belong to plan 210 under `docs/_evidence/memory-bench/202/closure.md`; plan closure does not mark them resolved.
+
+## Finish plan 202 development targets in plan 210
+
+- Section: Compromises Made
+- Priority: P1
+- Source: plans/202-Phase-11-Part-O12-Memory-Robustness-And-Recall-Beyond-Full-Context.md
+- Compromise: Plan 202 closed by owner disposition on 2026-11-02 with its broad baseline incomplete, Task 5 screen miss preserved, several levers accepted functionally, and offline/synthetic limits on safety, growth and OM. All source-task rows and evidence are consolidated in `docs/_evidence/memory-bench/202/closure.md`.
+- Implications: No Robust/BFC, reliability, revision or default claim follows. Plan 210 Tasks 1–5 must import and diagnose every row, run applicable development measurements before its freeze and preserve incomplete usage, cache incompatibility and calibration limits; Tasks 9–10 own independent acceptance and claims. Existing Task 5 deferred cohorts/frozen rules remain mandatory. This is pre-0.13.0 work, not a post-release deferral.
+
+## Resolve conditional fact extraction and F4 in plan 210
+
+- Section: Further Actions
+- Priority: P1
+- Source: plans/202-Phase-11-Part-O12-Memory-Robustness-And-Recall-Beyond-Full-Context.md
+- What: Plan 210 Tasks 1/3/5 own Task 17's residual state/aggregation diagnosis after read-time fixes using valid ingestion, delivered evidence and oracle/read-time controls. Only complete attribution of ≥5% irrecoverable failures permits the original minimal extractor repair and separately named opt-in facts preset, with the original reliability, cache-adjusted cost, citations, scope/consent and no-harm bars. Incomplete attribution leaves it unbuilt and F4 unresolved; Task 6 records the disposition before Task 8 freezes the product.
+- Why: Task 17 was deferred without implementation, not shown unnecessary. Missing evidence must neither justify a new write-path model call nor disappear because the ledger only enumerates installed features. No held-out result may trigger this build condition.
+
+## Finish memory acceptance on the final product
+
+- Section: Further Actions
+- Priority: P1
+- Source: plans/202-Phase-11-Part-O12-Memory-Robustness-And-Recall-Beyond-Full-Context.md
+- What: Execute 207 → 208 → 209 → 210. Plan 210 audits/removes unjustified mechanisms, measures outstanding development targets, freezes the candidate, reruns safety/growth, then runs the single held-out acceptance and chooses revisions/defaults/claims under the existing gates and frozen criteria.
+- Why: Work-outcome evaluation in 209 complements robustness QA and does not replace its suites, model/provider coverage, ability veto or cache/cost requirements. Accept the product that will ship, after removals, without spending held-out data during development.
+
+## Restore inherited plan 202 closure checks before release
+
+- Section: Further Actions
+- Priority: P1
+- Source: plans/202-Phase-11-Part-O12-Memory-Robustness-And-Recall-Beyond-Full-Context.md
+- What: Plan 210 verification prerequisites own Task 5's manifest test refusing the existing dirty candidate checkout and the host after-forget test matching its echoed query. Release-path plans 185/186 require reviewed Ollama Cloud/Kilo compatibility baselines and resolved kernel size/export budgets. Repeat the affected checks after the owning repairs.
+- Why: Fresh closure verification reproduced these inherited blockers; closing by owner disposition does not mean acceptance or release gates passed. Exact results are in `docs/_evidence/memory-bench/202/closure-verification.json`. The initial fabric timing failure passed on an isolated rerun; 29 PostgreSQL tests remain skipped in the closure run.

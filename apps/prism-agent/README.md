@@ -116,6 +116,14 @@ injects recalled exchanges for the turn's task, enables `memory.recall`/`memory.
 write-path model or embedding call; retrieval is lexical. `memory.recall` and `memory.read` join the
 research worker's prompt-free allow-list; `memory.forget` and the other writes still ask.
 
+`memory: "coding"` selects the coding preset: the same exchange archive and read tools, plus a
+standing-decision kind. A user turn with a lasting-rule cue (`from now on`, `always`, `we decided`,
+`use X instead of Y`, `no, do X`) is captured as a **proposed** decision and never silently active;
+the host UI asks once to confirm it, and use across two sessions can also activate it. Active project
+decisions take the pinned-core slice (decisions first, then preferences), and path-scoped decisions
+reach the turn through at most three path cues. The option makes no decision-model or other
+generative write call; a decision model is opt-in plan 202 Task 12.
+
 The markdown store lives under `<dirname(storePath)>/memory`, inside the host's data directory, and
 the fabric jails it to that `tools.root`. Exchanges are shared by every session on one store: the
 fabric takes its tenant from `scopes.tenantId` (default `prism`) and its user scope from a fixed

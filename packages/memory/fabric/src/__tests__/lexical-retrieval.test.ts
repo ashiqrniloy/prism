@@ -201,16 +201,86 @@ describe("memory.recall tool: multi-query, snippets, budget", () => {
     assert.equal((tight.value as { hits: unknown[] }).hits.length, 1, "the best hit is always returned");
   });
 
-  it("memory_recall_weak_result_hint", async () => {
+  it("memory_recall_empty_and_weak_results_abstain", async () => {
     const memory = lexicalMemory();
     const fabric = createMemoryFabric({ memory, consolidate: false });
     await fabric.remember({ kind: "fact", content: "canary rollout protects deploys" });
     const recall = fabric.tools().find((definition) => definition.name === "memory.recall")!;
     const empty = (await recall.execute({ query: "kubernetes helm" } as JsonObject, toolContext)) as ToolResult;
-    assert.match(okText(empty), /^no match in any kind/);
+    assert.match(okText(empty), /^no matching memory/);
     assert.deepEqual((empty.value as { unmatchedTerms: string[] }).unmatchedTerms, ["kubernete", "helm"]);
     const weak = (await recall.execute({ query: "canary billing auth" } as JsonObject, toolContext)) as ToolResult;
-    assert.equal((weak.value as { hits: unknown[] }).hits.length, 1, "a weak-but-matching hit is returned so the agent can judge it");
-    assert.match(okText(weak), /try synonyms/i);
+    assert.equal((weak.value as { hits: unknown[] }).hits.length, 0, "a weak-only result is an abstention, not a guess");
+    assert.match(okText(weak), /^no matching memory for: canary billing auth; scopes: project$/);
+    assert.deepEqual((weak.value as { unmatchedTerms: string[] }).unmatchedTerms, ["canary", "bill", "auth"]);
+  });
+
+  it("recall_summary_counts_sessions_and_pages", async () => {
+    const memory = lexicalMemory();
+    const fabric = createMemoryFabric({ memory, consolidate: false });
+    for (let index = 0; index < 7; index += 1) {
+      await fabric.remember({
+        kind: "fact",
+        content: `needle item ${index}`,
+        session: `s${index % 3}`,
+        tRef: `2026-01-0${index + 1}T00:00:00.000Z`,
+      });
+    }
+    const recall = fabric.tools().find((definition) => definition.name === "memory.recall")!;
+    assert.match(recall.description ?? "", /list the instances and their ids before counting or totalling/);
+    const first = (await recall.execute({ query: "needle", topK: 2 } as JsonObject, toolContext)) as ToolResult;
+    const firstText = okText(first);
+    assert.match(
+      firstText,
+      /^7 matches in 3 sessions \(2026-01-01…2026-01-07\); showing 2; 5 more not shown; page with \{ query: "needle", page: 1 \}\./,
+    );
+    assert.match(firstText, /Sessions: s0×3 \(2026-01-01…2026-01-07\), s1×2 \(2026-01-02…2026-01-05\), s2×2 \(2026-01-03…2026-01-06\)\./);
+    const firstIds = (first.value as { hits: Array<{ id: string }> }).hits.map((hit) => hit.id);
+    assert.equal(firstIds.length, 2);
+    const second = (await recall.execute({ query: "needle", topK: 2, page: 1 } as JsonObject, toolContext)) as ToolResult;
+    assert.match(okText(second), /showing 2; 5 more not shown; page with \{ query: "needle", page: 2 \}\./);
+    const secondIds = (second.value as { hits: Array<{ id: string }> }).hits.map((hit) => hit.id);
+    assert.equal(secondIds.length, 2);
+    assert.deepEqual(
+      firstIds.filter((id) => secondIds.includes(id)),
+      [],
+    );
+    await assert.rejects(
+      async () => recall.execute({ query: "needle", topK: 2, page: 16 } as JsonObject, toolContext),
+      /outside the 32-hit recall window/,
+    );
+  });
+
+  it("summary_fits_rendered_token_budget", async () => {
+    const memory = lexicalMemory();
+    const fabric = createMemoryFabric({ memory, consolidate: false });
+    for (let index = 0; index < 12; index += 1) {
+      await fabric.remember({ kind: "fact", content: `needle ${index} ${"filler ".repeat(120)}`, session: `s${index % 4}` });
+    }
+    const recall = fabric.tools().find((definition) => definition.name === "memory.recall")!;
+    const result = (await recall.execute({ query: "needle", topK: 12, budget: 1200 } as JsonObject, toolContext)) as ToolResult;
+    const value = result.value as { summary?: string; hits: unknown[] };
+    assert.ok(value.summary, "the summary is present");
+    assert.ok(Math.ceil(value.summary!.length / 4) <= 200, "the summary stays within 200 rendered tokens");
+    const rendered = okText(result)
+      .split("\n")
+      .filter((line) => line.includes("matched=["))
+      .reduce((sum, line) => sum + Math.ceil(line.length / 4), 0);
+    assert.ok(rendered + Math.ceil(value.summary!.length / 4) <= 1200, "summary and snippets share the recall budget");
+  });
+
+  it("empty_recall_reports_terms_and_scopes", async () => {
+    const memory = lexicalMemory();
+    const fabric = createMemoryFabric({
+      memory,
+      scopes: [
+        { level: "project", memory },
+        { level: "user", memory },
+      ],
+      consolidate: false,
+    });
+    const recall = fabric.tools().find((definition) => definition.name === "memory.recall")!;
+    const output = okText((await recall.execute({ query: "kubernetes helm" } as JsonObject, toolContext)) as ToolResult);
+    assert.equal(output, "no matching memory for: kubernetes helm; scopes: project, user");
   });
 });

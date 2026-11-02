@@ -3,7 +3,9 @@ import {
   type ContextBlock,
   type ContextDraft,
   type HookContext,
+  type JsonObject,
   type Message,
+  type SessionContext,
   type SessionEntry,
   withContextBlocks,
 } from "@arnilo/prism";
@@ -18,12 +20,14 @@ import {
 } from "@arnilo/prism-memory-core";
 import { foldObservationalMemoryLedger } from "@arnilo/prism-memory-observational";
 import type { MemoryFabricInjectConfig } from "./config.js";
+import type { FabricDecisions } from "./decisions.js";
 import { coreCandidateRows, type FabricCore } from "./delivery/core.js";
 import type { FabricCueDuplicate, FabricCues } from "./delivery/cues.js";
 import { type FabricDirectoryHandle, memoryRetractionVersion, renderFabricDirectory } from "./directory.js";
-import { fitInjection } from "./excerpt.js";
+import { fitInjection, PREAMBLE } from "./excerpt.js";
+import { conceptInPlay, conceptPointerLine } from "./ontology/pointer.js";
 import { isActiveNote } from "./lifecycle/index.js";
-import type { MemoryFabric, MemoryFabricRecallOptions } from "./types.js";
+import { isMemoryDecisionDeliverable, type MemoryFabric, type MemoryFabricRecallOptions, type MemoryNoteHit } from "./types.js";
 
 /** Tracks notes shown to the model in each session and records citations in assistant text. */
 export interface FabricCitationTracker {
@@ -33,6 +37,13 @@ export interface FabricCitationTracker {
   observe(sessionId: string, textChunk: string): void;
   /** Return all cited ids for the session (only ids previously shown count). */
   cited(sessionId: string): readonly string[];
+  /** Record notes the model received by `memory.read`: they may be cited, but a read is not a retrieval count. */
+  received(sessionId: string, noteIds: readonly string[]): void;
+  /**
+   * Take the answering turn's cited set, or `undefined` when it cited fewer than two notes (plan 207 Task 4): the
+   * ids the model received and then cited together, plus the session's turn index. Called once per completed turn.
+   */
+  takeCoRead(sessionId: string): { readonly ids: readonly string[]; readonly turn: number } | undefined;
   /** Take the retrieval counts accumulated since the previous call; diagnostics only, never a use. */
   takeRetrievals(sessionId: string): Readonly<Record<string, number>>;
   /** Clear tracking state for a session. */
@@ -40,21 +51,44 @@ export interface FabricCitationTracker {
 }
 
 export function createFabricCitationTracker(): FabricCitationTracker {
-  const sessions = new Map<
-    string,
-    { readonly shown: Set<string>; readonly cited: Set<string>; readonly retrievals: Map<string, number>; suffix: string }
-  >();
+  interface TrackerState {
+    readonly shown: Set<string>;
+    readonly cited: Set<string>;
+    /** Ids cited since the last completed turn: the co-read candidate set. */
+    readonly turnCited: Set<string>;
+    readonly retrievals: Map<string, number>;
+    suffix: string;
+    turns: number;
+  }
+  const sessions = new Map<string, TrackerState>();
+  const stateFor = (sessionId: string): TrackerState => {
+    let state = sessions.get(sessionId);
+    if (!state) {
+      state = { shown: new Set(), cited: new Set(), turnCited: new Set(), retrievals: new Map(), suffix: "", turns: 0 };
+      sessions.set(sessionId, state);
+    }
+    return state;
+  };
   return {
     show(sessionId: string, noteIds: readonly string[]): void {
-      let state = sessions.get(sessionId);
-      if (!state) {
-        state = { shown: new Set(), cited: new Set(), retrievals: new Map(), suffix: "" };
-        sessions.set(sessionId, state);
-      }
+      const state = stateFor(sessionId);
       for (const id of noteIds) {
         state.shown.add(id);
         state.retrievals.set(id, (state.retrievals.get(id) ?? 0) + 1);
       }
+    },
+    received(sessionId: string, noteIds: readonly string[]): void {
+      const state = stateFor(sessionId);
+      for (const id of noteIds) state.shown.add(id);
+    },
+    takeCoRead(sessionId: string) {
+      const state = sessions.get(sessionId);
+      if (!state) return undefined;
+      const turn = state.turns;
+      state.turns += 1;
+      const ids = [...state.turnCited];
+      state.turnCited.clear();
+      return ids.length >= 2 ? { ids, turn } : undefined;
     },
     observe(sessionId: string, textChunk: string): void {
       const state = sessions.get(sessionId);
@@ -64,6 +98,7 @@ export function createFabricCitationTracker(): FabricCitationTracker {
         const id = match[1]!;
         if (state.shown.has(id)) {
           state.cited.add(id);
+          state.turnCited.add(id);
         }
       }
       state.suffix = text.slice(-14);
@@ -250,6 +285,72 @@ async function coreStillShown(
   }
 }
 
+/** Adaptive passive delivery: pointer cards by default, full notes for a session that does not use tools. */
+export type FabricDeliveryMode = "pointers" | "excerpts";
+
+export interface FabricDeliveryState {
+  readonly mode: FabricDeliveryMode;
+  /** Consecutive user turns with a partial-selection cue since the last `memory.*` call. */
+  readonly cueTurns: number;
+  /** The persisted user entry that last advanced the counter; rebuilds of that turn are idempotent. */
+  readonly turn?: string;
+  readonly reason: string;
+}
+
+/** The package session-state slice this state machine needs. */
+export interface FabricDeliveryStateStore {
+  get(session: SessionContext): JsonObject | undefined;
+  set(session: SessionContext, value: JsonObject): Promise<void>;
+}
+
+const PARTIAL_SELECTION_CUE =
+  /\b(?:all|any|compare|count|each|earliest|every|first|how many|last|latest|least|list|most|number of|oldest|order|timeline|when|which|who)\b/iu;
+
+/** Whether the turn asks for a selection, list, count, comparison, or time ordering. */
+export function hasPartialSelectionCue(text: string): boolean {
+  return PARTIAL_SELECTION_CUE.test(text);
+}
+
+/** Parse persisted delivery state; unknown or inconsistent fields fall back to pointer delivery. */
+export function readFabricDeliveryState(raw: JsonObject | undefined): FabricDeliveryState {
+  const cueTurns = typeof raw?.cueTurns === "number" && Number.isFinite(raw.cueTurns) ? Math.max(0, Math.floor(raw.cueTurns)) : 0;
+  const mode: FabricDeliveryMode = raw?.mode === "excerpts" && cueTurns >= 2 ? "excerpts" : "pointers";
+  const reason = typeof raw?.reason === "string" ? raw.reason : mode === "excerpts" ? "no memory tool use after 2 cued turns" : "start";
+  const turn = typeof raw?.turn === "string" ? raw.turn : undefined;
+  return { mode, cueTurns, reason, ...(turn === undefined ? {} : { turn }) };
+}
+
+/**
+ * Advance the per-session state machine at most once per persisted user turn. The second cued turn
+ * without a `memory.*` call switches this turn to excerpts; a tool call resets the counter.
+ */
+export async function noteFabricDeliveryTurn(
+  store: FabricDeliveryStateStore,
+  session: SessionContext,
+  turn: string,
+  text: string,
+): Promise<FabricDeliveryMode> {
+  const current = readFabricDeliveryState(store.get(session));
+  if (current.turn === turn) return current.mode;
+  const cueTurns = current.cueTurns + (hasPartialSelectionCue(text) ? 1 : 0);
+  const mode: FabricDeliveryMode = cueTurns >= 2 ? "excerpts" : "pointers";
+  const reason =
+    mode === "excerpts" ? "no memory tool use after 2 cued turns" : cueTurns > 0 ? `cued turn ${cueTurns} of 2` : current.reason;
+  await store.set(session, { mode, cueTurns, turn, reason });
+  return mode;
+}
+
+/** A `memory.*` tool call switches the session back to pointer delivery for later turns. */
+export async function resetFabricDeliveryState(store: FabricDeliveryStateStore, session: SessionContext): Promise<void> {
+  const current = readFabricDeliveryState(store.get(session));
+  await store.set(session, {
+    mode: "pointers",
+    cueTurns: 0,
+    ...(current.turn === undefined ? {} : { turn: current.turn }),
+    reason: "memory tool used",
+  });
+}
+
 /** One session's tail: the topic-injected lines for the current user turn, plus the cues added to it. */
 interface SessionTail {
   readonly key: string;
@@ -260,6 +361,8 @@ interface SessionTail {
   /** Cue lines already added for this user turn, kept so a rebuild of the same turn is byte-identical. */
   readonly cueLines: string[];
   readonly cueIds: string[];
+  /** The tail already carries its one concept pointer for this turn; a path cue adds no second. */
+  readonly concept: boolean;
 }
 
 export function createFabricContext(
@@ -273,6 +376,8 @@ export function createFabricContext(
   core?: FabricCore,
   cues?: FabricCues,
   memories: readonly Memory[] = [memory],
+  delivery?: FabricDeliveryStateStore,
+  decisions?: FabricDecisions,
 ) {
   const cache = new Map<string, SessionTail>();
   const snapshots = new Map<string, { version: number; blocks: readonly ContextBlock[]; ids: readonly string[] }>();
@@ -331,16 +436,19 @@ export function createFabricContext(
       const user = [...entries].reverse().find((entry) => entry.kind === "message" && entry.message?.role === "user");
       // No stable persisted turn identity means no passive recall and no per-turn cue budget.
       if (!user) return withTail(prefix, tailBlocks);
+      let turnText: string | undefined = latestUserText(draft.messages) ?? contentToText(user.message!.content);
       let tail = cache.get(sessionId);
       if (tail === undefined || tail.key !== user.id) {
         let lines: string[] = [];
         let ids: string[] = [];
         let coverageById: Record<string, number> = {};
+        let conceptPointer: MemoryNoteHit | undefined;
         if (inject) {
           const latest =
             (typeof options.query === "function" ? options.query({ messages: draft.messages }) : options.query) ??
             latestUserText(draft.messages) ??
             contentToText(user.message!.content);
+          turnText = latest;
           const period = recallPeriod(latest.slice(0, 2000), user.timestamp);
           const state = foldObservationalMemoryLedger(entries).taskState;
           const plan = planText(draft.messages) || planText(entries.flatMap((entry) => (entry.message ? [entry.message] : [])));
@@ -360,10 +468,38 @@ export function createFabricContext(
                 ...(touchedPaths === undefined ? {} : { touchedPaths: touchedPaths(sessionId) }),
               })
             : { hits: [] };
+          let fullTextScore = inject.fullTextScore;
+          if (delivery !== undefined) {
+            const mode = await noteFabricDeliveryTurn(delivery, context.session!, user.id, contentToText(user.message!.content));
+            if (mode === "excerpts") fullTextScore = 0;
+          }
           const duplicate = visibleMemory(draft, entries);
           const asOfMs = period.options.asOf ? new Date(period.options.asOf).getTime() : Date.now();
           // A candidate, trust-flagged, or inactive/archived note is never injected passively; only tool recall sees it.
-          const eligible = result.hits.filter((hit) => isActiveNote(hit, { asOfMs }) && (hit.flags?.length ?? 0) === 0 && !duplicate(hit));
+          let eligible = result.hits.filter(
+            (hit) => isActiveNote(hit, { asOfMs }) && (hit.flags?.length ?? 0) === 0 && isMemoryDecisionDeliverable(hit) && !duplicate(hit),
+          );
+          // Concepts are pulled, not pushed (plan 207 Task 4): at most one, as a pointer, when it is the top fused hit and
+          // its subject is in play. No concept text ever enters the passive block.
+          const top = eligible[0];
+          if (
+            top !== undefined &&
+            top.kind === "concept" &&
+            conceptInPlay(top, lexicalTerms(latest), touchedPaths === undefined ? [] : touchedPaths(sessionId))
+          ) {
+            conceptPointer = top;
+          }
+          eligible = eligible.filter((hit) => hit.kind !== "concept");
+          // P4/P3 share one call (plan 202 Task 12): skip injection when memory is clearly not needed,
+          // and drop only candidates the model places clearly below the relevance band.
+          if (decisions !== undefined && (decisions.enabled("P4") || decisions.enabled("P3")) && eligible.length > 0) {
+            const gate = await decisions.evaluateTurn({
+              text: latest,
+              candidates: eligible.slice(0, 32).map((hit) => ({ id: hit.id, text: hit.content })),
+            });
+            if (gate.needed === false) eligible = [];
+            else if (gate.irrelevant !== undefined) eligible = eligible.filter((hit) => !gate.irrelevant!.has(hit.id));
+          }
           // Evidence-sized delivery: whole notes by rank up to the budget, and the best hit always
           // shown (as an excerpt when it alone exceeds the budget) so the budget cannot hide it.
           const { hits, lines: semanticLines } = fitInjection(
@@ -372,15 +508,24 @@ export function createFabricContext(
             inject.budgetTokens ?? 4000,
             inject.topK ?? 12,
             eligible.length,
+            inject.minScore,
+            fullTextScore,
           );
-          if (hits.length > 0) {
+          if (semanticLines.length > 0) {
             lines = semanticLines;
             ids = hits.map((hit) => hit.id);
             coverageById = Object.fromEntries(hits.filter((hit) => hit.coverage !== undefined).map((hit) => [hit.id, hit.coverage!]));
-            tracker.show(sessionId, ids);
           }
+          if (conceptPointer !== undefined) {
+            lines =
+              lines.length > 0
+                ? [...lines, conceptPointerLine(conceptPointer.id, conceptPointer.subject)]
+                : [PREAMBLE, conceptPointerLine(conceptPointer.id, conceptPointer.subject)];
+            ids = [...ids, conceptPointer.id];
+          }
+          if (ids.length > 0) tracker.show(sessionId, ids);
         }
-        tail = { key: user.id, lines, ids, coverageById, cueLines: [], cueIds: [] };
+        tail = { key: user.id, lines, ids, coverageById, cueLines: [], cueIds: [], concept: conceptPointer !== undefined };
         cache.set(sessionId, tail);
       }
       // Path cues arrive after the topic block and join the same tail block; they show once per session.
@@ -390,7 +535,9 @@ export function createFabricContext(
           : await cues.render(context.session!, touchedPaths(sessionId), {
               turnKey: user.id,
               exclude: () => new Set([...pinned.ids, ...tail.ids, ...tail.cueIds]),
+              conceptTaken: tail.concept,
               duplicate: () => visibleMemory(draft, entries),
+              ...(turnText === undefined ? {} : { query: turnText }),
               signal: context.signal,
             });
       if (cue) {

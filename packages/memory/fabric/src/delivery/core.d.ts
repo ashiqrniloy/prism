@@ -8,64 +8,75 @@
  * bounded `get` for the text of the notes that fit the budget.
  */
 import { type SecretRedactor } from "@arnilo/prism";
-import { type Memory, type MemoryVectorMetadataPage, type MemoryVectorMetadataRow, type VectorScanMetadataQuery } from "@arnilo/prism-memory-core";
+import {
+  type Memory,
+  type MemoryVectorMetadataPage,
+  type MemoryVectorMetadataRow,
+  type VectorScanMetadataQuery,
+} from "@arnilo/prism-memory-core";
 import { type StorageWeights } from "../lifecycle/index.js";
 import { type MemoryNoteMetadata } from "../types.js";
 /** Scope levels the core draws from, in the order the block lists them. */
 export type FabricCoreScope = "user" | "project";
 export interface MemoryFabricCoreConfig {
-    /** Ceiling on the rendered block. Default 600, at most {@link HARD_CORE_TOKENS}. */
-    readonly maxTokens?: number;
-    /** Scopes to include. Default both; `user` always renders first. */
-    readonly scopes?: readonly FabricCoreScope[];
+  /** Ceiling on the rendered block. Default 600, at most {@link HARD_CORE_TOKENS}. */
+  readonly maxTokens?: number;
+  /** Scopes to include. Default both; `user` always renders first. */
+  readonly scopes?: readonly FabricCoreScope[];
 }
 export interface ResolvedFabricCoreOptions {
-    readonly maxTokens: number;
-    readonly scopes: readonly FabricCoreScope[];
+  readonly maxTokens: number;
+  readonly scopes: readonly FabricCoreScope[];
 }
 export declare const HARD_CORE_TOKENS = 1000;
 export declare const DEFAULT_CORE_OPTIONS: ResolvedFabricCoreOptions;
-export declare function resolveFabricCoreOptions(input: boolean | MemoryFabricCoreConfig | undefined, defaultOn: boolean): false | ResolvedFabricCoreOptions;
+export declare function resolveFabricCoreOptions(
+  input: boolean | MemoryFabricCoreConfig | undefined,
+  defaultOn: boolean,
+): false | ResolvedFabricCoreOptions;
 /** One active scope the core reads, and the memory that holds it. */
 export interface FabricCoreScopeBinding {
-    readonly level: FabricCoreScope;
-    readonly memory: Memory;
+  readonly level: FabricCoreScope;
+  readonly memory: Memory;
 }
 export interface CreateFabricCoreOptions {
-    readonly scopes: readonly FabricCoreScopeBinding[];
-    readonly options: ResolvedFabricCoreOptions;
-    /** The store's metadata scan; the core needs no text from a listing, only ids and metadata. */
-    readonly scanMetadata: (query: VectorScanMetadataQuery) => Promise<MemoryVectorMetadataPage>;
-    readonly storageWeights?: StorageWeights;
-    readonly redactor?: SecretRedactor;
-    readonly secrets?: readonly (string | undefined)[];
-    /**
-     * Write a scope's derived `core.md` (the markdown store has one; the others have no file layout).
-     * A failure is reported once and never fails the turn.
-     */
-    readonly writeFile?: (scope: {
-        readonly tenantId: string;
-        readonly resourceId: string;
-    }, content: string) => Promise<void>;
-    readonly notify?: (message: string) => void;
+  readonly scopes: readonly FabricCoreScopeBinding[];
+  readonly options: ResolvedFabricCoreOptions;
+  /** The store's metadata scan; the core needs no text from a listing, only ids and metadata. */
+  readonly scanMetadata: (query: VectorScanMetadataQuery) => Promise<MemoryVectorMetadataPage>;
+  readonly storageWeights?: StorageWeights;
+  readonly redactor?: SecretRedactor;
+  readonly secrets?: readonly (string | undefined)[];
+  /**
+   * Write a scope's derived `core.md` (the markdown store has one; the others have no file layout).
+   * A failure is reported once and never fails the turn.
+   */
+  readonly writeFile?: (
+    scope: {
+      readonly tenantId: string;
+      readonly resourceId: string;
+    },
+    content: string,
+  ) => Promise<void>;
+  readonly notify?: (message: string) => void;
 }
 /** The rendered block, without the context-block envelope the caller adds. */
 export interface FabricCoreBlock {
-    readonly content: string;
-    readonly tokens: number;
-    /** The notes the block shows, so later tiers can deduplicate against it. */
-    readonly itemIds: readonly string[];
+  readonly content: string;
+  readonly tokens: number;
+  /** The notes the block shows, so later tiers can deduplicate against it. */
+  readonly itemIds: readonly string[];
 }
 export interface FabricCore {
-    /** The cached block; recomputed only after a write bumped a scope's version. */
-    block(signal?: AbortSignal): Promise<FabricCoreBlock | undefined>;
-    /** Force the next `block` to recompute (writes that bypass the memory instance). */
-    invalidate(): void;
+  /** The cached block; recomputed only after a write bumped a scope's version. */
+  block(signal?: AbortSignal): Promise<FabricCoreBlock | undefined>;
+  /** Force the next `block` to recompute (writes that bypass the memory instance). */
+  invalidate(): void;
 }
 interface CoreLine {
-    readonly id: string;
-    readonly line: string;
-    readonly tokens: number;
+  readonly id: string;
+  readonly line: string;
+  readonly tokens: number;
 }
 /** The heading a scope's core line starts with; a person sees the same text in `core.md`. */
 export declare function coreHeading(label: string): string;
@@ -73,28 +84,36 @@ export declare function coreHeading(label: string): string;
  * Selection and order for one scope: verified, active, unflagged notes of the core kinds, pinned
  * first, then descending S, ties by id so the order is stable across rebuilds.
  */
-export declare function coreCandidateRows(rows: readonly MemoryVectorMetadataRow[], weights?: StorageWeights): readonly {
-    readonly id: string;
-    readonly metadata: MemoryNoteMetadata;
-    readonly storage: number;
+export declare function coreCandidateRows(
+  rows: readonly MemoryVectorMetadataRow[],
+  weights?: StorageWeights,
+): readonly {
+  readonly id: string;
+  readonly metadata: MemoryNoteMetadata;
+  readonly storage: number;
 }[];
 /** One scope's core body and the budget its notes spend; `undefined` when the scope holds nothing. */
 export interface FabricCoreScopeRender {
-    readonly level: FabricCoreScope;
-    readonly label: string;
-    readonly scope: {
-        readonly tenantId: string;
-        readonly resourceId: string;
-    };
-    readonly lines: readonly CoreLine[];
-    readonly content?: string;
-    readonly tokens: number;
-    readonly itemIds: readonly string[];
+  readonly level: FabricCoreScope;
+  readonly label: string;
+  readonly scope: {
+    readonly tenantId: string;
+    readonly resourceId: string;
+  };
+  readonly lines: readonly CoreLine[];
+  readonly content?: string;
+  readonly tokens: number;
+  readonly itemIds: readonly string[];
 }
 /** One scope's `core.md` body: the heading plus the note lines, exactly what the model reads of it. */
-export declare function renderCore(label: string, lines: readonly CoreLine[]): {
-    readonly content: string;
-    readonly tokens: number;
-} | undefined;
+export declare function renderCore(
+  label: string,
+  lines: readonly CoreLine[],
+):
+  | {
+      readonly content: string;
+      readonly tokens: number;
+    }
+  | undefined;
 export declare function createFabricCore(input: CreateFabricCoreOptions): FabricCore;
 export {};

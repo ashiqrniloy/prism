@@ -13,6 +13,7 @@ import {
   runLifecycle,
   sessionDiagnostics,
   summarizeLifecycle,
+  summarizePromotion,
 } from "./suite.mjs";
 
 test("lifecycle_persona_is_seeded_and_keeps_hidden_answers_out_of_probes", async () => {
@@ -312,4 +313,24 @@ test("lifecycle_attribution_records_ids_not_text", () => {
     { channel: "write", tool: "memory.insert", scope: "project", kind: "fact", keyHash: "a".repeat(64), textHash: "b".repeat(64) },
   ]);
   assert.ok(!JSON.stringify(grade).includes("HIDDEN_NOTE_TEXT"));
+});
+
+test("promotion_summary_counts_only_promotion_writes_and_their_later_use", () => {
+  const notes = new Map([
+    ["a", { id: "a", generatedBy: "promotion", kind: "fact", status: "candidate", uses: 0 }],
+    ["b", { id: "b", generatedBy: "promotion", kind: "fact", status: "verified", uses: 2 }],
+    ["c", { id: "c", generatedBy: "agent", kind: "fact", status: "verified", uses: 1 }],
+    ["d", { id: "d", generatedBy: "promotion", kind: "file", status: "verified", uses: 1 }],
+  ]);
+  assert.deepEqual(summarizePromotion(2, notes), {
+    sessions: 2,
+    promoted: 2,
+    notesPerSession: 1,
+    verified: 1,
+    verifiedShare: 0.5,
+    used: 1,
+    usedShare: 0.5,
+    candidate: 1,
+    archived: 0,
+  });
 });

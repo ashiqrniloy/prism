@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-31T17:45:31.587Z",
+  "generatedAt": "2026-11-01T06:56:36.955Z",
   "root": {
     "name": "@arnilo/prism",
     "version": "0.13.0"
@@ -44,6 +44,7 @@
     "@arnilo/prism-provider-commandcode": "0.13.0",
     "@arnilo/prism-provider-kilo": "0.13.0",
     "@arnilo/prism-provider-litellm": "0.13.0",
+    "@arnilo/prism-provider-ollama-cloud": "0.13.0",
     "@arnilo/prism-store-jsonl": "0.13.0",
     "@arnilo/prism-store-codecs": "0.13.0",
     "@arnilo/prism-store-sqlite": "0.13.0",
@@ -57,12 +58,12 @@
     "@arnilo/prism-tools-research": "0.13.0"
   },
   "counts": {
-    "publishable": 50,
-    "workspace": 49,
-    "provider": 10,
+    "publishable": 51,
+    "workspace": 50,
+    "provider": 11,
     "prismFamily": 1,
     "capability": 38,
-    "codeWithPeer": 49,
+    "codeWithPeer": 50,
     "pureManifest": 0
   },
   "providers": [
@@ -72,6 +73,7 @@
     "@arnilo/prism-provider-laya",
     "@arnilo/prism-provider-liquid",
     "@arnilo/prism-provider-litellm",
+    "@arnilo/prism-provider-ollama-cloud",
     "@arnilo/prism-provider-openai-codex",
     "@arnilo/prism-provider-opencode-go",
     "@arnilo/prism-provider-openrouter",

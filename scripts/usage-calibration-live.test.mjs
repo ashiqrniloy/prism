@@ -20,8 +20,8 @@
  * Gating: `PRISM_LIVE_PROVIDER_TESTS=1` plus the vendor key; without either the
  * leg skips with a reason (skip-not-fail, strict mode fails the run not the
  * suite). A rejected credential fails the leg — a release gate wants to know.
- * Credentials come from the environment (`scripts/live.env` through the matrix
- * runner) and never appear in the evidence, which carries env var *names* only.
+ * Credentials come from the environment (`~/.config/prism/live.env` through the
+ * matrix runner) and never appear in the evidence, which carries env var *names* only.
  *
  * Registered as matrix suite `calibration/vendor-count-tokens`; not in
  * `GATE_FILES` and not under the root `dist/__tests__/*.test.js` glob, so the

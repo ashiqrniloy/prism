@@ -4,7 +4,14 @@ import { readdir, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHashEmbedder, type Memory } from "@arnilo/prism-memory-core";
-import { createMemory, createMemoryFabric, encodeMemoryNoteMetadata, type MemoryFabric, type MemoryFabricScopeBinding, parseMemoryNoteMetadata } from "../../index.js";
+import {
+  createMemory,
+  createMemoryFabric,
+  encodeMemoryNoteMetadata,
+  type MemoryFabric,
+  type MemoryFabricScopeBinding,
+  parseMemoryNoteMetadata,
+} from "../../index.js";
 import { MEMORY_NOTE_METADATA_KEY } from "../../types.js";
 import type { ExtractedNote } from "../extract.js";
 import type { ConsolidationCandidate } from "../gather.js";
@@ -287,5 +294,50 @@ describe("consolidation writes", () => {
     assert.deepEqual(offenders, []);
     const exportsText = await readFile(join(root, "exports.ts"), "utf8");
     assert.ok(!exportsText.includes("runFabricPromotion"), "the runner is not exported");
+  });
+});
+
+// Plan 207 Task 3: the extractor's subject reaches the stored note.
+describe("consolidation writes carry the extractor's subject", () => {
+  it("shown_subject_is_stored_and_new_is_not", async () => {
+    const { fabric, project } = scoped();
+    await writeConsolidationNotes({
+      remember: fabric.remember,
+      memory: project,
+      notes: [
+        accepted({ text: "The payments service retries with backoff.", kind: "fact", subject: "payments" }),
+        accepted({ text: "The ledger service batches nightly.", kind: "fact", subject: "new" }),
+      ],
+      sessionId: "s1",
+      pass: PASS,
+    });
+    const hits = (await fabric.recall("payments ledger service", { minSimilarity: 0 })).hits;
+    const byText = (needle: string) => hits.find((hit) => hit.content.includes(needle));
+    assert.equal((await metadataOf(project, byText("payments")!.id)).metadata.subject, "payments");
+    assert.equal(
+      (await metadataOf(project, byText("ledger")!.id)).metadata.subject,
+      undefined,
+      '"new" is a request for the concept pass, not a slug',
+    );
+  });
+
+  it("subject_is_not_carried_into_a_fallback_scope", async () => {
+    // Only the project scope is active, so a `user` note lands in the project: the user-scope slug must not follow it.
+    const project = memory(PROJECT_RESOURCE);
+    const bindings: MemoryFabricScopeBinding[] = [{ level: "project", memory: project }];
+    const fabric = createMemoryFabric({ memory: project, scopes: bindings, consolidate: false });
+    await writeConsolidationNotes({
+      remember: fabric.remember,
+      memory: project,
+      scopes: bindings,
+      notes: [
+        accepted({ text: "The user prefers terse replies from payments tooling.", kind: "preference", scope: "user", subject: "payments" }),
+      ],
+      sessionId: "s1",
+      pass: PASS,
+    });
+    const [hit] = (await fabric.recall("terse replies", { minSimilarity: 0 })).hits;
+    assert.ok(hit);
+    assert.equal((await metadataOf(project, hit.id)).metadata.subject, undefined);
   });
 });

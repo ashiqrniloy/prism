@@ -5,6 +5,7 @@ import type { Memory, MemoryTagCount } from "@arnilo/prism-memory-core";
 import { MemoryScopeError, MemoryValidationError, redactJson } from "@arnilo/prism-memory-core";
 import { readFabricBlock } from "./blocks.js";
 import type { FabricFileJail } from "./files.js";
+import type { SubjectListing } from "./ontology/index.js";
 import { MEMORY_FABRIC_WORKING_KEY, type MemoryNoteKind } from "./types.js";
 
 /**
@@ -36,6 +37,9 @@ export const HARD_DIRECTORY_TOKENS = 500;
 const MAX_SCANNED_FILES = 1_000;
 const MAX_WALK_DEPTH = 6;
 const SNAPSHOT_TOPICS = 200;
+/** Subjects one scope's snapshot keeps, and the most its directory line names before the budget trims further. */
+const SNAPSHOT_SUBJECTS = 64;
+const DIRECTORY_SUBJECTS = 8;
 const DIRECTORY_NOTE_KINDS: readonly MemoryNoteKind[] = ["fact", "preference", "procedure", "file"];
 
 export function resolveFabricDirectoryOptions(
@@ -86,6 +90,8 @@ export interface FabricDirectoryScopeSnapshot {
   readonly level: string;
   readonly counts: Readonly<Partial<Record<MemoryNoteKind, number>>>;
   readonly topics: readonly MemoryTagCount[];
+  /** The scope's concepts (plan 207): how many, and the most used subjects first. Absent without concepts. */
+  readonly concepts?: { readonly count: number; readonly subjects: readonly string[] };
 }
 
 export interface FabricDirectorySnapshot {
@@ -125,6 +131,8 @@ export interface CreateFabricDirectoryOptions {
   readonly exclude?: (relativePath: string) => boolean;
   readonly redactor?: SecretRedactor;
   readonly secrets?: readonly (string | undefined)[];
+  /** The scope's subjects, most used first; the ontology tier supplies it, and without it no line is written. */
+  readonly concepts?: (level: string, signal: AbortSignal | undefined) => Promise<readonly SubjectListing[]>;
 }
 
 async function walkFiles(jail: FabricFileJail, exclude: (path: string) => boolean, signal: AbortSignal | undefined) {
@@ -180,14 +188,23 @@ export function createFabricDirectory(options: CreateFabricDirectoryOptions): Fa
     const [scopes, working, walked] = await Promise.all([
       Promise.all(
         memories.map(async ({ level, memory: scopeMemory }) => {
-          const [counts, topics] = await Promise.all([
+          const [counts, topics, concepts] = await Promise.all([
             optional(() => scopeMemory.countByKind(query), {} as Readonly<Record<string, number>>),
             optional(() => scopeMemory.topTags({ ...query, limit: SNAPSHOT_TOPICS }), [] as readonly MemoryTagCount[]),
+            options.concepts === undefined ? [] : optional(() => options.concepts!(level, signal), [] as readonly SubjectListing[]),
           ]);
           return {
             level,
             counts: Object.fromEntries(DIRECTORY_NOTE_KINDS.flatMap((kind) => (counts[kind] ? [[kind, counts[kind]]] : []))),
             topics: topics.map((topic) => ({ tag: redact(topic.tag), count: topic.count })),
+            ...(concepts.length === 0
+              ? {}
+              : {
+                  concepts: {
+                    count: concepts.length,
+                    subjects: concepts.slice(0, SNAPSHOT_SUBJECTS).map((entry) => redact(entry.subject)),
+                  },
+                }),
           } satisfies FabricDirectoryScopeSnapshot;
         }),
       ),
@@ -245,10 +262,27 @@ function countsSentence(counts: FabricDirectorySnapshot["counts"]): string | und
 }
 
 export function isFabricDirectoryEmpty(snapshot: FabricDirectorySnapshot): boolean {
-  return countsSentence(snapshot.counts) === undefined && snapshot.files.length === 0 && snapshot.blocks.length === 0;
+  return (
+    countsSentence(snapshot.counts) === undefined &&
+    snapshot.files.length === 0 &&
+    snapshot.blocks.length === 0 &&
+    !snapshot.scopes.some((scope) => scope.concepts !== undefined)
+  );
 }
 
-function renderLines(snapshot: FabricDirectorySnapshot, topics: number, files: number): string {
+/** `project concepts: 12; subjects: payments, deploy-pipeline, auth (+9)`, one line per scope that has concepts. */
+function conceptLines(snapshot: FabricDirectorySnapshot, subjects: number): string[] {
+  return snapshot.scopes.flatMap((scope) => {
+    const { concepts } = scope;
+    if (concepts === undefined) return [];
+    const named = concepts.subjects.slice(0, subjects);
+    if (named.length === 0) return [`${scope.level} concepts: ${concepts.count}`];
+    const rest = concepts.count - named.length;
+    return [`${scope.level} concepts: ${concepts.count}; subjects: ${named.join(", ")}${rest > 0 ? ` (+${rest})` : ""}`];
+  });
+}
+
+function renderLines(snapshot: FabricDirectorySnapshot, topics: number, files: number, subjects: number): string {
   const lines: string[] = [];
   if (snapshot.scopes.length > 1) {
     // One line per scope: counts and its own topics. Topic and file budgets are global.
@@ -282,6 +316,10 @@ function renderLines(snapshot: FabricDirectorySnapshot, topics: number, files: n
       );
     }
   }
+  const concepts = conceptLines(snapshot, subjects);
+  // Concepts over kinds the counts do not name (exchanges only) still need the pointer to the tool.
+  if (lines.length === 0 && concepts.length > 0) concepts[0] = `${concepts[0]}. Recall with memory.recall.`;
+  lines.push(...concepts);
   if (files > 0 && snapshot.files.length > 0) {
     const rest = snapshot.files.length - files;
     lines.push(
@@ -303,11 +341,14 @@ export function renderFabricDirectory(
   if (isFabricDirectoryEmpty(snapshot)) return undefined;
   let topics = Math.min(options.maxTopics, snapshot.topics.length);
   let files = Math.min(options.maxFiles, snapshot.files.length);
-  let content = renderLines(snapshot, topics, files);
-  while (Math.ceil(content.length / 4) > options.maxTokens && (topics > 0 || files > 0)) {
+  let subjects = DIRECTORY_SUBJECTS;
+  let content = renderLines(snapshot, topics, files, subjects);
+  // Files go first, then topics, then the subjects a concepts line names; its count always stays.
+  while (Math.ceil(content.length / 4) > options.maxTokens && (topics > 0 || files > 0 || subjects > 0)) {
     if (files >= topics && files > 0) files -= 1;
-    else topics -= 1;
-    content = renderLines(snapshot, topics, files);
+    else if (topics > 0) topics -= 1;
+    else subjects -= 1;
+    content = renderLines(snapshot, topics, files, subjects);
   }
   if (Math.ceil(content.length / 4) > options.maxTokens) content = content.slice(0, options.maxTokens * 4);
   return { content, tokens: Math.ceil(content.length / 4) };

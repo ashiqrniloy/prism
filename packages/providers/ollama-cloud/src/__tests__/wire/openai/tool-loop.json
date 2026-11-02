@@ -1,0 +1,101 @@
+[
+  {
+    "method": "POST",
+    "path": "/v1/chat/completions",
+    "requestBody": {
+      "model": "gemma4:31b",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Call get_weather for Paris. Use the tool."
+        }
+      ],
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "get_weather",
+            "description": "Get current weather for a city",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "city"
+              ]
+            }
+          }
+        }
+      ],
+      "stream": true,
+      "stream_options": {
+        "include_usage": true
+      }
+    },
+    "status": 200,
+    "contentType": "text/event-stream",
+    "responseBody": "data: {\"id\":\"chatcmpl-ollama-tool1\",\"object\":\"chat.completion.chunk\",\"created\":1762000010,\"model\":\"gemma4:31b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-ollama-tool1\",\"object\":\"chat.completion.chunk\",\"created\":1762000010,\"model\":\"gemma4:31b\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"call_tn83v5zc\",\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"arguments\":\"{\\\"city\\\":\\\"Paris\\\"}\"}}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-ollama-tool1\",\"object\":\"chat.completion.chunk\",\"created\":1762000010,\"model\":\"gemma4:31b\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"tool_calls\"}]}\n\ndata: {\"id\":\"chatcmpl-ollama-tool1\",\"object\":\"chat.completion.chunk\",\"created\":1762000010,\"model\":\"gemma4:31b\",\"choices\":[],\"usage\":{\"prompt_tokens\":68,\"completion_tokens\":15,\"total_tokens\":83,\"prompt_tokens_details\":{\"cached_tokens\":64}}}\n\ndata: [DONE]\n\n"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/chat/completions",
+    "requestBody": {
+      "model": "gemma4:31b",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Call get_weather for Paris. Use the tool."
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_tn83v5zc",
+              "type": "function",
+              "function": {
+                "name": "get_weather",
+                "arguments": "{\"city\":\"Paris\"}"
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_call_id": "call_tn83v5zc",
+          "content": "{\"tempC\":18,\"sky\":\"clear\"}"
+        }
+      ],
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "get_weather",
+            "description": "Get current weather for a city",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "city"
+              ]
+            }
+          }
+        }
+      ],
+      "stream": true,
+      "stream_options": {
+        "include_usage": true
+      }
+    },
+    "status": 200,
+    "contentType": "text/event-stream",
+    "responseBody": "data: {\"id\":\"chatcmpl-ollama-tool2\",\"object\":\"chat.completion.chunk\",\"created\":1762000012,\"model\":\"gemma4:31b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"The current weather in Paris is 18\\u00b0C with clear skies.\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-ollama-tool2\",\"object\":\"chat.completion.chunk\",\"created\":1762000012,\"model\":\"gemma4:31b\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: {\"id\":\"chatcmpl-ollama-tool2\",\"object\":\"chat.completion.chunk\",\"created\":1762000012,\"model\":\"gemma4:31b\",\"choices\":[],\"usage\":{\"prompt_tokens\":102,\"completion_tokens\":20,\"total_tokens\":122,\"prompt_tokens_details\":{\"cached_tokens\":96}}}\n\ndata: [DONE]\n\n"
+  }
+]

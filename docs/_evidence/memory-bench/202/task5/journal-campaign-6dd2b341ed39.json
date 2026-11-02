@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "campaignId": "campaign-6dd2b341ed39",
+  "manifestHash": "6dd2b341ed39b014587d3c8d9efc77e7c4e3a18c00ebbb96051ae2955408d42f",
+  "ceiling": 100000000,
+  "priorReservation": 0,
+  "provider": "kilo",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "createdAt": "2026-10-31T22:57:51.898Z",
+  "updatedAt": "2026-10-31T22:59:30.394Z",
+  "status": "finished",
+  "legacy": [],
+  "attempts": [
+    {
+      "attemptId": "202-task5.control.beam-100k.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free@1",
+      "jobId": "202-task5.control.beam-100k.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "manifestHash": "6dd2b341ed39b014587d3c8d9efc77e7c4e3a18c00ebbb96051ae2955408d42f",
+      "status": "failed",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/202/task5/smoke-202-task5.control.beam-100k.preset-r1.kilo.nvidia-nemotron-3-ultra-550b-a55b:free.json",
+      "maxInputTokens": 7000000,
+      "reservedInputTokens": 7500000,
+      "startedAt": "2026-10-31T22:57:51.900Z",
+      "confirmedInputTokens": 24190,
+      "usageComplete": true,
+      "cacheReadTokens": 0,
+      "outputTokens": 2525,
+      "endedAt": "2026-10-31T22:58:34.670Z"
+    },
+    {
+      "attemptId": "202-task5.candidate.beam-100k.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free@1",
+      "jobId": "202-task5.candidate.beam-100k.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "manifestHash": "6dd2b341ed39b014587d3c8d9efc77e7c4e3a18c00ebbb96051ae2955408d42f",
+      "status": "failed",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/202/task5/smoke-202-task5.candidate.beam-100k.preset-r1.kilo.nvidia-nemotron-3-ultra-550b-a55b:free.json",
+      "maxInputTokens": 7000000,
+      "reservedInputTokens": 7500000,
+      "startedAt": "2026-10-31T22:58:34.670Z",
+      "confirmedInputTokens": 23229,
+      "usageComplete": true,
+      "cacheReadTokens": 0,
+      "outputTokens": 4644,
+      "endedAt": "2026-10-31T22:59:30.394Z"
+    }
+  ]
+}

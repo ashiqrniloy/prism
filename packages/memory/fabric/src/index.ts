@@ -56,18 +56,22 @@ import {
 } from "./config.js";
 import { ConsolidationExtractionError } from "./consolidation/extract.js";
 import { hasNewObservationalMaterial } from "./consolidation/pass.js";
-import { createFabricCitationTracker, createFabricContext } from "./context.js";
+import { createFabricCitationTracker, createFabricContext, readFabricDeliveryState, resetFabricDeliveryState } from "./context.js";
 import { createMemoryFabric } from "./create.js";
+import { createFabricDecisions } from "./decisions.js";
 import { createFabricCore } from "./delivery/core.js";
 import { createFabricCues } from "./delivery/cues.js";
+import { captureDecision, confirmDecisionProposals, decisionNoteId } from "./delivery/rules.js";
 import { createFabricTeam, type FabricTeam, type FabricTeamApproval } from "./delivery/team.js";
 import { createFabricDirectory } from "./directory.js";
-import { createExchangeArchive, type ExchangeArchive, exchangePairs } from "./exchanges.js";
+import { createExchangeArchive, type ExchangeArchive, exchangePairs, messageText } from "./exchanges.js";
 import { createFabricFileJail } from "./files.js";
 import { createScopeClock, readScopeClockState, SCOPE_CLOCK_COUNTER } from "./lifecycle/clock.js";
 import { citationEvidence } from "./lifecycle/evidence.js";
 import { createFabricLifecycle, describeNote, type FabricLifecycle, inspectNote, normalizeNoteStatus } from "./lifecycle/index.js";
 import { createMemory } from "./memory.js";
+import { createConceptDeletionHandler, MEMORY_FABRIC_CONCEPT_HANDLER_SERVICE } from "./ontology/handler.js";
+import { createFabricOntology, MEMORY_FABRIC_SERVICE } from "./ontology/port.js";
 import { exportMemoryOkf, importMemoryOkf } from "./okf-bundle.js";
 import { readPromoteState } from "./promote.js";
 import { reconcileFabricFiles } from "./reconcile.js";
@@ -77,6 +81,7 @@ import { createScopedMemoryPolicy } from "./scoped/policy.js";
 import { createMemoryFabricTools } from "./tools.js";
 import {
   type CreateMemoryFabricOptions,
+  type FabricScopeLevel,
   type MemoryFabric,
   type MemoryFabricRecallOptions,
   type MemoryFabricRecallResult,
@@ -86,6 +91,7 @@ import {
 import { createMemoryWorkingStore } from "./working-memory.js";
 
 export {
+  CODING_PRESET_REVISION,
   CONVERSATIONAL_PRESET_REVISION,
   type MemoryFabricConfig,
   type MemoryFabricCoreConfig,
@@ -94,11 +100,13 @@ export {
   type MemoryFabricInjectConfig,
   type MemoryFabricLifecycleConfig,
   type MemoryFabricMarkdownStoreConfig,
+  type MemoryFabricOntologyConfig,
   type MemoryFabricPostgresStoreConfig,
   type MemoryFabricPresetName,
   type MemoryFabricProjectScopeConfig,
   type MemoryFabricScopedConfig,
   type MemoryFabricScopesConfig,
+  type MemoryFabricStateConfig,
   type MemoryFabricTeamConfig,
   type MemoryFabricToolsConfig,
   memoryFabricConfigSchema,
@@ -108,10 +116,20 @@ export {
   type ResolvedFabricTeamOptions,
   type ResolvedLifecycleConfig,
   type ResolvedMemoryFabricConfig,
+  type ResolvedStateConfig,
   resolveLifecycleConfig,
   resolveMemoryFabricConfig,
 } from "./config.js";
 export { type MemoryConformanceStores, runMemoryConformance } from "./conformance.js";
+export type {
+  DecisionCandidate,
+  DecisionPoint,
+  DecisionPointSpec,
+  FabricDecisions,
+  MemoryFabricDecisionsConfig,
+  ResolvedDecisionsConfig,
+  SupersessionChoice,
+} from "./decisions.js";
 // The moved 0.12 library surface (fabric, scoped policy, memory, working memory, conformance).
 export * from "./exports.js";
 export { createMemory } from "./memory.js";
@@ -124,6 +142,7 @@ const CUES_STATE_KEY = "fabric.cues";
 const PROMOTE_STATE_KEY = "fabric.promote";
 const EXCHANGE_STATE_KEY = "fabric.exchanges";
 const SCOPE_CLOCK_KEY = "fabric.clock";
+const DELIVERY_STATE_KEY = "fabric.delivery";
 const FABRIC_CONTEXT_HOOK_ID = "memory-fabric:context.build";
 
 export const packageName = "@arnilo/prism-memory-fabric";
@@ -210,10 +229,23 @@ const definition = definePackage<MemoryFabricConfig>({
       }),
     }));
     const memory = memories[0]!.memory;
+    // The ontology tier's store-side half (plan 207 Task 2): the deletion cascade always runs when indexed notes are
+    // on, and `memory.fabric` is the port the wiki package consumes. Neither calls a model.
+    const ontology = config.semantic
+      ? createFabricOntology({
+          scopes: memories.map(({ level, memory: scoped }) => ({ level, memory: scoped })),
+          store: vectorStore,
+          bindThreshold: config.ontology.bindThreshold,
+        })
+      : undefined;
+    if (ontology !== undefined) {
+      prism.services.provide(MEMORY_FABRIC_SERVICE, ontology.port);
+      prism.services.provide(MEMORY_FABRIC_CONCEPT_HANDLER_SERVICE, createConceptDeletionHandler(ontology));
+    }
     // A project this process did not bind is opened over the same stores on demand, so a nightly
     // `memory:maintain` can widen across every project of this tenant (plan 188.4 Further Action 2).
-    const openScope = ({ resourceId }: { readonly resourceId: string }) =>
-      createMemory({
+    const openScope = ({ resourceId }: { readonly resourceId: string }) => {
+      const opened = createMemory({
         tenantId: config.scopes.tenantId,
         resourceId,
         threadId: config.scopes.threadId,
@@ -223,13 +255,31 @@ const definition = definePackage<MemoryFabricConfig>({
         ...(config.limits === undefined ? {} : { limits: config.limits }),
         ...(config.workingMemoryTemplate === undefined ? {} : { workingMemoryTemplate: config.workingMemoryTemplate }),
       });
+      // A project this process did not bind still cascades: its retractions reach the same concept index logic.
+      ontology?.attach({ level: "project", memory: opened });
+      return opened;
+    };
     // The scope ordinal this process ranks against; the tick below refreshes it once per session.
     let sessionClock = 0;
+    // Opt-in decision gates bind one decisions-capable client at setup. Absent keeps every incumbent.
+    const decisions =
+      config.decisions === false
+        ? undefined
+        : createFabricDecisions({ config: config.decisions, client: prism.models.decisions(config.decisions.model) });
     const fabricOptions: CreateMemoryFabricOptions = {
       onRecall: prism.services.consume<CreateMemoryFabricOptions["onRecall"]>("memory-fabric.diagnostics"),
       memory,
       scopes: memories,
+      // Notes bind to the subject they name, and the extractor is shown the scope's subjects (plan 207 Task 3).
+      ...(ontology === undefined
+        ? {}
+        : {
+            subjects: ontology.subjects,
+            ontology: { conceptPrior: config.ontology.conceptPrior, maxClaimsRendered: config.ontology.maxClaimsRendered },
+          }),
       promote: config.promote,
+      state: config.state,
+      ...(decisions === undefined ? {} : { decisions }),
       promoteRoot: config.scopes.project?.root ?? config.tools.root ?? process.cwd(),
       exchanges: { enabled: config.exchanges.enabled },
       // The repository rules need a real root, not the cwd fallback `promoteRoot` uses for derivability.
@@ -316,6 +366,15 @@ const definition = definePackage<MemoryFabricConfig>({
     const evidenceCursor = new Map<string, string>();
     const helpedNotes = new Map<string, Set<string>>();
     const promoteState = prism.state.session<JsonObject>(PROMOTE_STATE_KEY, { refused: 0 });
+    // Adaptive passive delivery is per session: pointers by default, excerpts after two cued turns
+    // without a memory tool call. Any memory.* call resets it (plan 202 Task 10).
+    const deliveryState = prism.state.session<JsonObject>(DELIVERY_STATE_KEY, {
+      mode: "pointers",
+      cueTurns: 0,
+      reason: "start",
+    });
+    // Coding decisions capture only in the coding preset; the same rules module serves every preset later.
+    const decisionCapture = config.preset?.name === "coding";
     // Turns since the last background pass, per session. In memory: a restored session starts at 0,
     // and the `session.opened` catch-up covers whatever the previous process missed.
     const turnsSincePass = new Map<string, number>();
@@ -349,6 +408,9 @@ const definition = definePackage<MemoryFabricConfig>({
           source: createFabricDirectory({
             memory,
             memories,
+            ...(ontology === undefined
+              ? {}
+              : { concepts: (level, signal) => ontology.subjects.listing(level as FabricScopeLevel, signal) }),
             ...(config.tools.root
               ? {
                   files: createFabricFileJail(
@@ -402,6 +464,7 @@ const definition = definePackage<MemoryFabricConfig>({
             storageWeights: config.lifecycle.storageWeights,
             decay: config.lifecycle.decay,
             clock: () => sessionClock,
+            ...(decisions === undefined ? {} : { decisions }),
           })
         : undefined;
 
@@ -490,10 +553,15 @@ const definition = definePackage<MemoryFabricConfig>({
       remember: fabric.remember,
       recall,
       forget: fabric.forget,
+      state: config.state,
+      ...(decisions === undefined ? {} : { decisions }),
+      resolveModelClient: (model) => prism.models.client(model),
       isIndexedNotesAvailable: indexedNotes,
       tracker,
       readNotes: readNotesAcrossScopes,
+      ...(ontology === undefined ? {} : { ontology: { maxClaimsRendered: config.ontology.maxClaimsRendered } }),
       scopeLevel: memories[0]!.level,
+      scopeLevels: [...memories.map((binding) => binding.level), ...(team === undefined ? [] : (["team"] as const))],
       ...(directory ? { directory } : {}),
       lifecycle: {
         verify: (id, signal) => lifecycle.verify(id, signal === undefined ? {} : { signal }),
@@ -515,6 +583,8 @@ const definition = definePackage<MemoryFabricConfig>({
       core,
       cues,
       memories.map(({ memory }) => memory),
+      deliveryState,
+      decisions,
     );
     let warnedFloor = false;
     prism.hooks.on(
@@ -536,10 +606,12 @@ const definition = definePackage<MemoryFabricConfig>({
       { id: FABRIC_CONTEXT_HOOK_ID, priority: -1_100 },
     );
     prism.hooks.on("message.delta", (event, context) => projection.observe(event.content, context));
-    prism.hooks.on("tool.started", (event, context) => {
+    prism.hooks.on("tool.started", async (event, context) => {
       const session = context.session;
       if (!session || !enabled.get(session)) return;
       touchedFor(session).record({ name: event.call.name, arguments: event.call.arguments });
+      // Observed tool use is the only signal; no model-catalog tier is available (R10).
+      if (event.call.name.startsWith("memory.")) await resetFabricDeliveryState(deliveryState, session);
     });
     // A completed turn is archived once the reply is on the branch (`message.completed` fires after
     // the append; `turn.completed` fires inside the provider round, before it). Tool rounds are not
@@ -573,6 +645,25 @@ const definition = definePackage<MemoryFabricConfig>({
             `memory-fabric: ${report.refused.trust + report.refused.secret} exchange(s) refused by the trust scan or redactor; not archived`,
           );
         }
+        if (report.archived > 0 && decisionCapture) {
+          const turnText = messageText(pair.user.message);
+          const gate = decisions === undefined ? undefined : await decisions.evaluateTurn({ text: turnText });
+          // P1 gates capture; P7 is an extra refusal input and never removes the trust scan.
+          const proposal =
+            gate?.durable === false || gate?.instructionLike === true
+              ? undefined
+              : captureDecision(turnText, [pair.user.id, pair.assistant.id]);
+          if (proposal !== undefined) {
+            const note = await fabric.remember(
+              { ...proposal, id: decisionNoteId(session.id, pair.user.id), session: session.id },
+              { sessionId: session.id, status: "candidate", signal },
+            );
+            const approved = await confirmDecisionProposals(prism.host.ui, [
+              { id: note.id, text: note.content, ...(note.rationale === undefined ? {} : { rationale: note.rationale }) },
+            ]);
+            for (const id of approved) await lifecycle.verify(id, { signal });
+          }
+        }
         if (report.archived > 0) {
           const state = readExchangeState(exchangeState.get(session));
           await exchangeState.set(session, { cursor: pair.assistant.id, archived: state.archived + report.archived });
@@ -593,7 +684,14 @@ const definition = definePackage<MemoryFabricConfig>({
       const session = context.session;
       if (!session || event.restored !== true || !enabled.get(session) || !config.promote.enabled) return;
       const state = readPromoteState(promoteState.get(session));
-      if (!hasNewObservationalMaterial(await session.entries(), state.cursor)) return;
+      const entries = await session.entries();
+      if (!hasNewObservationalMaterial(entries, state.cursor)) return;
+      const lastUser = [...entries].reverse().find((entry) => entry.kind === "message" && entry.message?.role === "user");
+      const gate =
+        decisions?.enabled("P1") && lastUser?.message !== undefined
+          ? await decisions.evaluateTurn({ text: messageText(lastUser.message) })
+          : undefined;
+      if (gate?.durable === false) return;
       turnsSincePass.set(session.id, 0);
       session.background("fabric.consolidate", (signal) => consolidateNow(session, signal));
     });
@@ -605,10 +703,18 @@ const definition = definePackage<MemoryFabricConfig>({
         turnsSincePass.set(session.id, turns);
         if (turns >= config.promote.minTurnsBetween) {
           const state = readPromoteState(promoteState.get(session));
+          const entries = await session.entries();
           // A turn with no new OM material starts no task and makes no model call.
-          if (hasNewObservationalMaterial(await session.entries(), state.cursor)) {
+          if (hasNewObservationalMaterial(entries, state.cursor)) {
             turnsSincePass.set(session.id, 0);
-            session.background("fabric.consolidate", (signal) => consolidateNow(session, signal));
+            // P1 gates the generative extractor too; a clear "not durable" skips this pass. The
+            // capture hook reuses this result for the same persisted user text.
+            const lastUser = [...entries].reverse().find((entry) => entry.kind === "message" && entry.message?.role === "user");
+            const gate =
+              decisions?.enabled("P1") && lastUser?.message !== undefined
+                ? await decisions.evaluateTurn({ text: messageText(lastUser.message) })
+                : undefined;
+            if (gate?.durable !== false) session.background("fabric.consolidate", (signal) => consolidateNow(session, signal));
           }
         }
       }
@@ -627,6 +733,7 @@ const definition = definePackage<MemoryFabricConfig>({
         cited: ids,
         helped,
       });
+      const coRead = tracker.takeCoRead(session.id);
       for (const id of evidence.helpful) helped.add(id);
       if (evidence.cursor !== undefined) evidenceCursor.set(session.id, evidence.cursor);
       session.background("fabric.lifecycle", async (signal) => {
@@ -636,6 +743,9 @@ const definition = definePackage<MemoryFabricConfig>({
           verifyAfterSessions: config.lifecycle.verifyAfterSessions,
           signal,
         });
+        // A concept's recorded uses order the directory's subject list: keep its index row current.
+        if (ids.length) await ontology?.refresh(ids, { signal });
+        if (coRead !== undefined) await lifecycle.recordCoReads([coRead], { clock: sessionClock, signal });
         await lifecycle.recordRetrievals(retrievals, { signal });
         await lifecycle.recordEvidence(evidence, { signal });
       });
@@ -644,7 +754,7 @@ const definition = definePackage<MemoryFabricConfig>({
     // --- command: toggle this session's fabric without touching another session's state.
     prism.commands.register(createMemoryCommand(enabled));
     prism.commands.register(createMemoryConsolidateCommand(fabric, promoteState));
-    prism.commands.register(createMemoryStatusCommand(lifecycle, promoteState, team, config.preset, stores.unreadable));
+    prism.commands.register(createMemoryStatusCommand(lifecycle, promoteState, team, config.preset, stores.unreadable, deliveryState));
     if (team !== undefined) {
       const ui = () => prism.host.ui;
       prism.commands.register(createMemoryShareCommand(team, memory, ui));
@@ -1123,6 +1233,7 @@ function createMemoryStatusCommand(
   team?: FabricTeam,
   preset?: ResolvedMemoryFabricConfig["preset"],
   unreadable?: () => MarkdownUnreadableCounts,
+  deliveryState?: SessionState<JsonObject>,
 ): PackageCommand {
   const args: JsonSchema = { type: "object", additionalProperties: false, properties: {} };
   return {
@@ -1134,6 +1245,7 @@ function createMemoryStatusCommand(
       const unreadableCounts = unreadable?.();
       const teamCounts = team === undefined ? undefined : await team.census();
       const state = context.session ? readPromoteState(promoteState.get(context.session)) : undefined;
+      const delivery = context.session && deliveryState ? readFabricDeliveryState(deliveryState.get(context.session)) : undefined;
       const refused = state?.refused ?? 0;
       const last = state?.last;
       const teamText =
@@ -1148,7 +1260,8 @@ function createMemoryStatusCommand(
         refused,
         ...(teamCounts === undefined ? {} : { team: { ...teamCounts } }),
         ...(last === undefined ? {} : { last: last as unknown as JsonObject }),
-        text: `${preset === undefined ? "" : `Preset ${preset.name} (revision ${preset.revision}). `}Fabric notes: ${counts.candidate} candidate, ${counts.verified} verified, ${counts.archived} archived${counts.reconsolidate ? `, ${counts.reconsolidate} reconsolidate` : ""}${unreadableCounts?.unreadable ? `, ${unreadableCounts.unreadable} unreadable (${formatReasons(unreadableCounts.unreadableReasons)}; written by a newer version, kept as written)` : ""}; ${refused} note(s) refused.${teamText}${last === undefined ? "" : ` Last pass: ${last.candidates} candidate(s), ${last.accepted} accepted, ${last.written} written, ${last.updated} updated, ${last.exceptions} exception(s), ${last.retired} retired, ${last.modelCalls} model call(s); rejected score ${last.rejected.score}, ephemeral ${last.rejected.ephemeral}, derivable ${last.rejected.derivable}, trust ${last.rejected.trust}, secret ${last.rejected.secret}.${failureText(last)}`}`,
+        ...(delivery === undefined ? {} : { delivery: delivery.mode, reason: delivery.reason }),
+        text: `${preset === undefined ? "" : `Preset ${preset.name} (revision ${preset.revision}). `}Fabric notes: ${counts.candidate} candidate, ${counts.verified} verified, ${counts.archived} archived${counts.reconsolidate ? `, ${counts.reconsolidate} reconsolidate` : ""}${unreadableCounts?.unreadable ? `, ${unreadableCounts.unreadable} unreadable (${formatReasons(unreadableCounts.unreadableReasons)}; written by a newer version, kept as written)` : ""}; ${refused} note(s) refused.${teamText}${delivery === undefined ? "" : ` Delivery: ${delivery.mode} (${delivery.reason}).`}${last === undefined ? "" : ` Last pass: ${last.candidates} candidate(s), ${last.accepted} accepted, ${last.written} written, ${last.updated} updated, ${last.exceptions} exception(s), ${last.retired} retired, ${last.modelCalls} model call(s); rejected score ${last.rejected.score}, ephemeral ${last.rejected.ephemeral}, derivable ${last.rejected.derivable}, trust ${last.rejected.trust}, secret ${last.rejected.secret}.${failureText(last)}`}`,
       };
     },
   };
@@ -1168,7 +1281,7 @@ function createMemoryShareCommand(team: FabricTeam, source: Memory, ui: () => Pa
   return {
     name: "memory:share",
     description:
-      "Share one verified project note into the checked-in team store (team.dir). Shows the note and the target path for approval first; the commit stays yours.",
+      "Share one verified project note or concept into the checked-in team store (team.dir). Shows the note and the target path for approval first; the commit stays yours.",
     args,
     async run(raw: JsonObject, _context: PackageCommandContext): Promise<JsonObject> {
       const approve = async (request: { title: string; detail: string }): Promise<FabricTeamApproval> => {

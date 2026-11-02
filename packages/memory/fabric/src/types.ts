@@ -15,8 +15,8 @@ import type {
   RecallPageDirection,
 } from "@arnilo/prism-memory-observational";
 import { isMemoryId } from "@arnilo/prism-memory-observational";
-import type { MemoryNoteUseEvent } from "./lifecycle/events.js";
-import { readUseEvents } from "./lifecycle/events.js";
+import type { MemoryNoteCoReadEvent, MemoryNoteUseEvent } from "./lifecycle/events.js";
+import { readCoReadEvents, readUseEvents } from "./lifecycle/events.js";
 import type { MemoryNoteStatus } from "./lifecycle/status.js";
 import { isMemoryNoteStatus } from "./lifecycle/status.js";
 
@@ -24,14 +24,63 @@ import { isMemoryNoteStatus } from "./lifecycle/status.js";
  * Note kinds a fabric record may carry. `episode` is a **view** over an observational-memory
  * id: it is never stored as a second row, so `kind: "episode"` writes nothing. `exchange` is the
  * verbatim archive of a completed user turn plus the assistant reply (plan 188.9 Task 7); the
- * archive writes it, never a tool call.
+ * archive writes it, never a tool call. `decision` is a standing rule with a rationale, a decision
+ * status and optional supersession (plan 202 Task 11). `concept` is the ontology tier's note: one per
+ * subject, itemized claims that each cite T1 notes (plan 207 Task 2). Only the ontology port, a human edit,
+ * `memory:import` and `memory:share` write one. Recall ranks it ahead of its evidence (Task 4); the directory, the
+ * core block and every lifecycle pass leave it alone.
  */
-export type MemoryNoteKind = "working" | "episode" | "fact" | "preference" | "procedure" | "file" | "exchange";
+export type MemoryNoteKind = "working" | "episode" | "fact" | "preference" | "procedure" | "decision" | "file" | "exchange" | "concept";
 
-export type { MemoryNoteUseEvent } from "./lifecycle/events.js";
+export type { MemoryNoteCoReadEvent, MemoryNoteUseEvent } from "./lifecycle/events.js";
 export type { MemoryNoteStatus } from "./lifecycle/status.js";
 
-export const MEMORY_NOTE_KINDS: readonly MemoryNoteKind[] = ["working", "episode", "fact", "preference", "procedure", "file", "exchange"];
+export const MEMORY_NOTE_KINDS: readonly MemoryNoteKind[] = [
+  "working",
+  "episode",
+  "fact",
+  "preference",
+  "procedure",
+  "decision",
+  "file",
+  "exchange",
+  "concept",
+];
+
+/** Closed set of relations a concept note may hold toward another subject's concept (plan 207 Task 2). */
+export const CONCEPT_RELATIONS = ["part-of", "instance-of", "uses", "related"] as const;
+export type ConceptRelation = (typeof CONCEPT_RELATIONS)[number];
+
+export function isConceptRelation(value: unknown): value is ConceptRelation {
+  return typeof value === "string" && (CONCEPT_RELATIONS as readonly string[]).includes(value);
+}
+
+export const CONCEPT_TYPES = ["entity", "topic"] as const;
+export type ConceptType = (typeof CONCEPT_TYPES)[number];
+
+/** Why a concept needs a consolidation pass; the cascade and the port record these, the wiki reads them. */
+export const CONCEPT_DIRTY_REASONS = ["removed", "stale", "evidence", "edited"] as const;
+export type ConceptDirtyReason = (typeof CONCEPT_DIRTY_REASONS)[number];
+
+export const MAX_CONCEPT_ALIASES = 16;
+export const MAX_CONCEPT_TITLE_CHARS = 120;
+
+/** Decision lifecycle, independent of the storage lifecycle (`candidate`/`verified`/`archived`). */
+export type MemoryDecisionStatus = "proposed" | "active" | "superseded";
+export const MEMORY_DECISION_STATUSES: readonly MemoryDecisionStatus[] = ["proposed", "active", "superseded"];
+
+export function isMemoryDecisionStatus(value: unknown): value is MemoryDecisionStatus {
+  return typeof value === "string" && (MEMORY_DECISION_STATUSES as readonly string[]).includes(value);
+}
+
+/** Only confirmed decisions are delivered passively; proposed and superseded stay readable by recall. */
+export function isMemoryDecisionDeliverable(
+  note:
+    | Pick<MemoryNoteMetadata, "kind" | "decisionStatus" | "status">
+    | { readonly kind: MemoryNoteKind; readonly decisionStatus?: MemoryDecisionStatus; readonly status?: string },
+): boolean {
+  return note.kind !== "decision" || (note.decisionStatus === "active" && note.status !== "candidate");
+}
 
 /** Storage levels a fabric reads and writes, narrowest first. `path` notes live in `project`; `team` is the
  * checked-in shared store, read-only to tools (plan 188.5 Task 3). */
@@ -48,6 +97,11 @@ export function isMemoryNoteScope(value: unknown): value is MemoryNoteScope {
 /** The default write scope per kind: user-wide preferences and everything learned in the project. */
 export function defaultScopeFor(kind: MemoryNoteKind): MemoryNoteScope {
   return kind === "preference" ? "user" : "project";
+}
+
+/** Decisions are user, project or path rules; the agent and checked-in team scopes are not decision homes. */
+export function isDecisionScope(scope: MemoryNoteScope | undefined): boolean {
+  return scope === undefined || scope === "user" || scope === "project" || scope === "path";
 }
 
 /**
@@ -79,10 +133,10 @@ export function validateNoteKey(value: unknown): string {
 }
 
 /**
- * Kinds `recall` returns when the caller does not name kinds. `procedure` is opt-in: it is
- * never mixed into an untyped recall, and `working` is injected as a core block instead.
+ * Kinds `recall` returns when the caller does not name kinds. `procedure` and `decision` are
+ * opt-in: they are never mixed into an untyped recall, and `working` is injected as a core block.
  */
-export const DEFAULT_RECALL_KINDS: readonly MemoryNoteKind[] = ["fact", "preference", "file", "exchange"];
+export const DEFAULT_RECALL_KINDS: readonly MemoryNoteKind[] = ["fact", "preference", "file", "exchange", "concept"];
 
 /** Reserved `metadata` key holding the fabric note fields on a vector record. */
 export const MEMORY_NOTE_METADATA_KEY = "fabric";
@@ -98,8 +152,24 @@ export interface MemoryNoteLink {
   readonly weight?: number;
 }
 
+/** How coarse a resolved date expression is; `resolved` is the start of that period. */
+export type MemoryNoteDatePrecision = "day" | "week" | "month" | "year";
+
+/**
+ * One relative date expression in a note's text, resolved against its reference time by the
+ * deterministic resolver (plan 202 Task 6). A reading, not a validity bound: the note still talks
+ * about the whole span its text names.
+ */
+export interface MemoryNoteDate {
+  /** The expression as written, e.g. `last Tuesday`. */
+  readonly text: string;
+  /** ISO timestamp: the start of the period `precision` names, UTC. */
+  readonly resolved: string;
+  readonly precision: MemoryNoteDatePrecision;
+}
+
 /** Who wrote a note. `human` is an external edit found by reconcile; the rest are programmatic writes. */
-export type MemoryNoteActor = "agent" | "promotion" | "human" | "import" | "host";
+export type MemoryNoteActor = "agent" | "promotion" | "human" | "import" | "host" | "consolidation";
 
 /**
  * Write provenance, stored top-level in record metadata as `generated` (OKF v0.2 `generated` field).
@@ -161,6 +231,8 @@ export interface MemoryNote {
   readonly session?: string;
   /** Reference time the note talks about; informational, not a validity bound. */
   readonly tRef?: string;
+  /** Relative dates in the note text, resolved against `tRef`. */
+  readonly dates?: readonly MemoryNoteDate[];
   readonly validFrom?: string;
   readonly validTo?: string;
   readonly keywords?: readonly string[];
@@ -169,6 +241,10 @@ export interface MemoryNote {
   readonly links?: readonly MemoryNoteLink[];
   readonly sourceEntryIds?: readonly string[];
   readonly supersedes?: string;
+  /** Why the decision was chosen; `kind: "decision"` only. */
+  readonly rationale?: string;
+  /** Decision lifecycle; absent on non-decisions. */
+  readonly decisionStatus?: MemoryDecisionStatus;
   /** Set only on a note derived from a bound reflection; names the bind it graduated from. */
   readonly promotedFrom?: MemoryNotePromotion;
   /** Lifecycle; absent on a note written before promotion existed, which means `verified`. */
@@ -183,6 +259,8 @@ export interface MemoryNote {
   readonly harmful?: number;
   /** Last 32 uses: scope-session ordinal and wall time. */
   readonly uses?: readonly MemoryNoteUseEvent[];
+  /** Last 16 answering turns that cited this note with others: ids and turn indexes, no text (plan 207 Task 4). */
+  readonly coRead?: readonly MemoryNoteCoReadEvent[];
   /** Block label, `kind: "working"` only. */
   readonly block?: string;
   /** Workspace path, `kind: "file"` only. */
@@ -198,6 +276,20 @@ export interface MemoryNote {
   readonly appliesTo?: readonly string[];
   /** Stable subject id used for shadowing and widening; `[a-z0-9.-]{1,64}`. */
   readonly key?: string;
+  /** The ontology subject a note is bound to; on a `concept` note, the subject it describes. `[a-z0-9.-]{1,64}`. */
+  readonly subject?: string;
+  /** `concept` only: display title. */
+  readonly title?: string;
+  /** `concept` only: an entity (a thing in this world) or a topic. */
+  readonly conceptType?: ConceptType;
+  /** `concept` only: other names for the subject (at most {@link MAX_CONCEPT_ALIASES}). */
+  readonly aliases?: readonly string[];
+  /** `concept` only: every note id a claim cites, derived from the body and kept for the citation index. */
+  readonly sources?: readonly string[];
+  /** `concept` only: ids of claims whose citation was superseded, archived, downgraded or flagged. */
+  readonly stale?: readonly string[];
+  /** `concept` only: why the next consolidation pass must visit this concept. */
+  readonly dirty?: readonly ConceptDirtyReason[];
   /** Provenance of the last write to this note. */
   readonly generated?: MemoryNoteProvenance;
   /** Trust-scan classes a human edit tripped; a flagged note is a candidate and is never injected. */
@@ -232,6 +324,11 @@ export interface MemoryNoteHit extends MemoryNote {
   /** Pre-fusion vector cosine, absent for lexical-only hits and expanded links. */
   readonly similarity?: number;
   readonly recency?: number;
+  /**
+   * Read-time hint: a newer same-subject hit this one is grouped under. It is inferred from `key`,
+   * an explicit `supersedes` edge, or exchange subject terms; nothing is deleted or invalidated.
+   */
+  readonly supersededBy?: { readonly id: string; readonly at: string };
 }
 
 export interface MemoryFabricRememberInput {
@@ -254,6 +351,7 @@ export interface MemoryFabricRememberInput {
   readonly contentHash?: string;
   readonly session?: string;
   readonly tRef?: string;
+  readonly dates?: readonly MemoryNoteDate[];
   readonly validFrom?: string;
   readonly validTo?: string;
   readonly keywords?: readonly string[];
@@ -262,12 +360,18 @@ export interface MemoryFabricRememberInput {
   readonly links?: readonly MemoryNoteLink[];
   readonly sourceEntryIds?: readonly string[];
   readonly supersedes?: string;
+  /** Why the decision was chosen; `kind: "decision"` only. */
+  readonly rationale?: string;
+  /** Decision lifecycle; defaults to `proposed` for `kind: "decision"`. */
+  readonly decisionStatus?: MemoryDecisionStatus;
   /** Where the note lives: `user`/`agent`/`project`, or `path` for a project note limited by globs. */
   readonly scope?: MemoryNoteScope;
   /** 1–8 project-root-relative globs; required exactly when `scope` is `path`. */
   readonly appliesTo?: readonly string[];
   /** Stable subject id, `[a-z0-9.-]{1,64}`; used for shadowing and widening. */
   readonly key?: string;
+  /** Bind the note to an ontology subject in its own scope (plan 207). A binding may precede its concept. */
+  readonly subject?: string;
   /** The wider-scope note this exception shadows; requires the same `key` as that note. */
   readonly overrides?: string;
   /** Score and signals of the consolidation pass that wrote it. */
@@ -294,6 +398,11 @@ export interface MemoryFabricRecallOptions {
   readonly touchedPaths?: readonly string[];
   /** Reference-time interval, inclusive start and exclusive end. */
   readonly tRef?: { readonly from: string; readonly to: string };
+  /** Time-scoped recall: only notes whose resolved date (else `tRef`) falls in the window, inclusive. */
+  readonly from?: string;
+  readonly to?: string;
+  /** `relevance` (default) keeps the ranked order; `time` orders by resolved date, oldest first. */
+  readonly order?: "relevance" | "time";
   /**
    * Defaults to {@link DEFAULT_RECALL_KINDS}; naming a kind is the only way to get `procedure`.
    * `["all"]` is shorthand for every kind {@link MEMORY_NOTE_KINDS} lists.
@@ -363,6 +472,18 @@ export interface MemoryFabricScopeOpenInput {
 }
 
 export interface CreateMemoryFabricOptions {
+  /**
+   * The ontology tier's subject source (plan 207 Task 3), from `createFabricOntology(...).subjects`. With it a
+   * written note is bound to the one subject it names and the consolidation extractor is shown the scope's
+   * subjects. Without it nothing changes.
+   */
+  readonly subjects?: import("./ontology/index.js").FabricSubjects;
+  /**
+   * Turns on the ontology tier's retrieval surface (plan 207 Task 4): `memory.recall` may name `concept` and renders a
+   * concept hit with its claims. `conceptPrior` ranks concepts above their evidence in every recall; both default to
+   * the config defaults. Without it the tools refuse a named `concept` with `concept_requires_ontology`.
+   */
+  readonly ontology?: { readonly conceptPrior?: number; readonly maxClaimsRendered?: number };
   /** Optional private diagnostic observer; never changes ranking or model-visible content. */
   readonly onRecall?: (event: {
     readonly query: string;
@@ -449,6 +570,10 @@ export interface CreateMemoryFabricOptions {
   readonly repositoryRules?: boolean;
   /** The archive config; when it is enabled, its unconsolidated exchanges join a pass's candidates. */
   readonly exchanges?: import("./config.js").MemoryFabricExchangesConfig;
+  /** Opt-in read-time state table; one model call per explicit `memory.recall`. */
+  readonly state?: boolean | import("./state.js").MemoryFabricStateConfig;
+  /** Opt-in decision gates, already bound to a decisions-capable client by the package. */
+  readonly decisions?: import("./decisions.js").FabricDecisions;
 }
 
 export interface MemoryFabricConsolidationOptions {
@@ -626,6 +751,7 @@ export interface MemoryNoteMetadata {
   readonly kind: MemoryNoteKind;
   readonly session?: string;
   readonly tRef?: string;
+  readonly dates?: readonly MemoryNoteDate[];
   readonly validFrom?: string;
   readonly validTo?: string;
   readonly keywords?: readonly string[];
@@ -634,6 +760,10 @@ export interface MemoryNoteMetadata {
   readonly links?: readonly MemoryNoteLink[];
   readonly sourceEntryIds?: readonly string[];
   readonly supersedes?: string;
+  /** Why the decision was chosen; `kind: "decision"` only. */
+  readonly rationale?: string;
+  /** Decision lifecycle; absent on non-decisions. */
+  readonly decisionStatus?: MemoryDecisionStatus;
   /** Set only on a note derived from a bound reflection; names the bind it graduated from. */
   readonly promotedFrom?: MemoryNotePromotion;
   /**
@@ -643,6 +773,8 @@ export interface MemoryNoteMetadata {
   readonly status?: MemoryNoteStatus;
   /** The last 32 uses: the scope-session ordinal each use happened in and its wall time. */
   readonly uses?: readonly MemoryNoteUseEvent[];
+  /** The last 16 answering turns that cited this note together with others: ids and turn indexes only. */
+  readonly coRead?: readonly MemoryNoteCoReadEvent[];
   /** Distinct sessions the note has been used in. */
   readonly useSessions?: number;
   /** Returns from recall and injection, for diagnostics only. */
@@ -662,6 +794,20 @@ export interface MemoryNoteMetadata {
   readonly appliesTo?: readonly string[];
   /** Stable subject id used for shadowing and widening. */
   readonly key?: string;
+  /** The ontology subject a note is bound to; on a `concept` note, the subject it describes. `[a-z0-9.-]{1,64}`. */
+  readonly subject?: string;
+  /** `concept` only: display title. */
+  readonly title?: string;
+  /** `concept` only: an entity (a thing in this world) or a topic. */
+  readonly conceptType?: ConceptType;
+  /** `concept` only: other names for the subject (at most {@link MAX_CONCEPT_ALIASES}). */
+  readonly aliases?: readonly string[];
+  /** `concept` only: every note id a claim cites, derived from the body and kept for the citation index. */
+  readonly sources?: readonly string[];
+  /** `concept` only: ids of claims whose citation was superseded, archived, downgraded or flagged. */
+  readonly stale?: readonly string[];
+  /** `concept` only: why the next consolidation pass must visit this concept. */
+  readonly dirty?: readonly ConceptDirtyReason[];
   /** Trust-scan classes a human edit tripped; kept until `memory.replace` or a clean human edit. */
   readonly flags?: readonly string[];
   /** When status: "archived", the timestamp it was archived; used for historical asOf queries. */
@@ -701,6 +847,7 @@ export const MEMORY_NOTE_FABRIC_KEYS: ReadonlySet<string> = new Set([
   "kind",
   "session",
   "tRef",
+  "dates",
   "validFrom",
   "validTo",
   "keywords",
@@ -709,8 +856,11 @@ export const MEMORY_NOTE_FABRIC_KEYS: ReadonlySet<string> = new Set([
   "links",
   "sourceEntryIds",
   "supersedes",
+  "rationale",
+  "decisionStatus",
   "promotedFrom",
   "uses",
+  "coRead",
   "useSessions",
   "retrievals",
   "helpful",
@@ -721,6 +871,13 @@ export const MEMORY_NOTE_FABRIC_KEYS: ReadonlySet<string> = new Set([
   "scope",
   "appliesTo",
   "key",
+  "subject",
+  "title",
+  "conceptType",
+  "aliases",
+  "sources",
+  "stale",
+  "dirty",
   "flags",
   "archivedAt",
   "archivedFrom",
@@ -757,7 +914,25 @@ const isIsoTimestamp = (value: unknown): value is string =>
 const isStringList = (value: unknown): value is readonly string[] =>
   Array.isArray(value) && value.every((item) => typeof item === "string" && item.length > 0);
 
-const NOTE_ACTORS: readonly MemoryNoteActor[] = ["agent", "promotion", "human", "import", "host"];
+const NOTE_DATE_PRECISIONS: readonly MemoryNoteDatePrecision[] = ["day", "week", "month", "year"];
+
+/** Fail-closed parse of the additive `dates` field; a malformed entry makes the whole note unparsable. */
+export function parseDates(value: unknown): readonly MemoryNoteDate[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const dates: MemoryNoteDate[] = [];
+  for (const item of value) {
+    if (item === null || typeof item !== "object" || Array.isArray(item)) return undefined;
+    const record = item as Record<string, unknown>;
+    if (Object.keys(record).some((key) => key !== "text" && key !== "resolved" && key !== "precision")) return undefined;
+    if (typeof record.text !== "string" || record.text.trim().length === 0) return undefined;
+    if (!isIsoTimestamp(record.resolved)) return undefined;
+    if (!(NOTE_DATE_PRECISIONS as readonly unknown[]).includes(record.precision)) return undefined;
+    dates.push({ text: record.text, resolved: record.resolved, precision: record.precision as MemoryNoteDatePrecision });
+  }
+  return dates;
+}
+
+const NOTE_ACTORS: readonly MemoryNoteActor[] = ["agent", "promotion", "human", "import", "host", "consolidation"];
 
 /** Fail-closed parse of a `generated` stamp; a malformed one makes the whole note unparsable. */
 export function parseMemoryNoteProvenance(value: unknown): MemoryNoteProvenance | undefined {
@@ -798,6 +973,35 @@ export function parsePromotionStamp(value: unknown): MemoryNotePromotionStamp | 
 }
 
 /**
+ * Fail-closed check of the ontology fields (plan 207 Task 2). `subject` may sit on any kind; a `concept` must carry
+ * `subject`, `title` and `conceptType`, and only a concept may carry the concept-only fields. A concept's links
+ * use the closed relation set.
+ */
+function parseConceptFields(record: Record<string, unknown>): boolean {
+  if (record.subject !== undefined && (typeof record.subject !== "string" || !NOTE_KEY.test(record.subject))) return false;
+  const conceptOnly = ["title", "conceptType", "aliases", "sources", "stale", "dirty"] as const;
+  if (record.kind !== "concept") return conceptOnly.every((key) => record[key] === undefined);
+  if (record.subject === undefined) return false;
+  if (typeof record.title !== "string" || record.title.trim().length === 0 || record.title.length > MAX_CONCEPT_TITLE_CHARS) return false;
+  if (!(CONCEPT_TYPES as readonly unknown[]).includes(record.conceptType)) return false;
+  if (record.aliases !== undefined && (!isStringList(record.aliases) || record.aliases.length > MAX_CONCEPT_ALIASES)) return false;
+  for (const key of ["sources", "stale"] as const) {
+    if (record[key] !== undefined && !isStringList(record[key])) return false;
+  }
+  if (record.dirty !== undefined) {
+    if (!Array.isArray(record.dirty)) return false;
+    if (!record.dirty.every((reason) => (CONCEPT_DIRTY_REASONS as readonly unknown[]).includes(reason))) return false;
+  }
+  if (record.links !== undefined) {
+    if (!Array.isArray(record.links)) return false;
+    for (const link of record.links) {
+      if (link === null || typeof link !== "object" || !isConceptRelation((link as Record<string, unknown>).relation)) return false;
+    }
+  }
+  return true;
+}
+
+/**
  * Fail-closed parse of the fabric fields on a vector record. Returns `undefined` when the
  * record is not a fabric note or carries a malformed field, so a corrupt row is never injected.
  */
@@ -814,6 +1018,8 @@ export function parseMemoryNoteMetadata(metadata: JsonObject | undefined): Memor
   const record = raw as Record<string, unknown>;
   if (record.v !== 1 || !isMemoryNoteKind(record.kind)) return undefined;
   if (record.session !== undefined && (typeof record.session !== "string" || !record.session.trim())) return undefined;
+  const dates = record.dates === undefined ? undefined : parseDates(record.dates);
+  if (record.dates !== undefined && dates === undefined) return undefined;
   const promotion = record.promotion === undefined ? undefined : parsePromotionStamp(record.promotion);
   if (record.promotion !== undefined && promotion === undefined) return undefined;
   if (record.flags !== undefined && !isStringList(record.flags)) return undefined;
@@ -825,8 +1031,15 @@ export function parseMemoryNoteMetadata(metadata: JsonObject | undefined): Memor
   }
   if (record.context !== undefined && (typeof record.context !== "string" || record.context.length === 0)) return undefined;
   if (record.supersedes !== undefined && !isMemoryId(record.supersedes)) return undefined;
+  if (record.rationale !== undefined && (typeof record.rationale !== "string" || record.rationale.trim().length === 0)) return undefined;
+  if (record.decisionStatus !== undefined && !isMemoryDecisionStatus(record.decisionStatus)) return undefined;
+  if (!parseConceptFields(record)) return undefined;
+  if (record.kind === "decision" && record.decisionStatus === undefined) return undefined;
+  if (record.kind !== "decision" && (record.rationale !== undefined || record.decisionStatus !== undefined)) return undefined;
   const uses = record.uses === undefined ? [] : readUseEvents(record.uses);
   if (uses === undefined) return undefined;
+  const coRead = record.coRead === undefined ? [] : readCoReadEvents(record.coRead);
+  if (coRead === undefined) return undefined;
   for (const key of ["useSessions", "retrievals", "helpful", "harmful"] as const) {
     if (record[key] !== undefined && (!Number.isSafeInteger(record[key]) || (record[key] as number) < 0)) return undefined;
   }
@@ -892,6 +1105,7 @@ export function parseMemoryNoteMetadata(metadata: JsonObject | undefined): Memor
     ...(Object.keys(unknown).length === 0 ? {} : { unknown }),
     ...(record.session === undefined ? {} : { session: record.session as string }),
     ...(record.tRef === undefined ? {} : { tRef: record.tRef as string }),
+    ...(dates === undefined ? {} : { dates }),
     ...(record.validFrom === undefined ? {} : { validFrom: record.validFrom as string }),
     ...(record.validTo === undefined ? {} : { validTo: record.validTo as string }),
     ...(record.keywords === undefined ? {} : { keywords: record.keywords as readonly string[] }),
@@ -900,9 +1114,12 @@ export function parseMemoryNoteMetadata(metadata: JsonObject | undefined): Memor
     ...(links === undefined ? {} : { links }),
     ...(record.sourceEntryIds === undefined ? {} : { sourceEntryIds: record.sourceEntryIds as readonly string[] }),
     ...(record.supersedes === undefined ? {} : { supersedes: record.supersedes as string }),
+    ...(record.rationale === undefined ? {} : { rationale: record.rationale as string }),
+    ...(record.decisionStatus === undefined ? {} : { decisionStatus: record.decisionStatus as MemoryDecisionStatus }),
     ...(promotedFrom === undefined ? {} : { promotedFrom }),
     ...(status === undefined ? {} : { status }),
     ...(uses.length === 0 ? {} : { uses }),
+    ...(coRead.length === 0 ? {} : { coRead }),
     ...(record.useSessions === undefined ? {} : { useSessions: record.useSessions as number }),
     ...(record.retrievals === undefined ? {} : { retrievals: record.retrievals as number }),
     ...(record.helpful === undefined ? {} : { helpful: record.helpful as number }),
@@ -913,6 +1130,13 @@ export function parseMemoryNoteMetadata(metadata: JsonObject | undefined): Memor
     ...(record.scope === undefined ? {} : { scope: record.scope as MemoryNoteScope }),
     ...(record.appliesTo === undefined ? {} : { appliesTo: record.appliesTo as readonly string[] }),
     ...(record.key === undefined ? {} : { key: record.key as string }),
+    ...(record.subject === undefined ? {} : { subject: record.subject as string }),
+    ...(record.title === undefined ? {} : { title: record.title as string }),
+    ...(record.conceptType === undefined ? {} : { conceptType: record.conceptType as ConceptType }),
+    ...(record.aliases === undefined ? {} : { aliases: record.aliases as readonly string[] }),
+    ...(record.sources === undefined ? {} : { sources: record.sources as readonly string[] }),
+    ...(record.stale === undefined ? {} : { stale: record.stale as readonly string[] }),
+    ...(record.dirty === undefined ? {} : { dirty: record.dirty as readonly ConceptDirtyReason[] }),
     ...(record.flags === undefined ? {} : { flags: record.flags as readonly string[] }),
     ...(record.archivedAt === undefined ? {} : { archivedAt: record.archivedAt as string }),
     ...(record.consolidatedAt === undefined ? {} : { consolidatedAt: record.consolidatedAt as string }),

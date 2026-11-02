@@ -45,7 +45,11 @@ export function scopeOf(candidate: FabricCandidate): MemoryNoteScope {
  * Glob match for `applies_to`: `/` is the separator, `**` crosses directories, `*` and `?` stay
  * inside one segment. Patterns and paths are project-root-relative with no `..` (validated on write).
  */
-export function globMatches(pattern: string, path: string): boolean {
+const GLOB_PATTERN_CACHE = new Map<string, RegExp>();
+/** Compile once per distinct validated glob; the cache is bounded so an import cannot grow it forever. */
+function globPattern(pattern: string): RegExp {
+  const cached = GLOB_PATTERN_CACHE.get(pattern);
+  if (cached !== undefined) return cached;
   let source = "^";
   for (let index = 0; index < pattern.length; index += 1) {
     const char = pattern[index]!;
@@ -59,8 +63,14 @@ export function globMatches(pattern: string, path: string): boolean {
     else if (char === "?") source += "[^/]";
     else source += char.replace(/[.+^${}()|[\]\\]/g, "\\$&");
   }
-  source += "$";
-  return new RegExp(source).test(path);
+  const compiled = new RegExp(`${source}$`);
+  if (GLOB_PATTERN_CACHE.size >= 1_024) GLOB_PATTERN_CACHE.clear();
+  GLOB_PATTERN_CACHE.set(pattern, compiled);
+  return compiled;
+}
+
+export function globMatches(pattern: string, path: string): boolean {
+  return globPattern(pattern).test(path);
 }
 
 /** The prior this candidate earns: `path` only on a touched-path glob match, otherwise its level. */
@@ -69,6 +79,14 @@ export function priorFor(metadata: MemoryNoteMetadata, priors: ScopePriors, touc
   if (level !== "path") return priors[level];
   const globs = metadata.appliesTo ?? [];
   return globs.some((glob) => touchedPaths.some((path) => globMatches(glob, path))) ? priors.path : priors.project;
+}
+
+/**
+ * What shadows what: a note's `key`, or for a concept its subject (plan 207 Task 4), so a private concept hides a
+ * team concept about the same subject. `:` is outside the key alphabet, so the two namespaces cannot collide.
+ */
+function shadowKey(metadata: MemoryNoteMetadata): string | undefined {
+  return metadata.kind === "concept" && metadata.subject !== undefined ? `concept:${metadata.subject}` : metadata.key;
 }
 
 /** One hit dropped because a narrower scope holds the same `key`. */
@@ -93,6 +111,7 @@ export type ScopeCandidateLoader = (
   minSimilarity?: number,
   touchedPaths?: readonly string[],
   allowArchived?: boolean,
+  window?: { readonly from?: number; readonly to?: number },
 ) => Promise<ScopeRecallResult>;
 
 export interface ScopeRecallScope {
@@ -112,20 +131,39 @@ export function createScopeRecall(deps: {
     minSimilarity?: number,
     source?: import("@arnilo/prism-memory-core").Memory,
     allowArchived?: boolean,
+    window?: { readonly from?: number; readonly to?: number },
   ) => Promise<FabricCandidate[]>;
   readonly priors: ScopePriors;
   /** `w_R·σ(R) + w_S·σ(S)` for one note; absent keeps the pre-188.4 ranking. */
   readonly strengthPrior?: (metadata: MemoryNoteMetadata) => number;
+  /**
+   * The ontology tier's kind prior (plan 207 Task 4): added to a `concept` hit after fusion and the scope prior, so a
+   * matching concept outranks its own evidence but not a better-matching note. Absent or 0 leaves the ranking alone.
+   */
+  readonly conceptPrior?: number;
 }): ScopeCandidateLoader {
   const { scopes, recallCandidates, priors, strengthPrior } = deps;
+  const conceptPrior = deps.conceptPrior ?? 0;
+  const kindPrior = (metadata: MemoryNoteMetadata): number => (metadata.kind === "concept" ? conceptPrior : 0);
 
-  return async function load(query, kinds, asOfMs, limit, signal, scoring, minSimilarity, touchedPaths = [], allowArchived = false) {
+  return async function load(
+    query,
+    kinds,
+    asOfMs,
+    limit,
+    signal,
+    scoring,
+    minSimilarity,
+    touchedPaths = [],
+    allowArchived = false,
+    window,
+  ) {
     const perScope = await Promise.all(
       scopes.map(async (scope) => ({
         level: scope.level,
         memory: scope.memory,
         candidates: (
-          await recallCandidates(query, kinds, asOfMs, limit, signal, scoring, minSimilarity, scope.memory, allowArchived)
+          await recallCandidates(query, kinds, asOfMs, limit, signal, scoring, minSimilarity, scope.memory, allowArchived, window)
         ).map((candidate) =>
           // A checked-in team note may carry no scope of its own: the store it lives in is the level.
           scope.level === "team" && candidate.metadata.scope === undefined
@@ -135,7 +173,15 @@ export function createScopeRecall(deps: {
       })),
     );
     // One active scope is the pre-188.2 path: no fusion and no prior, so scores stay the mode's own.
-    if (perScope.length === 1) return { candidates: perScope[0]!.candidates, shadowed: [] };
+    if (perScope.length === 1) {
+      const only = perScope[0]!.candidates;
+      if (conceptPrior === 0 || !only.some((candidate) => candidate.metadata.kind === "concept")) return { candidates: only, shadowed: [] };
+      // Stable sort: equal scores keep the mode's own order, and a recall without a concept never reaches here.
+      const lifted = only
+        .map((candidate) => ({ ...candidate, hit: { ...candidate.hit, score: candidate.hit.score + kindPrior(candidate.metadata) } }))
+        .sort((a, b) => b.hit.score - a.hit.score);
+      return { candidates: lifted, shadowed: [] };
+    }
 
     const all = perScope.flatMap((scope) => scope.candidates);
     // Key shadowing: the narrowest scope wins, regardless of rank. A note without a key never shadows.
@@ -143,7 +189,7 @@ export function createScopeRecall(deps: {
     const shadowed: ShadowedCandidate[] = [];
     for (const level of SCOPE_DEPTH) {
       for (const candidate of all.filter((item) => scopeOf(item) === level)) {
-        const key = candidate.metadata.key;
+        const key = shadowKey(candidate.metadata);
         if (key === undefined) continue;
         const winner = winners.get(key);
         if (winner === undefined) {
@@ -161,9 +207,7 @@ export function createScopeRecall(deps: {
 
     const lists = perScope
       .map((scope) => ({
-        hits: scope.candidates
-          .filter((candidate) => visible.includes(candidate))
-          .map((candidate) => candidate.hit),
+        hits: scope.candidates.filter((candidate) => visible.includes(candidate)).map((candidate) => candidate.hit),
         leg: (scope.memory.retrieval === "hybrid" ? "vector" : "lexical") as "vector" | "lexical",
       }))
       .filter((list) => list.hits.length > 0);
@@ -179,7 +223,8 @@ export function createScopeRecall(deps: {
           score:
             entry.score +
             priorFor(candidate.metadata, priors, touchedPaths) +
-            (strengthPrior?.(candidate.metadata) ?? 0),
+            (strengthPrior?.(candidate.metadata) ?? 0) +
+            kindPrior(candidate.metadata),
           retrieval: entry.retrieval,
         },
       });
@@ -230,7 +275,11 @@ export function selectWithScopeReserve<T>(
 }
 
 /** Explain rows for hits that lost to a narrower scope's key; kept for diagnosis, never returned as hits. */
-export function shadowedExplain(shadowed: readonly ShadowedCandidate[], priors: ScopePriors, touchedPaths: readonly string[]): MemoryFabricExplainEntry[] {
+export function shadowedExplain(
+  shadowed: readonly ShadowedCandidate[],
+  priors: ScopePriors,
+  touchedPaths: readonly string[],
+): MemoryFabricExplainEntry[] {
   return shadowed.map(({ candidate, byId }) => ({
     id: candidate.hit.id,
     score: candidate.hit.score + priorFor(candidate.metadata, priors, touchedPaths),

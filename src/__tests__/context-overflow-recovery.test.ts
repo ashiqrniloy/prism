@@ -97,6 +97,11 @@ describe("Provider failure classification (plan 194 Task 3)", () => {
 
   it("classifies the other supported overflow patterns and SystemOne's 422", () => {
     assert.equal(classifyProviderFailure(statusError(400, "context_length_exceeded")), "context_overflow");
+    assert.equal(
+      classifyProviderFailure(statusError(400, "prompt too long; exceeded max context length by 28996 tokens")),
+      "context_overflow",
+      "Ollama Cloud's measured overflow body",
+    );
     assert.equal(classifyProviderFailure(statusError(413, "prompt is too long")), "context_overflow");
     assert.equal(classifyProviderFailure(statusError(422, "invalid params: context window exceeds limit")), "context_overflow");
   });

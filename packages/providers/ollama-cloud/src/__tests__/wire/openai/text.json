@@ -1,0 +1,20 @@
+{
+  "method": "POST",
+  "path": "/v1/chat/completions",
+  "requestBody": {
+    "model": "gemma4:31b",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Say hello from Ollama Cloud."
+      }
+    ],
+    "stream": true,
+    "stream_options": {
+      "include_usage": true
+    }
+  },
+  "status": 200,
+  "contentType": "text/event-stream",
+  "responseBody": "data: {\"id\":\"chatcmpl-ollama-txt\",\"object\":\"chat.completion.chunk\",\"created\":1762000000,\"model\":\"gemma4:31b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"Hello from Ollama Cloud.\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-ollama-txt\",\"object\":\"chat.completion.chunk\",\"created\":1762000000,\"model\":\"gemma4:31b\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: {\"id\":\"chatcmpl-ollama-txt\",\"object\":\"chat.completion.chunk\",\"created\":1762000000,\"model\":\"gemma4:31b\",\"choices\":[],\"usage\":{\"prompt_tokens\":18,\"completion_tokens\":6,\"total_tokens\":24}}\n\ndata: [DONE]\n\n"
+}

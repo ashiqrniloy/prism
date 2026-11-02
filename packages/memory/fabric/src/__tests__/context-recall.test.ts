@@ -1,8 +1,14 @@
 import { it } from "bun:test";
 import assert from "node:assert/strict";
-import type { ContextDraft, HookContext, SessionEntry } from "@arnilo/prism";
+import type { ContextDraft, HookContext, JsonObject, SessionContext, SessionEntry } from "@arnilo/prism";
 import { createHashEmbedder } from "@arnilo/prism-memory-core";
-import { createFabricContext, recallPeriod } from "../context.js";
+import {
+  createFabricContext,
+  noteFabricDeliveryTurn,
+  readFabricDeliveryState,
+  recallPeriod,
+  resetFabricDeliveryState,
+} from "../context.js";
 import { createMemory, createMemoryFabric } from "../index.js";
 
 const user = (id: string): SessionEntry => ({
@@ -12,6 +18,22 @@ const user = (id: string): SessionEntry => ({
   timestamp: "2026-10-17T12:00:00Z",
   message: { role: "user", content: [{ type: "text", text: "question" }] },
 });
+
+const userSaying = (id: string, text: string): SessionEntry => ({
+  ...user(id),
+  message: { role: "user", content: [{ type: "text", text }] },
+});
+
+function deliveryStore() {
+  const values = new Map<string, JsonObject>();
+  return {
+    values,
+    get: (session: SessionContext) => values.get(session.id),
+    set: async (session: SessionContext, value: JsonObject) => {
+      values.set(session.id, value);
+    },
+  };
+}
 function harness() {
   let entries: SessionEntry[] = [user("u1")];
   const context = {
@@ -66,7 +88,7 @@ it("semantic tail is computed once including empty results, and resets for new p
   );
   assert.equal(calls, 1);
   assert.deepEqual(first.messages.at(-1), second.messages.at(-1));
-  assert.match(JSON.stringify(first.messages.at(-1)), /Cite the ids you use/);
+  assert.match(JSON.stringify(first.messages.at(-1)), /Cite the memory ids you use/);
   assert.equal(first.context, undefined);
   assert.equal(first.messages[0]?.role, "user");
   h.setEntries([user("steer")]);
@@ -146,6 +168,49 @@ it("defaults_inject_evidence_sized_whole_notes", async () => {
     ).length,
     12,
   );
+});
+
+it("low_confidence_hits_render_as_pointer_cards", async () => {
+  const h = harness();
+  const userLine = `I picked up the new bike ${"with a very long note ".repeat(10)}`;
+  const note = await h.fabric.remember({
+    kind: "exchange",
+    content: `user: ${userLine}\n\nassistant: PRIVATE ASSISTANT REPLY`,
+    tRef: "2026-04-02T00:00:00Z",
+    keywords: ["bike"],
+  });
+  const projection = createFabricContext(
+    h.memory,
+    async () => ({ hits: [{ ...note, score: 0.25 }], explain: [] }),
+    { budgetTokens: 600, topK: 3, query: "user" },
+    { query: "bike" },
+  );
+  const { lines } = semanticBlock(await projection.build(h.draft, h.context));
+  const card = lines.find((line) => line.startsWith(`- [${note.id}]`));
+  assert.ok(card, "the low-confidence hit is still delivered, as a pointer");
+  assert.match(card, /^- \[[^\]]+\] 2026-04-02 "/);
+  assert.ok(card.includes(userLine.slice(0, 119)), "the card starts with the user's first 120 characters");
+  assert.match(card, /bike/, "the card names a matched query term");
+  assert.doesNotMatch(card, /PRIVATE ASSISTANT REPLY/, "the assistant reply is not delivered");
+  assert.ok(card.length < 300, "a pointer is shorter than the exchange it points at");
+});
+
+it("below_floor_injects_only_cue_and_directory", async () => {
+  const h = harness();
+  const note = await h.fabric.remember({ kind: "exchange", content: "user: a low confidence note\n\nassistant: hidden" });
+  const projection = createFabricContext(
+    h.memory,
+    async () => ({ hits: [{ ...note, score: 0.1 }], explain: [] }),
+    { budgetTokens: 600, topK: 3, query: "user", minScore: 0.2, fullTextScore: 0.35 },
+    { query: "note" },
+  );
+  const { lines, metadata } = semanticBlock(await projection.build(h.draft, h.context));
+  const delivered = lines.flatMap((line) => line.split("\n"));
+  assert.equal(delivered.length, 2, "the citation preamble and the cue, no note");
+  assert.match(delivered[0]!, /Cite the memory ids you use/);
+  assert.match(delivered[1]!, /^Showing 0 of 1 matching notes\./);
+  assert.doesNotMatch(JSON.stringify(delivered), new RegExp(note.id));
+  assert.deepEqual(metadata.itemIds, []);
 });
 
 it("over_budget_best_hit_is_excerpted_within_budget", async () => {
@@ -338,7 +403,7 @@ it("short_note_renders_whole_and_unchanged", async () => {
   const projection = createFabricContext(h.memory, async () => ({ hits: [{ ...note, score: 1 }], explain: [] }), { topK: 3 });
   const { lines } = semanticBlock(await projection.build(h.draft, h.context));
   assert.deepEqual(lines, [
-    "Cite the ids you use as [id].",
+    "Cite the memory ids you use as [id].",
     `- [${note.id}] project fact (${note.ingestedAt.slice(0, 10)}) short whole note`,
   ]);
 });
@@ -379,27 +444,32 @@ it("injection_never_exceeds_budget", async () => {
   const notes = await Promise.all(
     sizes.map((size, i) => h.fabric.remember({ kind: "fact", content: `note${i} river ${"x".repeat(size)}` })),
   );
-  for (const topK of [1, 2, 3, 5]) {
-    for (const budgetTokens of [60, 200, 600, 1200]) {
-      const projection = createFabricContext(
-        h.memory,
-        async () => ({ hits: notes.map((note) => ({ ...note, score: 1 })), explain: [] }),
-        {
-          budgetTokens,
-          topK,
-          query: "user",
-        },
-        { query: "river" },
-      );
-      const { lines } = semanticBlock(
-        await projection.build(h.draft, {
-          ...h.context,
-          session: { id: `s-${topK}-${budgetTokens}`, entries: async () => h.entries },
-        } as unknown as HookContext),
-      );
-      const tokens = Math.ceil(lines.join("\n").length / 4);
-      assert.ok(lines.filter((line) => line.startsWith("- [")).length <= topK);
-      assert.ok(tokens <= budgetTokens, `topK ${topK} budget ${budgetTokens}: ${tokens} tokens over ${lines.length - 1} hits`);
+  for (const score of [1, 0.25]) {
+    for (const topK of [1, 2, 3, 5]) {
+      for (const budgetTokens of [60, 200, 600, 1200]) {
+        const projection = createFabricContext(
+          h.memory,
+          async () => ({ hits: notes.map((note) => ({ ...note, score })), explain: [] }),
+          {
+            budgetTokens,
+            topK,
+            query: "user",
+          },
+          { query: "river" },
+        );
+        const { lines } = semanticBlock(
+          await projection.build(h.draft, {
+            ...h.context,
+            session: { id: `s-${score}-${topK}-${budgetTokens}`, entries: async () => h.entries },
+          } as unknown as HookContext),
+        );
+        const tokens = Math.ceil(lines.join("\n").length / 4);
+        assert.ok(lines.filter((line) => line.startsWith("- [")).length <= topK);
+        assert.ok(
+          tokens <= budgetTokens,
+          `score ${score} topK ${topK} budget ${budgetTokens}: ${tokens} tokens over ${lines.length - 1} hits`,
+        );
+      }
     }
   }
   // No exception: a best hit larger than the whole budget is excerpted down to it, alone.
@@ -527,4 +597,87 @@ it("an excerpt survives a matched token wider than its window", async () => {
   const text = queryExcerpt(`head ${token} tail ${"pad ".repeat(100)}`, new Set([token]), 200);
   assert.ok(text.length <= 200);
   assert.match(text, /^…?b+/);
+});
+
+it("delivery_switches_to_excerpts_without_tool_use", async () => {
+  const h = harness();
+  const note = await h.fabric.remember({ kind: "fact", content: `needle ${"x".repeat(300)} tail-marker` });
+  const store = deliveryStore();
+  const projection = createFabricContext(
+    h.memory,
+    async () => ({ hits: [{ ...note, score: 0.25, similarity: 0.25 }], explain: [] }),
+    { minScore: 0.2, topK: 1 },
+    {},
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    store,
+  );
+  const first = userSaying("u1", "list all needle decisions");
+  h.setEntries([first]);
+  const firstText = tailText(await projection.build({ messages: [first.message!] }, h.context));
+  assert.doesNotMatch(firstText, /tail-marker/, "the first cued turn still uses a pointer card");
+  assert.equal(store.values.get("s")?.mode, "pointers");
+  assert.equal(store.values.get("s")?.cueTurns, 1);
+
+  const second = userSaying("u2", "count every needle decision");
+  h.setEntries([second]);
+  const secondText = tailText(await projection.build({ messages: [second.message!] }, h.context));
+  assert.match(secondText, /tail-marker/, "the second cued turn without tool use shows the full note");
+  assert.equal(store.values.get("s")?.mode, "excerpts");
+  assert.equal(store.values.get("s")?.cueTurns, 2);
+  assert.equal(store.values.get("s")?.reason, "no memory tool use after 2 cued turns");
+});
+
+it("delivery_switches_back_on_tool_use", async () => {
+  const h = harness();
+  const note = await h.fabric.remember({ kind: "fact", content: `needle ${"x".repeat(300)} tail-marker` });
+  const store = deliveryStore();
+  const projection = createFabricContext(
+    h.memory,
+    async () => ({ hits: [{ ...note, score: 0.25, similarity: 0.25 }], explain: [] }),
+    { minScore: 0.2, topK: 1 },
+    {},
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    store,
+  );
+  for (const [id, text] of [
+    ["u1", "list all needle decisions"],
+    ["u2", "count every needle decision"],
+  ] as const) {
+    const entry = userSaying(id, text);
+    h.setEntries([entry]);
+    await projection.build({ messages: [entry.message!] }, h.context);
+  }
+  assert.equal(store.values.get("s")?.mode, "excerpts");
+
+  // This is the state transition the `tool.started` hook applies for any memory.* call.
+  await resetFabricDeliveryState(store, h.context.session!);
+  assert.equal(readFabricDeliveryState(store.values.get("s")).mode, "pointers");
+  assert.equal(store.values.get("s")?.reason, "memory tool used");
+
+  const third = userSaying("u3", "list all needle decisions");
+  h.setEntries([third]);
+  const text = tailText(await projection.build({ messages: [third.message!] }, h.context));
+  assert.doesNotMatch(text, /tail-marker/, "tool use returns the next turn to pointer cards");
+  assert.equal(store.values.get("s")?.cueTurns, 1);
+});
+
+it("delivery_mode_is_per_session_and_per_principal", async () => {
+  const store = deliveryStore();
+  const first = { id: "principal-a" } as SessionContext;
+  const second = { id: "principal-b" } as SessionContext;
+  assert.equal(await noteFabricDeliveryTurn(store, first, "u1", "list all"), "pointers");
+  assert.equal(await noteFabricDeliveryTurn(store, first, "u2", "count every"), "excerpts");
+  assert.equal(await noteFabricDeliveryTurn(store, second, "u1", "list all"), "pointers");
+  assert.equal(readFabricDeliveryState(store.values.get("principal-a")).mode, "excerpts");
+  assert.equal(readFabricDeliveryState(store.values.get("principal-b")).mode, "pointers");
 });

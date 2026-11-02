@@ -13,7 +13,8 @@ import { createHash } from "node:crypto";
 import type { Message, SecretRedactor, SessionEntry } from "@arnilo/prism";
 import type { MemoryConsentInput } from "@arnilo/prism-memory-core";
 import { lexicalTerms } from "@arnilo/prism-memory-core";
-import { scanScopedMemoryContent } from "./scoped/trust.js";
+import { resolveDates } from "./dates.js";
+import { normalizeScopedMemoryContent, scanScopedMemoryContent } from "./scoped/trust.js";
 import type { MemoryFabric, MemoryFabricWriteOptions, MemoryNoteScope } from "./types.js";
 
 /** Link edges one split part carries; a pathological turn is capped instead of writing a quadratic list. */
@@ -193,8 +194,8 @@ export function createExchangeArchive(options: ExchangeArchiveOptions): Exchange
   async function pair(input: ExchangePair, writeOptions: MemoryFabricWriteOptions = {}): Promise<ExchangeArchiveReport> {
     const report = emptyReport();
     if (!isFinalAssistant(input.assistant.message)) return { ...report, skipped: 1 };
-    const userText = messageText(input.user.message);
-    const assistantText = messageText(input.assistant.message);
+    const userText = normalizeScopedMemoryContent(messageText(input.user.message));
+    const assistantText = normalizeScopedMemoryContent(messageText(input.assistant.message));
     if (userText.length === 0) return { ...report, skipped: 1 };
     if (!scanScopedMemoryContent(`${userText}\n${assistantText}`).ok) {
       return { ...report, skipped: 1, refused: { trust: 1, secret: 0 } };
@@ -214,6 +215,7 @@ export function createExchangeArchive(options: ExchangeArchiveOptions): Exchange
       const present = await Promise.all(ids.map((id) => exists(id)));
       if (present.every(Boolean)) return { ...report, skipped: 1 };
     }
+    const dates = resolveDates(contents.join("\n"), input.user.timestamp);
     let written = 0;
     for (const [part, content] of contents.entries()) {
       // A part links to its siblings so recalling any one expands to the rest; a pathological turn
@@ -233,6 +235,7 @@ export function createExchangeArchive(options: ExchangeArchiveOptions): Exchange
           scope,
           session: sessionId || input.user.sessionId,
           tRef: input.user.timestamp,
+          ...(dates.length === 0 ? {} : { dates }),
           sourceEntryIds: [input.user.id, input.assistant.id],
           keywords: exchangeKeywords(content),
           ...(contents.length < 2 ? {} : { context: `part ${part + 1} of ${contents.length}` }),

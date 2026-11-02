@@ -3,17 +3,20 @@
  * `agent-run-state.ts` can read an agent's hook registrations for the durable fingerprint
  * without forming a cycle through `create-agent.ts` → `session.ts`.
  */
-import type { Agent, AgentEvent, Skill, ToolDefinition } from "../contracts.js";
+import type { Agent, AgentConfig, AgentEvent, Skill, ToolDefinition } from "../contracts.js";
 import type { HookBus } from "../hooks/index.js";
 import type { LoopStrategy } from "../loop/types.js";
 import type { LoadedPackages } from "../packages/loader.js";
 import type { SlotRegistry } from "../slots/index.js";
 /** Per-agent kernel runtime: the host hook bus and the slot registry. Never public. */
 export interface AgentRuntime {
-    readonly hooks: HookBus;
-    readonly slots: SlotRegistry;
+    /** Swapped atomically by `agent.reload()`; sessions re-bind on their next use. */
+    hooks: HookBus;
+    slots: SlotRegistry;
     /** Loaded packages, their declared capabilities, and status notes. */
-    readonly packages: LoadedPackages;
+    packages: LoadedPackages;
+    /** Set for the duration of `agent.reload()`: a run that starts now would see a half-swapped runtime. */
+    reloading?: boolean;
     /**
      * Plan 177 Task 5: sessions open on this agent, added when a session opens and dropped by its
      * `close()`. `dispose()` aborts and closes each one. Structural type keeps this leaf session-free.
@@ -58,10 +61,14 @@ export declare function packagesAffectTools(agent: Agent): boolean;
  * through here (plan 146 Task 1 A2). The host's own list is returned untouched when nothing merges.
  */
 export declare function agentToolList(agent: Agent): readonly ToolDefinition[];
+/** The same merge for a config/package pair that is not the agent's committed runtime (reload assembly). */
+export declare function toolListFor(config: AgentConfig, packages: LoadedPackages | undefined): readonly ToolDefinition[];
 /**
  * `AgentConfig.skills` with package skills merged in and `disable` applied, keeping the host's shape: a
  * registry stays a registry (skills activate on demand) and an array stays an array.
  */
 export declare function agentSkillSource(agent: Agent): readonly Skill[];
+/** The same merge for a config/package pair that is not the agent's committed runtime (reload assembly). */
+export declare function skillSourceFor(config: AgentConfig, packages: LoadedPackages | undefined): readonly Skill[];
 /** The package that registered `tool`, when a package did. */
 export declare function toolOwner(agent: Agent, tool: string): string | undefined;

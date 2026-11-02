@@ -97,6 +97,7 @@ const packages: Array<{
   { dir: "packages/providers/commandcode", name: "@arnilo/prism-provider-commandcode", sourceExport: true },
   { dir: "packages/providers/kilo", name: "@arnilo/prism-provider-kilo", sourceExport: true },
   { dir: "packages/providers/litellm", name: "@arnilo/prism-provider-litellm", sourceExport: true },
+  { dir: "packages/providers/ollama-cloud", name: "@arnilo/prism-provider-ollama-cloud", sourceExport: true },
   { dir: "packages/providers/opencode-go", name: "@arnilo/prism-provider-opencode-go", sourceExport: true },
   { dir: "packages/providers/openrouter", name: "@arnilo/prism-provider-openrouter", sourceExport: true },
   { dir: "packages/providers/typesafe", name: "@arnilo/prism-provider-typesafe", sourceExport: true },
@@ -459,6 +460,7 @@ describe("packaging guard", () => {
       "laya",
       "liquid",
       "litellm",
+      "ollama-cloud",
       "openai-codex",
       "opencode-go",
       "openrouter",
@@ -847,7 +849,7 @@ describe("packaging guard", () => {
   it("0.4 package set — 61 manifests in lockstep, no shims, family roots stay inert", () => {
     const root = readPkg(".");
     const names = packages.map((pkg) => pkg.name).sort();
-    assert.equal(names.length, 50, "50 active packages including root (Kilo, then LiteLLM, added)");
+    assert.equal(names.length, 51, "51 active packages including root (Kilo, LiteLLM, then Ollama Cloud added)");
     assert.ok(names.includes("@arnilo/prism-tools-work"), "work package must be present");
     assert.ok(!names.includes("@arnilo/prism-office"), "office package must be absent");
     // Plan 140 Task 1: the SDK is on its own version line (0.1.x).

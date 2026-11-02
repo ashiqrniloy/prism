@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "metric": "live observational-memory worker input/output tokens per 10k source message tokens",
+  "generatedAt": "2026-11-02T11:12:25.655Z",
+  "provider": "openrouter",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "judges": [
+    "openrouter/dots-studio/dots-3-note-preview:free",
+    "openrouter/cohere/north-mini-code:free"
+  ],
+  "suite": "longmemeval-s",
+  "questions": "6071bd76",
+  "sourceMessageTokens": 121798,
+  "totalInputTokens": 2987872,
+  "outputTokens": 45588,
+  "usageComplete": true,
+  "workerCalls": {
+    "observer": 160,
+    "reflector": 5,
+    "dropper": 0,
+    "embedding": 0,
+    "decider": 0,
+    "consolidate": 0,
+    "judge": 2,
+    "judgeAttempts": 2,
+    "gatewayRetries": 0,
+    "judgeCacheHits": 0,
+    "judgeCacheMisses": 2,
+    "concurrencyHalvings": 0,
+    "overloads": 0
+  },
+  "workerUsage": {
+    "observer": {
+      "calls": 160,
+      "inputTokens": 2843914,
+      "outputTokens": 40039
+    },
+    "reflector": {
+      "calls": 5,
+      "inputTokens": 20734,
+      "outputTokens": 4356
+    },
+    "dropper": {
+      "calls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0
+    }
+  },
+  "workerErrors": [],
+  "per10k": {
+    "observer": {
+      "calls": 13.137,
+      "inputTokens": 233494.31,
+      "outputTokens": 3287.328
+    },
+    "reflector": {
+      "calls": 0.411,
+      "inputTokens": 1702.327,
+      "outputTokens": 357.641
+    },
+    "dropper": {
+      "calls": 0.0,
+      "inputTokens": 0.0,
+      "outputTokens": 0.0
+    }
+  },
+  "protocol": "LongMemEval-S one question, OM observer default 10k trigger; --ablate om.reflector.observationTokens=1000 to exercise the reflector; free OpenRouter answer and judges; no held-out access.",
+  "limitations": [
+    "One live question, not quality evidence.",
+    "The reflector threshold was lowered only to force at least one reflector pass; its per-10k cost is an amortized input-token measure, not a per-pass price.",
+    "Free provider usage is recorded from the wire; zero dollar cost does not establish paid-model cost."
+  ]
+}

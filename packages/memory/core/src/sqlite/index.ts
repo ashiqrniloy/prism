@@ -3,7 +3,7 @@ import { closeSync, openSync } from "node:fs";
 import { assertAccessConstraint, assertAccessGrants, assertAuthorizationTenant, grantAllows, sourceIdFromRecord } from "../acl.js";
 import { HARD_DIRECTORY_TAGS, resolveDirectoryAsOf, resolveDirectoryLimit } from "../directory.js";
 import { MemoryConflictError, MemoryValidationError } from "../errors.js";
-import { lexicalCoverage, lexicalKeys, lexicalTermString, lexicalTerms, recordLexicalTerms } from "../lexical.js";
+import { lexicalCoverage, lexicalKeys, lexicalTermString, lexicalTerms } from "../lexical.js";
 import { assertInvalidationBatch, assertShareGrant, HARD_LINEAGE_EDGES, recordBlocked } from "../lineage.js";
 import {
   compareMemoryRecord,
@@ -163,6 +163,10 @@ export async function createSqliteMemoryStores(options: SqliteMemoryStoresOption
     throw new MemoryValidationError("Cannot open SQLite memory file: unknown, corrupt, or incompatible schema/configuration");
   }
   const database = db;
+  // A scope with no generation pointer still reports the max generation of its records. Computing
+  // that max is a full JSON scan, so cache it until a write can have changed it.
+  const generationFallbacks = new Map<string, bigint | number | undefined>();
+  const generationKey = (scope: MemoryScope): string => scopeArgs(scope).join("\0");
   function requireScanScope(query: VectorScanMetadataQuery): { readonly tenantId: string; readonly resourceId: string } {
     if (!Number.isInteger(query.limit) || query.limit < 1) throw new MemoryValidationError("scan limit must be a positive integer");
     return {
@@ -217,9 +221,17 @@ export async function createSqliteMemoryStores(options: SqliteMemoryStoresOption
   function currentGeneration(scope: MemoryScope): bigint | number | undefined {
     const pointer = state<{ generation: bigint | number }>(scope, "generation", "");
     if (pointer) return pointer.generation;
-    let max: bigint | number | undefined;
-    for (const row of rows(scope))
-      if (row.generation !== undefined && (max === undefined || BigInt(row.generation) > BigInt(max))) max = row.generation;
+    // Do not decode every record just to find a maximum; json_extract keeps this O(scope rows) in
+    // SQLite rather than O(scope rows) JSON.parse in TypeScript on every lexical query.
+    const key = generationKey(scope);
+    if (generationFallbacks.has(key)) return generationFallbacks.get(key);
+    const found = database
+      .query<{ kind: string; value: string | number }, [string, string, string]>(
+        "SELECT json_type(record,'$.generation') AS kind, CASE json_type(record,'$.generation') WHEN 'object' THEN json_extract(record,'$.generation.bigint') ELSE json_extract(record,'$.generation') END AS value FROM semantic_memory WHERE tenant_id=? AND resource_id=? AND thread_id=? AND json_extract(record,'$.generation') IS NOT NULL ORDER BY CAST(value AS NUMERIC) DESC LIMIT 1",
+      )
+      .get(...scopeArgs(scope));
+    const max = found === null || found === undefined ? undefined : found.kind === "object" ? BigInt(found.value) : Number(found.value);
+    generationFallbacks.set(key, max);
     return max;
   }
   function rank(query: VectorQuery | VectorLexicalQuery, candidates: MemoryVectorHit[]): MemoryVectorHit[] {
@@ -296,6 +308,7 @@ export async function createSqliteMemoryStores(options: SqliteMemoryStoresOption
           }
         })
         .immediate();
+      generationFallbacks.clear();
     },
     async query(query) {
       assertNotAborted(query.signal);
@@ -318,13 +331,14 @@ export async function createSqliteMemoryStores(options: SqliteMemoryStoresOption
       // Keys (keywords, tags, context, path) weigh three times the body.
       const matches = match
         ? database
-            .query<{ record: string; score: number }, [string, string, string, string]>(
-              "SELECT m.record, -bm25(semantic_memory_fts, 1.0, 3.0) AS score FROM semantic_memory_fts JOIN semantic_memory m ON m.rowid=semantic_memory_fts.rowid WHERE semantic_memory_fts MATCH ? AND m.tenant_id=? AND m.resource_id=? AND m.thread_id=?",
+            .query<{ record: string; score: number; lex_text: string; lex_keys: string }, [string, string, string, string]>(
+              "SELECT m.record, m.lex_text, m.lex_keys, -bm25(semantic_memory_fts, 1.0, 3.0) AS score FROM semantic_memory_fts JOIN semantic_memory m ON m.rowid=semantic_memory_fts.rowid WHERE semantic_memory_fts MATCH ? AND m.tenant_id=? AND m.resource_id=? AND m.thread_id=?",
             )
             .all(match, ...scopeArgs(query))
             .map((row) => {
               const record = decode<MemoryVectorRecord>(row.record);
-              return { ...record, score: row.score, coverage: lexicalCoverage(terms, recordLexicalTerms(record)) };
+              const docTerms = new Set(`${row.lex_text} ${row.lex_keys}`.split(" ").filter(Boolean));
+              return { ...record, score: row.score, coverage: lexicalCoverage(terms, docTerms) };
             })
         : [];
       return rank(query, matches);
@@ -332,7 +346,7 @@ export async function createSqliteMemoryStores(options: SqliteMemoryStoresOption
     async delete(filter, opts = {}) {
       assertNotAborted(opts.signal);
       const s = requireScope(filter);
-      return database
+      const deleted = database
         .transaction(() => {
           const candidates = database
             .query<{ id: string; thread_id: string }, [string, string]>(
@@ -348,6 +362,8 @@ export async function createSqliteMemoryStores(options: SqliteMemoryStoresOption
           return deleted;
         })
         .immediate();
+      generationFallbacks.clear();
+      return deleted;
     },
     async getByIds(scope, ids, options = {}) {
       assertNotAborted(options.signal);

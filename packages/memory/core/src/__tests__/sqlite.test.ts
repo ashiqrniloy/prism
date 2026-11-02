@@ -67,6 +67,18 @@ test("sqlite_lexical_query_ranks_bm25_and_updates_index", async () => {
   await v.delete({ ...scope, ids: ["long"] });
   expect(await v.lexicalQuery({ ...scope, text: "coffee", topK: 2 })).toEqual([]);
 });
+test("sqlite_generation_fallback_cache_invalidates_on_write", async () => {
+  const { vectorStore: v } = await open(undefined, 2);
+  await v.upsert([record("old", "old", [1, 0]), { ...record("new", "new", [1, 0]), generation: 2n }]);
+  expect(await v.getCurrentGeneration(scope)).toBe(2n);
+  await v.upsert([{ ...record("newer", "newer", [1, 0]), generation: 3n }]);
+  expect(await v.getCurrentGeneration(scope)).toBe(3n);
+  await v.delete({ ...scope, ids: ["newer"] });
+  expect(await v.getCurrentGeneration(scope)).toBe(2n);
+  await v.setCurrentGeneration(scope, 9007199254740993n);
+  expect(await v.getCurrentGeneration(scope)).toBe(9007199254740993n);
+});
+
 test("sqlite_isolates_scope_and_filters_before_ranking", async () => {
   const { vectorStore: v } = await open();
   await v.upsert([
@@ -237,9 +249,7 @@ test("sqlite_v3_migrates_v2_index_and_refuses_unknown", async () => {
   >;
   expect(columns).toEqual({ status: "candidate", storage: 0.25, last_use_ordinal: 7 });
   expect((await migrated.vectorStore.scanMetadata({ scope, limit: 5 })).rows.map((row) => row.id)).toEqual(["migrated"]);
-  expect(
-    await migrated.vectorStore.scopeCounter.increment({ tenantId: "t", resourceId: "r", name: "sessions" }),
-  ).toBe(1);
+  expect(await migrated.vectorStore.scopeCounter.increment({ tenantId: "t", resourceId: "r", name: "sessions" })).toBe(1);
   const version = new Database(file).query("PRAGMA user_version").get() as { user_version: number };
   expect(version.user_version).toBe(3);
 

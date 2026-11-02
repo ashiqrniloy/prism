@@ -1,6 +1,8 @@
 import type { MemoryVectorHit, MemoryVectorRecord, RecallScoringOptions } from "@arnilo/prism-memory-core";
 import {
   HARD_TOP_K_CAP,
+  lexicalDice,
+  lexicalTerms,
   type Memory,
   type MemoryLimits,
   MemoryValidationError,
@@ -69,8 +71,9 @@ export function parseRecallKinds(value: unknown): readonly MemoryNoteKind[] | un
   if (!Array.isArray(value) || value.length === 0) throw new MemoryValidationError("kinds must be a non-empty array");
   const kinds = new Set<MemoryNoteKind>();
   for (const kind of value) {
-    if (kind === "all") for (const every of MEMORY_NOTE_KINDS) kinds.add(every);
-    else if (isMemoryNoteKind(kind)) kinds.add(kind);
+    if (kind === "all") {
+      for (const every of MEMORY_NOTE_KINDS) kinds.add(every);
+    } else if (isMemoryNoteKind(kind)) kinds.add(kind);
     else throw new MemoryValidationError(`Unknown memory note kind: ${String(kind)}`);
   }
   return [...kinds];
@@ -78,6 +81,149 @@ export function parseRecallKinds(value: unknown): readonly MemoryNoteKind[] | un
 
 function resolveRecallKinds(kinds: readonly (MemoryNoteKind | "all")[] | undefined): ReadonlySet<MemoryNoteKind> {
   return new Set(parseRecallKinds(kinds) ?? DEFAULT_RECALL_KINDS);
+}
+
+/**
+ * One end of a time-scoped recall window. A date-only bound (`2026-03-01`) covers that whole UTC
+ * day, so `to: "2026-05-31"` includes 31 May; a full timestamp is compared as given, inclusive.
+ */
+function resolveDateBound(value: string | undefined, name: "from" | "to"): number | undefined {
+  if (value === undefined) return undefined;
+  const ms = Date.parse(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T${name === "to" ? "23:59:59.999" : "00:00:00.000"}Z` : value);
+  if (!Number.isFinite(ms)) throw new MemoryValidationError(`${name} must be a valid ISO date`);
+  return ms;
+}
+
+/** Exchanges carry resolved event dates; everything else falls back to `tRef` or write time. */
+export function noteTime(metadata: Pick<MemoryNoteMetadata, "dates" | "tRef">, createdAt: string): number {
+  const dates = metadata.dates;
+  if (dates !== undefined && dates.length > 0) return Date.parse(dates[0]!.resolved);
+  return Date.parse(metadata.tRef ?? createdAt);
+}
+
+/** Time-window membership: any resolved event date, else the note's own reference time. */
+export function noteInWindow(metadata: Pick<MemoryNoteMetadata, "dates" | "tRef">, createdAt: string, from?: number, to?: number): boolean {
+  if (from === undefined && to === undefined) return true;
+  const inside = (ms: number) => (from === undefined || ms >= from) && (to === undefined || ms <= to);
+  const dates = metadata.dates;
+  if (dates !== undefined && dates.length > 0) return dates.some((date) => inside(Date.parse(date.resolved)));
+  return inside(Date.parse(metadata.tRef ?? createdAt));
+}
+
+/**
+ * Exchange subject overlap: Task 5 keywords with value-like numeric terms removed, so two budget
+ * turns share `budget`/`finance` even when the amounts differ. Provisional until the Task 7 screen;
+ * the read-time marker is a hint, never a write.
+ */
+export const DEFAULT_SUBJECT_DICE = 0.5;
+
+function subjectTerms(hit: MemoryNoteHit): ReadonlySet<string> {
+  return lexicalTerms((hit.keywords ?? []).filter((term) => !/^\p{N}/u.test(term)).join(" "));
+}
+
+function subjectClass(hit: MemoryNoteHit): "active" | "archived" {
+  return hit.status === "archived" ? "archived" : "active";
+}
+
+function sameSubject(left: MemoryNoteHit, right: MemoryNoteHit): boolean {
+  if (left.kind !== "exchange" || right.kind !== "exchange") return false;
+  if ((left.level ?? "project") !== (right.level ?? "project") || subjectClass(left) !== subjectClass(right)) return false;
+  const a = subjectTerms(left);
+  const b = subjectTerms(right);
+  return a.size > 0 && b.size > 0 && lexicalDice(a, b) >= DEFAULT_SUBJECT_DICE;
+}
+
+function hitTime(hit: MemoryNoteHit): number {
+  const ms = noteTime(hit, hit.ingestedAt);
+  return Number.isFinite(ms) ? ms : Date.parse(hit.ingestedAt) || 0;
+}
+
+/**
+ * Read-time grouping (plan 202 Task 7): same key, an explicit `supersedes` edge, or similar exchange
+ * subject terms put hits in one group. Each group keeps the position of its best-ranked member and
+ * is ordered newest-first; every earlier member gets a `supersededBy` hint. No hit is removed.
+ */
+export function groupRecallHits(hits: readonly MemoryNoteHit[]): MemoryNoteHit[] {
+  if (hits.length < 2) return [...hits];
+  const parent = Array.from({ length: hits.length }, (_, index) => index);
+  const find = (value: number): number => {
+    let root = value;
+    while (parent[root] !== root) root = parent[root]!;
+    while (parent[value] !== value) {
+      const next = parent[value]!;
+      parent[value] = root;
+      value = next;
+    }
+    return root;
+  };
+  const union = (left: number, right: number): void => {
+    const a = find(left);
+    const b = find(right);
+    if (a !== b) parent[Math.max(a, b)] = Math.min(a, b);
+  };
+  const byKey = new Map<string, number>();
+  const byId = new Map(hits.map((hit, index) => [hit.id, index]));
+  for (const [index, hit] of hits.entries()) {
+    if (hit.key !== undefined) {
+      const identity = `${subjectClass(hit)}|${hit.level ?? "project"}|${hit.kind}|${hit.key}`;
+      const first = byKey.get(identity);
+      if (first === undefined) byKey.set(identity, index);
+      else union(index, first);
+    }
+    if (hit.supersedes !== undefined) {
+      const older = byId.get(hit.supersedes);
+      if (
+        older !== undefined &&
+        (hits[older]!.level ?? "project") === (hit.level ?? "project") &&
+        subjectClass(hits[older]!) === subjectClass(hit)
+      )
+        union(index, older);
+    }
+  }
+  for (let index = 0; index < hits.length; index += 1)
+    for (let other = index + 1; other < hits.length; other += 1) if (sameSubject(hits[index]!, hits[other]!)) union(index, other);
+
+  const groups = new Map<number, { readonly index: number; readonly hit: MemoryNoteHit }[]>();
+  for (const [index, hit] of hits.entries()) {
+    const root = find(index);
+    groups.set(root, [...(groups.get(root) ?? []), { index, hit }]);
+  }
+  const roots: number[] = [];
+  const seen = new Set<number>();
+  for (let index = 0; index < hits.length; index += 1) {
+    const root = find(index);
+    if (seen.has(root)) continue;
+    seen.add(root);
+    roots.push(root);
+  }
+  const out: MemoryNoteHit[] = [];
+  for (const root of roots) {
+    const members = groups.get(root)!;
+    if (members.length === 1) {
+      out.push(members[0]!.hit);
+      continue;
+    }
+    members.sort(
+      (left, right) =>
+        hitTime(right.hit) - hitTime(left.hit) || right.hit.score - left.hit.score || left.hit.id.localeCompare(right.hit.id),
+    );
+    for (const [index, member] of members.entries()) {
+      if (index === 0) {
+        out.push(member.hit);
+        continue;
+      }
+      const newer = members[index - 1]!;
+      out.push({
+        ...member.hit,
+        supersededBy: { id: newer.hit.id, at: new Date(hitTime(newer.hit)).toISOString() },
+      });
+    }
+  }
+  return out;
+}
+
+function inWindow(candidate: FabricCandidate, from?: number, to?: number): boolean {
+  return noteInWindow(candidate.metadata, candidate.hit.createdAt, from, to);
 }
 
 function resolveRecallAsOf(asOf: string | Date | undefined): number {
@@ -170,6 +316,12 @@ export function createFabricRecall(deps: {
     ) {
       throw new MemoryValidationError("tRef must be a valid increasing timestamp interval");
     }
+    const from = resolveDateBound(recallOptions.from, "from");
+    const to = resolveDateBound(recallOptions.to, "to");
+    if (from !== undefined && to !== undefined && from > to) throw new MemoryValidationError("from must not be after to");
+    const timeOrder = recallOptions.order === "time";
+    if (recallOptions.order !== undefined && !timeOrder && recallOptions.order !== "relevance")
+      throw new MemoryValidationError('order must be "relevance" or "time"');
     const kinds = resolveRecallKinds(recallOptions.kinds);
     const asOfMs = resolveRecallAsOf(recallOptions.asOf);
     const topK = resolveMemoryLimits({ topK: recallOptions.topK ?? limits.topK }).topK;
@@ -187,6 +339,7 @@ export function createFabricRecall(deps: {
     const candidates = loaded.candidates;
 
     const eligible = candidates.filter((candidate) => {
+      if (!inWindow(candidate, from, to)) return false;
       if (!recallOptions.tRef) return true;
       const time = candidate.metadata.tRef ?? candidate.hit.createdAt;
       return Date.parse(time) >= Date.parse(recallOptions.tRef.from) && Date.parse(time) < Date.parse(recallOptions.tRef.to);
@@ -212,6 +365,7 @@ export function createFabricRecall(deps: {
         !isActiveNote(metadata, { asOfMs, allowCandidate: true })
       )
         continue;
+      if (!inWindow({ hit: { ...record, score: 0 }, metadata }, from, to)) continue;
       if (recallOptions.tRef) {
         const time = metadata.tRef ?? record.createdAt;
         if (Date.parse(time) < Date.parse(recallOptions.tRef.from) || Date.parse(time) >= Date.parse(recallOptions.tRef.to)) continue;
@@ -250,17 +404,28 @@ export function createFabricRecall(deps: {
         0,
         recallOptions.touchedPaths,
         true,
+        from === undefined && to === undefined ? undefined : { from, to },
       );
       for (const candidate of archivedLoaded.candidates) {
         if (archivedChosen.length >= archivedCap) break;
-        if (candidate.metadata.status !== "archived") continue;
+        if (candidate.metadata.status !== "archived" || !inWindow(candidate, from, to)) continue;
         archivedChosen.push({ candidate, link: false });
       }
     }
 
-    const ranked = [...verifiedFirst([...chosen.values()]), ...archivedChosen];
+    // Time order is by resolved event date, oldest first; the relevance tie-break keeps it stable.
+    const byTime = (a: ChosenHit, b: ChosenHit) =>
+      noteTime(a.candidate.metadata, a.candidate.hit.createdAt) - noteTime(b.candidate.metadata, b.candidate.hit.createdAt) ||
+      b.candidate.hit.score - a.candidate.hit.score;
+    const ranked = timeOrder
+      ? [[...chosen.values()].sort(byTime), [...archivedChosen].sort(byTime)].flat()
+      : [...verifiedFirst([...chosen.values()]), ...archivedChosen];
+    // Group before selection so a same-subject history competes for the budget as one unit, not as
+    // unrelated hits. An explicit time order keeps its chronological contract and is not regrouped.
+    const rankedById = new Map(ranked.map((item) => [item.candidate.hit.id, item]));
+    const ordered = timeOrder ? ranked : groupRecallHits(ranked.map((item) => toHit(item.candidate))).map((hit) => rankedById.get(hit.id)!);
     const picked = new Set(
-      selectWithScopeReserve(ranked, {
+      selectWithScopeReserve(ordered, {
         ...(budget === undefined ? {} : { budget }),
         tokens: (item) => toHit(item.candidate).tokenCount,
         level: (item) => scopeOf(item.candidate),
@@ -268,7 +433,7 @@ export function createFabricRecall(deps: {
     );
     const hits: MemoryNoteHit[] = [];
     const explain: MemoryFabricExplainEntry[] = [];
-    for (const item of ranked) {
+    for (const item of ordered) {
       if (!picked.has(item)) continue;
       const { candidate, link } = item;
       const hit = toHit(candidate);
@@ -296,6 +461,6 @@ export function createFabricRecall(deps: {
     } catch {
       /* Diagnostic observers cannot affect retrieval. */
     }
-    return { hits, explain };
+    return { hits: timeOrder ? hits : groupRecallHits(hits), explain };
   };
 }

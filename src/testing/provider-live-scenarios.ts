@@ -5,7 +5,6 @@ import type {
   JsonObject,
   ModelConfig,
   ModelProvider,
-  ProviderEvent,
   ProviderRequest,
   ToolCallContent,
   ToolDefinition,
@@ -45,7 +44,7 @@ export const LIVE_WEATHER_TOOL: ToolDefinition = {
   }),
 };
 
-export type LiveRouteName = "openai" | "anthropic" | "responses";
+export type LiveRouteName = "native" | "openai" | "anthropic" | "responses";
 
 export interface LiveRouteConfig {
   readonly model: string | ModelConfig;
@@ -57,6 +56,10 @@ export interface LiveRouteConfig {
   readonly cachePrefix?: string;
   /** Optional model override for cache probe if primary model does not report cache accounting. */
   readonly cacheModel?: string | ModelConfig;
+  /** Structured-output prompt, for services that answer the shared schema-less prompt in prose. */
+  readonly structuredPrompt?: string;
+  /** Model used by the error scenario when the service accepts an empty `messages` array. */
+  readonly errorModel?: string | ModelConfig;
 }
 
 export type LiveRouteInput = string | ModelConfig | LiveRouteConfig;
@@ -71,6 +74,7 @@ export interface ProviderLiveScenariosOptions {
     | ((options?: { fetch?: typeof fetch }) => ModelProvider | PackageInstance | Promise<ModelProvider | PackageInstance>);
   /** Route definitions: chat/openai, anthropic/messages, responses (OpenAI Responses, stateless). */
   readonly routes: {
+    readonly native?: LiveRouteInput;
     readonly openai?: LiveRouteInput;
     readonly anthropic?: LiveRouteInput;
     readonly responses?: LiveRouteInput;
@@ -406,6 +410,7 @@ export async function liveScenarioStructuredOutput(options: {
   readonly sessionId?: string;
   readonly structuredOutput?: "json_schema" | "reject" | boolean;
   readonly schema?: JsonObject;
+  readonly prompt?: string;
 }): Promise<{ readonly ok: boolean; readonly rejected?: boolean; readonly value?: unknown }> {
   const schema = options.schema ?? {
     type: "object",
@@ -420,7 +425,9 @@ export async function liveScenarioStructuredOutput(options: {
 
   const request: ProviderRequest = {
     model: modelToUse,
-    messages: [{ role: "user", content: [{ type: "text", text: "Reply with a JSON object matching the requested schema." }] }],
+    messages: [
+      { role: "user", content: [{ type: "text", text: options.prompt ?? "Reply with a JSON object matching the requested schema." }] },
+    ],
     options: {
       sessionId: options.sessionId ?? `live-structured-${Date.now()}`,
       structuredOutput: { name: "probe", schema },
@@ -482,12 +489,20 @@ export async function liveScenarioErrorResponse(options: {
   readonly route: string;
   readonly secrets: readonly string[];
   readonly sessionId?: string;
+  /** Unknown model to provoke the error; used when the service accepts an empty `messages` array. */
+  readonly errorModel?: ModelConfig;
 }): Promise<void> {
-  const badReq: ProviderRequest = {
-    model: options.model,
-    messages: [],
-    options: { sessionId: options.sessionId ?? "live-error" },
-  };
+  const badReq: ProviderRequest = options.errorModel
+    ? {
+        model: options.errorModel,
+        messages: [{ role: "user", content: [{ type: "text", text: "Reply with exactly: pong" }] }],
+        options: { sessionId: options.sessionId ?? "live-error" },
+      }
+    : {
+        model: options.model,
+        messages: [],
+        options: { sessionId: options.sessionId ?? "live-error" },
+      };
   const events = await collectProviderEvents(options.provider, badReq);
   const term = events.at(-1);
   assert.ok(term, "live error request produced no events");
@@ -695,6 +710,7 @@ export async function executeProviderLiveScenarios(
   const results: ProviderLiveScenarioResult[] = [];
 
   const routeEntries: [LiveRouteName, LiveRouteInput][] = [];
+  if (options.routes.native) routeEntries.push(["native", options.routes.native]);
   if (options.routes.openai) routeEntries.push(["openai", options.routes.openai]);
   if (options.routes.anthropic) routeEntries.push(["anthropic", options.routes.anthropic]);
   if (options.routes.responses) routeEntries.push(["responses", options.routes.responses]);
@@ -732,6 +748,7 @@ export async function executeProviderLiveScenarios(
         secrets,
         sessionId: config.sessionId,
         structuredOutput: config.structuredOutput ?? (model.capabilities?.structuredOutput === "json_schema" ? "json_schema" : undefined),
+        prompt: config.structuredPrompt,
       });
       results.push({ scenario: "structured-output", route: routeName, ok: true, details: structRes });
     }
@@ -747,12 +764,14 @@ export async function executeProviderLiveScenarios(
     }
 
     if (!options.scenarios || options.scenarios.includes("error")) {
+      const errorModel = config.errorModel ? (await resolveModelConfig(provider, config.errorModel, routeName)).model : undefined;
       await liveScenarioErrorResponse({
         provider,
         model,
         route: routeName,
         secrets,
         sessionId: config.sessionId,
+        errorModel,
       });
       results.push({ scenario: "error", route: routeName, ok: true });
     }
@@ -846,6 +865,7 @@ export function runProviderLiveScenarios(options: ProviderLiveScenariosOptions):
     const secrets = resolveSecrets(options.secretEnv, options.secrets);
 
     const routeEntries: [LiveRouteName, LiveRouteInput][] = [];
+    if (options.routes.native) routeEntries.push(["native", options.routes.native]);
     if (options.routes.openai) routeEntries.push(["openai", options.routes.openai]);
     if (options.routes.anthropic) routeEntries.push(["anthropic", options.routes.anthropic]);
     if (options.routes.responses) routeEntries.push(["responses", options.routes.responses]);
@@ -903,6 +923,7 @@ export function runProviderLiveScenarios(options: ProviderLiveScenariosOptions):
             secrets,
             sessionId: routeConfig.sessionId,
             structuredOutput: routeConfig.structuredOutput,
+            prompt: routeConfig.structuredPrompt,
           });
         });
 
@@ -921,12 +942,16 @@ export function runProviderLiveScenarios(options: ProviderLiveScenariosOptions):
 
         (!options.scenarios || options.scenarios.includes("error") ? it : it.skip)("live_error_response_leaks_no_secret", async () => {
           await init();
+          const errorModel = routeConfig.errorModel
+            ? (await resolveModelConfig(provider, routeConfig.errorModel, routeName)).model
+            : undefined;
           await liveScenarioErrorResponse({
             provider,
             model,
             route: routeName,
             secrets,
             sessionId: routeConfig.sessionId,
+            errorModel,
           });
         });
 

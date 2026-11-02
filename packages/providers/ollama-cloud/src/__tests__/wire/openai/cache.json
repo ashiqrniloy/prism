@@ -1,0 +1,20 @@
+{
+  "method": "POST",
+  "path": "/v1/chat/completions",
+  "requestBody": {
+    "model": "gemma4:31b",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Warm prefix prompt for cache hit verification."
+      }
+    ],
+    "stream": true,
+    "stream_options": {
+      "include_usage": true
+    }
+  },
+  "status": 200,
+  "contentType": "text/event-stream",
+  "responseBody": "data: {\"id\":\"chatcmpl-ollama-cache\",\"object\":\"chat.completion.chunk\",\"created\":1762000020,\"model\":\"gemma4:31b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"Cache hit acknowledged.\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-ollama-cache\",\"object\":\"chat.completion.chunk\",\"created\":1762000020,\"model\":\"gemma4:31b\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: {\"id\":\"chatcmpl-ollama-cache\",\"object\":\"chat.completion.chunk\",\"created\":1762000020,\"model\":\"gemma4:31b\",\"choices\":[],\"usage\":{\"prompt_tokens\":150,\"completion_tokens\":8,\"total_tokens\":158,\"prompt_tokens_details\":{\"cached_tokens\":120}}}\n\ndata: [DONE]\n\n"
+}

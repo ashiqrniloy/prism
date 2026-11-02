@@ -12,7 +12,14 @@ import {
   type ProviderRequest,
   type SessionEntry,
 } from "@arnilo/prism";
-import { mockProvider, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism/testing";
+import {
+  createScriptedHostUi,
+  mockProvider,
+  providerDone,
+  providerTextDelta,
+  providerToolCall,
+  toolCallContent,
+} from "@arnilo/prism/testing";
 import { createHashEmbedder } from "@arnilo/prism-memory-core";
 import { createMarkdownMemoryStores } from "@arnilo/prism-memory-core/fabric";
 import { type MemoryFabricConfig, resolveMemoryFabricConfig } from "../config.js";
@@ -227,6 +234,46 @@ describe("exchange archive module", () => {
     );
   });
 
+  it("coding_preset_captures_a_cue_as_proposed_and_confirms_it_through_host_ui", async () => {
+    const root = await tempRoot();
+    const scripted = createScriptedHostUi({ confirm: true });
+    const agent = await createAgent({
+      model: { provider: "mock", model: "main" },
+      host: { ui: scripted.ui },
+      packages: [mockProvider([[providerTextDelta("Understood."), providerDone()]]), memoryFabric({ preset: "coding", tools: { root } })],
+      slots: { store: createMemorySessionStore() },
+    });
+    const session = await agent.session({ id: "coding-decision", create: true });
+    await session.run("From now on, use pnpm instead of npm because we keep one lockfile.");
+    await waitFor(async () => (await decisionFiles(root)).length > 0);
+    await session.close();
+
+    const files = await decisionFiles(root);
+    assert.equal(files.length, 1, "one cue writes one decision note");
+    assert.match(files[0]!.body, /pnpm instead of npm/);
+    assert.match(files[0]!.body, /"decisionStatus":"active"/, "the person confirmed the proposed rule once");
+    assert.match(files[0]!.body, /"sourceEntryIds":/);
+    assert.equal(scripted.requestsOf("confirm").length, 1, "confirmation is one batched host.ui call");
+
+    const stores = await createMarkdownMemoryStores({ root: join(root, "notes") });
+    try {
+      const memory = createMemory({
+        tenantId: "prism",
+        resourceId: PROJECT_RESOURCE,
+        threadId: "default",
+        vectorStore: stores.vectorStore,
+        workingStore: stores.workingStore,
+      });
+      const fabric = createMemoryFabric({ memory, consolidate: false });
+      const result = await fabric.recall("pnpm lockfile", { kinds: ["decision"], topK: 5, budget: 1_000 });
+      assert.equal(result.hits[0]?.decisionStatus, "active");
+      assert.equal(result.hits[0]?.rationale, "We keep one lockfile.");
+    } finally {
+      await stores.close();
+      await agent.dispose();
+    }
+  });
+
   it("exchanges_off_writes_nothing", async () => {
     const root = await tempRoot();
     const requests: ProviderRequest[] = [];
@@ -251,6 +298,24 @@ describe("exchange archive module", () => {
     await agent.dispose();
   });
 });
+
+/** Every decision note under `<root>/notes`, whatever directory its kind falls back to. */
+async function decisionFiles(root: string): Promise<readonly { path: string; body: string }[]> {
+  const found: { path: string; body: string }[] = [];
+  const walk = async (dir: string): Promise<void> => {
+    const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+    for (const item of entries) {
+      const path = join(dir, item.name);
+      if (item.isDirectory()) await walk(path);
+      else if (path.endsWith(".md") && !path.includes(".tmp-")) {
+        const body = await readFile(path, "utf8").catch(() => undefined);
+        if (body !== undefined && (/"kind":"decision"/.test(body) || /"decisionStatus":/.test(body))) found.push({ path, body });
+      }
+    }
+  };
+  await walk(join(root, "notes"));
+  return found;
+}
 
 describe("exchange archive through the package", () => {
   it("message_completed_archives_one_exchange_with_source_ids_and_date", async () => {

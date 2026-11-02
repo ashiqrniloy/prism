@@ -128,6 +128,8 @@ export function transformVariantSource(path, source, input = []) {
             inject.budgetTokens ?? 600,
             inject.topK ?? 3,
             eligible.length,
+            inject.minScore,
+            fullTextScore,
           );`,
         `          const hits: MemoryNoteHit[] = [];
           const semanticLines: string[] = ["Cite the ids you use as [id]."];
@@ -174,10 +176,13 @@ export function transformVariantSource(path, source, input = []) {
   if (active("fabric.crossSourceDedup=off")) replace("const duplicate = visibleMemory(draft, entries);", "const duplicate = () => false;");
   if (active("lifecycle.verification=retrieval")) replace("return state ? [...state.cited] : [];", "return state ? [...state.shown] : [];");
   if (active("lifecycle.promotion=every-reflection")) {
-    replace(
-      'import { randomUUID } from "node:crypto";',
-      'import { randomUUID } from "node:crypto";\nimport { scanScopedMemoryContent } from "./scoped/trust.js";',
-    );
+    // The current source already imports the trust scan; only historical sources need the line.
+    if (!source.includes('import { scanScopedMemoryContent } from "./scoped/trust.js";')) {
+      replace(
+        'import { randomUUID } from "node:crypto";',
+        'import { randomUUID } from "node:crypto";\nimport { scanScopedMemoryContent } from "./scoped/trust.js";',
+      );
+    }
     replace(
       "    consolidate,\n    recall,",
       `    consolidate: async (session, consolidateOptions = {}) => {

@@ -2,18 +2,19 @@
  * Plan 188.4 Task 5: duplicate merging is deterministic grouping, episode merging is one fail-closed
  * model call per cluster, and the survivor inherits the evidence the others carried.
  */
-import assert from "node:assert/strict";
+
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
 import type { JsonObject, ModelClient } from "@arnilo/prism";
 import { providerDone, providerToolCall, toolCallContent } from "@arnilo/prism/testing";
 import { createMemoryVectorStore } from "@arnilo/prism-memory-core";
 import { resolveLifecycleConfig } from "../../config.js";
 import { createMemoryFabric } from "../../create.js";
 import { createMemory } from "../../memory.js";
-import { encodeMemoryNoteMetadata, parseMemoryNoteMetadata } from "../../types.js";
-import { duplicateGroups, EPISODE_MERGE_TOOL, episodeClusters, mergedMetadata } from "../merge.js";
-import type { CapacityNote } from "../capacity.js";
 import type { MemoryNoteMetadata } from "../../types.js";
+import { encodeMemoryNoteMetadata, parseMemoryNoteMetadata } from "../../types.js";
+import type { CapacityNote } from "../capacity.js";
+import { duplicateGroups, EPISODE_MERGE_TOOL, episodeClusters, mergedMetadata } from "../merge.js";
 
 function capacityNote(id: string, fields: Partial<Omit<MemoryNoteMetadata, "v">>, text: string): CapacityNote {
   return { id, metadata: { v: 1, kind: "fact", ...fields }, status: "verified", text, tokens: 1 };
@@ -75,7 +76,10 @@ describe("capacity merging (plan 188.4 Task 5)", () => {
     assert.ok(groups.some((group) => group.survivor.id === "cccccccccccc" && group.others[0]?.id === "dddddddddddd"));
     assert.equal(groups.flatMap((group) => [group.survivor.id, ...group.others.map((note) => note.id)]).includes(alone.id), false);
     // A pinned note is never an input: a merge archives the loser.
-    assert.deepEqual(duplicateGroups([capacityNote("ffffffffffff", { key: "k", pinned: true }, "x"), capacityNote("111111111111", { key: "k" }, "x")]), []);
+    assert.deepEqual(
+      duplicateGroups([capacityNote("ffffffffffff", { key: "k", pinned: true }, "x"), capacityNote("111111111111", { key: "k" }, "x")]),
+      [],
+    );
   });
 
   it("merged_metadata_unions_and_sums", () => {
@@ -137,9 +141,12 @@ describe("capacity merging (plan 188.4 Task 5)", () => {
       lifecycle,
       clock: () => 0,
       resolveModelClient: () =>
-        summaryClient(() => {
-          calls += 1;
-        }, { text: "Drain the canary pool before every rollback", kind: "procedure", keywords: ["canary"] }),
+        summaryClient(
+          () => {
+            calls += 1;
+          },
+          { text: "Drain the canary pool before every rollback", kind: "procedure", keywords: ["canary"] },
+        ),
     });
 
     const report = await fabric.maintain();
@@ -178,9 +185,12 @@ describe("capacity merging (plan 188.4 Task 5)", () => {
       lifecycle,
       clock: () => 0,
       resolveModelClient: () =>
-        summaryClient(() => {
-          calls += 1;
-        }, { text: "never written", kind: "procedure" }),
+        summaryClient(
+          () => {
+            calls += 1;
+          },
+          { text: "never written", kind: "procedure" },
+        ),
     });
 
     const report = await fabric.maintain();
@@ -202,7 +212,11 @@ describe("capacity merging (plan 188.4 Task 5)", () => {
     assert.equal(resolveLifecycleConfig({ merge: { episodes: false } }).merge.episodes, undefined);
     assert.deepEqual(resolveLifecycleConfig({ merge: { episodes: {} } }).merge.episodes, { minCluster: 5 });
     assert.deepEqual(resolveLifecycleConfig({ capacity: { project: { notes: 10 } } }).capacity.project, { notes: 10, tokens: 60_000 });
+    assert.deepEqual(resolved.exchangeCapacity, { hotTokens: 200_000 });
+    assert.deepEqual(resolveLifecycleConfig({ exchangeCapacity: { hotTokens: 20_000 } }).exchangeCapacity, { hotTokens: 20_000 });
     for (const bad of [
+      { exchangeCapacity: { hotTokens: 0 } },
+      { exchangeCapacity: { hotTokens: 1_000_001 } },
       { capacity: { project: { notes: 0 } } },
       { capacity: { project: { tokens: 1_000_001 } } },
       { merge: { duplicateDice: 0.4 } },

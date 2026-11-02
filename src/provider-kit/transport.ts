@@ -28,9 +28,11 @@ export type ProviderTransportErrorCode =
   | "incomplete_delta"
   | "response_body_shape";
 
-const QUOTA_BODY = /quota|usage[\s_-]*limit|insufficient[\s_-]*(?:quota|credit|balance)|billing[\s_-]*(?:limit|quota)/i;
+const QUOTA_BODY =
+  /quota|usage[\s_-]*limit|session[\s_-]*limit|weekly[\s_-]*limit|insufficient[\s_-]*(?:quota|credit|balance)|billing[\s_-]*(?:limit|quota)/i;
 /** Bodies the supported routes answer when the request does not fit the model's context window. */
-const CONTEXT_OVERFLOW_BODY = /context_length_exceeded|maximum context length|context window exceeds limit|prompt is too long/i;
+const CONTEXT_OVERFLOW_BODY =
+  /context_length_exceeded|maximum context length|exceeded max(?:imum)? context length|context window exceeds limit|prompt is too long/i;
 /** 400/413 are the generic overflow statuses; SystemOne answers 422 for an invalid request. */
 const CONTEXT_OVERFLOW_STATUSES = new Set([400, 413, 422]);
 const TRANSIENT_NETWORK_CODES = new Set(["ECONNRESET", "ECONNREFUSED", "EAI_AGAIN", "ENETUNREACH", "ETIMEDOUT", "UND_ERR_CONNECT_TIMEOUT"]);

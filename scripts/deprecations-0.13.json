@@ -32,9 +32,9 @@
       "name": "@arnilo/prism-providers",
       "range": "*",
       "reused": false,
-      "successor": "@arnilo/prism-provider-{commandcode,hyper,kilo,laya,litellm,liquid,openai-codex,opencode-go,openrouter,typesafe} and @arnilo/prism/provider-kit",
+      "successor": "@arnilo/prism-provider-{commandcode,hyper,kilo,laya,liquid,litellm,ollama-cloud,openai-codex,opencode-go,openrouter,typesafe} and @arnilo/prism/provider-kit",
       "anchor": "#012-family-package-native-package-map",
-      "message": "Legacy 0.12 package. Prism 0.13+: @arnilo/prism-provider-{hyper,kilo,laya,liquid,litellm,openai-codex,opencode-go,openrouter,typesafe} and @arnilo/prism/provider-kit. https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+      "message": "Legacy 0.12 package. Prism 0.13+: @arnilo/prism-provider-{commandcode,hyper,kilo,laya,liquid,litellm,ollama-cloud,openai-codex,opencode-go,openrouter,typesafe} and @arnilo/prism/provider-kit. https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
     },
     {
       "name": "@arnilo/prism-coding-tools",
@@ -226,7 +226,7 @@
       "reused": false,
       "successor": "@arnilo/prism/provider-kit",
       "anchor": "#012-family-package-native-package-map",
-      "message": "Not shipped in Prism 0.13.0. Build a provider on @arnilo/prism/provider-kit: https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+      "message": "Not shipped in Prism 0.13.0. For Ollama Cloud use @arnilo/prism-provider-ollama-cloud; for anything else build a provider on @arnilo/prism/provider-kit: https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
     },
     {
       "name": "@arnilo/prism-provider-openai",

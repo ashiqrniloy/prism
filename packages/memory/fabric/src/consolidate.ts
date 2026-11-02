@@ -65,6 +65,7 @@ export function mergeNoteMetadata(existing: MemoryNoteMetadata, incoming: Memory
   const links = mergeNoteLinks(existing.links, incoming.links);
   const sourceEntryIds = unionStrings(existing.sourceEntryIds, incoming.sourceEntryIds);
   const tRef = incoming.tRef ?? existing.tRef;
+  const dates = incoming.dates ?? existing.dates;
   const validFrom = incoming.validFrom ?? existing.validFrom;
   const context = incoming.context ?? existing.context;
   const supersedes = incoming.supersedes ?? existing.supersedes;
@@ -73,6 +74,7 @@ export function mergeNoteMetadata(existing: MemoryNoteMetadata, incoming: Memory
   const scope = incoming.scope ?? existing.scope;
   const appliesTo = incoming.appliesTo ?? existing.appliesTo;
   const key = incoming.key ?? existing.key;
+  const subject = incoming.subject ?? existing.subject;
   const uses = existing.uses;
   const useSessions = existing.useSessions;
   const retrievals = existing.retrievals;
@@ -86,6 +88,7 @@ export function mergeNoteMetadata(existing: MemoryNoteMetadata, incoming: Memory
     kind: incoming.kind,
     ...(existing.unknown === undefined ? {} : { unknown: existing.unknown }),
     ...(tRef === undefined ? {} : { tRef }),
+    ...(dates === undefined ? {} : { dates }),
     ...(validFrom === undefined ? {} : { validFrom }),
     ...(incoming.validTo === undefined ? {} : { validTo: incoming.validTo }),
     ...(keywords === undefined ? {} : { keywords }),
@@ -99,6 +102,7 @@ export function mergeNoteMetadata(existing: MemoryNoteMetadata, incoming: Memory
     ...(scope === undefined ? {} : { scope }),
     ...(appliesTo === undefined ? {} : { appliesTo }),
     ...(key === undefined ? {} : { key }),
+    ...(subject === undefined ? {} : { subject }),
     ...(uses === undefined ? {} : { uses }),
     ...(useSessions === undefined ? {} : { useSessions }),
     ...(retrievals === undefined ? {} : { retrievals }),

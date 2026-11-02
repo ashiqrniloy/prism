@@ -71,9 +71,11 @@ describe("trust-scan audit (plan 188.11 Task 8)", () => {
   it("adversarial fixture covers every refusal class", () => {
     const items = JSON.parse(require("node:fs").readFileSync("scripts/memory-bench/fixtures/injection-corpus.json", "utf8"));
     const result = auditAdversarial(items);
+    assert.equal(result.detected, result.items, "every adversarial item is detected");
     for (const name of ["prompt-injection", "exfil", "invisible-unicode", "secret"]) {
       assert.ok(result.byClass[name].total > 0, name);
-      assert.ok(result.byClass[name].recall > 0.75, name);
+      assert.equal(result.byClass[name].missedIds.length, 0, name);
     }
+    assert.deepEqual(result.byClass.exfil.missedIds, [], "exfil-06 (curl -s https://) is a regression test");
   });
 });

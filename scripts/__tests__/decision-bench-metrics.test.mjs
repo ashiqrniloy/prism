@@ -1,6 +1,17 @@
 import { test } from "bun:test";
 import assert from "node:assert/strict";
-import { agreement, brier, ece, loadItems, percentile, scoreAnswer, summarise, validateItems } from "../decision-bench.mjs";
+import {
+  agreement,
+  brier,
+  ece,
+  loadItems,
+  loadMemoryItems,
+  percentile,
+  scoreAnswer,
+  summarise,
+  validateItems,
+  validateMemoryItems,
+} from "../decision-bench.mjs";
 
 const noulItem = (id, label) => ({
   id,
@@ -31,6 +42,16 @@ test("checked-in fixture validates and stays inside the 150-300 item band", () =
   assert.deepEqual(validateItems(items), []);
   assert.ok(items.length >= 150 && items.length <= 300, `got ${items.length}`);
   assert.deepEqual(new Set(items.map((item) => item.category)), new Set(["tool", "route", "tool-result-error", "approval-risk"]));
+});
+
+test("memory-gate fixture has at least 100 labelled items per point and choices are reversed", () => {
+  const items = loadMemoryItems();
+  assert.deepEqual(validateMemoryItems(items), []);
+  assert.equal(items.length, 700);
+  for (const point of ["P1", "P2", "P3", "P4", "P5", "P6", "P7"]) {
+    assert.equal(items.filter((item) => item.point === point).length, 100, point);
+  }
+  assert.equal(items.filter((item) => item.point === "P2" && item.reversed === true).length, 50);
 });
 
 test("validateItems rejects a bad label and a duplicate id", () => {

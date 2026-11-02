@@ -1,0 +1,746 @@
+{
+  "schemaVersion": 1,
+  "title": "Plan 202 Task 5 Development Screen Verdict",
+  "criteriaVersion": "202-task5-candidate-gap-v2-screen",
+  "manifestHash": "8828ec96fa4efde255ca7b07d4d855123486a14a6b2531dc461df3d4476c26a7",
+  "generatedAt": "2026-11-02T20:38:08.646Z",
+  "mode": "development-screen",
+  "screenVerdict": "miss",
+  "handOff": {
+    "plan": 210,
+    "reason": "deferred to plan 210 by the plan 202 Task 5.4.6 owner disposition; the full target is postponed, not dropped",
+    "verdictSummary": "Candidate gap did not achieve the required 50% reduction in any measurable suite (ratios 0.88-1.22 vs target <= 0.50). MAB was unmeasurable due to lack of fine round labels. Descriptive ability regressions observed on beam-100k (abstention, preference_following), locomo (adversarial, open-domain), and beam-1m (multi_session_reasoning), with summarization and temporal_reasoning unverified. Screen closes as miss; deferred arms and root-cause investigations hand off to Plan 210."
+  },
+  "suites": {
+    "beam-100k": {
+      "suite": "beam-100k",
+      "candidateGap": {
+        "suite": "beam-100k",
+        "measurable": true,
+        "pairedQuestions": 33,
+        "measurablePairs": 27,
+        "controlGapCount": 23,
+        "controlGapRate": 0.8518518518518519,
+        "candidateGapCount": 22,
+        "candidateGapRate": 0.8148148148148148,
+        "ratio": 0.9565217391304347,
+        "halvingTarget": 0.42592592592592593,
+        "passed": false,
+        "worstCaseBound": {
+          "candidateFailures": 1,
+          "worstCaseCandidateGaps": 23,
+          "worstCaseCandidateGapRate": 0.7931034482758621,
+          "worstCasePassed": false
+        },
+        "uncertainty": {
+          "diff": -0.037037037037037035,
+          "ci95": [
+            -0.14814814814814814,
+            0.08695652173913043
+          ],
+          "p": 1,
+          "iterations": 10000,
+          "seed": 7
+        },
+        "verdict": "miss"
+      },
+      "abilityGuard": {
+        "role": "descriptive",
+        "margin": 0.03,
+        "strata": {
+          "abstention": {
+            "ability": "abstention",
+            "pairs": 4,
+            "controlCorrect": 3,
+            "candidateCorrect": 1,
+            "controlAccuracy": 0.75,
+            "candidateAccuracy": 0.25,
+            "diff": -0.5,
+            "ci95": [
+              -1,
+              0
+            ],
+            "p": 0.5,
+            "pHolm": 1,
+            "passesMargin": false,
+            "regressed": true,
+            "missing": false,
+            "status": "regression"
+          },
+          "contradiction_resolution": {
+            "ability": "contradiction_resolution",
+            "pairs": 4,
+            "controlCorrect": 0,
+            "candidateCorrect": 0,
+            "controlAccuracy": 0,
+            "candidateAccuracy": 0,
+            "diff": 0,
+            "ci95": [
+              0,
+              0
+            ],
+            "p": 1,
+            "pHolm": 1,
+            "passesMargin": true,
+            "regressed": false,
+            "missing": false,
+            "status": "pass"
+          },
+          "event_ordering": {
+            "ability": "event_ordering",
+            "pairs": 4,
+            "controlCorrect": 0,
+            "candidateCorrect": 0,
+            "controlAccuracy": 0,
+            "candidateAccuracy": 0,
+            "diff": 0,
+            "ci95": [
+              0,
+              0
+            ],
+            "p": 1,
+            "pHolm": 1,
+            "passesMargin": true,
+            "regressed": false,
+            "missing": false,
+            "status": "pass"
+          },
+          "information_extraction": {
+            "ability": "information_extraction",
+            "pairs": 4,
+            "controlCorrect": 2,
+            "candidateCorrect": 2,
+            "controlAccuracy": 0.5,
+            "candidateAccuracy": 0.5,
+            "diff": 0,
+            "ci95": [
+              0,
+              0
+            ],
+            "p": 1,
+            "pHolm": 1,
+            "passesMargin": true,
+            "regressed": false,
+            "missing": false,
+            "status": "pass"
+          },
+          "instruction_following": {
+            "ability": "instruction_following",
+            "pairs": 4,
+            "controlCorrect": 2,
+            "candidateCorrect": 3,
+            "controlAccuracy": 0.5,
+            "candidateAccuracy": 0.75,
+            "diff": 0.25,
+            "ci95": [
+              0,
+              0.75
+            ],
+            "p": 1,
+            "pHolm": 1,
+            "passesMargin": true,
+            "regressed": false,
+            "missing": false,
+            "status": "pass"
+          },
+          "knowledge_update": {
+            "ability": "knowledge_update",
+            "pairs": 3,
+            "controlCorrect": 2,
+            "candidateCorrect": 2,
+            "controlAccuracy": 0.6666666666666666,
+            "candidateAccuracy": 0.6666666666666666,
+            "diff": 0,
+            "ci95": [
+              0,
+              0
+            ],
+            "p": 1,
+            "pHolm": 1,
+            "passesMargin": true,
+            "regressed": false,
+            "missing": false,
+            "status": "pass"
+          },
+          "multi_session_reasoning": {
+            "ability": "multi_session_reasoning",
+            "pairs": 4,
+            "controlCorrect": 0,
+            "candidateCorrect": 1,
+            "controlAccuracy": 0,
+            "candidateAccuracy": 0.25,
+            "diff": 0.25,
+            "ci95": [
+              0,
+              0.75
+            ],
+            "p": 1,
+            "pHolm": 1,
+            "passesMargin": true,
+            "regressed": false,
+            "missing": false,
+            "status": "pass"
+          },
+          "preference_following": {
+            "ability": "preference_following",
+            "pairs": 4,
+            "controlCorrect": 3,
+            "candidateCorrect": 1,
+            "controlAccuracy": 0.75,
+            "candidateAccuracy": 0.25,
+            "diff": -0.5,
+            "ci95": [
+              -1,
+              0
+            ],
+            "p": 0.5,
+            "pHolm": 1,
+            "passesMargin": false,
+            "regressed": true,
+            "missing": false,
+            "status": "regression"
+          },
+          "summarization": {
+            "ability": "summarization",
+            "pairs": 0,
+            "controlCorrect": null,
+            "candidateCorrect": null,
+            "controlAccuracy": null,
+            "candidateAccuracy": null,
+            "diff": null,
+            "ci95": null,
+            "p": null,
+            "pHolm": null,
+            "passesMargin": false,
+            "regressed": false,
+            "missing": true,
+            "status": "unverified"
+          },
+          "temporal_reasoning": {
+            "ability": "temporal_reasoning",
+            "pairs": 0,
+            "controlCorrect": null,
+            "candidateCorrect": null,
+            "controlAccuracy": null,
+            "candidateAccuracy": null,
+            "diff": null,
+            "ci95": null,
+            "p": null,
+            "pHolm": null,
+            "passesMargin": false,
+            "regressed": false,
+            "missing": true,
+            "status": "unverified"
+          }
+        },
+        "regressions": [
+          "abstention",
+          "preference_following"
+        ],
+        "unverifiedStrata": [
+          "summarization",
+          "temporal_reasoning"
+        ],
+        "passed": false
+      },
+      "suiteVerdict": "miss"
+    },
+    "locomo": {
+      "suite": "locomo",
+      "candidateGap": {
+        "suite": "locomo",
+        "measurable": true,
+        "pairedQuestions": 60,
+        "measurablePairs": 55,
+        "controlGapCount": 37,
+        "controlGapRate": 0.6727272727272727,
+        "candidateGapCount": 45,
+        "candidateGapRate": 0.8181818181818182,
+        "ratio": 1.2162162162162162,
+        "halvingTarget": 0.33636363636363636,
+        "passed": false,
+        "worstCaseBound": {
+          "candidateFailures": 2,
+          "worstCaseCandidateGaps": 47,
+          "worstCaseCandidateGapRate": 0.7833333333333333,
+          "worstCasePassed": false
+        },
+        "uncertainty": {
+          "diff": 0.14545454545454545,
+          "ci95": [
+            0,
+            0.2898550724637681
+          ],
+          "p": 0.1875,
+          "iterations": 10000,
+          "seed": 7
+        },
+        "verdict": "miss"
+      },
+      "abilityGuard": {
+        "role": "descriptive",
+        "margin": 0.03,
+        "strata": {
+          "multi-hop": {
+            "ability": "multi-hop",
+            "pairs": 12,
+            "controlCorrect": 3,
+            "candidateCorrect": 4,
+            "controlAccuracy": 0.25,
+            "candidateAccuracy": 0.3333333333333333,
+            "diff": 0.08333333333333331,
+            "ci95": [
+              0,
+              0.21428571428571427
+            ],
+            "p": 1,
+            "pHolm": 1,
+            "passesMargin": true,
+            "regressed": false,
+            "missing": false,
+            "status": "pass"
+          },
+          "temporal": {
+            "ability": "temporal",
+            "pairs": 12,
+            "controlCorrect": 8,
+            "candidateCorrect": 8,
+            "controlAccuracy": 0.6666666666666666,
+            "candidateAccuracy": 0.6666666666666666,
+            "diff": 0,
+            "ci95": [
+              -0.25,
+              0.2
+            ],
+            "p": 1,
+            "pHolm": 1,
+            "passesMargin": true,
+            "regressed": false,
+            "missing": false,
+            "status": "pass"
+          },
+          "open-domain": {
+            "ability": "open-domain",
+            "pairs": 10,
+            "controlCorrect": 5,
+            "candidateCorrect": 4,
+            "controlAccuracy": 0.5,
+            "candidateAccuracy": 0.4,
+            "diff": -0.09999999999999998,
+            "ci95": [
+              -0.23076923076923078,
+              0
+            ],
+            "p": 1,
+            "pHolm": 1,
+            "passesMargin": false,
+            "regressed": true,
+            "missing": false,
+            "status": "regression"
+          },
+          "single-hop": {
+            "ability": "single-hop",
+            "pairs": 12,
+            "controlCorrect": 11,
+            "candidateCorrect": 11,
+            "controlAccuracy": 0.9166666666666666,
+            "candidateAccuracy": 0.9166666666666666,
+            "diff": 0,
+            "ci95": [
+              -0.25,
+              0.2
+            ],
+            "p": 1,
+            "pHolm": 1,
+            "passesMargin": true,
+            "regressed": false,
+            "missing": false,
+            "status": "pass"
+          },
+          "adversarial": {
+            "ability": "adversarial",
+            "pairs": 9,
+            "controlCorrect": 7,
+            "candidateCorrect": 6,
+            "controlAccuracy": 0.7777777777777778,
+            "candidateAccuracy": 0.6666666666666666,
+            "diff": -0.11111111111111116,
+            "ci95": [
+              -0.45454545454545453,
+              0.4
+            ],
+            "p": 1,
+            "pHolm": 1,
+            "passesMargin": false,
+            "regressed": true,
+            "missing": false,
+            "status": "regression"
+          }
+        },
+        "regressions": [
+          "open-domain",
+          "adversarial"
+        ],
+        "unverifiedStrata": [],
+        "passed": false
+      },
+      "suiteVerdict": "miss"
+    },
+    "memoryagentbench-cr": {
+      "suite": "memoryagentbench-cr",
+      "candidateGap": {
+        "suite": "memoryagentbench-cr",
+        "measurable": false,
+        "reason": "no fine-round labels or unresolved gold reference; missingness is never zero",
+        "pairedQuestions": 20,
+        "measurablePairs": 0,
+        "controlGapCount": null,
+        "controlGapRate": null,
+        "candidateGapCount": null,
+        "candidateGapRate": null,
+        "ratio": null,
+        "halvingTarget": null,
+        "passed": false,
+        "worstCaseBound": null,
+        "uncertainty": null,
+        "verdict": "inconclusive"
+      },
+      "abilityGuard": {
+        "role": "descriptive",
+        "margin": 0.03,
+        "strata": {
+          "conflict-resolution-single-hop": {
+            "ability": "conflict-resolution-single-hop",
+            "pairs": 10,
+            "controlCorrect": 10,
+            "candidateCorrect": 10,
+            "controlAccuracy": 1,
+            "candidateAccuracy": 1,
+            "diff": 0,
+            "ci95": [
+              0,
+              0
+            ],
+            "p": 1,
+            "pHolm": 1,
+            "passesMargin": true,
+            "regressed": false,
+            "missing": false,
+            "status": "pass"
+          },
+          "conflict-resolution-multi-hop": {
+            "ability": "conflict-resolution-multi-hop",
+            "pairs": 8,
+            "controlCorrect": 3,
+            "candidateCorrect": 3,
+            "controlAccuracy": 0.375,
+            "candidateAccuracy": 0.375,
+            "diff": 0,
+            "ci95": [
+              -0.2727272727272727,
+              0.375
+            ],
+            "p": 1,
+            "pHolm": 1,
+            "passesMargin": true,
+            "regressed": false,
+            "missing": false,
+            "status": "pass"
+          }
+        },
+        "regressions": [],
+        "unverifiedStrata": [],
+        "passed": true
+      },
+      "suiteVerdict": "inconclusive"
+    },
+    "beam-1m": {
+      "suite": "beam-1m",
+      "candidateGap": {
+        "suite": "beam-1m",
+        "measurable": true,
+        "pairedQuestions": 11,
+        "measurablePairs": 8,
+        "controlGapCount": 8,
+        "controlGapRate": 1,
+        "candidateGapCount": 7,
+        "candidateGapRate": 0.875,
+        "ratio": 0.875,
+        "halvingTarget": 0.5,
+        "passed": false,
+        "worstCaseBound": {
+          "candidateFailures": 1,
+          "worstCaseCandidateGaps": 8,
+          "worstCaseCandidateGapRate": 0.8888888888888888,
+          "worstCasePassed": false
+        },
+        "uncertainty": {
+          "diff": -0.125,
+          "ci95": [
+            -0.375,
+            0
+          ],
+          "p": 1,
+          "iterations": 10000,
+          "seed": 7
+        },
+        "verdict": "miss"
+      },
+      "abilityGuard": {
+        "role": "descriptive",
+        "margin": 0.03,
+        "strata": {
+          "abstention": {
+            "ability": "abstention",
+            "pairs": 2,
+            "controlCorrect": 1,
+            "candidateCorrect": 1,
+            "controlAccuracy": 0.5,
+            "candidateAccuracy": 0.5,
+            "diff": 0,
+            "ci95": [
+              0,
+              0
+            ],
+            "p": 1,
+            "pHolm": 1,
+            "passesMargin": true,
+            "regressed": false,
+            "missing": false,
+            "status": "pass"
+          },
+          "contradiction_resolution": {
+            "ability": "contradiction_resolution",
+            "pairs": 1,
+            "controlCorrect": 0,
+            "candidateCorrect": 0,
+            "controlAccuracy": 0,
+            "candidateAccuracy": 0,
+            "diff": 0,
+            "ci95": [
+              0,
+              0
+            ],
+            "p": 1,
+            "pHolm": 1,
+            "passesMargin": true,
+            "regressed": false,
+            "missing": false,
+            "status": "pass"
+          },
+          "event_ordering": {
+            "ability": "event_ordering",
+            "pairs": 1,
+            "controlCorrect": 0,
+            "candidateCorrect": 0,
+            "controlAccuracy": 0,
+            "candidateAccuracy": 0,
+            "diff": 0,
+            "ci95": [
+              0,
+              0
+            ],
+            "p": 1,
+            "pHolm": 1,
+            "passesMargin": true,
+            "regressed": false,
+            "missing": false,
+            "status": "pass"
+          },
+          "information_extraction": {
+            "ability": "information_extraction",
+            "pairs": 2,
+            "controlCorrect": 2,
+            "candidateCorrect": 2,
+            "controlAccuracy": 1,
+            "candidateAccuracy": 1,
+            "diff": 0,
+            "ci95": [
+              0,
+              0
+            ],
+            "p": 1,
+            "pHolm": 1,
+            "passesMargin": true,
+            "regressed": false,
+            "missing": false,
+            "status": "pass"
+          },
+          "instruction_following": {
+            "ability": "instruction_following",
+            "pairs": 1,
+            "controlCorrect": 0,
+            "candidateCorrect": 0,
+            "controlAccuracy": 0,
+            "candidateAccuracy": 0,
+            "diff": 0,
+            "ci95": [
+              0,
+              0
+            ],
+            "p": 1,
+            "pHolm": 1,
+            "passesMargin": true,
+            "regressed": false,
+            "missing": false,
+            "status": "pass"
+          },
+          "knowledge_update": {
+            "ability": "knowledge_update",
+            "pairs": 0,
+            "controlCorrect": null,
+            "candidateCorrect": null,
+            "controlAccuracy": null,
+            "candidateAccuracy": null,
+            "diff": null,
+            "ci95": null,
+            "p": null,
+            "pHolm": null,
+            "passesMargin": false,
+            "regressed": false,
+            "missing": true,
+            "status": "unverified"
+          },
+          "multi_session_reasoning": {
+            "ability": "multi_session_reasoning",
+            "pairs": 2,
+            "controlCorrect": 2,
+            "candidateCorrect": 1,
+            "controlAccuracy": 1,
+            "candidateAccuracy": 0.5,
+            "diff": -0.5,
+            "ci95": [
+              -1,
+              0
+            ],
+            "p": 1,
+            "pHolm": 1,
+            "passesMargin": false,
+            "regressed": true,
+            "missing": false,
+            "status": "regression"
+          },
+          "preference_following": {
+            "ability": "preference_following",
+            "pairs": 1,
+            "controlCorrect": 1,
+            "candidateCorrect": 1,
+            "controlAccuracy": 1,
+            "candidateAccuracy": 1,
+            "diff": 0,
+            "ci95": [
+              0,
+              0
+            ],
+            "p": 1,
+            "pHolm": 1,
+            "passesMargin": true,
+            "regressed": false,
+            "missing": false,
+            "status": "pass"
+          },
+          "summarization": {
+            "ability": "summarization",
+            "pairs": 0,
+            "controlCorrect": null,
+            "candidateCorrect": null,
+            "controlAccuracy": null,
+            "candidateAccuracy": null,
+            "diff": null,
+            "ci95": null,
+            "p": null,
+            "pHolm": null,
+            "passesMargin": false,
+            "regressed": false,
+            "missing": true,
+            "status": "unverified"
+          },
+          "temporal_reasoning": {
+            "ability": "temporal_reasoning",
+            "pairs": 0,
+            "controlCorrect": null,
+            "candidateCorrect": null,
+            "controlAccuracy": null,
+            "candidateAccuracy": null,
+            "diff": null,
+            "ci95": null,
+            "p": null,
+            "pHolm": null,
+            "passesMargin": false,
+            "regressed": false,
+            "missing": true,
+            "status": "unverified"
+          }
+        },
+        "regressions": [
+          "multi_session_reasoning"
+        ],
+        "unverifiedStrata": [
+          "knowledge_update",
+          "summarization",
+          "temporal_reasoning"
+        ],
+        "passed": false
+      },
+      "suiteVerdict": "miss"
+    }
+  },
+  "sourceReports": {
+    "202-task5.control.beam-100k.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free": {
+      "path": "docs/_evidence/memory-bench/202/task5/run-202-task5.control.beam-100k.preset-r1.kilo.nvidia-nemotron-3-ultra-550b-a55b:free.json",
+      "sha256": "b2b1ea89f67599fc2ec733ad8966b9f7f26b48062cb85b46b65be4490f89424a",
+      "questionsScored": 32,
+      "totalResults": 33,
+      "status": "failed"
+    },
+    "202-task5.candidate.beam-100k.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free": {
+      "path": "docs/_evidence/memory-bench/202/task5/run-202-task5.candidate.beam-100k.preset-r1.kilo.nvidia-nemotron-3-ultra-550b-a55b:free.json",
+      "sha256": "30c78f6da9d52bd01631fb6830d09873954af084334cd1b2299e360ea9a84a01",
+      "questionsScored": 38,
+      "totalResults": 40,
+      "status": "completed"
+    },
+    "202-task5.control.locomo.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free": {
+      "path": "docs/_evidence/memory-bench/202/task5/run-202-task5.control.locomo.preset-r1.kilo.nvidia-nemotron-3-ultra-550b-a55b:free.json",
+      "sha256": "242610b8689bc47b853a147b505cbafc3238d2125e54ad768c5334975b2979be",
+      "questionsScored": 57,
+      "totalResults": 60,
+      "status": "completed"
+    },
+    "202-task5.candidate.locomo.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free": {
+      "path": "docs/_evidence/memory-bench/202/task5/run-202-task5.candidate.locomo.preset-r1.kilo.nvidia-nemotron-3-ultra-550b-a55b:free.json",
+      "sha256": "c81d5a4a8d96df635d66c3cb5a9bcc9da4e14be5e9642343974c02f4ed5ad5c3",
+      "questionsScored": 58,
+      "totalResults": 60,
+      "status": "completed"
+    },
+    "202-task5.control.memoryagentbench-cr.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free": {
+      "path": "docs/_evidence/memory-bench/202/task5/run-202-task5.control.memoryagentbench-cr.preset-r1.kilo.nvidia-nemotron-3-ultra-550b-a55b:free.json",
+      "sha256": "1764afa6f96a29d9b100c231323a87f20f6601d480b375c26e114c3b4f77eae0",
+      "questionsScored": 20,
+      "totalResults": 20,
+      "status": "completed"
+    },
+    "202-task5.candidate.memoryagentbench-cr.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free": {
+      "path": "docs/_evidence/memory-bench/202/task5/run-202-task5.candidate.memoryagentbench-cr.preset-r1.kilo.nvidia-nemotron-3-ultra-550b-a55b:free.json",
+      "sha256": "1ccfed08e4c26af2cc5aef5de28b0a538fb50ab0b14f0f2d41738b5e5e51ea30",
+      "questionsScored": 18,
+      "totalResults": 20,
+      "status": "completed"
+    },
+    "202-task5.control.beam-1m.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free": {
+      "path": "docs/_evidence/memory-bench/202/task5/run-202-task5.control.beam-1m.preset-r1.kilo.nvidia-nemotron-3-ultra-550b-a55b:free.json",
+      "sha256": "6b13e2fe40ada26e916ab41ba8308c44e76c2d60c5ad25968b895e963a423ff1",
+      "questionsScored": 40,
+      "totalResults": 40,
+      "status": "completed"
+    },
+    "202-task5.candidate.beam-1m.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free": {
+      "path": "docs/_evidence/memory-bench/202/task5/run-202-task5.candidate.beam-1m.preset-r1.kilo.nvidia-nemotron-3-ultra-550b-a55b:free.json",
+      "sha256": "11339def7581737ecff208cfdfb257557d0986659dddecbe6cbc8a69cbc16dfb",
+      "questionsScored": 27,
+      "totalResults": 31,
+      "status": "failed"
+    }
+  }
+}

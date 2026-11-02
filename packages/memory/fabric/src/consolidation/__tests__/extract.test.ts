@@ -416,3 +416,67 @@ describe("consolidation extractor", () => {
     assert.equal(resolved, 0);
   });
 });
+
+// Plan 207 Task 3: extractor-assisted subject binding.
+describe("extractor subjects", () => {
+  const subjects = [
+    {
+      level: "project" as const,
+      subjects: [{ subject: "payments", title: "Payments service", aliases: ["billing service"], uses: 0, evidence: 1 }],
+    },
+  ];
+
+  it("extractor_unknown_subject_is_dropped_not_rejected", async () => {
+    const reply = {
+      notes: [
+        note({ subject: "payments" }),
+        note({ subject: "ghost" }),
+        note({ subject: "new" }),
+        note({ subject: "payments", scope: "user" }),
+        note({ subject: 42 }),
+        note({ subject: "payments", scope: "path", applies_to: ["src/**"] }),
+        note({}),
+      ],
+    };
+    const result = await extractConsolidationNotes(input(reply, { subjects }));
+    assert.deepEqual(
+      result.notes.map((extracted) => extracted.subject),
+      ["payments", undefined, "new", undefined, undefined, "payments", undefined],
+      "a shown slug and `new` are kept; an unshown slug, another scope's slug and a non-string are dropped",
+    );
+    assert.equal(result.correctionCalls, 0, "an unknown subject is not a repair");
+
+    // Nothing was shown, so there is nothing to bind to: even a real slug is advisory noise.
+    const bare = await extractConsolidationNotes(input({ notes: [note({ subject: "payments" }), note({ subject: "new" })] }));
+    assert.deepEqual(
+      bare.notes.map((extracted) => extracted.subject),
+      [undefined, undefined],
+    );
+  });
+
+  it("subject_list_rides_in_the_prompt_and_extractor_segments_stay_stable", async () => {
+    for (const repositoryRules of [false, true]) {
+      const requests: Parameters<ModelClient["generate"]>[0][] = [];
+      for (const shown of [false, true]) {
+        await extractConsolidationNotes(
+          input(
+            { notes: [] },
+            {
+              repositoryRules,
+              ...(shown ? { subjects } : {}),
+              client: client({ notes: [] }, (request) => requests.push(request as (typeof requests)[number])),
+            },
+          ),
+        );
+      }
+      const prefix = (request: (typeof requests)[number]) =>
+        JSON.stringify({ system: request.messages?.filter((message) => message.role === "system"), tools: request.tools });
+      assert.equal(prefix(requests[0]!), prefix(requests[1]!), "system text and tool schema are byte-identical with and without subjects");
+      assert.equal(JSON.stringify(requests[0]!.messages).includes("payments | Payments service"), false);
+      assert.match(JSON.stringify(requests[1]!.messages), /payments \| Payments service \| billing service/);
+      const schema = requests[1]!.tools![0]!.parameters as JsonObject;
+      const properties = (((schema.properties as JsonObject).notes as JsonObject).items as JsonObject).properties as JsonObject;
+      assert.deepEqual(properties.subject, { type: "string", maxLength: 64 }, "a free string: no enum that would change per call");
+    }
+  });
+});

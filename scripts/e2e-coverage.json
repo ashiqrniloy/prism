@@ -1056,6 +1056,16 @@
         ],
         "mode": ""
       }
+    },
+    "@arnilo/prism-provider-ollama-cloud": {
+      ".": {
+        "suites": [
+          "packages/providers/ollama-cloud/src/__tests__/live.test.ts",
+          "packages/providers/ollama-cloud/src/__tests__/ollama-cloud.test.ts",
+          "packages/providers/ollama-cloud/src/__tests__/package.test.ts"
+        ],
+        "mode": ""
+      }
     }
   }
 }

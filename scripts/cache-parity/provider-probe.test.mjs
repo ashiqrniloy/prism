@@ -74,6 +74,55 @@ test("provider_probe_fixed_prefix_exact_request_budget_and_affinity", async () =
   await probeProvider({ provider: scripted(usages, without), model, turns: 4, withoutSession: true });
   assert.ok(without.every((request) => request.options.cacheKey === undefined && request.options.sessionId === undefined));
 });
+test("provider_probe_ttft_flag", async () => {
+  const flags = parseArgs(["--provider", "ollama-cloud", "--model", "gemma4:31b", "--route", "openai", "--ttft"]);
+  assert.equal(flags.ttft, true);
+  assert.equal(flags.route, "openai");
+  assert.throws(() => parseArgs(["--provider", "ollama-cloud", "--model", "gemma4:31b", "--route", "messages"]));
+  assert.throws(() => parseArgs(["--provider", "openrouter", "--model", "fixed", "--route", "native"]));
+  let time = 0;
+  const provider = {
+    id: "mock",
+    async *generate() {
+      time += 5;
+      yield { type: "content_delta", content: { type: "thinking", text: "not a text token" } };
+      time += 10;
+      yield { type: "content_delta", content: { type: "text", text: "" } };
+      time += 20;
+      yield { type: "content_delta", content: { type: "text", text: "OK" } };
+      time += 40;
+      yield { type: "usage", usage: usages[1] };
+      yield { type: "done" };
+    },
+  };
+  const report = await probeProvider({ provider, model, ttft: true, now: () => time });
+  assert.ok(report.turns.every((turn) => turn.ttftMs === 35 && turn.latencyMs === 75));
+  const noText = await probeProvider({ provider: scripted(usages), model, ttft: true, now: () => time });
+  assert.ok(
+    noText.turns.every((turn) => turn.ttftMs === null),
+    "missing text is not zero TTFT",
+  );
+  const unchanged = await probeProvider({ provider: scripted(usages), model });
+  assert.ok(
+    unchanged.turns.every((turn) => !("ttftMs" in turn)),
+    "opt-in only",
+  );
+});
+
+test("provider_probe_ollama_routes_use_distinct_evidence_paths", async () => {
+  const root = mkdtempSync(join(tmpdir(), "prism-cache-routes-"));
+  try {
+    const report = await probeProvider({ provider: scripted(usages), model, ttft: true, route: "native" });
+    const native = await writeEvidence(report, { root });
+    const compat = await writeEvidence({ ...report, route: "openai" }, { root });
+    assert.notEqual(native, compat);
+    assert.match(native, /-native-/);
+    assert.match(compat, /-openai-/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("provider_probe_openrouter_wire_keeps_marked_prefix_stable", async () => {
   const { create } = await importProvider("openrouter");
   const bodies = [],

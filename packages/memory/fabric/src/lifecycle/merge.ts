@@ -40,7 +40,7 @@ function scopeIdentity(note: CapacityNote): string {
  * duplicate: episodes of one subject are summarised by the episode pass, not folded as if repeated.
  */
 function mergeable(note: CapacityNote): boolean {
-  return note.text !== undefined && note.metadata.pinned !== true && note.metadata.kind !== "episode";
+  return note.text !== undefined && note.metadata.pinned !== true && note.metadata.kind !== "episode" && note.metadata.kind !== "concept";
 }
 
 function byStrength(notes: readonly CapacityNote[], weights?: StorageWeights) {

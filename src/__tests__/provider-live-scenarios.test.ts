@@ -1,12 +1,11 @@
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, it } from "bun:test";
-import type { ModelConfig } from "../contracts.js";
+import type { ModelConfig, ProviderEvent, ProviderRequest } from "../contracts.js";
 import { replayFetch } from "../provider-kit/wire-replay.js";
 import {
   executeProviderLiveScenarios,
-  executeSystemOneLiveScenarios,
   liveScenarioAbort,
   liveScenarioCacheProbe,
   liveScenarioErrorResponse,
@@ -139,14 +138,7 @@ describe("provider live scenarios", () => {
     await systemOneScenarioErrorResponse({ provider: sysErrProvider, model: jModel, secrets: ["fake-key"] });
 
     // 3. Multi-scenario programmatic runner
-    const multiExchanges = [
-      textFixture,
-      toolLoopFixture[0],
-      toolLoopFixture[1],
-      structuredFixture,
-      errorFixture,
-      cacheFixture,
-    ];
+    const multiExchanges = [textFixture, toolLoopFixture[0], toolLoopFixture[1], structuredFixture, errorFixture, cacheFixture];
     const multiProvider = createHyperProvider({ apiKey: "fake-key", fetch: replayFetch(multiExchanges) });
     const multiExecResult = await executeProviderLiveScenarios({
       provider: multiProvider,
@@ -161,6 +153,44 @@ describe("provider live scenarios", () => {
     });
     assert.equal(multiExecResult.ok, true);
     assert.equal(multiExecResult.scenarios.length, 6);
+  });
+
+  it("live_scenarios_use_per_route_structured_prompt_and_error_model", async () => {
+    const requests: ProviderRequest[] = [];
+    const provider = {
+      id: "fake-cloud",
+      async *generate(request: ProviderRequest): AsyncIterable<ProviderEvent> {
+        requests.push(request);
+        const unknown = request.model.model === "prism-no-such-model:1b";
+        if (unknown) {
+          yield { type: "error", error: { message: "model not found", failureClass: "permanent" } };
+          return;
+        }
+        yield { type: "content_delta", content: { type: "text", text: '{"ok":true}' } };
+        yield { type: "done", stopReason: "end_turn" };
+      },
+    };
+    const result = await executeProviderLiveScenarios({
+      provider,
+      routes: {
+        openai: {
+          model: "some-model",
+          structuredOutput: "json_schema",
+          structuredPrompt: 'Return {"ok":true}',
+          errorModel: "prism-no-such-model:1b",
+        },
+      },
+      scenarios: ["structured-output", "error"],
+    });
+    assert.equal(result.ok, true);
+    assert.deepEqual(
+      result.scenarios.map((entry) => entry.scenario),
+      ["structured-output", "error"],
+    );
+    const firstBlock = requests[0]!.messages[0]!.content[0]!;
+    assert.equal(firstBlock.type === "text" ? firstBlock.text : undefined, 'Return {"ok":true}');
+    assert.equal(requests[1]?.model.model, "prism-no-such-model:1b", "error scenario must use the hook model");
+    assert.ok(requests[1]!.messages.length > 0, "error scenario with a hook model sends a normal message");
   });
 
   it("live_scenarios_skip_without_credentials", async () => {

@@ -19,10 +19,22 @@ await session.run("Plan the migration and keep the retry budget small.");
 await agent.commands.run("om:view", {}, { session });  // the rendered ledger
 ```
 
-**No completed benchmark arm and no live quality evidence in 0.13.0.** The observational-memory arm
-of the 188.7 campaign was a one-question probe, the 12-persona lifecycle safety set was not reached,
-and the `om+fabric` arm never completed. Quality, safety and cross-family evidence for OM are plan
-202 Task 16 (with the shared safety suite in Task 14); nothing below claims a measured quality result.
+**Measured role (plan 202 Task 16, 2026-11-02).** OM is the T0 tier: it observes the session and
+feeds fabric consolidation, while its in-session compression stays independent. On a seven-seed
+offline lifecycle suite (24 sessions per seed, zero model calls), OM plus fabric scored **0.732** task
+success without promotion and **0.732** with promotion. Fabric alone moved from **0.375** to
+**0.393** with promotion. Promotion wrote **0.25 notes per session** on OM+fabric and **0.125** on
+fabric alone; **none** of those candidates was recalled and cited in a later session, so the
+use-verified share was **0**. The reference host therefore keeps promotion off: there is no measured
+gain, and an earlier three-seed draw was negative. The full result and limitations are in
+`docs/_evidence/memory-bench/202/observational/role.{json,md}`.
+
+A separate six-run live smoke (two free OpenRouter models × `om`, `om+fabric`, `fabric-x-tools`)
+completed every one-question LongMemEval-S arm with zero worker errors. It is a completion check, not
+quality evidence. The historical `MemoryBenchWorkerError` came from the benchmark aborting on a
+background worker failure; current runs show the retained cause is either the arm's token ceiling or
+a provider rate limit, and the benchmark now records non-budget failures and continues, matching the
+package contract. See `arms.json` and `cost.json` beside the role evidence.
 
 ## Cost, security, and failure behavior
 
@@ -40,6 +52,13 @@ With the toggle on:
 | Compaction | first at the `compactAt`/`trigger` gate; then once per observation pass that advances coverage when OM owns the slot | the ledger already in memory, no model call |
 
 One pass runs per session at a time; a request while one is in flight is skipped, not queued.
+
+**Measured live worker cost per 10k source-message tokens** (one LongMemEval-S question, free
+OpenRouter route): observer **233,494 input / 3,287 output tokens**, reflector **1,702 / 358**,
+dropper not triggered. Total arm input was 2,987,872 tokens for 121,798 source-message tokens. The
+reflector trigger was lowered to 1k only to force a pass; the observer ran at its default 10k
+trigger. One live question is a cost measurement, not a quality result.
+`docs/_evidence/memory-bench/202/observational/cost.{json,md}`.
 
 ## Context and caching
 
@@ -121,10 +140,12 @@ memory fabric's `observational` source, a host's own projection — folds the sa
 
 ## Related packages
 
-`@arnilo/prism-memory-fabric` can promote this package's reflections to long-term notes. With
-`memoryFabric({ promote: { observational: true } })` installed beside this package, each new reflection
-is written in the background as a candidate fact that earns trust by use (see the fabric README,
-"Promotion from observational memory"). This package needs no configuration for it.
+`@arnilo/prism-memory-fabric` consumes this package's ledger in its consolidation pass. With
+`memoryFabric({ promote: {} })` installed beside this package, the extractor sees OM observations,
+task-state decisions, and reflections in the session tail and writes accepted notes as candidates
+that earn trust by use. The old `promote.observational` flag was retired in plan 188.3; the current
+path is the ordinary `promote` object, and the fabric README records the measured result. This
+package needs no configuration for it.
 
 ## Slot ownership
 

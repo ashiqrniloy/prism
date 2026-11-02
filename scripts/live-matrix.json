@@ -3,13 +3,39 @@
   "defaults": {
     "envFile": [
       "$PRISM_LIVE_ENV_FILE",
-      "scripts/live.env"
+      "$HOME/.config/prism/live.env"
     ],
     "skipContract": "A suite whose required env vars are absent is SKIPPED with a reason, never failed. Strict mode (PRISM_LIVE_STRICT=1, runner Task 2) fails the RUN on any skip, not the suite.",
     "modelEnvConvention": "PRISM_LIVE_<PROVIDER>_MODEL; multi-probe suites suffix _CHAT_MODEL/_MESSAGES_MODEL etc. Wired=false means the live test does not read the env var yet (retrofit: plans/064 Task 4).",
     "template": "scripts/live.env.example"
   },
   "suites": [
+    {
+      "id": "providers/ollama-cloud",
+      "package": "@arnilo/prism-provider-ollama-cloud",
+      "status": "active",
+      "source": "packages/providers/ollama-cloud/src/__tests__/live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts src/__tests__/live-agent.test.ts",
+      "cwd": "packages/providers/ollama-cloud",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "OLLAMA_API_KEY"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_OLLAMA_CLOUD_MODEL",
+          "default": "gemma4:31b",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_OLLAMA_CLOUD_THINKING_MODEL",
+          "default": "gpt-oss:20b",
+          "wired": true
+        }
+      ],
+      "scope": "Ollama Cloud key; native NDJSON and OpenAI-compatible routes. Shared scenarios per route: text, 2-turn tool loop, abort, 3-turn prefix-cache probe, structured output with a concrete prompt, and an unknown model id returning a named error (both via the shared suite's `structuredPrompt`/`errorModel` route hooks). The package adds a 3-turn kernel smoke: tool echo, the tool result read back, then an image turn.",
+      "cost": "~19 generation requests (6 per route in the shared scenarios, 2 structured-output and 2 unknown-model per route, plus the 3-turn kernel smoke), plus free discovery metadata only if a model id is not in the static catalog. Separate manual cache probe with --ttft: 4 requests per route, 8 for native + openai, plus catalog discovery per invocation (1 + N free metadata requests, concurrency 4); the pi comparison adds 4 requests. Free-tier session/weekly limits apply."
+    },
     {
       "id": "providers/hyper",
       "package": "@arnilo/prism-provider-hyper",
@@ -305,10 +331,10 @@
     {
       "id": "memory/observational-live",
       "package": "@arnilo/prism-memory-observational",
-      "status": "planned",
-      "source": null,
-      "command": null,
-      "cwd": "packages/memory/observational",
+      "status": "active",
+      "source": "scripts/memory-bench/observational-live.test.mjs",
+      "command": "bun test --timeout=0 scripts/memory-bench/observational-live.test.mjs",
+      "cwd": ".",
       "requires": [
         "PRISM_LIVE_OBSERVATIONAL_MEMORY_TESTS",
         "OPENCODE_GO_API_KEY"
@@ -317,13 +343,13 @@
         {
           "env": "PRISM_LIVE_OPENCODE_GO_CHAT_MODEL",
           "default": "mimo-v2.5",
-          "wired": false
+          "wired": true
         }
       ],
-      "scope": "Compaction worker over the shipped OpenCode Go provider (plan 182 deleted the OpenAI provider this row named).",
+      "scope": "Live observer and reflector worker calls over the shipped OpenCode Go provider; no fabric or benchmark harness.",
       "cost": "A few small summarization requests.",
       "plan": "plans/064-E2E-Live-Test-Coverage-Matrix.md",
-      "notes": "Plan 188.11 Task 7 re-pointed the row from OPENAI_API_KEY/gpt-5.1 to OPENCODE_GO_API_KEY/mimo-v2.5. Plan 157 Task 5 deleted the 0.12 observational-memory attach surface and its live test; the package's own suite covers the worker legs hermetically."
+      "notes": "Plan 202 Task 16 activated the row. The test is opt-in via PRISM_LIVE_OBSERVATIONAL_MEMORY_TESTS=1 and asserts one source-backed observation, then one reflector request. Worker failures stay background-only in the product; benchmark runs record them instead of aborting the arm."
     },
     {
       "id": "memory/fabric-conversational-live",

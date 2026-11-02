@@ -27,7 +27,7 @@ node scripts/live-matrix.mjs --check   # validate manifest + per-suite skip/run 
 
 | knob | effect |
 |---|---|
-| `PRISM_LIVE_ENV_FILE` | credential file, loaded with Node `--env-file` semantics. Default: `scripts/live.env` when present. Copy `scripts/live.env.example` to start. |
+| `PRISM_LIVE_ENV_FILE` | credential file, loaded with Node `--env-file` semantics. Default: `~/.config/prism/live.env` when present. Copy `scripts/live.env.example` outside the repo (mode `0600`) to start; no runner reads a credential file inside the checkout. |
 | `PRISM_LIVE_FILTER=<sub>` | only suites whose id contains `<sub>` |
 | `PRISM_LIVE_STRICT=1` | any skip fails the **run** (exit 1), not the suite — for release gates |
 | `PRISM_LIVE_DRY_RUN=1` | accounting only, no spawns |
@@ -48,11 +48,12 @@ Each run writes `docs/_evidence/live-matrix-report.{json,md}`: per-suite status/
 
 ## Credential matrix
 
-Set only the rows you want to run; everything else skips. Least-privilege scope is mandatory per row: issue the narrowest credential that satisfies the named probe. Credentials live in `scripts/live.env` (gitignored) or `~/.config/prism/live.env` (out-of-repo), never in the repository, test fixtures, or CI logs; the journey suites assert the `assertNoSecretLeak` convention (from `@arnilo/prism/testing/*`) over every transcript they produce, and the manifest validator rejects secret-shaped values.
+Set only the rows you want to run; everything else skips. Least-privilege scope is mandatory per row: issue the narrowest credential that satisfies the named probe. Credentials live in `~/.config/prism/live.env` (out-of-repo, mode `0600`), never in the repository, test fixtures, or CI logs; the journey suites assert the `assertNoSecretLeak` convention (from `@arnilo/prism/testing/*`) over every transcript they produce, and the manifest validator rejects secret-shaped values.
 
 <!-- generated:live-matrix:start -->
 | suite | status | required credentials | model override | least-privilege scope | cost |
 |---|---|---|---|---|---|
+| `providers/ollama-cloud` | active | `PRISM_LIVE_PROVIDER_TESTS` + `OLLAMA_API_KEY` | `PRISM_LIVE_OLLAMA_CLOUD_MODEL` (default `gemma4:31b`), `PRISM_LIVE_OLLAMA_CLOUD_THINKING_MODEL` (default `gpt-oss:20b`) | Ollama Cloud key; native NDJSON and OpenAI-compatible routes. Shared scenarios per route: text, 2-turn tool loop, abort, 3-turn prefix-cache probe, structured output with a concrete prompt, and an unknown model id returning a named error (both via the shared suite's `structuredPrompt`/`errorModel` route hooks). The package adds a 3-turn kernel smoke: tool echo, the tool result read back, then an image turn. | ~19 generation requests (6 per route in the shared scenarios, 2 structured-output and 2 unknown-model per route, plus the 3-turn kernel smoke), plus free discovery metadata only if a model id is not in the static catalog. Separate manual cache probe with --ttft: 4 requests per route, 8 for native + openai, plus catalog discovery per invocation (1 + N free metadata requests, concurrency 4); the pi comparison adds 4 requests. Free-tier session/weekly limits apply. |
 | `providers/hyper` | active | `PRISM_LIVE_PROVIDER_TESTS` + `HYPER_API_KEY` | `PRISM_LIVE_HYPER_CHAT_MODEL` (default `deepseek-v4-pro`), `PRISM_LIVE_HYPER_MESSAGES_MODEL` (default `qwen3.6-plus`) | Hyper key; dual-route tier-1 live scenarios (chat & messages). | ~10 requests across both routes incl. prefix cache probe; sub-cent. |
 | `providers/opencode-go` | active | `PRISM_LIVE_PROVIDER_TESTS` + `OPENCODE_GO_API_KEY` | `PRISM_LIVE_OPENCODE_GO_CHAT_MODEL` (default `mimo-v2.5`), `PRISM_LIVE_OPENCODE_GO_MESSAGES_MODEL` (default `qwen3.6-plus`) | OpenCode Go key; dual-route tier-1 live scenarios (chat & messages). | ~10 requests across both routes incl. prefix cache probe; sub-cent. |
 | `providers/typesafe` | active | `PRISM_LIVE_PROVIDER_TESTS` + `TYPESAFE_API_KEY` | `PRISM_LIVE_TYPESAFE_MODEL` (default `jev-latest`) | TypeSafe key; System One tier-1 live scenarios (decision model), including one raw decide call with noul/choice/score answers. | ~4 requests; sub-cent. |
@@ -175,9 +176,8 @@ agent harness or pi. It never runs in `release:gate` or starts automatically.
 Offline pi lever equivalence is not measured cache parity.
 
 After approving the model and spend, put credentials and opt-in flags in a
-private `live.env` (mode `0600`). `PRISM_LIVE_ENV_FILE` selects it; otherwise the
-probe checks `scripts/live.env`, then `~/.config/prism/live.env`. Existing env
-values take precedence. Do not put a key in arguments or paste one in a command.
+private `live.env` (mode `0600`). `PRISM_LIVE_ENV_FILE` selects it; otherwise the probe reads
+`~/.config/prism/live.env`. Existing env values take precedence. Do not put a key in arguments or paste one in a command.
 
 ```sh
 # private live.env: OPENROUTER_API_KEY, PRISM_LIVE_PROVIDER_TESTS=1,
@@ -189,6 +189,13 @@ timeout 600 bun scripts/cache-parity/provider-probe.mjs \
 # Separately authorized pinned implicit-cache model; measure its no-header baseline:
 timeout 600 bun scripts/cache-parity/provider-probe.mjs \
   --provider openrouter --model recursive/flint-v1.0:free --turns 4 --without-session
+
+# Ollama Cloud: OLLAMA_API_KEY plus both general opt-in flags above; no paid OpenRouter flag.
+# Two separate four-request runs (8 generation requests total):
+timeout 600 bun scripts/cache-parity/provider-probe.mjs \
+  --provider ollama-cloud --model gemma4:31b --turns 4 --ttft
+timeout 600 bun scripts/cache-parity/provider-probe.mjs \
+  --provider ollama-cloud --model gemma4:31b --turns 4 --route openai --ttft
 ```
 
 - **Cost:** `--turns` generation requests (default 4; range 2–20), plus one
@@ -198,6 +205,14 @@ timeout 600 bun scripts/cache-parity/provider-probe.mjs \
   requires two invocations: **8 generation requests** at defaults, plus catalog
   discovery. A failed or undersized first prompt stops before further spend.
   All flags default off; paid OpenRouter additionally needs its paid flag.
+- **Timing/routes:** `--ttft` adds per-turn `ttftMs`, from generation start to the
+  first nonempty text delta; thinking does not count, and missing text is `null`,
+  never zero. `latencyMs` remains total stream duration. Without `--ttft`, reports
+  retain their existing timing fields. Ollama Cloud alone accepts `--route native`
+  (default) or `--route openai`; route-specific evidence filenames cannot overwrite
+  each other. Its key variable is `OLLAMA_API_KEY`. Each CLI invocation performs
+  `1 + N` free metadata requests (tags plus show, concurrency 4) before generation;
+  a separate four-turn pi reference adds four generation requests.
 - **Prefix:** at least 8192 space-separated padding words plus fixed system,
   two tools, tool-call/result history and an anchor message. A declared
   `cache.minCacheableTokens` raises this target (up to 65536). The first request

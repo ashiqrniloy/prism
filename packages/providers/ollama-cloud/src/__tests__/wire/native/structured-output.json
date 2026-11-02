@@ -1,0 +1,35 @@
+{
+  "method": "POST",
+  "path": "/api/chat",
+  "requestBody": {
+    "model": "gemma4:31b",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Give a city and its population. JSON only."
+      }
+    ],
+    "stream": true,
+    "format": {
+      "type": "object",
+      "properties": {
+        "city": {
+          "type": "string"
+        },
+        "population": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "city",
+        "population"
+      ]
+    },
+    "options": {
+      "num_predict": 64
+    }
+  },
+  "status": 200,
+  "contentType": "application/x-ndjson",
+  "responseBody": "{\"model\":\"gemma4:31b\",\"created_at\":\"2026-11-01T12:40:00Z\",\"message\":{\"role\":\"assistant\",\"content\":\"```json\\n{\\n  \\\"city\\\": \\\"Tokyo\\\",\\n  \\\"population\\\": 37435191\\n}\\n```\"},\"done\":false}\n{\"model\":\"gemma4:31b\",\"created_at\":\"2026-11-01T12:40:00Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\"},\"done\":true,\"done_reason\":\"stop\",\"total_duration\":220000000,\"prompt_eval_count\":23,\"prompt_eval_cached_count\":0,\"eval_count\":31}\n"
+}

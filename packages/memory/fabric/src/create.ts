@@ -25,6 +25,7 @@ import {
 import type { ConsolidationExistingNote } from "./consolidation/prompts.js";
 import { createFabricCitationTracker } from "./context.js";
 import { decideConsolidation } from "./decider.js";
+import type { SupersessionChoice } from "./decisions.js";
 import {
   createFabricLifecycle,
   isActiveNote,
@@ -36,9 +37,14 @@ import { runMaintenance } from "./lifecycle/maintain.js";
 import { noteImportance, storageStrength, strengthPrior } from "./lifecycle/strength.js";
 import { mergeNoteLinks, resolveNoteLinks } from "./links.js";
 import { registerMemoryFabricContext } from "./provider.js";
-import { createFabricRecall, type FabricCandidate } from "./recall.js";
+import { createFabricRecall, type FabricCandidate, noteInWindow, noteTime } from "./recall.js";
 import { createScopeRecall, resolveScopePriors } from "./scope/recall.js";
+import { scanScopedMemoryContent } from "./scoped/trust.js";
 import { createFabricConversationSearch } from "./search.js";
+import { resolveStateConfig } from "./state.js";
+import { ConceptRequiresOntologyError } from "./ontology/errors.js";
+import { DEFAULT_CONCEPT_PRIOR, DEFAULT_MAX_CLAIMS_RENDERED } from "./ontology/render.js";
+import { emitMemoryRetract } from "./ontology/retract.js";
 import { createMemoryFabricTools } from "./tools.js";
 import {
   type CreateMemoryFabricOptions,
@@ -46,10 +52,13 @@ import {
   encodeMemoryNoteMetadata,
   estimateNoteTokens,
   type FabricScopeLevel,
+  isDecisionScope,
+  isMemoryDecisionStatus,
   isMemoryNoteKind,
   isMemoryNoteScope,
   isMemoryNoteValidAt,
   MEMORY_NOTE_METADATA_KEY,
+  type MemoryDecisionStatus,
   type MemoryFabric,
   type MemoryFabricConsolidateOptions,
   type MemoryFabricConsolidateResult,
@@ -67,6 +76,7 @@ import {
   type MemoryNoteProvenance,
   type MemoryNoteScope,
   noteFields,
+  parseDates,
   parseMemoryNoteMetadata,
   parsePromotionStamp,
   stampProvenance,
@@ -76,6 +86,12 @@ import {
 import { resolveMemoryFabricSettings, runFabricEvolutionWorker } from "./workers.js";
 
 const isIso = (value: unknown): value is string => typeof value === "string" && value.length > 0 && Number.isFinite(Date.parse(value));
+
+/** One time-scoped archive recall scans metadata because core recall ranks by relevance only. */
+const ARCHIVE_WINDOW_PAGE = 200;
+// shortcut: scan at most 5,000 archived metadata rows per time-window recall; add store-side date
+// filtering before an archive outgrows that bound.
+const ARCHIVE_WINDOW_SCAN_ROWS = 5_000;
 
 /**
  * Re-resolve the extractor's model with `parameters.maxTokens`, capped by the model's own limit (the
@@ -128,6 +144,11 @@ function assertRememberInput(input: MemoryFabricRememberInput, maxTextChars: num
     const value = input[key];
     if (value !== undefined && !isIso(value)) throw new MemoryValidationError(`${key} must be an ISO timestamp`);
   }
+  if (input.dates !== undefined) {
+    const dates = parseDates(input.dates);
+    if (dates === undefined || dates.length !== input.dates.length)
+      throw new MemoryValidationError("dates must carry text, an ISO resolved time, and a known precision");
+  }
   for (const key of ["keywords", "tags", "sourceEntryIds"] as const) {
     const value = input[key];
     if (value === undefined) continue;
@@ -146,6 +167,18 @@ function assertRememberInput(input: MemoryFabricRememberInput, maxTextChars: num
   }
   if (input.promotion !== undefined && parsePromotionStamp(input.promotion) === undefined) {
     throw new MemoryValidationError("promotion must carry a finite score, finite signals, and a non-empty pass");
+  }
+  if (input.rationale !== undefined && (typeof input.rationale !== "string" || input.rationale.trim().length === 0)) {
+    throw new MemoryValidationError("rationale must be a non-empty string");
+  }
+  if (input.decisionStatus !== undefined && !isMemoryDecisionStatus(input.decisionStatus)) {
+    throw new MemoryValidationError("decisionStatus must be proposed, active or superseded");
+  }
+  if (input.kind !== "decision" && (input.rationale !== undefined || input.decisionStatus !== undefined)) {
+    throw new MemoryValidationError("rationale and decisionStatus are only valid for kind decision");
+  }
+  if (input.kind === "decision" && !isDecisionScope(input.scope)) {
+    throw new MemoryValidationError("decision scope must be user, project or path");
   }
   if (input.reflectionId !== undefined && !isMemoryId(input.reflectionId)) {
     throw new MemoryValidationError("reflectionId must be a 12-hex observational memory id");
@@ -173,6 +206,7 @@ function assertRememberInput(input: MemoryFabricRememberInput, maxTextChars: num
     throw new MemoryValidationError(`scope must be one of ${["user", "agent", "project", "path"].join("|")}`);
   }
   if (input.key !== undefined) validateNoteKey(input.key);
+  if (input.subject !== undefined) validateNoteKey(input.subject);
   if (input.appliesTo !== undefined) validateAppliesTo(input.appliesTo);
   if ((input.scope === "path") !== (input.appliesTo !== undefined)) {
     throw new MemoryValidationError('appliesTo is required exactly when scope is "path"');
@@ -198,6 +232,7 @@ function toNoteMetadata(
     ...(promotedFrom === undefined ? {} : { promotedFrom }),
     ...(input.session === undefined ? {} : { session: input.session }),
     ...(input.tRef === undefined ? {} : { tRef: input.tRef }),
+    ...(input.dates === undefined ? {} : { dates: input.dates }),
     ...(input.validFrom === undefined ? {} : { validFrom: input.validFrom }),
     ...(input.validTo === undefined ? {} : { validTo: input.validTo }),
     ...(input.keywords === undefined ? {} : { keywords: input.keywords }),
@@ -206,9 +241,12 @@ function toNoteMetadata(
     ...(input.links === undefined ? {} : { links: input.links }),
     ...(input.sourceEntryIds === undefined ? {} : { sourceEntryIds: input.sourceEntryIds }),
     ...(input.supersedes === undefined ? {} : { supersedes: input.supersedes }),
+    ...(input.rationale === undefined ? {} : { rationale: input.rationale }),
+    ...(input.decisionStatus === undefined ? {} : { decisionStatus: input.decisionStatus }),
     ...(input.scope === undefined ? {} : { scope: input.scope }),
     ...(input.appliesTo === undefined ? {} : { appliesTo: input.appliesTo }),
     ...(input.key === undefined ? {} : { key: input.key }),
+    ...(input.subject === undefined ? {} : { subject: input.subject }),
     ...(input.overrides === undefined ? {} : { overrides: input.overrides }),
     ...(input.promotion === undefined ? {} : { promotion: input.promotion }),
     ...(path === undefined ? {} : { path }),
@@ -234,6 +272,10 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
   }
   const limits = memory.limits;
   const settings = resolveMemoryFabricSettings(options);
+  const state = resolveStateConfig(options.state);
+  if (state !== false && options.resolveModelClient === undefined) {
+    throw new MemoryValidationError("state requires resolveModelClient for its one model call");
+  }
   const redactor = resolveRedactor(options.redactor, options.secrets);
   const decider = typeof options.consolidate === "object" && options.consolidate.decider === "model" ? options.consolidate : undefined;
   const promotion = options.promote?.enabled === true ? options.promote : undefined;
@@ -467,31 +509,49 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
         .filter((item) => item.hit.score >= settings.threshold && (kind !== "file" || item.metadata.path === path))
         .slice(0, 5);
       try {
-        if (!options.resolveModelClient) throw new Error("Model decider requires a model client");
-        const decision = await decideConsolidation({
-          client: options.resolveModelClient(decider.model),
-          text: content,
-          candidates: eligible.map((item) => ({ id: item.hit.id, text: item.hit.text, score: item.hit.score, metadata: item.metadata })),
-          limits: settings.workerLimits,
-          redactor,
-          sessionId: writeOptions.sessionId,
-          signal,
-        });
-        if (decision.action === "NOOP") {
-          return {
-            ...noteFields(candidate.metadata),
-            id: candidate.hit.id,
-            kind,
-            content: candidate.hit.text,
-            ingestedAt: candidate.hit.createdAt,
-            tokenCount: estimateNoteTokens(candidate.hit.text),
-            scope: target.scope,
-          };
+        const classified = options.decisions?.enabled("P2")
+          ? await options.decisions.supersession(
+              content,
+              eligible.map((item) => ({ id: item.hit.id, text: item.hit.text, score: item.hit.score })),
+            )
+          : undefined;
+        if (classified !== undefined) {
+          const priority: readonly SupersessionChoice[] = ["replaces", "contradicts", "refines"];
+          const id = [...classified.entries()]
+            .sort(([leftId, left], [rightId, right]) => priority.indexOf(left) - priority.indexOf(right) || (leftId < rightId ? -1 : 1))
+            .find(([, choice]) => priority.includes(choice))?.[0];
+          if (id !== undefined) {
+            candidate = eligible.find((item) => item.hit.id === id)!;
+            const choice = classified.get(id)!;
+            plan = { action: choice === "refines" ? "update" : "supersede", id };
+          } else plan = { action: "insert", similar: candidate.hit.id };
+        } else {
+          if (!options.resolveModelClient) throw new Error("Model decider requires a model client");
+          const decision = await decideConsolidation({
+            client: options.resolveModelClient(decider.model),
+            text: content,
+            candidates: eligible.map((item) => ({ id: item.hit.id, text: item.hit.text, score: item.hit.score, metadata: item.metadata })),
+            limits: settings.workerLimits,
+            redactor,
+            sessionId: writeOptions.sessionId,
+            signal,
+          });
+          if (decision.action === "NOOP") {
+            return {
+              ...noteFields(candidate.metadata),
+              id: candidate.hit.id,
+              kind,
+              content: candidate.hit.text,
+              ingestedAt: candidate.hit.createdAt,
+              tokenCount: estimateNoteTokens(candidate.hit.text),
+              scope: target.scope,
+            };
+          }
+          if (decision.action === "UPDATE" || decision.action === "SUPERSEDE") {
+            candidate = eligible.find((item) => item.hit.id === decision.id)!;
+            plan = { action: decision.action === "UPDATE" ? "update" : "supersede", id: candidate.hit.id };
+          } else plan = { action: "insert", similar: candidate.hit.id };
         }
-        if (decision.action === "UPDATE" || decision.action === "SUPERSEDE") {
-          candidate = eligible.find((item) => item.hit.id === decision.id)!;
-          plan = { action: decision.action === "UPDATE" ? "update" : "supersede", id: candidate.hit.id };
-        } else plan = { action: "insert", similar: candidate.hit.id };
       } catch {
         if (signal?.aborted) throw signal.reason ?? new Error("Memory write aborted");
         plan = { action: "insert", similar: candidate.hit.id };
@@ -527,6 +587,12 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
     let importance = input.importance;
     let hostMetadata: JsonObject = {};
     let status: MemoryNoteStatus | undefined = writeOptions.status;
+    const decisionStatus: MemoryDecisionStatus | undefined =
+      kind === "decision"
+        ? (input.decisionStatus ??
+          (plan.action === "update" && candidate !== undefined ? candidate.metadata.decisionStatus : undefined) ??
+          "proposed")
+        : undefined;
 
     if (plan.action === "supersede" && candidate !== undefined) {
       // Supersede the old row first: a crash between the two writes leaves the old note invalid
@@ -540,7 +606,11 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
             ...(candidate.hit.metadata ?? {}),
             status: "retired",
             auditVerb: promotedFrom !== undefined ? "superseded-by-om" : "superseded",
-            [MEMORY_NOTE_METADATA_KEY]: encodeMemoryNoteMetadata({ ...candidate.metadata, validTo: ingestedAt }),
+            [MEMORY_NOTE_METADATA_KEY]: encodeMemoryNoteMetadata({
+              ...candidate.metadata,
+              validTo: ingestedAt,
+              ...(candidate.metadata.kind === "decision" ? { decisionStatus: "superseded" as const } : {}),
+            }),
           },
           ...(candidate.hit.consent === undefined ? {} : { consent: candidate.hit.consent }),
           ...(candidate.hit.importance === undefined ? {} : { importance: candidate.hit.importance }),
@@ -549,6 +619,7 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
         target,
       );
       supersedes = candidate.hit.id;
+      await emitMemoryRetract(target, { ids: [candidate.hit.id], reason: "superseded" });
     } else if (plan.action === "update" && candidate !== undefined) {
       id = candidate.hit.id;
       createdAt = candidate.hit.createdAt;
@@ -558,13 +629,15 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
       // A promotion never demotes a note; an agent writing a candidate again is what confirms it.
       const existing = normalizeNoteStatus(candidate.hit.metadata?.status as string | undefined, "verified");
       status =
-        existing === "verified"
-          ? candidate.hit.metadata?.status === undefined
-            ? undefined
-            : "verified"
-          : writeOptions.status === "candidate"
-            ? "candidate"
-            : "verified";
+        kind === "decision" && decisionStatus !== "active"
+          ? "candidate"
+          : existing === "verified"
+            ? candidate.hit.metadata?.status === undefined
+              ? undefined
+              : "verified"
+            : writeOptions.status === "candidate"
+              ? "candidate"
+              : "verified";
     }
 
     const derivedLinks = linkerActive
@@ -580,15 +653,33 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
       derivedLinks,
       plan.action === "insert" && plan.similar ? [{ id: plan.similar, relation: "similar" }] : undefined,
     );
+    // Schema-assisted encoding (plan 207 Task 3): a note names its subject when it is written. An explicit subject
+    // wins, a rewrite keeps the subject it already had, and otherwise the scope's concept index decides, with no
+    // model call. Zero or several matches leave the note unbound for the concept pass.
+    const subject =
+      input.subject ??
+      (plan.action === "update" ? candidate?.metadata.subject : undefined) ??
+      (options.subjects === undefined ? undefined : await options.subjects.bindingFor(level, content, input.keywords ?? [], signal));
     const created = options.clock?.() ?? 0;
     const incoming: MemoryNoteMetadata = {
-      ...toNoteMetadata({ ...input, ...(supersedes === undefined ? {} : { supersedes }) }, kind, path, promotedFrom),
+      ...toNoteMetadata(
+        {
+          ...input,
+          ...(supersedes === undefined ? {} : { supersedes }),
+          ...(decisionStatus === undefined ? {} : { decisionStatus }),
+          ...(subject === undefined ? {} : { subject }),
+        },
+        kind,
+        path,
+        promotedFrom,
+      ),
       scope: level,
       ...(created > 0 ? { created } : {}),
       ...(input.appliesTo === undefined ? {} : { appliesTo: input.appliesTo }),
       ...(links === undefined ? {} : { links }),
     };
     const metadata = plan.action === "update" && candidate !== undefined ? mergeNoteMetadata(candidate.metadata, incoming) : incoming;
+    if (kind === "decision" && decisionStatus !== "active" && status === undefined) status = "candidate";
     // D14: importance is evidence, not a constant. A host value still wins; otherwise S at [0,1).
     importance ??= noteImportance(storageStrength(metadata, options.lifecycle?.storageWeights));
 
@@ -610,6 +701,8 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
       },
       target,
     );
+
+    if (subject !== undefined) await options.subjects?.noteBound(level, subject, signal);
 
     if (evolutionActive) {
       const neighbors = candidates
@@ -643,7 +736,13 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
     if (input === null || typeof input !== "object") throw new MemoryValidationError("note input must be an object");
     const kind = input.kind;
     if (!isMemoryNoteKind(kind)) throw new MemoryValidationError(`Unknown memory note kind: ${String(kind)}`);
+    // A concept is the ontology tier's note: only the ontology port, a human edit, import and share write one.
+    if (kind === "concept") throw new ConceptRequiresOntologyError();
     assertRememberInput(input, limits.maxEntryTextChars);
+    if (kind === "decision") {
+      const scan = scanScopedMemoryContent(`${input.content ?? ""}\n${input.rationale ?? ""}`);
+      if (!scan.ok) throw new MemoryValidationError(`decision refused by the trust scan: ${scan.class}`);
+    }
     if (kind !== "working" && input.block !== undefined) throw new MemoryValidationError('"block" is only valid for kind "working"');
     if (kind !== "file" && input.path !== undefined) throw new MemoryValidationError('"path" is only valid for kind "file"');
     if (kind === "working" && (input.scope !== undefined || input.appliesTo !== undefined || input.key !== undefined)) {
@@ -743,6 +842,8 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
         options.exchanges?.enabled === true
           ? await gatherExchanges(entries, promotion.maxCandidates, exchangeLevels, consolidateOptions.signal)
           : [];
+      // The scope's subjects, pinned for this session's epoch: the extractor may bind a note to one it was shown.
+      const subjects = options.subjects === undefined ? [] : await options.subjects.snapshot(session.id, consolidateOptions.signal);
       const result = await runConsolidationPass({
         sessionId: session.id,
         entries,
@@ -763,6 +864,7 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
         ...(options.secrets === undefined ? {} : { secrets: options.secrets }),
         root: options.promoteRoot ?? process.cwd(),
         ...(options.repositoryRules === true ? { repositoryRules: true } : {}),
+        ...(subjects.length === 0 ? {} : { subjects }),
         ...(exchanges.length === 0 ? {} : { exchanges }),
         ...(exchanges.length === 0
           ? {}
@@ -836,6 +938,62 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
   }
 
   /**
+   * Time-scoped archive search reads every archived metadata row in the bound instead of the
+   * relevance top-K, so an event date outside that top-K is still found. The main store is the one
+   * `options.vectorStore` backs; a read-only team store falls back to the relevance path.
+   */
+  async function scanArchivedWindow(
+    source: Memory,
+    kinds: ReadonlySet<MemoryNoteKind>,
+    asOfMs: number,
+    limit: number,
+    window: { readonly from?: number; readonly to?: number },
+    signal?: AbortSignal,
+  ): Promise<FabricCandidate[] | undefined> {
+    const store = options.vectorStore;
+    if (source !== memory || store?.scanMetadata === undefined) return undefined;
+    const rows: { readonly id: string; readonly createdAt: string; readonly metadata: MemoryNoteMetadata }[] = [];
+    let cursor: string | undefined;
+    let scanned = 0;
+    while (scanned < ARCHIVE_WINDOW_SCAN_ROWS) {
+      const page = await store.scanMetadata({
+        scope: { tenantId: source.scope.tenantId, resourceId: source.scope.resourceId },
+        limit: Math.min(ARCHIVE_WINDOW_PAGE, ARCHIVE_WINDOW_SCAN_ROWS - scanned),
+        ...(cursor === undefined ? {} : { cursor }),
+        ...(signal === undefined ? {} : { signal }),
+      });
+      scanned += page.rows.length;
+      for (const row of page.rows) {
+        const metadata = parseMemoryNoteMetadata(row.metadata);
+        if (
+          metadata === undefined ||
+          metadata.status !== "archived" ||
+          !kinds.has(metadata.kind) ||
+          !isMemoryNoteValidAt(metadata, asOfMs) ||
+          !noteInWindow(metadata, row.createdAt, window.from, window.to)
+        )
+          continue;
+        rows.push({ id: row.id, createdAt: row.createdAt, metadata });
+      }
+      if (page.nextCursor === undefined) break;
+      cursor = page.nextCursor;
+    }
+    // Newest event first in the window; `order: "time"` re-sorts the appended rows afterwards.
+    rows.sort((a, b) => noteTime(b.metadata, b.createdAt) - noteTime(a.metadata, a.createdAt) || a.id.localeCompare(b.id));
+    const selected = rows.slice(0, limit);
+    if (selected.length === 0) return [];
+    const records = await source.get(
+      selected.map((row) => row.id),
+      signal === undefined ? {} : { signal },
+    );
+    const byId = new Map(records.map((record) => [record.id, record]));
+    return selected.flatMap((row) => {
+      const record = byId.get(row.id);
+      return record === undefined ? [] : [{ hit: { ...record, score: 0 }, metadata: row.metadata }];
+    });
+  }
+
+  /**
    * One bounded candidate batch for both recall and the write path: explicit oversample because
    * kind, validity, and foreign-row filtering happen here (`memory.recall` oversamples only when
    * scoring resolves).
@@ -850,7 +1008,11 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
     minSimilarity?: number,
     source: Memory = memory,
     allowArchived = false,
+    window?: { readonly from?: number; readonly to?: number },
   ): Promise<FabricCandidate[]> {
+    const scanned =
+      allowArchived && window !== undefined ? await scanArchivedWindow(source, kinds, asOfMs, limit, window, signal) : undefined;
+    if (scanned !== undefined) return scanned;
     const recalled = await source.recall(query, {
       minSimilarity,
       topK: Math.min(HARD_TOP_K_CAP, limit * RECALL_OVERSAMPLE),
@@ -917,6 +1079,7 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
     recallCandidates,
     priors,
     ...(noteStrengthPrior === undefined ? {} : { strengthPrior: noteStrengthPrior }),
+    conceptPrior: options.ontology?.conceptPrior ?? DEFAULT_CONCEPT_PRIOR,
   });
   /** Link targets may live in any active scope; the narrowest scope wins an id collision. */
   async function getNotesAcrossScopes(ids: readonly string[], signal?: AbortSignal): Promise<readonly MemoryVectorRecord[]> {
@@ -1077,11 +1240,20 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
       remember,
       recall,
       forget,
+      state,
+      ...(options.resolveModelClient === undefined ? {} : { resolveModelClient: options.resolveModelClient }),
       tracker,
       noteMemory: (id, signal) => memoryWithNote(id, signal),
       navigateNotes,
       readNotes: (ids, signal) => getNotesAcrossScopes(ids, signal),
+      ...(options.ontology === undefined
+        ? {}
+        : { ontology: { maxClaimsRendered: options.ontology.maxClaimsRendered ?? DEFAULT_MAX_CLAIMS_RENDERED } }),
       ...(options.scopes === undefined ? {} : { scopeLevel: options.scopes[orderedMemories.indexOf(memory)]?.level ?? "project" }),
+      scopeLevels: [
+        ...(options.scopes ?? [{ level: "project" as const, memory }]).map((binding) => binding.level),
+        ...(options.readOnlyScopes ?? []).map((binding) => binding.level),
+      ],
       ...(options.touchedPaths === undefined ? {} : { touchedPaths: options.touchedPaths }),
       lifecycle: {
         verify: (id, signal) => routedVerify(id, signal === undefined ? {} : { signal }),

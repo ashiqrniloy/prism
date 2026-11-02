@@ -1,5 +1,68 @@
 # Plan 202 Task 5 evidence
 
+## Task 5.7 — Closure decision and verification scope (2026-11-01)
+
+Offline closure decision and verification scope assessment concluding the Task 5 development-screen leg.
+
+### Closure Decision: Development Screen Miss; Full Target Handed Off to Plan 210
+
+1. **Development Screen Outcome:** Offline aggregation of the 8 development-screen cells under Gate 16 yielded an overall verdict of **`miss`** ([development-screen-verdict.json](development-screen-verdict.json), [development-screen-verdict.md](development-screen-verdict.md)).
+   - **Candidate Gap:** The required 50% candidate-gap reduction (`candidateGap <= 0.5 * controlGap`) was missed in every measurable suite:
+     - `beam-100k`: ratio 0.957 vs required <= 0.500 (control gap 85.2%, candidate gap 81.5%, paired diff -3.70% [-14.81%, 8.70%]; verdict: **`miss`**).
+     - `locomo`: ratio 1.216 vs required <= 0.500 (control gap 67.3%, candidate gap 81.8%, paired diff +14.55% [0.00%, 28.99%]; gap widened; verdict: **`miss`**).
+     - `memoryagentbench-cr`: 0 fine-gold round mappings exist; missingness is unmeasurable (`null`, never zero; verdict: **`inconclusive`**).
+     - `beam-1m`: ratio 0.875 vs required <= 0.500 (control gap 100.0%, candidate gap 87.5%, paired diff -12.50% [-37.50%, 0.00%]; verdict: **`miss`**).
+   - **Descriptive Ability Regressions:** Ability rows (descriptive under Task 5.4.6 owner disposition) showed regressions on `beam-100k` (`abstention` -50.0%, `preference_following` -50.0%), `locomo` (`open-domain` -10.0%, `adversarial` -11.1%), and `beam-1m` (`multi_session_reasoning` -50.0%). Strata `summarization` and `temporal_reasoning` were unverified (missing comparable pairs in the slice).
+2. **Lever Rule Enforcement:** Under the pre-registered lever rules and amended Task 5.7 criteria, a screen `miss` blocks closure as a passing improvement, and partial/exploratory results must never be relabeled as a passing improvement. Therefore:
+   - Task 5 does **not** claim candidate recall improvement.
+   - Parent Task 5 remains **open (`- [ ]`)** with respect to claiming candidate recall improvement.
+   - No default change, preset-revision promotion, or published accuracy claim is made.
+3. **Plan 210 Hand-Off:** Under the owner disposition (Task 5.4.6), the full target (every applicable suite, full `longmemeval-m` and `beam-1m` cohorts, and the ability guard veto) is handed off to Plan 210:
+   - **Plan 210 Task 1 (Feature Ledger):** Keyword enrichment and agentic navigation are listed as candidates with status `negative` / `miss` on screened suites and `unmeasured` on deferred suites (`deferredFrom: "202-task5.4.6"`, referencing full manifest [development-comparison-manifest.json](development-comparison-manifest.json) hash `a19a5ab7…`).
+   - **Plan 210 Task 5 (Ablation / Re-measurement):** Leave-one-out arms on full cohorts (`longmemeval-m`, full `beam-1m`) scored under frozen Task 5.2 candidate-gap halving rules.
+   - **Plan 210 Task 9 (Held-Out Acceptance):** Frozen ability guard veto (`>= -0.03` across all strata) and full suite coverage on held-out partitions.
+
+### Verification Scope & Quality Assurances
+
+- **SQLite Navigation & Store:** 20 focused SQLite navigation tests pass; memory-core (40 pass in core tests, 62 pass overall); fabric (511 pass / 23 PostgreSQL skips).
+- **PostgreSQL Durable Store Validation (Task 5.6):** 26 pass / 0 fail across 4 memory integration suites ([postgres-validation.json](postgres-validation.json), [postgres-validation.md](postgres-validation.md)), including the new `postgres-navigation.integration.test.ts` (5 pass) verifying archive persistence across pool recreation, category retrieval via `topTags`, recall unmatched terms, zero-based `session` paging and `around` (±2) parity with SQLite, metadata scan fallback warning, tenant/resource/thread isolation, hold tombstoning, revoked consent, and secret redaction.
+- **PostgreSQL Broader Conformance:** `bun run test:postgres` (57 pass / 0 fail), release evidence refreshed in `scripts/release-evidence.json` (64 surfaces, `blocked=false`).
+- **Release Gate Status:** `bun scripts/release.mjs gate` passes the PostgreSQL evidence check (`checkReleaseEvidence`); unrelated pre-existing release blockers remain documented (compat baselines and kernel budget headroom).
+- **Enrichment Timing:** Deterministic, model-free keyword enrichment runs in <= 2 ms per exchange (measured 0.19 ms p50 / 0.31 ms p95 pinned build with revalidation).
+- **Bench Cost & Security:** 0 USD spend on Kilo gateway free routes; private traces kept secure under `.cache/memory-bench/task5/`; no credentials or private dataset text in public artifacts.
+- **Repository Quality:** `bun run typecheck` clean across all workspaces; `bunx biome check` clean; `git diff --check` clean.
+
+## Task 5.6 — PostgreSQL memory validation and durable-store evidence (2026-11-01)
+
+Completed against PostgreSQL 16.15 with `pgvector` 0.8.7 (Podman rootless disposable test instance). Detailed artifacts: [postgres-validation.json](postgres-validation.json) and [postgres-validation.md](postgres-validation.md).
+
+- **Task 5 navigation & memory integration:** 26 pass / 0 fail across 4 suites (`postgres-navigation.integration.test.ts`, `postgres-memory.integration.test.ts`, `postgres-vector.integration.test.ts`, `postgres-propagation.integration.test.ts`).
+- **Invariants proven:** archive session/keyword persistence across connection pool destruction/reopen, directory category retrieval via `topTags`, recall unmatched-term feedback, `around` (±2) and `session` (8-note zero-based pages in `tRef` order) parity with SQLite, cross-tenant/cross-resource/cross-thread isolation, deletion, hold tombstoning, revoked consent, secret redaction, and `AbortSignal` cancellation.
+- **Navigation scan fallback metrics:** 466 rows (16 exchange notes + 450 filler notes), 3 cursor pages crossed (> 200 row boundary), 9 ms retrieval latency, unindexed fallback status warning emitted.
+- **Broader PostgreSQL conformance:** `bun run test:postgres` 57 pass / 0 fail; recorded in `scripts/postgres-evidence.json`.
+- **Release evidence & gate:** `bun run release:evidence` refreshed 64 surfaces (`blocked=false`) in `scripts/release-evidence.json`. `bun scripts/release.mjs gate` passed the PostgreSQL evidence check (`checkReleaseEvidence`); unrelated pre-existing release blockers remain documented.
+
+## Task 5.5 — Development Screen Verdict: miss (2026-11-01)
+
+Offline candidate-gap and ability-guard evaluation computed across the 8 development-screen cells (gate 16, criteria `202-task5-candidate-gap-v2-screen`, manifest hash `8828ec96fa4efde255ca7b07d4d855123486a14a6b2531dc461df3d4476c26a7`). Detailed artifacts: [development-screen-verdict.json](development-screen-verdict.json) and [development-screen-verdict.md](development-screen-verdict.md).
+
+### Screen Outcome: `miss`
+
+| Suite | Complete Pairs | Control Gap | Candidate Gap | Ratio | Target (<= 0.50x) | Candidate-Gap Verdict | Ability Regressions (Descriptive) | Suite Verdict |
+| --- | ---: | ---: | ---: | ---: | ---: | :---: | :--- | :---: |
+| `beam-100k` | 27 | 85.2% (23/27) | 81.5% (22/27) | 0.957 | <= 42.6% | **`miss`** | abstention (-50%), preference_following (-50%) | **`miss`** |
+| `locomo` | 55 | 67.3% (37/55) | 81.8% (45/55) | 1.216 | <= 33.6% | **`miss`** | adversarial (-11.1%), open-domain (-10.0%) | **`miss`** |
+| `memoryagentbench-cr` | 0 (20 paired) | null | null | n/a | n/a | **`inconclusive`** | none | **`inconclusive`** |
+| `beam-1m` | 8 | 100.0% (8/8) | 87.5% (7/8) | 0.875 | <= 50.0% | **`miss`** | multi_session_reasoning (-50.0%) | **`miss`** |
+
+### Key Findings & Disposition
+
+1. **Candidate-Gap Target Missed:** The predeclared criterion requires at least a 50% candidate-gap reduction (`candidateGap <= 0.5 * controlGap`) on valid fine-gold paired questions. Observed ratios are 0.957 on `beam-100k`, 1.216 on `locomo` (candidate gap widened), and 0.875 on `beam-1m`. None of the measurable suites achieved the target.
+2. **Missing Evidence is Never Zero:** `memoryagentbench-cr` has no fine-gold round mappings; under criteria rules, missingness is unmeasurable (`null`, never zero) and is scored `inconclusive`.
+3. **Descriptive Ability Regressions:** Under Task 5.4.6 owner disposition, the ability guard is descriptive (non-veto) for the screen. Regressions are reported with Holm-adjusted p-values and paired cluster bootstrap CIs: `abstention` (-50%) and `preference_following` (-50%) on `beam-100k`; `adversarial` (-11.1%) and `open-domain` (-10.0%) on `locomo`; `multi_session_reasoning` (-50%) on `beam-1m`. Strata `summarization` and `temporal_reasoning` are unverified (missing comparable pairs in the slice).
+4. **Plan 210 Hand-Off:** The screen closes honestly as **`miss`** without altering frozen rules. Deferred arms (`longmemeval-m`, full 40-question `beam-1m` cohort, ability guard veto) and root-cause investigations hand off directly to Plan 210.
+
+
 ## Task 5.4 — Kilo transport, gate 16, and the live screen (2026-11-01)
 
 Owner instruction (verbatim): **"Use Kilo Gateways free models"**. The panel itself did not

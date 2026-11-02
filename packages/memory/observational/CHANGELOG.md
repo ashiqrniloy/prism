@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Plan 202 Task 16 measured OM's T0 role: seven offline lifecycle seeds put OM+fabric at 0.732 task success with promotion off and on, while promotion wrote 0.25 candidates per session with zero later use. The reference host keeps promotion off. A six-run live smoke on two models completed `om`, `om+fabric`, and the preset arm with zero worker errors. Live cost on one LongMemEval-S question: observer 233,494 input and reflector 1,702 input tokens per 10k source-message tokens. The historical benchmark `MemoryBenchWorkerError` was the harness aborting on a background worker failure; the harness now retains the cause, treats token-ceiling as budget, and continues on other worker failures. Evidence: `docs/_evidence/memory-bench/202/observational/`.
+
 ### Fixed
 
 - The ledger fold reads the package's own log records off a branch (plan 157 Further Action 1). `state.log` keeps each record as one `package_state` entry whose payload is `data.value`, and `foldObservationalMemoryLedger` (via `recordData`) skipped that wrapper: a consumer holding only the branch — the memory fabric's `observational` source, a host projection, `coverage-helpers` — folded an empty ledger for a session the package had recorded. A `set` state value is still not read as a record.

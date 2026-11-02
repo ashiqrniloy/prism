@@ -1,0 +1,110 @@
+{
+  "plan": "202",
+  "task": "5.6",
+  "gitHead": "e227450322518338025467d20b376a8432912b50",
+  "capturedAt": "2026-11-01T13:50:30.000Z",
+  "environment": {
+    "database": "PostgreSQL 16.15 (Debian 16.15-1.pgdg12+2) on x86_64-pc-linux-gnu",
+    "pgvector": "0.8.7",
+    "runtime": "podman 6.1.4 (rootless container on loopback port)"
+  },
+  "memoryIntegrationSuites": {
+    "postgres-navigation.integration.test.ts": {
+      "tests": 5,
+      "pass": 5,
+      "fail": 0,
+      "cases": [
+        "postgres_exchange_session_and_keywords_survive_reopen",
+        "postgres_lexical_enrichment_and_unmatched_terms",
+        "postgres_read_around_and_session_pages_match_sqlite",
+        "postgres_navigation_scan_emits_status_and_honours_abort",
+        "postgres_navigation_enforces_scope_consent_holds_deletion_and_redaction"
+      ]
+    },
+    "postgres-memory.integration.test.ts": {
+      "tests": 4,
+      "pass": 4,
+      "fail": 0,
+      "cases": [
+        "passes shared memory conformance with pgvector",
+        "isolates tenants and survives reopen",
+        "scope_isolation_holds_on_postgres",
+        "postgres_okf_roundtrip"
+      ]
+    },
+    "postgres-vector.integration.test.ts": {
+      "tests": 14,
+      "pass": 14,
+      "fail": 0,
+      "cases": [
+        "postgres vector ddl and identifiers > rejects identifier injection attempts",
+        "postgres vector ddl and identifiers > emits lexical, drift columns, generation pointer table, and conditional hnsw",
+        "createPostgresVectorStore integration > generation visibility: pointer filters query and lexical legs, rollback via setCurrentGeneration, legacy rows always visible",
+        "createPostgresVectorStore integration > commits atomically: rolled-back transactions leave prior chunks retrievable",
+        "createPostgresVectorStore integration > keeps multi-record upsert batches atomic on failure",
+        "createPostgresVectorStore integration > returns exact-scope getBySource results and never leaks across tenants",
+        "createPostgresVectorStore integration > serves fts lexical queries from the tsvector leg when available",
+        "createPostgresVectorStore integration > stores embedding-less records and ORs analyzed terms in the lexical leg",
+        "createPostgresVectorStore integration > orders cosine query results nearest-first matching brute force",
+        "createPostgresVectorStore integration > round-trips embedderId and shares statement builders with createPostgresMemoryStores",
+        "createPostgresVectorStore integration > persists and clamps importance on durable rows",
+        "createPostgresVectorStore integration > composite recall order matches the memory adapter through pgvector",
+        "createPostgresVectorStore integration > applies source ACL in both query legs, denies by default, and keeps allowed hits inside topK",
+        "createPostgresVectorStore integration > reports what its own ACL predicate withheld, one entry per source, only when asked"
+      ]
+    },
+    "postgres-propagation.integration.test.ts": {
+      "tests": 3,
+      "pass": 3,
+      "fail": 0,
+      "cases": [
+        "postgres deletion propagation integration > tombstones 1k derived rows in one durable transaction, and no query leg returns them afterwards",
+        "postgres deletion propagation integration > re-points on the durable store in one transaction and keeps propagation correct on both sides",
+        "postgres deletion propagation integration > fails closed on the durable store: no grant means no propagation and no partial re-point"
+      ]
+    },
+    "total": {
+      "tests": 26,
+      "pass": 26,
+      "fail": 0
+    }
+  },
+  "navigationFallbackMetrics": {
+    "fixtureRows": 466,
+    "scanPages": 3,
+    "scanRows": 466,
+    "sessionPageMs": 9,
+    "cursorBoundary": 200,
+    "warningEmitted": "memory-fabric: store has no listBySession; session navigation uses a metadata scan"
+  },
+  "broaderPostgresLegs": {
+    "command": "bun run test:postgres",
+    "evidenceFile": "scripts/postgres-evidence.json",
+    "tests": 57,
+    "pass": 57,
+    "fail": 0,
+    "legs": [
+      "@arnilo/prism-store-postgres test:postgres (50 pass, 0 fail across 7 files)",
+      "@arnilo/prism-channels test:postgres (2 pass, 0 fail across 1 file)",
+      "phase7-conformance.test.mjs (2 pass, 0 fail across 1 file)",
+      "phase22-conformance.test.mjs (3 pass, 0 fail across 1 file)"
+    ]
+  },
+  "releaseEvidence": {
+    "command": "bun run release:evidence",
+    "manifest": "scripts/release-evidence.json",
+    "surfaces": 64,
+    "blocked": false
+  },
+  "releaseGate": {
+    "command": "bun scripts/release.mjs gate",
+    "checkReleaseEvidence": "pass",
+    "verdict": "blocked_by_unrelated",
+    "unrelatedBlockers": [
+      "compat: @arnilo/prism-memory-fabric changed: createFabricContext",
+      "compat: @arnilo/prism-provider-kilo changed: kiloTaskId, type KiloAuthConfig, type KiloAuthMethod, type KiloModelConfig, type KiloModelEntry, type KiloProviderOptions, type KiloRoute, type ListKiloModelsOptions",
+      "compat: @arnilo/prism-provider-ollama-cloud changed: type ListOllamaCloudModelsOptions, type OllamaCloudBalance, type OllamaCloudBalanceOptions, type OllamaCloudBalanceWindow, type OllamaCloudModelConfig, type OllamaCloudModelEntry, type OllamaCloudRoute, type OllamaCloudShowEntry",
+      "kernel size budget ceiling growth (packedBytes, unpackedBytes, fileCount, rootExports, sourceLines; pending release baseline rebaseline)"
+    ]
+  }
+}

@@ -14,6 +14,7 @@ import {
   type ResolvedMemoryWorkerLimits,
   recordData,
 } from "@arnilo/prism-memory-observational";
+import type { SubjectScopeListing } from "../ontology/index.js";
 import type { FabricConsolidationReport, ResolvedPromoteConfig } from "../promote.js";
 import { type MemoryFabric, type MemoryFabricScopeBinding, type MemoryNoteScope, parseMemoryNoteMetadata } from "../types.js";
 import { type ConsolidationExtraction, type ExtractedNote, extractConsolidationNotes } from "./extract.js";
@@ -49,6 +50,8 @@ export interface ConsolidationPassInput {
   readonly root: string;
   /** The project scope has a root, so the extractor gets the repository and derivability rules. */
   readonly repositoryRules?: boolean;
+  /** The ontology tier's subjects per scope for this session's epoch; the extractor may bind a note to one. */
+  readonly subjects?: readonly SubjectScopeListing[];
   /**
    * Not-yet-consolidated archived exchanges, gathered by the caller from the store. They join the
    * pass's candidates so one extractor call turns verbatim history into dated, keyed facts.
@@ -337,6 +340,7 @@ async function extract(
     client: input.resolveClient(),
     candidates,
     segments,
+    ...(input.subjects === undefined ? {} : { subjects: input.subjects }),
     recallExisting,
     limits: input.limits,
     maxNotes: input.config.maxCandidates,

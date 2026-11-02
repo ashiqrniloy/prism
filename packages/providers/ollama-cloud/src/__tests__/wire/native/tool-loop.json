@@ -1,0 +1,101 @@
+[
+  {
+    "method": "POST",
+    "path": "/api/chat",
+    "requestBody": {
+      "model": "gemma4:31b",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Call get_weather for Paris. Use the tool."
+        }
+      ],
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "get_weather",
+            "description": "Get current weather for a city",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "city"
+              ]
+            }
+          }
+        }
+      ],
+      "stream": true,
+      "options": {
+        "num_predict": 128
+      }
+    },
+    "status": 200,
+    "contentType": "application/x-ndjson",
+    "responseBody": "{\"model\":\"gemma4:31b\",\"created_at\":\"2026-11-01T12:40:00Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\",\"tool_calls\":[{\"id\":\"call_tn83v5zc\",\"function\":{\"index\":0,\"name\":\"get_weather\",\"arguments\":{\"city\":\"Paris\"}}}]},\"done\":false}\n{\"model\":\"gemma4:31b\",\"created_at\":\"2026-11-01T12:40:00Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\"},\"done\":true,\"done_reason\":\"stop\",\"total_duration\":191000000,\"prompt_eval_count\":68,\"prompt_eval_cached_count\":64,\"eval_count\":15}\n"
+  },
+  {
+    "method": "POST",
+    "path": "/api/chat",
+    "requestBody": {
+      "model": "gemma4:31b",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Call get_weather for Paris. Use the tool."
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "function": {
+                "name": "get_weather",
+                "arguments": {
+                  "city": "Paris"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "get_weather",
+          "content": "{\"tempC\":18,\"sky\":\"clear\"}"
+        }
+      ],
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "get_weather",
+            "description": "Get current weather for a city",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "city": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "city"
+              ]
+            }
+          }
+        }
+      ],
+      "stream": true,
+      "options": {
+        "num_predict": 64
+      }
+    },
+    "status": 200,
+    "contentType": "application/x-ndjson",
+    "responseBody": "{\"model\":\"gemma4:31b\",\"created_at\":\"2026-11-01T12:40:00Z\",\"message\":{\"role\":\"assistant\",\"content\":\"The current weather in Paris is 18\\u00b0C with clear skies.\"},\"done\":false}\n{\"model\":\"gemma4:31b\",\"created_at\":\"2026-11-01T12:40:00Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\"},\"done\":true,\"done_reason\":\"stop\",\"total_duration\":212000000,\"prompt_eval_count\":102,\"prompt_eval_cached_count\":96,\"eval_count\":20}\n"
+  }
+]

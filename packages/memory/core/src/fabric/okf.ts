@@ -26,6 +26,7 @@ const OKF_TYPE_BY_KIND: Readonly<Record<string, string>> = Object.freeze({
   episode: "Episode",
   file: "File",
   working: "Working",
+  concept: "Concept",
 });
 const KIND_BY_OKF_TYPE: Readonly<Record<string, string>> = Object.freeze(
   Object.fromEntries(Object.entries(OKF_TYPE_BY_KIND).map(([kind, type]) => [type.toLowerCase(), kind])),
@@ -69,6 +70,9 @@ const KNOWN_FRONTMATTER_KEYS: ReadonlySet<string> = new Set([
   "valid_to",
   "supersedes",
   "sources",
+  "subject",
+  "concept_type",
+  "aliases",
   "generated",
   "prism",
 ]);
@@ -147,7 +151,7 @@ export function renderNoteFile(record: MemoryVectorRecord): string {
   const lines = [
     "---",
     `type: ${json(okfTypeForKind(fabricKind(record)))}`,
-    `title: ${json(noteTitle(record.text))}`,
+    `title: ${json(fabric?.kind === "concept" && typeof fabric.title === "string" ? fabric.title : noteTitle(record.text))}`,
     `description: ${json(noteDescription(record.text))}`,
   ];
   if (fabric?.tags !== undefined) lines.push(`tags: ${json(fabric.tags)}`);
@@ -158,7 +162,14 @@ export function renderNoteFile(record: MemoryVectorRecord): string {
   if (fabric?.validFrom !== undefined) lines.push(`valid_from: ${json(fabric.validFrom)}`);
   if (fabric?.validTo !== undefined) lines.push(`valid_to: ${json(fabric.validTo)}`);
   if (fabric?.supersedes !== undefined) lines.push(`supersedes: ${json(fabric.supersedes)}`);
-  if (fabric?.sourceEntryIds !== undefined && Array.isArray(fabric.sourceEntryIds)) {
+  if (fabric?.kind === "concept") {
+    // A concept is browsed and diffed by people: its subject, type, names and cited notes are frontmatter, and the
+    // body's footnotes are the citations (plan 207 Task 2).
+    if (typeof fabric.subject === "string") lines.push(`subject: ${json(fabric.subject)}`);
+    if (typeof fabric.conceptType === "string") lines.push(`concept_type: ${json(fabric.conceptType)}`);
+    if (Array.isArray(fabric.aliases)) lines.push(`aliases: ${json(fabric.aliases)}`);
+    if (Array.isArray(fabric.sources)) lines.push(`sources: ${json(fabric.sources.map((id) => ({ id })))}`);
+  } else if (fabric?.sourceEntryIds !== undefined && Array.isArray(fabric.sourceEntryIds)) {
     lines.push(`sources: ${json(fabric.sourceEntryIds.map((id) => ({ id, resource: `prism-session:${id}` })))}`);
   }
   if (record.metadata?.generated !== undefined) lines.push(`generated: ${json(record.metadata.generated)}`);
@@ -227,7 +238,12 @@ export function parseNoteFile(content: string, filePath: string, classify?: Note
   if (parsed.applies_to !== undefined) metadata = setFabric(metadata, { appliesTo: parsed.applies_to });
   if (typeof prism.key === "string") metadata = setFabric(metadata, { key: prism.key });
   if (isRecord(prism.scope) && typeof prism.scope.level === "string") metadata = setFabric(metadata, { scope: prism.scope.level });
-  if (Array.isArray(parsed.sources)) {
+  if (Array.isArray(parsed.sources) && (kind ?? fabricFields(metadata)?.kind) === "concept") {
+    const sources = parsed.sources
+      .map((source) => (isRecord(source) && typeof source.id === "string" ? source.id : undefined))
+      .filter((value): value is string => value !== undefined);
+    metadata = setFabric(metadata, { sources });
+  } else if (Array.isArray(parsed.sources)) {
     const sourceEntryIds = parsed.sources
       .map((source) => (isRecord(source) && typeof source.id === "string" ? source.id : undefined))
       .filter((value): value is string => value !== undefined);

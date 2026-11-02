@@ -10,7 +10,10 @@
 import type { MemoryNoteKind, MemoryNoteMetadata, MemoryNoteUseEvent } from "../types.js";
 
 /** How much each kind of note is expected to be needed again; a lower `d` forgets slower. */
-export type MemoryNoteDecay = Readonly<Record<MemoryNoteKind, number>>;
+export type MemoryNoteDecay = Readonly<Record<Exclude<MemoryNoteKind, "concept">, number>> & {
+  /** Unused: the lifecycle never decays, archives or evicts a concept (plan 207); a value would only rank it. */
+  readonly concept?: number;
+};
 
 /** Coefficients of `S = explicit + sessions·log(1+useSessions) + helpful − harmful + outcome`. */
 export interface StorageWeights {
@@ -42,6 +45,8 @@ export const DEFAULT_DECAY: MemoryNoteDecay = Object.freeze({
   fact: 0.4,
   preference: 0.2,
   procedure: 0.4,
+  // A standing decision outlives a fact, like a preference.
+  decision: 0.2,
   file: 0.4,
   // Verbatim history is detail, not a lesson: it fades faster than a fact but slower than an episode.
   exchange: 0.5,

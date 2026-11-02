@@ -507,7 +507,7 @@ export function mockProvider(state) {
           .filter((message) => message.role === "user")
           .map((message) => textOf(message.content))
           .join("\n");
-        const id = /\[([^\]]+)\]/.exec(text)?.[1];
+        const id = /\[[^\]]+\] \[([^\]]+)\] message:/.exec(text)?.[1];
         if (id)
           yield providerToolCall(
             toolCallContent("synthetic-observation", "record_observation", {
@@ -593,7 +593,15 @@ export function measuredProvider(provider, state) {
           state.budgetExceeded = true;
           throw new Error("MemoryBenchTokenCeiling");
         }
-        if (kind) state.calls[kind]++;
+        if (kind) {
+          state.calls[kind]++;
+          state.workerUsage ??= {
+            observer: { calls: 0, inputTokens: 0, outputTokens: 0 },
+            reflector: { calls: 0, inputTokens: 0, outputTokens: 0 },
+            dropper: { calls: 0, inputTokens: 0, outputTokens: 0 },
+          };
+          state.workerUsage[kind].calls++;
+        }
         if (extractor) {
           state.calls.consolidate = (state.calls.consolidate ?? 0) + 1;
           extractorStats(state).calls += 1;
@@ -612,6 +620,12 @@ export function measuredProvider(provider, state) {
               const stats = extractorStats(state);
               if (chunk.stopReason === "max_output_tokens") stats.atMaxOutput += 1;
               if (typeof chunk.usage?.inputTokens === "number") stats.inputTokens += chunk.usage.inputTokens;
+            }
+            // Plan 202 Task 16: OM worker cost is its own ledger, not the product answer's.
+            if (kind && chunk.type === "done") {
+              const usage = state.workerUsage[kind];
+              if (typeof chunk.usage?.inputTokens === "number") usage.inputTokens += chunk.usage.inputTokens;
+              if (typeof chunk.usage?.outputTokens === "number") usage.outputTokens += chunk.usage.outputTokens;
             }
             yield chunk;
           }
@@ -898,6 +912,7 @@ export async function replay(question, options, providers, state) {
     toolCalls: 0,
     recallCalls: 0,
     retrievedSnippetTokens: 0,
+    sourceMessageTokens: 0,
     recalledIds: [],
     answerRetries: 0,
     mutating: false,
@@ -1273,7 +1288,13 @@ export async function replay(question, options, providers, state) {
       const deadline = Date.now() + 600_000;
       while (true) {
         const status = await agent.commands.run("om:status", {}, { session });
-        if (status.lastError) throw new Error("MemoryBenchWorkerError");
+        if (status.lastError) {
+          // A worker pass is background-only by contract: an observer/reflector failure must not abort
+          // the arm. Budget exhaustion is the one exception, because it ends the whole run.
+          if (/TokenCeiling/.test(status.lastError)) throw new Error("MemoryBenchTokenCeiling");
+          state.workerErrors ??= [];
+          state.workerErrors.push({ phase: "ingest", message: String(status.lastError).slice(0, 200) });
+        }
         if (!status.inFlight) break;
         if (Date.now() > deadline) throw new Error("MemoryBenchWorkerTimeout");
         await new Promise((resolve) => setTimeout(resolve, 20));
@@ -1300,6 +1321,7 @@ export async function replay(question, options, providers, state) {
           await store.append(entry);
           parentId = entry.id;
           chunkTokens += tokens(message.text);
+          metrics.sourceMessageTokens += tokens(message.text);
         }
         if (useOm && chunkTokens >= 10_000) await checkpoint();
       }
@@ -1403,6 +1425,7 @@ export async function replay(question, options, providers, state) {
       explicitRecallCalls: metrics.explicitRecallCalls,
       automaticRecallCalls: metrics.automaticRecallCalls,
       retrievedSnippetTokens: metrics.retrievedSnippetTokens,
+      sourceMessageTokens: metrics.sourceMessageTokens,
       recalledIds: metrics.recalledIds,
       answerRetries: metrics.answerRetries,
       turns: metrics.agentSteps,

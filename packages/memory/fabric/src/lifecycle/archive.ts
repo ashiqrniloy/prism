@@ -58,6 +58,8 @@ export function shouldArchive(
   options: ArchiveDecisionOptions = {},
 ): boolean {
   if (metadata.pinned === true) return false;
+  // The ontology curator alone changes or retires a concept (plan 207 Task 2).
+  if (metadata.kind === "concept") return false;
   const archive = options.archive ?? DEFAULT_ARCHIVE_CONFIG;
   const decay = options.decay ?? DEFAULT_DECAY;
   const d = decay[metadata.kind] ?? DEFAULT_DECAY.fact;

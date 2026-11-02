@@ -228,7 +228,9 @@ describe("extractor budget, reasoning level and truncation (plan 188.10 Task 5)"
    * segment): system 3,464, schema 2,156, existing 13,383, candidates 39,179, segments 437. The
    * session's candidates dominate (88% of the empty-store prompt), the harness parts are 4.8–19.0 kB,
    * no part is unbounded, and no trim is justified by that breakdown. Task 6's instance, key and
-   * keyword rules grew the system part by 619 B (≈155 tokens), inside its 250-token budget.
+   * keyword rules grew the system part by 619 B (≈155 tokens), inside its 250-token budget. Plan 207 Task 3's optional
+   * `subject` field grew the schema by 43 B (≈11 tokens); the system part is unchanged and the subject list itself
+   * travels in the per-call prompt only when an ontology has subjects.
    */
   it("extractor_prompt_size_breakdown_matches_fixture", () => {
     const candidates = Array.from({ length: 3 }, (_, index) => ({
@@ -250,7 +252,7 @@ describe("extractor budget, reasoning level and truncation (plan 188.10 Task 5)"
         candidates: bytes(prompt.candidates),
         segments: bytes(prompt.segments),
       },
-      { system: 3464, schema: 1567, existing: 55, candidates: 196, segments: 86 },
+      { system: 3464, schema: 1610, existing: 55, candidates: 196, segments: 86 },
     );
   });
 });

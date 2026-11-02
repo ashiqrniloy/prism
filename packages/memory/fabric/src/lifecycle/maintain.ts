@@ -27,7 +27,15 @@ import {
   parseMemoryNoteMetadata,
 } from "../types.js";
 import { shouldArchive } from "./archive.js";
-import { type CapacityLimits, type CapacityNote, capacityForLevel, capacityUsage, evictionOrder, overCapacity } from "./capacity.js";
+import {
+  type CapacityLimits,
+  type CapacityNote,
+  capacityForLevel,
+  capacityUsage,
+  evictionOrder,
+  exchangeDemotionOrder,
+  overCapacity,
+} from "./capacity.js";
 import { SCOPE_CLOCK_COUNTER } from "./clock.js";
 import type { FabricLifecycle } from "./index.js";
 import { createFabricLifecycle } from "./index.js";
@@ -495,7 +503,10 @@ export async function runMaintenance(
   for (const { memory, index } of targets) {
     const level: MemoryNoteScope = deps.levels[index] ?? "project";
     const clock = await scopeClock(deps, memory);
-    const rows = await scanActiveRows(scanMetadata, { tenantId: memory.scope.tenantId, resourceId: memory.scope.resourceId }, signal);
+    // A concept is never archived, merged or evicted by maintenance: the ontology curator owns it.
+    const rows = (await scanActiveRows(scanMetadata, { tenantId: memory.scope.tenantId, resourceId: memory.scope.resourceId }, signal)).filter(
+      (row) => row.metadata.kind !== "concept",
+    );
     const survivors: ActiveRow[] = [];
     for (const row of rows) {
       // Metadata only: archiving never re-embeds and never sets `validTo`.
@@ -510,17 +521,49 @@ export async function runMaintenance(
     }
     const limits = capacityForLevel(level, lifecycle?.capacity);
     const notes = await capacityNotes(memory, survivors, signal);
-    let usage = capacityUsage(notes);
-    let kept: readonly CapacityNote[] = notes;
+    // Raw exchanges have their own size-only tier. They never consume the fact/procedure budget,
+    // and a demotion keeps the note text in the searchable archive.
+    const regularNotes = notes.filter((note) => note.metadata.kind !== "exchange");
+    let exchanges = notes.filter((note) => note.metadata.kind === "exchange");
+    let usage = capacityUsage(regularNotes);
+    let kept: readonly CapacityNote[] = regularNotes;
     if (overCapacity(usage, limits)) {
-      const result = await enforceCapacity(deps, { index, level, clock, notes, limits, now, ...(signal === undefined ? {} : { signal }) });
+      const result = await enforceCapacity(deps, {
+        index,
+        level,
+        clock,
+        notes: regularNotes,
+        limits,
+        now,
+        ...(signal === undefined ? {} : { signal }),
+      });
       merged += result.merged;
       episodesMerged += result.episodesMerged;
       evicted += result.evicted;
       kept = result.kept;
       usage = capacityUsage(kept);
     }
-    active.set(index, kept);
+    const hotTokens = lifecycle?.exchangeCapacity.hotTokens;
+    if (hotTokens !== undefined) {
+      let exchangeTokens = capacityUsage(exchanges).tokens;
+      const demoted = new Set<string>();
+      for (const note of exchangeDemotionOrder(exchanges, clock, decision)) {
+        if (exchangeTokens <= hotTokens) break;
+        if (
+          !(await deps.lifecycles[index]!.archive(note.id, {
+            now,
+            auditVerb: "demoted",
+            ...(signal === undefined ? {} : { signal }),
+          }))
+        )
+          continue;
+        demoted.add(note.id);
+        exchangeTokens -= note.tokens;
+        evicted += 1;
+      }
+      if (demoted.size > 0) exchanges = exchanges.filter((note) => !demoted.has(note.id));
+    }
+    active.set(index, [...kept, ...exchanges]);
     if (overCapacity(usage, limits)) {
       overBudget.push({
         scope: memory.scope.resourceId,

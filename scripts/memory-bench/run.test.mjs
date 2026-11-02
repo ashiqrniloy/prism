@@ -41,6 +41,17 @@ test("paid_bounded_wire_is_explicit_and_cannot_resume_unbounded_checkpoints", as
   assert.notEqual(protocolFingerprint(report), protocolFingerprint({ ...report, boundedWire: true }));
 });
 
+test("worker_failure_keeps_its_cause_and_budget_error_ends_the_arm", () => {
+  const rateLimited = new Error("MemoryBenchWorkerError", {
+    cause: { name: "ObservationalWorkerError", message: "Kilo request failed: 429 rate_limit_exceeded" },
+  });
+  assert.equal(questionFailureDisposition({ error: rateLimited }), "failed");
+  const budget = new Error("MemoryBenchWorkerError", {
+    cause: { name: "ObservationalWorkerError", message: "MemoryBenchTokenCeiling" },
+  });
+  assert.equal(questionFailureDisposition({ error: budget }), "token-ceiling");
+});
+
 test("wrapped_wire_reservation_refusal_is_a_token_ceiling_not_an_answer_failure", () => {
   const error = new Error("MemoryBenchAnswerError:failed", { cause: new Error("MemoryBenchTokenCeiling") });
   assert.equal(questionFailureDisposition({ error, budget: false }), "token-ceiling");
@@ -543,7 +554,7 @@ test("judge_waits_the_gateway_retry_hint_before_reasking", async () => {
         account: async () => {},
         ceilingReached: () => false,
         calls,
-        backoffMs: (attempt, error) => {
+        backoffMs: (_attempt, error) => {
           waits.push(retryAfterMs(error?.cause?.message, error?.message));
           return 20;
         },
@@ -1656,7 +1667,12 @@ test("delivery_diagnostic_mirrors_shipped_injection_rule", async () => {
   };
   const context = { sessionId: "s", session: { id: "s", entries: async () => [user] } };
   const long = await fabric.remember({ kind: "fact", content: `${"filler ".repeat(300)}question${" tail".repeat(300)}` });
-  for (const candidates of [hits, hits.slice(1), [hits[1], { ...long, score: 1 }, hits[2]]]) {
+  for (const candidates of [
+    hits,
+    hits.slice(1),
+    [hits[1], { ...long, score: 1 }, hits[2]],
+    [{ ...hits[1], score: 0.25 }, hits[0], hits[2]],
+  ]) {
     // Exact boundary: the citation preamble must consume budget too.
     for (const budgetTokens of [1, 300, 600, selectInjection(candidates, "question", 10000).tokens]) {
       const draft = await createFabricContext(memory, async () => ({ hits: candidates, explain: [] }), { budgetTokens, topK: 3 }).build(
@@ -2892,7 +2908,11 @@ test("defaults_match_pre_registered_grid_choice", async () => {
   const { memoryFabricConfigSchema } = await import("../../packages/memory/fabric/src/config.ts");
   const report = JSON.parse(await readFile("docs/_evidence/memory-bench/188.9/ceiling-development.json", "utf8"));
   const chosen = chooseDeliveryDefaults(report);
-  assert.deepEqual(chosen, INJECT_DEFAULTS);
+  assert.deepEqual(chosen, {
+    budgetTokens: INJECT_DEFAULTS.budgetTokens,
+    topK: INJECT_DEFAULTS.topK,
+    minSimilarity: INJECT_DEFAULTS.minSimilarity,
+  });
   assert.deepEqual(chosen, { budgetTokens: 4000, topK: 12, minSimilarity: 0.2 });
   // The schema's declared defaults are the same cell, so a caller reading the schema sees the truth.
   const inject = memoryFabricConfigSchema.properties.inject.anyOf[1].properties;
@@ -2903,6 +2923,10 @@ test("defaults_match_pre_registered_grid_choice", async () => {
       minSimilarity: inject.minSimilarity.default,
     },
     chosen,
+  );
+  assert.deepEqual(
+    { minScore: inject.minScore.default, fullTextScore: inject.fullTextScore.default },
+    { minScore: INJECT_DEFAULTS.minScore, fullTextScore: INJECT_DEFAULTS.fullTextScore },
   );
   // Rejected neighbours are still in the evidence: the chosen cell is not the cheapest, but no 4k cell
   // delivers more evidence, and the next step up costs more than a third again.
@@ -3108,7 +3132,7 @@ test("provider_list_includes_the_litellm_pool", async () => {
   // The refusal text names every supported provider, so a typo does not read as "unknown host".
   await assert.rejects(
     liveProviders([{ provider: "nope", model: "x" }], "/tmp"),
-    /hyper, opencode-go, openrouter, commandcode and litellm/,
+    /hyper, opencode-go, openrouter, commandcode, kilo and litellm/,
   );
 });
 

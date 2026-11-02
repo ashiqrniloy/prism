@@ -534,6 +534,17 @@
         "@arnilo/prism": ">=0.13.0 <1.0.0",
       },
     },
+    "packages/providers/ollama-cloud": {
+      "name": "@arnilo/prism-provider-ollama-cloud",
+      "version": "0.13.0",
+      "devDependencies": {
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": ">=0.13.0 <1.0.0",
+      },
+    },
     "packages/providers/openai-codex": {
       "name": "@arnilo/prism-provider-openai-codex",
       "version": "0.13.0",
@@ -851,6 +862,8 @@
     "@arnilo/prism-provider-liquid": ["@arnilo/prism-provider-liquid@workspace:packages/providers/liquid"],
 
     "@arnilo/prism-provider-litellm": ["@arnilo/prism-provider-litellm@workspace:packages/providers/litellm"],
+
+    "@arnilo/prism-provider-ollama-cloud": ["@arnilo/prism-provider-ollama-cloud@workspace:packages/providers/ollama-cloud"],
 
     "@arnilo/prism-provider-openai-codex": ["@arnilo/prism-provider-openai-codex@workspace:packages/providers/openai-codex"],
 

@@ -2,38 +2,30 @@
   "kind": "202-task5-execution-verification",
   "gate": {
     "path": "docs/_evidence/memory-bench/202/task5/owner-gate.json",
-    "manifestHash": "c9c6b88b8682923b27f7bb47eb970b391c93a1814970c518e9866b0834043db1",
-    "journal": "e3d8ac7d031aa5dcfad250b7dd7e84472fb517d8268eeafd2236b87dcf21ab32"
+    "manifestHash": "8828ec96fa4efde255ca7b07d4d855123486a14a6b2531dc461df3d4476c26a7",
+    "journal": "7654e9d0c5d1f954bd49313b03868e1702ef8e469ddcb30065c7da1cfcb19fdf"
   },
   "journal": {
-    "campaignId": "campaign-e3d8ac7d031a",
+    "campaignId": "campaign-7654e9d0c5d1",
     "status": "setup-failure",
     "ceiling": 100000000
   },
   "product": {
     "control": "ad25add4e2d662d637d43fbe06188160eea15569eca0e5498145e0de2a6143b0",
     "candidate": "26bf9013cc0d2a258b3753d8f4f20e723180062cc45fabbc72a521b00fe98f20",
-    "harness": "d6c0702672575c09c4caa73024cfd01c490cf825055f599a330d3c312350522d"
+    "harness": "1d3c852551a14dca369a5e5698f6b42e1861916c29f0a0d00bb14a32359bb4c6"
   },
-  "criteriaHash": "2ae02b79651b10990440df296dda34141a5eac86f366cc7e2213b714f57e4d1c",
-  "evidenceProtocolHash": "4f9e62347045a4056fdfe56f3fe1cbb8c80ec8d988f9d1a1cac21fb83fb159b9",
+  "criteriaHash": "25922ea9280c15c38277c7ca53d8606eef8374b3cb5a81e6bdb58fabbe9260f0",
+  "evidenceProtocolHash": "bc9aa07ca9fedadd8eee71effa8d9da9d577c42a6139f83f742fe9689d9d2d0c",
   "analysisHash": "9c9e228642638bb266379ebebff453ead285e12a4c42f9f35bc8b98fd0e00294",
   "results": [
     {
-      "id": "202-task5.control.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
-      "attemptId": "202-task5.control.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free@1",
-      "status": "completed",
-      "usageComplete": true,
-      "reused": true,
-      "charged": 1102309
-    },
-    {
-      "id": "202-task5.candidate.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free",
-      "attemptId": "202-task5.candidate.beam-100k.preset-r1.openrouter.nvidia/nemotron-3-ultra-550b-a55b:free@2",
+      "id": "202-task5.control.beam-100k.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free",
+      "attemptId": "202-task5.control.beam-100k.preset-r1.kilo.nvidia/nemotron-3-ultra-550b-a55b:free@2",
       "status": "setup-failure",
       "exit": 1
     }
   ],
-  "provider": "openrouter",
+  "provider": "kilo",
   "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
 }

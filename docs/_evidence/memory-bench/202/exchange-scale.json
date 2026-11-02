@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "metric": "p95 lexical recall over the vector store",
+  "exchanges": 100000,
+  "results": [
+    {
+      "store": "sqlite",
+      "exchanges": 100000,
+      "writeMs": 2393.4,
+      "querySamples": 200,
+      "queryP50Ms": 0.533,
+      "queryP95Ms": 1.063
+    },
+    {
+      "store": "postgres",
+      "exchanges": 100000,
+      "writeMs": 21231.11,
+      "querySamples": 200,
+      "queryP50Ms": 2.954,
+      "queryP95Ms": 4.148
+    }
+  ],
+  "criterion": {
+    "p95MsMax": 100,
+    "pass": true
+  }
+}

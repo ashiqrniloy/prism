@@ -28,7 +28,13 @@ const MULTI_SESSION_PROTOCOL = "multi-session-recall-v1";
 /** Ranks at which a multi-session diagnostic reports "all needed rounds inside the top k". */
 export const MULTI_SESSION_TOP_K = Object.freeze([10, 20]);
 /** The shipped passive-injection defaults (plan 188.9 Task 5); diagnostics mirror the product. */
-export const INJECT_DEFAULTS = Object.freeze({ budgetTokens: 4000, topK: 12, minSimilarity: 0.2 });
+export const INJECT_DEFAULTS = Object.freeze({
+  budgetTokens: 4000,
+  topK: 12,
+  minSimilarity: 0.2,
+  minScore: 0.2,
+  fullTextScore: 0.35,
+});
 const INJECT = INJECT_DEFAULTS;
 const CANDIDATE_TOP_K = 32;
 
@@ -146,11 +152,13 @@ export function selectInjection(
   topK = INJECT.topK,
   renderer = "excerpt",
   eligibleCount = Array.isArray(hits) ? hits.length : 0,
+  minScore = INJECT.minScore,
+  fullTextScore = INJECT.fullTextScore,
 ) {
   if (renderer === "whole") return wholeNoteInjection(hits, budgetTokens, topK);
   // The product passes the count left after its active/duplicate filters; the mirror passes the
   // ranking it was given, so both agree on whether the block was cut and on the cue text.
-  const fitted = fitInjection(hits, lexicalTerms(query), budgetTokens, topK, eligibleCount);
+  const fitted = fitInjection(hits, lexicalTerms(query), budgetTokens, topK, eligibleCount, minScore, fullTextScore);
   return { ids: fitted.hits.map((hit) => hit.id), lines: fitted.lines.slice(1), tokens: fitted.tokens };
 }
 

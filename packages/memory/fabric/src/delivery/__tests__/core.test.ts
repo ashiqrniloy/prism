@@ -287,8 +287,16 @@ describe("pinned core (plan 188.5 Task 1)", () => {
     assert.equal(await coreBlock(projection), undefined);
     assert.equal(scans(), 0, "core: false runs no scan");
     assert.equal(resolveFabricCoreOptions(false, true), false);
-    assert.deepEqual(resolveFabricCoreOptions(undefined, true), { maxTokens: 600, scopes: ["user", "project"] });
-    assert.deepEqual(resolveFabricCoreOptions({ scopes: ["project"] }, true), { maxTokens: 600, scopes: ["project"] });
+    assert.deepEqual(resolveFabricCoreOptions(undefined, true), {
+      maxTokens: 600,
+      scopes: ["user", "project"],
+      kinds: ["fact", "preference", "procedure", "decision"],
+    });
+    assert.deepEqual(resolveFabricCoreOptions({ scopes: ["project"] }, true), {
+      maxTokens: 600,
+      scopes: ["project"],
+      kinds: ["fact", "preference", "procedure", "decision"],
+    });
     assert.throws(() => resolveFabricCoreOptions({ maxTokens: 1_001 }, true), /core\.maxTokens/);
     assert.throws(() => resolveFabricCoreOptions({ scopes: [] }, true), /core\.scopes/);
   });

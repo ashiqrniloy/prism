@@ -284,7 +284,7 @@ function requestFromWire(
     ? "anthropic"
     : requestPath?.includes("responses")
       ? "responses"
-      : requestPath?.includes("chat")
+      : requestPath?.includes("chat/completions")
         ? "openai"
         : undefined;
   const responsesWire = route === "responses";

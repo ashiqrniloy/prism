@@ -1,0 +1,1388 @@
+{
+  "schemaVersion": 1,
+  "metric": "offline lifecycle taskSuccess with and without observational-memory promotion",
+  "generatedAt": "2026-11-02T12:29:55.149Z",
+  "seeds": [
+    7,
+    11,
+    19,
+    23,
+    29,
+    31,
+    37
+  ],
+  "modelCalls": 0,
+  "rows": [
+    {
+      "arm": "fabric",
+      "config": "fabric",
+      "seed": 7,
+      "status": "completed",
+      "taskSuccess": 0.3333333333333333,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 0,
+        "notesPerSession": 0,
+        "verified": 0,
+        "verifiedShare": null,
+        "used": 0,
+        "usedShare": null,
+        "candidate": 0,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "reflector": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "dropper": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      "inputTokens": 388360,
+      "calls": {
+        "observer": 0,
+        "reflector": 0,
+        "dropper": 0,
+        "embedding": 0,
+        "gatewayRetries": 0
+      }
+    },
+    {
+      "arm": "fabric+promotion",
+      "config": "fabric",
+      "seed": 7,
+      "status": "completed",
+      "taskSuccess": 0.375,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 3,
+        "notesPerSession": 0.125,
+        "verified": 0,
+        "verifiedShare": 0,
+        "used": 0,
+        "usedShare": 0,
+        "candidate": 3,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "reflector": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "dropper": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      "inputTokens": 402155,
+      "calls": {
+        "observer": 0,
+        "reflector": 0,
+        "dropper": 0,
+        "embedding": 0,
+        "gatewayRetries": 0,
+        "consolidate": 9
+      }
+    },
+    {
+      "arm": "om+fabric",
+      "config": "om+fabric",
+      "seed": 7,
+      "status": "completed",
+      "taskSuccess": 0.7083333333333334,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 0,
+        "notesPerSession": 0,
+        "verified": 0,
+        "verifiedShare": null,
+        "used": 0,
+        "usedShare": null,
+        "candidate": 0,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 224,
+          "inputTokens": 826384,
+          "outputTokens": 448
+        },
+        "reflector": {
+          "calls": 2,
+          "inputTokens": 45006,
+          "outputTokens": 4
+        },
+        "dropper": {
+          "calls": 2,
+          "inputTokens": 44853,
+          "outputTokens": 4
+        }
+      },
+      "inputTokens": 1370120,
+      "calls": {
+        "observer": 224,
+        "reflector": 2,
+        "dropper": 2,
+        "embedding": 0,
+        "gatewayRetries": 0
+      }
+    },
+    {
+      "arm": "om+fabric+promotion",
+      "config": "om+fabric",
+      "seed": 7,
+      "status": "completed",
+      "taskSuccess": 0.7083333333333334,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 6,
+        "notesPerSession": 0.25,
+        "verified": 0,
+        "verifiedShare": 0,
+        "used": 0,
+        "usedShare": 0,
+        "candidate": 6,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 224,
+          "inputTokens": 826391,
+          "outputTokens": 448
+        },
+        "reflector": {
+          "calls": 2,
+          "inputTokens": 45006,
+          "outputTokens": 4
+        },
+        "dropper": {
+          "calls": 2,
+          "inputTokens": 44853,
+          "outputTokens": 4
+        }
+      },
+      "inputTokens": 1656260,
+      "calls": {
+        "observer": 224,
+        "reflector": 2,
+        "dropper": 2,
+        "embedding": 0,
+        "gatewayRetries": 0,
+        "consolidate": 24
+      }
+    },
+    {
+      "arm": "fabric",
+      "config": "fabric",
+      "seed": 11,
+      "status": "completed",
+      "taskSuccess": 0.4583333333333333,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 0,
+        "notesPerSession": 0,
+        "verified": 0,
+        "verifiedShare": null,
+        "used": 0,
+        "usedShare": null,
+        "candidate": 0,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "reflector": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "dropper": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      "inputTokens": 388345,
+      "calls": {
+        "observer": 0,
+        "reflector": 0,
+        "dropper": 0,
+        "embedding": 0,
+        "gatewayRetries": 0
+      }
+    },
+    {
+      "arm": "fabric+promotion",
+      "config": "fabric",
+      "seed": 11,
+      "status": "completed",
+      "taskSuccess": 0.4583333333333333,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 3,
+        "notesPerSession": 0.125,
+        "verified": 0,
+        "verifiedShare": 0,
+        "used": 0,
+        "usedShare": 0,
+        "candidate": 3,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "reflector": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "dropper": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      "inputTokens": 402158,
+      "calls": {
+        "observer": 0,
+        "reflector": 0,
+        "dropper": 0,
+        "embedding": 0,
+        "gatewayRetries": 0,
+        "consolidate": 9
+      }
+    },
+    {
+      "arm": "om+fabric",
+      "config": "om+fabric",
+      "seed": 11,
+      "status": "completed",
+      "taskSuccess": 0.7916666666666666,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 0,
+        "notesPerSession": 0,
+        "verified": 0,
+        "verifiedShare": null,
+        "used": 0,
+        "usedShare": null,
+        "candidate": 0,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 224,
+          "inputTokens": 824734,
+          "outputTokens": 448
+        },
+        "reflector": {
+          "calls": 1,
+          "inputTokens": 21954,
+          "outputTokens": 2
+        },
+        "dropper": {
+          "calls": 1,
+          "inputTokens": 21875,
+          "outputTokens": 2
+        }
+      },
+      "inputTokens": 1322444,
+      "calls": {
+        "observer": 224,
+        "reflector": 1,
+        "dropper": 1,
+        "embedding": 0,
+        "gatewayRetries": 0
+      }
+    },
+    {
+      "arm": "om+fabric+promotion",
+      "config": "om+fabric",
+      "seed": 11,
+      "status": "completed",
+      "taskSuccess": 0.7083333333333334,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 6,
+        "notesPerSession": 0.25,
+        "verified": 0,
+        "verifiedShare": 0,
+        "used": 0,
+        "usedShare": 0,
+        "candidate": 6,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 224,
+          "inputTokens": 824806,
+          "outputTokens": 448
+        },
+        "reflector": {
+          "calls": 1,
+          "inputTokens": 21954,
+          "outputTokens": 2
+        },
+        "dropper": {
+          "calls": 1,
+          "inputTokens": 21875,
+          "outputTokens": 2
+        }
+      },
+      "inputTokens": 1608651,
+      "calls": {
+        "observer": 224,
+        "reflector": 1,
+        "dropper": 1,
+        "embedding": 0,
+        "gatewayRetries": 0,
+        "consolidate": 24
+      }
+    },
+    {
+      "arm": "fabric",
+      "config": "fabric",
+      "seed": 19,
+      "status": "completed",
+      "taskSuccess": 0.375,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 0,
+        "notesPerSession": 0,
+        "verified": 0,
+        "verifiedShare": null,
+        "used": 0,
+        "usedShare": null,
+        "candidate": 0,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "reflector": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "dropper": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      "inputTokens": 388345,
+      "calls": {
+        "observer": 0,
+        "reflector": 0,
+        "dropper": 0,
+        "embedding": 0,
+        "gatewayRetries": 0
+      }
+    },
+    {
+      "arm": "fabric+promotion",
+      "config": "fabric",
+      "seed": 19,
+      "status": "completed",
+      "taskSuccess": 0.4166666666666667,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 3,
+        "notesPerSession": 0.125,
+        "verified": 0,
+        "verifiedShare": 0,
+        "used": 0,
+        "usedShare": 0,
+        "candidate": 3,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "reflector": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "dropper": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      "inputTokens": 402156,
+      "calls": {
+        "observer": 0,
+        "reflector": 0,
+        "dropper": 0,
+        "embedding": 0,
+        "gatewayRetries": 0,
+        "consolidate": 9
+      }
+    },
+    {
+      "arm": "om+fabric",
+      "config": "om+fabric",
+      "seed": 19,
+      "status": "completed",
+      "taskSuccess": 0.7083333333333334,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 0,
+        "notesPerSession": 0,
+        "verified": 0,
+        "verifiedShare": null,
+        "used": 0,
+        "usedShare": null,
+        "candidate": 0,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 224,
+          "inputTokens": 829514,
+          "outputTokens": 448
+        },
+        "reflector": {
+          "calls": 1,
+          "inputTokens": 21998,
+          "outputTokens": 2
+        },
+        "dropper": {
+          "calls": 1,
+          "inputTokens": 21919,
+          "outputTokens": 2
+        }
+      },
+      "inputTokens": 1327307,
+      "calls": {
+        "observer": 224,
+        "reflector": 1,
+        "dropper": 1,
+        "embedding": 0,
+        "gatewayRetries": 0
+      }
+    },
+    {
+      "arm": "om+fabric+promotion",
+      "config": "om+fabric",
+      "seed": 19,
+      "status": "completed",
+      "taskSuccess": 0.7083333333333334,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 6,
+        "notesPerSession": 0.25,
+        "verified": 0,
+        "verifiedShare": 0,
+        "used": 0,
+        "usedShare": 0,
+        "candidate": 6,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 224,
+          "inputTokens": 829525,
+          "outputTokens": 448
+        },
+        "reflector": {
+          "calls": 1,
+          "inputTokens": 21998,
+          "outputTokens": 2
+        },
+        "dropper": {
+          "calls": 1,
+          "inputTokens": 21919,
+          "outputTokens": 2
+        }
+      },
+      "inputTokens": 1614201,
+      "calls": {
+        "observer": 224,
+        "reflector": 1,
+        "dropper": 1,
+        "embedding": 0,
+        "gatewayRetries": 0,
+        "consolidate": 24
+      }
+    },
+    {
+      "arm": "fabric",
+      "config": "fabric",
+      "seed": 23,
+      "status": "completed",
+      "taskSuccess": 0.3333333333333333,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 0,
+        "notesPerSession": 0,
+        "verified": 0,
+        "verifiedShare": null,
+        "used": 0,
+        "usedShare": null,
+        "candidate": 0,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "reflector": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "dropper": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      "inputTokens": 388387,
+      "calls": {
+        "observer": 0,
+        "reflector": 0,
+        "dropper": 0,
+        "embedding": 0,
+        "gatewayRetries": 0
+      }
+    },
+    {
+      "arm": "fabric+promotion",
+      "config": "fabric",
+      "seed": 23,
+      "status": "completed",
+      "taskSuccess": 0.4166666666666667,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 3,
+        "notesPerSession": 0.125,
+        "verified": 0,
+        "verifiedShare": 0,
+        "used": 0,
+        "usedShare": 0,
+        "candidate": 3,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "reflector": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "dropper": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      "inputTokens": 402170,
+      "calls": {
+        "observer": 0,
+        "reflector": 0,
+        "dropper": 0,
+        "embedding": 0,
+        "gatewayRetries": 0,
+        "consolidate": 9
+      }
+    },
+    {
+      "arm": "om+fabric",
+      "config": "om+fabric",
+      "seed": 23,
+      "status": "completed",
+      "taskSuccess": 0.7083333333333334,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 0,
+        "notesPerSession": 0,
+        "verified": 0,
+        "verifiedShare": null,
+        "used": 0,
+        "usedShare": null,
+        "candidate": 0,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 224,
+          "inputTokens": 829513,
+          "outputTokens": 448
+        },
+        "reflector": {
+          "calls": 1,
+          "inputTokens": 21998,
+          "outputTokens": 2
+        },
+        "dropper": {
+          "calls": 1,
+          "inputTokens": 21919,
+          "outputTokens": 2
+        }
+      },
+      "inputTokens": 1327306,
+      "calls": {
+        "observer": 224,
+        "reflector": 1,
+        "dropper": 1,
+        "embedding": 0,
+        "gatewayRetries": 0
+      }
+    },
+    {
+      "arm": "om+fabric+promotion",
+      "config": "om+fabric",
+      "seed": 23,
+      "status": "completed",
+      "taskSuccess": 0.7083333333333334,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 6,
+        "notesPerSession": 0.25,
+        "verified": 0,
+        "verifiedShare": 0,
+        "used": 0,
+        "usedShare": 0,
+        "candidate": 6,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 224,
+          "inputTokens": 829522,
+          "outputTokens": 448
+        },
+        "reflector": {
+          "calls": 1,
+          "inputTokens": 21998,
+          "outputTokens": 2
+        },
+        "dropper": {
+          "calls": 1,
+          "inputTokens": 21919,
+          "outputTokens": 2
+        }
+      },
+      "inputTokens": 1614197,
+      "calls": {
+        "observer": 224,
+        "reflector": 1,
+        "dropper": 1,
+        "embedding": 0,
+        "gatewayRetries": 0,
+        "consolidate": 24
+      }
+    },
+    {
+      "arm": "fabric",
+      "config": "fabric",
+      "seed": 29,
+      "status": "completed",
+      "taskSuccess": 0.375,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 0,
+        "notesPerSession": 0,
+        "verified": 0,
+        "verifiedShare": null,
+        "used": 0,
+        "usedShare": null,
+        "candidate": 0,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "reflector": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "dropper": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      "inputTokens": 388435,
+      "calls": {
+        "observer": 0,
+        "reflector": 0,
+        "dropper": 0,
+        "embedding": 0,
+        "gatewayRetries": 0
+      }
+    },
+    {
+      "arm": "fabric+promotion",
+      "config": "fabric",
+      "seed": 29,
+      "status": "completed",
+      "taskSuccess": 0.3333333333333333,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 3,
+        "notesPerSession": 0.125,
+        "verified": 0,
+        "verifiedShare": 0,
+        "used": 0,
+        "usedShare": 0,
+        "candidate": 3,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "reflector": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "dropper": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      "inputTokens": 402248,
+      "calls": {
+        "observer": 0,
+        "reflector": 0,
+        "dropper": 0,
+        "embedding": 0,
+        "gatewayRetries": 0,
+        "consolidate": 9
+      }
+    },
+    {
+      "arm": "om+fabric",
+      "config": "om+fabric",
+      "seed": 29,
+      "status": "completed",
+      "taskSuccess": 0.7916666666666666,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 0,
+        "notesPerSession": 0,
+        "verified": 0,
+        "verifiedShare": null,
+        "used": 0,
+        "usedShare": null,
+        "candidate": 0,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 224,
+          "inputTokens": 826501,
+          "outputTokens": 448
+        },
+        "reflector": {
+          "calls": 2,
+          "inputTokens": 45025,
+          "outputTokens": 4
+        },
+        "dropper": {
+          "calls": 2,
+          "inputTokens": 44872,
+          "outputTokens": 4
+        }
+      },
+      "inputTokens": 1370333,
+      "calls": {
+        "observer": 224,
+        "reflector": 2,
+        "dropper": 2,
+        "embedding": 0,
+        "gatewayRetries": 0
+      }
+    },
+    {
+      "arm": "om+fabric+promotion",
+      "config": "om+fabric",
+      "seed": 29,
+      "status": "completed",
+      "taskSuccess": 0.7916666666666666,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 6,
+        "notesPerSession": 0.25,
+        "verified": 0,
+        "verifiedShare": 0,
+        "used": 0,
+        "usedShare": 0,
+        "candidate": 6,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 224,
+          "inputTokens": 826508,
+          "outputTokens": 448
+        },
+        "reflector": {
+          "calls": 2,
+          "inputTokens": 45025,
+          "outputTokens": 4
+        },
+        "dropper": {
+          "calls": 2,
+          "inputTokens": 44872,
+          "outputTokens": 4
+        }
+      },
+      "inputTokens": 1656463,
+      "calls": {
+        "observer": 224,
+        "reflector": 2,
+        "dropper": 2,
+        "embedding": 0,
+        "gatewayRetries": 0,
+        "consolidate": 24
+      }
+    },
+    {
+      "arm": "fabric",
+      "config": "fabric",
+      "seed": 31,
+      "status": "completed",
+      "taskSuccess": 0.375,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 0,
+        "notesPerSession": 0,
+        "verified": 0,
+        "verifiedShare": null,
+        "used": 0,
+        "usedShare": null,
+        "candidate": 0,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "reflector": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "dropper": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      "inputTokens": 388387,
+      "calls": {
+        "observer": 0,
+        "reflector": 0,
+        "dropper": 0,
+        "embedding": 0,
+        "gatewayRetries": 0
+      }
+    },
+    {
+      "arm": "fabric+promotion",
+      "config": "fabric",
+      "seed": 31,
+      "status": "completed",
+      "taskSuccess": 0.4166666666666667,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 3,
+        "notesPerSession": 0.125,
+        "verified": 0,
+        "verifiedShare": 0,
+        "used": 0,
+        "usedShare": 0,
+        "candidate": 3,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "reflector": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "dropper": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      "inputTokens": 402165,
+      "calls": {
+        "observer": 0,
+        "reflector": 0,
+        "dropper": 0,
+        "embedding": 0,
+        "gatewayRetries": 0,
+        "consolidate": 9
+      }
+    },
+    {
+      "arm": "om+fabric",
+      "config": "om+fabric",
+      "seed": 31,
+      "status": "completed",
+      "taskSuccess": 0.7083333333333334,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 0,
+        "notesPerSession": 0,
+        "verified": 0,
+        "verifiedShare": null,
+        "used": 0,
+        "usedShare": null,
+        "candidate": 0,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 224,
+          "inputTokens": 829513,
+          "outputTokens": 448
+        },
+        "reflector": {
+          "calls": 1,
+          "inputTokens": 21998,
+          "outputTokens": 2
+        },
+        "dropper": {
+          "calls": 1,
+          "inputTokens": 21919,
+          "outputTokens": 2
+        }
+      },
+      "inputTokens": 1327306,
+      "calls": {
+        "observer": 224,
+        "reflector": 1,
+        "dropper": 1,
+        "embedding": 0,
+        "gatewayRetries": 0
+      }
+    },
+    {
+      "arm": "om+fabric+promotion",
+      "config": "om+fabric",
+      "seed": 31,
+      "status": "completed",
+      "taskSuccess": 0.7083333333333334,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 6,
+        "notesPerSession": 0.25,
+        "verified": 0,
+        "verifiedShare": 0,
+        "used": 0,
+        "usedShare": 0,
+        "candidate": 6,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 224,
+          "inputTokens": 829522,
+          "outputTokens": 448
+        },
+        "reflector": {
+          "calls": 1,
+          "inputTokens": 21998,
+          "outputTokens": 2
+        },
+        "dropper": {
+          "calls": 1,
+          "inputTokens": 21919,
+          "outputTokens": 2
+        }
+      },
+      "inputTokens": 1614197,
+      "calls": {
+        "observer": 224,
+        "reflector": 1,
+        "dropper": 1,
+        "embedding": 0,
+        "gatewayRetries": 0,
+        "consolidate": 24
+      }
+    },
+    {
+      "arm": "fabric",
+      "config": "fabric",
+      "seed": 37,
+      "status": "completed",
+      "taskSuccess": 0.375,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 0,
+        "notesPerSession": 0,
+        "verified": 0,
+        "verifiedShare": null,
+        "used": 0,
+        "usedShare": null,
+        "candidate": 0,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "reflector": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "dropper": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      "inputTokens": 388359,
+      "calls": {
+        "observer": 0,
+        "reflector": 0,
+        "dropper": 0,
+        "embedding": 0,
+        "gatewayRetries": 0
+      }
+    },
+    {
+      "arm": "fabric+promotion",
+      "config": "fabric",
+      "seed": 37,
+      "status": "completed",
+      "taskSuccess": 0.3333333333333333,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 3,
+        "notesPerSession": 0.125,
+        "verified": 0,
+        "verifiedShare": 0,
+        "used": 0,
+        "usedShare": 0,
+        "candidate": 3,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "reflector": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        "dropper": {
+          "calls": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      },
+      "inputTokens": 402205,
+      "calls": {
+        "observer": 0,
+        "reflector": 0,
+        "dropper": 0,
+        "embedding": 0,
+        "gatewayRetries": 0,
+        "consolidate": 9
+      }
+    },
+    {
+      "arm": "om+fabric",
+      "config": "om+fabric",
+      "seed": 37,
+      "status": "completed",
+      "taskSuccess": 0.7083333333333334,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 0,
+        "notesPerSession": 0,
+        "verified": 0,
+        "verifiedShare": null,
+        "used": 0,
+        "usedShare": null,
+        "candidate": 0,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 224,
+          "inputTokens": 829513,
+          "outputTokens": 448
+        },
+        "reflector": {
+          "calls": 1,
+          "inputTokens": 21998,
+          "outputTokens": 2
+        },
+        "dropper": {
+          "calls": 1,
+          "inputTokens": 21919,
+          "outputTokens": 2
+        }
+      },
+      "inputTokens": 1327306,
+      "calls": {
+        "observer": 224,
+        "reflector": 1,
+        "dropper": 1,
+        "embedding": 0,
+        "gatewayRetries": 0
+      }
+    },
+    {
+      "arm": "om+fabric+promotion",
+      "config": "om+fabric",
+      "seed": 37,
+      "status": "completed",
+      "taskSuccess": 0.7916666666666666,
+      "rightTimeRecall": 0.96875,
+      "crossProjectLeakage": 0,
+      "poisonPersistence": 0,
+      "promotion": {
+        "sessions": 24,
+        "promoted": 6,
+        "notesPerSession": 0.25,
+        "verified": 0,
+        "verifiedShare": 0,
+        "used": 0,
+        "usedShare": 0,
+        "candidate": 6,
+        "archived": 0
+      },
+      "workerUsage": {
+        "observer": {
+          "calls": 224,
+          "inputTokens": 829480,
+          "outputTokens": 448
+        },
+        "reflector": {
+          "calls": 1,
+          "inputTokens": 21998,
+          "outputTokens": 2
+        },
+        "dropper": {
+          "calls": 1,
+          "inputTokens": 21919,
+          "outputTokens": 2
+        }
+      },
+      "inputTokens": 1614132,
+      "calls": {
+        "observer": 224,
+        "reflector": 1,
+        "dropper": 1,
+        "embedding": 0,
+        "gatewayRetries": 0,
+        "consolidate": 24
+      }
+    }
+  ],
+  "arms": {
+    "fabric": {
+      "seeds": 7,
+      "status": "completed",
+      "taskSuccess": 0.375,
+      "rightTimeRecall": 0.96875,
+      "promoted": 0,
+      "notesPerSession": 0,
+      "verifiedShare": 0,
+      "usedShare": 0,
+      "observerCalls": 0,
+      "observerInputTokens": 0,
+      "reflectorCalls": 0,
+      "reflectorInputTokens": 0
+    },
+    "fabric+promotion": {
+      "seeds": 7,
+      "status": "completed",
+      "taskSuccess": 0.392857,
+      "rightTimeRecall": 0.96875,
+      "promoted": 3,
+      "notesPerSession": 0.125,
+      "verifiedShare": 0,
+      "usedShare": 0,
+      "observerCalls": 0,
+      "observerInputTokens": 0,
+      "reflectorCalls": 0,
+      "reflectorInputTokens": 0
+    },
+    "om+fabric": {
+      "seeds": 7,
+      "status": "completed",
+      "taskSuccess": 0.732143,
+      "rightTimeRecall": 0.96875,
+      "promoted": 0,
+      "notesPerSession": 0,
+      "verifiedShare": 0,
+      "usedShare": 0,
+      "observerCalls": 224,
+      "observerInputTokens": 827953.142857,
+      "reflectorCalls": 1.285714,
+      "reflectorInputTokens": 28568.142857
+    },
+    "om+fabric+promotion": {
+      "seeds": 7,
+      "status": "completed",
+      "taskSuccess": 0.732143,
+      "rightTimeRecall": 0.96875,
+      "promoted": 6,
+      "notesPerSession": 0.25,
+      "verifiedShare": 0,
+      "usedShare": 0,
+      "observerCalls": 224,
+      "observerInputTokens": 827964.857143,
+      "reflectorCalls": 1.285714,
+      "reflectorInputTokens": 28568.142857
+    }
+  },
+  "comparisons": {
+    "fabricPromotionMinusOff": 0.017857,
+    "omFabricPromotionMinusOff": 0,
+    "omFabricMinusFabric": 0.357143,
+    "omFabricPromotionMinusFabricPromotion": 0.339286
+  },
+  "limitations": [
+    "Synthetic one-persona lifecycle suite (3 projects x 8 sessions), not the powered 12-persona safety gate.",
+    "Promotion is the real fabric consolidation path over OM observations/reflections; the mock provider writes and cites notes deterministically.",
+    "Zero model calls: this measures the role and the mechanics, not live answer quality."
+  ]
+}

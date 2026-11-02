@@ -69,10 +69,31 @@ test("memory_option_rejects_unknown_value", () => {
         workspace: join(root, "workspace"),
         approval: "ask",
         web: { backend: "obscura" },
+        memory: "unknown",
+      }),
+    );
+    assert.throws(() => loadHostConfig(path), /memory must be conversational or coding/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("memory_option_accepts_coding", () => {
+  const root = mkdtempSync(join(tmpdir(), "pa-memory-config-"));
+  const path = join(root, "prism-agent.json");
+  try {
+    writeFileSync(
+      path,
+      JSON.stringify({
+        models: { orchestrator: MODEL, coding: MODEL, research: MODEL },
+        storePath: join(root, "sessions.db"),
+        workspace: join(root, "workspace"),
+        approval: "ask",
+        web: { backend: "obscura" },
         memory: "coding",
       }),
     );
-    assert.throws(() => loadHostConfig(path), /memory must be conversational/);
+    assert.equal(loadHostConfig(path).memory, "coding");
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

@@ -1,0 +1,194 @@
+{
+  "schemaVersion": 1,
+  "metric": "OM and preset arms complete on a one-question LongMemEval-S development smoke, two free OpenRouter models",
+  "generatedAt": "2026-11-02",
+  "modelCalls": 433,
+  "runs": [
+    {
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "config": "om",
+      "status": "partial",
+      "question": "6071bd76",
+      "answerOutcome": "completed",
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "workerCalls": {
+        "observer": 160,
+        "reflector": 5,
+        "dropper": 0,
+        "embedding": 0,
+        "decider": 0,
+        "consolidate": 0,
+        "judge": 2,
+        "judgeAttempts": 2,
+        "gatewayRetries": 0,
+        "judgeCacheHits": 0,
+        "judgeCacheMisses": 2,
+        "concurrencyHalvings": 0,
+        "overloads": 0
+      },
+      "workerErrors": [],
+      "inputTokens": 2987872,
+      "failure": null
+    },
+    {
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "config": "om+fabric",
+      "status": "partial",
+      "question": "6071bd76",
+      "answerOutcome": "completed",
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "workerCalls": {
+        "observer": 160,
+        "reflector": 0,
+        "dropper": 0,
+        "embedding": 0,
+        "decider": 0,
+        "consolidate": 0,
+        "judge": 2,
+        "judgeAttempts": 2,
+        "gatewayRetries": 0,
+        "judgeCacheHits": 0,
+        "judgeCacheMisses": 2,
+        "concurrencyHalvings": 0,
+        "overloads": 0
+      },
+      "workerErrors": [],
+      "inputTokens": 2916960,
+      "failure": null
+    },
+    {
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "config": "fabric-x-tools",
+      "status": "partial",
+      "question": "6071bd76",
+      "answerOutcome": "completed",
+      "correct": true,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "workerCalls": {
+        "observer": 0,
+        "reflector": 0,
+        "dropper": 0,
+        "embedding": 0,
+        "decider": 0,
+        "consolidate": 0,
+        "judge": 2,
+        "judgeAttempts": 2,
+        "gatewayRetries": 0,
+        "judgeCacheHits": 0,
+        "judgeCacheMisses": 2,
+        "concurrencyHalvings": 0,
+        "overloads": 0
+      },
+      "workerErrors": [],
+      "inputTokens": 6592,
+      "failure": null
+    },
+    {
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "config": "om",
+      "status": "partial",
+      "question": "6071bd76",
+      "answerOutcome": "completed",
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "workerCalls": {
+        "observer": 51,
+        "reflector": 0,
+        "dropper": 0,
+        "embedding": 0,
+        "decider": 0,
+        "consolidate": 0,
+        "judge": 2,
+        "judgeAttempts": 2,
+        "gatewayRetries": 0,
+        "judgeCacheHits": 0,
+        "judgeCacheMisses": 2,
+        "concurrencyHalvings": 0,
+        "overloads": 0
+      },
+      "workerErrors": [],
+      "inputTokens": 1217310,
+      "failure": null
+    },
+    {
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "config": "om+fabric",
+      "status": "partial",
+      "question": "6071bd76",
+      "answerOutcome": "completed",
+      "correct": false,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "no",
+        "openrouter/cohere/north-mini-code:free": "no"
+      },
+      "workerCalls": {
+        "observer": 45,
+        "reflector": 0,
+        "dropper": 0,
+        "embedding": 0,
+        "decider": 0,
+        "consolidate": 0,
+        "judge": 2,
+        "judgeAttempts": 2,
+        "gatewayRetries": 0,
+        "judgeCacheHits": 0,
+        "judgeCacheMisses": 2,
+        "concurrencyHalvings": 0,
+        "overloads": 0
+      },
+      "workerErrors": [],
+      "inputTokens": 1090827,
+      "failure": null
+    },
+    {
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "config": "fabric-x-tools",
+      "status": "partial",
+      "question": "6071bd76",
+      "answerOutcome": "completed",
+      "correct": true,
+      "judgeVerdicts": {
+        "openrouter/dots-studio/dots-3-note-preview:free": "yes",
+        "openrouter/cohere/north-mini-code:free": "yes"
+      },
+      "workerCalls": {
+        "observer": 0,
+        "reflector": 0,
+        "dropper": 0,
+        "embedding": 0,
+        "decider": 0,
+        "consolidate": 0,
+        "judge": 2,
+        "judgeAttempts": 2,
+        "gatewayRetries": 0,
+        "judgeCacheHits": 0,
+        "judgeCacheMisses": 2,
+        "concurrencyHalvings": 0,
+        "overloads": 0
+      },
+      "workerErrors": [],
+      "inputTokens": 6573,
+      "failure": null
+    }
+  ],
+  "protocol": "One LongMemEval-S question per arm; free OpenRouter answerers, two free OpenRouter judges, plain-text verdicts, bounded wire, label injections off. Not a development partition or quality comparison.",
+  "limitations": [
+    "One question per arm, not the 70-question development partition.",
+    "Two free models, not the paid panel; no quality claim.",
+    "OM role promotion was measured separately on the offline lifecycle suite."
+  ]
+}

@@ -71,6 +71,14 @@ test("no_live_tree_reference_to_retired_provider", () => {
   assert.deepEqual(disallowed, [], `Found live tree references to retired providers in non-allowlisted files: ${disallowed.join(", ")}`);
 });
 
+test("ollama_deprecation_points_to_cloud_successor", () => {
+  const deprecations = JSON.parse(readFileSync(join(ROOT, "scripts/deprecations-0.13.json"), "utf8"));
+  const ollama = deprecations.names.find((entry) => entry.name === "@arnilo/prism-provider-ollama");
+  assert.ok(ollama);
+  assert.ok(ollama.message.includes("For Ollama Cloud use @arnilo/prism-provider-ollama-cloud"));
+  assert.equal(ollama.successor, "@arnilo/prism/provider-kit");
+});
+
 test("deprecation_messages_name_supported_providers", () => {
   const deprecations = JSON.parse(readFileSync(join(ROOT, "scripts/deprecations-0.13.json"), "utf8"));
 

@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "provider": "ollama-cloud",
+  "model": "gemma4:31b",
+  "affinity": true,
+  "route": "native",
+  "requestedTurns": 4,
+  "requests": 4,
+  "stablePrefixTokens": 8365,
+  "stablePrefixTokensSource": "reported-first-request",
+  "minimumPrefixTokens": 8192,
+  "outputTokensLimit": 128,
+  "turns": [
+    {
+      "turn": 1,
+      "inputTokens": 8365,
+      "cacheReadTokens": 8352,
+      "cacheWriteTokens": null,
+      "stablePrefixTokens": 8365,
+      "latencyMs": 5822.1795569999995,
+      "ttftMs": 5569.764511000001
+    },
+    {
+      "turn": 2,
+      "inputTokens": 8383,
+      "cacheReadTokens": 8352,
+      "cacheWriteTokens": null,
+      "stablePrefixTokens": 8365,
+      "latencyMs": 1267.1037279999982,
+      "ttftMs": 974.3412199999984
+    },
+    {
+      "turn": 3,
+      "inputTokens": 8401,
+      "cacheReadTokens": 8384,
+      "cacheWriteTokens": null,
+      "stablePrefixTokens": 8365,
+      "latencyMs": 1019.935035999999,
+      "ttftMs": 726.6240440000001
+    },
+    {
+      "turn": 4,
+      "inputTokens": 8419,
+      "cacheReadTokens": 8416,
+      "cacheWriteTokens": null,
+      "stablePrefixTokens": 8365,
+      "latencyMs": 1018.4271100000005,
+      "ttftMs": 711.441275000001
+    }
+  ],
+  "status": "measured",
+  "reuse": 1.0022713687985654
+}

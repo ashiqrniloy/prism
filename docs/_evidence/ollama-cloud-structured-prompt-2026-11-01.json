@@ -1,0 +1,319 @@
+{
+  "generatedAt": "2026-11-01T19:08:24.095Z",
+  "route": "native",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "ok": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "ok"
+    ],
+    "additionalProperties": false
+  },
+  "reps": 2,
+  "prompts": [
+    {
+      "name": "shared_default",
+      "text": "Reply with a JSON object matching the requested schema."
+    },
+    {
+      "name": "concrete",
+      "text": "Return a JSON object with the single boolean key ok set to true."
+    },
+    {
+      "name": "schema_inline",
+      "text": "Respond with only JSON matching this schema, no prose: {\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"}},\"required\":[\"ok\"]}"
+    },
+    {
+      "name": "terse",
+      "text": "JSON only. {\"ok\":true}"
+    }
+  ],
+  "summary": [
+    {
+      "model": "gemma4:31b",
+      "byPrompt": [
+        {
+          "prompt": "shared_default",
+          "obeyed": 0,
+          "total": 2,
+          "outcomes": [
+            "prose"
+          ]
+        },
+        {
+          "prompt": "concrete",
+          "obeyed": 2,
+          "total": 2,
+          "outcomes": [
+            "json_schema_ok"
+          ]
+        },
+        {
+          "prompt": "schema_inline",
+          "obeyed": 2,
+          "total": 2,
+          "outcomes": [
+            "json_schema_ok"
+          ]
+        },
+        {
+          "prompt": "terse",
+          "obeyed": 2,
+          "total": 2,
+          "outcomes": [
+            "json_schema_ok"
+          ]
+        }
+      ]
+    },
+    {
+      "model": "gpt-oss:20b",
+      "byPrompt": [
+        {
+          "prompt": "shared_default",
+          "obeyed": 0,
+          "total": 2,
+          "outcomes": [
+            "json_other",
+            "prose"
+          ]
+        },
+        {
+          "prompt": "concrete",
+          "obeyed": 2,
+          "total": 2,
+          "outcomes": [
+            "json_schema_ok"
+          ]
+        },
+        {
+          "prompt": "schema_inline",
+          "obeyed": 2,
+          "total": 2,
+          "outcomes": [
+            "json_schema_ok"
+          ]
+        },
+        {
+          "prompt": "terse",
+          "obeyed": 2,
+          "total": 2,
+          "outcomes": [
+            "json_schema_ok"
+          ]
+        }
+      ]
+    },
+    {
+      "model": "kimi-k3",
+      "byPrompt": [
+        {
+          "prompt": "shared_default",
+          "obeyed": 0,
+          "total": 2,
+          "outcomes": [
+            "refused_plan"
+          ]
+        },
+        {
+          "prompt": "concrete",
+          "obeyed": 0,
+          "total": 2,
+          "outcomes": [
+            "refused_plan"
+          ]
+        },
+        {
+          "prompt": "schema_inline",
+          "obeyed": 0,
+          "total": 2,
+          "outcomes": [
+            "refused_plan"
+          ]
+        },
+        {
+          "prompt": "terse",
+          "obeyed": 0,
+          "total": 2,
+          "outcomes": [
+            "refused_plan"
+          ]
+        }
+      ]
+    }
+  ],
+  "results": [
+    {
+      "model": "gemma4:31b",
+      "prompt": "shared_default",
+      "rep": 0,
+      "outcome": "prose",
+      "detail": "Please provide the **schema** you would like me to follow and the **data or topic** you wa"
+    },
+    {
+      "model": "gemma4:31b",
+      "prompt": "shared_default",
+      "rep": 1,
+      "outcome": "prose",
+      "detail": "Please provide the **requested schema** and the **data/topic** you would like me to use. O"
+    },
+    {
+      "model": "gemma4:31b",
+      "prompt": "concrete",
+      "rep": 0,
+      "outcome": "json_schema_ok",
+      "detail": "{\"ok\":true}"
+    },
+    {
+      "model": "gemma4:31b",
+      "prompt": "concrete",
+      "rep": 1,
+      "outcome": "json_schema_ok",
+      "detail": "{\"ok\":true}"
+    },
+    {
+      "model": "gemma4:31b",
+      "prompt": "schema_inline",
+      "rep": 0,
+      "outcome": "json_schema_ok",
+      "detail": "{\"ok\":true}"
+    },
+    {
+      "model": "gemma4:31b",
+      "prompt": "schema_inline",
+      "rep": 1,
+      "outcome": "json_schema_ok",
+      "detail": "{\"ok\":true}"
+    },
+    {
+      "model": "gemma4:31b",
+      "prompt": "terse",
+      "rep": 0,
+      "outcome": "json_schema_ok",
+      "detail": "{\"ok\":true}"
+    },
+    {
+      "model": "gemma4:31b",
+      "prompt": "terse",
+      "rep": 1,
+      "outcome": "json_schema_ok",
+      "detail": "{\"ok\":true}"
+    },
+    {
+      "model": "gpt-oss:20b",
+      "prompt": "shared_default",
+      "rep": 0,
+      "outcome": "json_other",
+      "detail": "{\"error\":\"No schema provided. Please supply the JSON schema you would like me to follow.\"}"
+    },
+    {
+      "model": "gpt-oss:20b",
+      "prompt": "shared_default",
+      "rep": 1,
+      "outcome": "prose",
+      "detail": "I’m sorry, but I can’t comply with that."
+    },
+    {
+      "model": "gpt-oss:20b",
+      "prompt": "concrete",
+      "rep": 0,
+      "outcome": "json_schema_ok",
+      "detail": "{\"ok\":true}"
+    },
+    {
+      "model": "gpt-oss:20b",
+      "prompt": "concrete",
+      "rep": 1,
+      "outcome": "json_schema_ok",
+      "detail": "{\"ok\":true}"
+    },
+    {
+      "model": "gpt-oss:20b",
+      "prompt": "schema_inline",
+      "rep": 0,
+      "outcome": "json_schema_ok",
+      "detail": "{\"ok\":true}"
+    },
+    {
+      "model": "gpt-oss:20b",
+      "prompt": "schema_inline",
+      "rep": 1,
+      "outcome": "json_schema_ok",
+      "detail": "{\"ok\":true}"
+    },
+    {
+      "model": "gpt-oss:20b",
+      "prompt": "terse",
+      "rep": 0,
+      "outcome": "json_schema_ok",
+      "detail": "{\"ok\":true}"
+    },
+    {
+      "model": "gpt-oss:20b",
+      "prompt": "terse",
+      "rep": 1,
+      "outcome": "json_schema_ok",
+      "detail": "{\"ok\":true}"
+    },
+    {
+      "model": "kimi-k3",
+      "prompt": "shared_default",
+      "rep": 0,
+      "outcome": "refused_plan",
+      "detail": "Ollama Cloud request failed: 402 {\"error\":\"this model is not included in your free usage, "
+    },
+    {
+      "model": "kimi-k3",
+      "prompt": "shared_default",
+      "rep": 1,
+      "outcome": "refused_plan",
+      "detail": "Ollama Cloud request failed: 402 {\"error\":\"this model is not included in your free usage, "
+    },
+    {
+      "model": "kimi-k3",
+      "prompt": "concrete",
+      "rep": 0,
+      "outcome": "refused_plan",
+      "detail": "Ollama Cloud request failed: 402 {\"error\":\"this model is not included in your free usage, "
+    },
+    {
+      "model": "kimi-k3",
+      "prompt": "concrete",
+      "rep": 1,
+      "outcome": "refused_plan",
+      "detail": "Ollama Cloud request failed: 402 {\"error\":\"this model is not included in your free usage, "
+    },
+    {
+      "model": "kimi-k3",
+      "prompt": "schema_inline",
+      "rep": 0,
+      "outcome": "refused_plan",
+      "detail": "Ollama Cloud request failed: 402 {\"error\":\"this model is not included in your free usage, "
+    },
+    {
+      "model": "kimi-k3",
+      "prompt": "schema_inline",
+      "rep": 1,
+      "outcome": "refused_plan",
+      "detail": "Ollama Cloud request failed: 402 {\"error\":\"this model is not included in your free usage, "
+    },
+    {
+      "model": "kimi-k3",
+      "prompt": "terse",
+      "rep": 0,
+      "outcome": "refused_plan",
+      "detail": "Ollama Cloud request failed: 402 {\"error\":\"this model is not included in your free usage, "
+    },
+    {
+      "model": "kimi-k3",
+      "prompt": "terse",
+      "rep": 1,
+      "outcome": "refused_plan",
+      "detail": "Ollama Cloud request failed: 402 {\"error\":\"this model is not included in your free usage, "
+    }
+  ]
+}

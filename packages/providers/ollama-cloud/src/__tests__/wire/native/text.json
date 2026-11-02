@@ -1,0 +1,20 @@
+{
+  "method": "POST",
+  "path": "/api/chat",
+  "requestBody": {
+    "model": "gemma4:31b",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Say hello from Ollama Cloud."
+      }
+    ],
+    "stream": true,
+    "options": {
+      "num_predict": 64
+    }
+  },
+  "status": 200,
+  "contentType": "application/x-ndjson",
+  "responseBody": "{\"model\":\"gemma4:31b\",\"created_at\":\"2026-11-01T12:40:00Z\",\"message\":{\"role\":\"assistant\",\"content\":\"Hello\"},\"done\":false}\n{\"model\":\"gemma4:31b\",\"created_at\":\"2026-11-01T12:40:00Z\",\"message\":{\"role\":\"assistant\",\"content\":\" from Ollama Cloud.\"},\"done\":false}\n{\"model\":\"gemma4:31b\",\"created_at\":\"2026-11-01T12:40:00Z\",\"message\":{\"role\":\"assistant\",\"content\":\"\"},\"done\":true,\"done_reason\":\"stop\",\"total_duration\":256841615,\"prompt_eval_count\":18,\"prompt_eval_cached_count\":0,\"eval_count\":6}\n"
+}

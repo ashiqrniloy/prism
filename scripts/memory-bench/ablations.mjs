@@ -31,6 +31,7 @@ const paths = new Set([
   "fabric.lifecycle.archive.retrievalBelow",
   "fabric.lifecycle.archive.storageBelow",
   "fabric.lifecycle.archive.graceSessions",
+  "fabric.lifecycle.exchangeCapacity.hotTokens",
   "fabric.lifecycle.merge.duplicateDice",
   "fabric.lifecycle.merge.episodes",
   "fabric.core",

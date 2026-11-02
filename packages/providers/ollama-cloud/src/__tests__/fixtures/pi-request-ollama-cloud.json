@@ -1,0 +1,193 @@
+{
+  "piAiVersion": "1.4.0",
+  "extensionVersion": "0.13.1",
+  "model": "gemma4:31b",
+  "sessionId": "cache-parity-fixture",
+  "requests": [
+    {
+      "model": "gemma4:31b",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are reviewing a tiny coding fixture. Keep tools and prior history unchanged. Reply OK; do not call tools."
+        },
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "Inspect fixture.js."
+            }
+          ]
+        }
+      ],
+      "stream": true,
+      "stream_options": {
+        "include_usage": true
+      },
+      "max_tokens": 128,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "read",
+            "description": "Read a fixture file",
+            "parameters": {
+              "type": "object"
+            }
+          }
+        },
+        {
+          "type": "function",
+          "function": {
+            "name": "test",
+            "description": "Check fixture tests",
+            "parameters": {
+              "type": "object"
+            }
+          }
+        }
+      ],
+      "reasoning_effort": "none"
+    },
+    {
+      "model": "gemma4:31b",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are reviewing a tiny coding fixture. Keep tools and prior history unchanged. Reply OK; do not call tools."
+        },
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "Inspect fixture.js."
+            }
+          ]
+        },
+        {
+          "role": "assistant",
+          "content": null,
+          "tool_calls": [
+            {
+              "id": "call_read",
+              "type": "function",
+              "function": {
+                "name": "read",
+                "arguments": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "content": "export const answer = 42;",
+          "tool_call_id": "call_read"
+        }
+      ],
+      "stream": true,
+      "stream_options": {
+        "include_usage": true
+      },
+      "max_tokens": 128,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "read",
+            "description": "Read a fixture file",
+            "parameters": {
+              "type": "object"
+            }
+          }
+        },
+        {
+          "type": "function",
+          "function": {
+            "name": "test",
+            "description": "Check fixture tests",
+            "parameters": {
+              "type": "object"
+            }
+          }
+        }
+      ],
+      "reasoning_effort": "none"
+    },
+    {
+      "model": "gemma4:31b",
+      "messages": [
+        {
+          "role": "system",
+          "content": "You are reviewing a tiny coding fixture. Keep tools and prior history unchanged. Reply OK; do not call tools."
+        },
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "Inspect fixture.js."
+            }
+          ]
+        },
+        {
+          "role": "assistant",
+          "content": null,
+          "tool_calls": [
+            {
+              "id": "call_read",
+              "type": "function",
+              "function": {
+                "name": "read",
+                "arguments": "{}"
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "content": "export const answer = 42;",
+          "tool_call_id": "call_read"
+        },
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "Confirm the fixture. Reply OK."
+            }
+          ]
+        }
+      ],
+      "stream": true,
+      "stream_options": {
+        "include_usage": true
+      },
+      "max_tokens": 128,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "read",
+            "description": "Read a fixture file",
+            "parameters": {
+              "type": "object"
+            }
+          }
+        },
+        {
+          "type": "function",
+          "function": {
+            "name": "test",
+            "description": "Check fixture tests",
+            "parameters": {
+              "type": "object"
+            }
+          }
+        }
+      ],
+      "reasoning_effort": "none"
+    }
+  ]
+}

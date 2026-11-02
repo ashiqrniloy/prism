@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-31T20:55:37.092Z",
+  "generatedAt": "2026-11-01T18:21:59.625Z",
   "envFile": "/home/arn/.config/prism/live.env",
   "strict": true,
   "dryRun": false,
-  "filter": "providers/litellm",
+  "filter": "providers/ollama-cloud",
   "totals": {
     "ran": 1,
     "skipped": 0,
@@ -13,25 +13,30 @@
   },
   "coverage": {
     "ok": true,
-    "total": 83,
-    "covered": 79,
+    "total": 84,
+    "covered": 80,
     "pending": 4,
     "mode": "baseline"
   },
   "results": [
     {
-      "id": "providers/litellm",
-      "package": "@arnilo/prism-provider-litellm",
+      "id": "providers/ollama-cloud",
+      "package": "@arnilo/prism-provider-ollama-cloud",
       "status": "ran",
       "reason": null,
       "exitCode": 0,
-      "durationMs": 3143,
+      "durationMs": 33708,
       "command": "bun test --timeout=0 src/__tests__/live.test.ts src/__tests__/live-agent.test.ts",
-      "cwd": "packages/providers/litellm",
+      "cwd": "packages/providers/ollama-cloud",
       "models": [
         {
-          "env": "PRISM_LIVE_LITELLM_MODEL",
-          "value": "prism-free/gpt-oss-20b@groq",
+          "env": "PRISM_LIVE_OLLAMA_CLOUD_MODEL",
+          "value": "gemma4:31b",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_OLLAMA_CLOUD_THINKING_MODEL",
+          "value": "gpt-oss:20b",
           "wired": true
         }
       ],

@@ -34,8 +34,8 @@ export interface HostConfig {
     readonly cache?: ToolsWebCacheConfig;
   };
   readonly embeddings?: { readonly model: ModelRef };
-  /** Opt-in conversational memory for the research and coding workers. Unset keeps memory-fabric out. */
-  readonly memory?: "conversational";
+  /** Opt-in memory for the research and coding workers. `coding` adds standing decisions and path rules. */
+  readonly memory?: "conversational" | "coding";
   /** Passed to tools-research and to `limits.maxContinuations`. Default 1. */
   readonly maxRepairs?: number;
   /**
@@ -207,8 +207,8 @@ export function loadHostConfig(path: string): HostConfig {
     assertKeys(parsed.embeddings, EMBED_KEYS, "embeddings");
     embeddings = { model: modelRef(parsed.embeddings.model, "embeddings.model") };
   }
-  if (parsed.memory !== undefined && parsed.memory !== "conversational") {
-    throw new Error("prism-agent config memory must be conversational");
+  if (parsed.memory !== undefined && parsed.memory !== "conversational" && parsed.memory !== "coding") {
+    throw new Error("prism-agent config memory must be conversational or coding");
   }
   if (parsed.maxRepairs !== undefined && (typeof parsed.maxRepairs !== "number" || !Number.isInteger(parsed.maxRepairs))) {
     throw new Error("prism-agent config maxRepairs must be an integer");
@@ -302,7 +302,7 @@ export function loadHostConfig(path: string): HostConfig {
       ...(cache === undefined ? {} : { cache }),
     },
     ...(embeddings === undefined ? {} : { embeddings }),
-    ...(parsed.memory === "conversational" ? { memory: "conversational" as const } : {}),
+    ...(parsed.memory === "conversational" || parsed.memory === "coding" ? { memory: parsed.memory } : {}),
     ...(typeof parsed.maxRepairs === "number" ? { maxRepairs: parsed.maxRepairs } : {}),
     ...(gate === undefined ? {} : { gate }),
     ...(external === undefined ? {} : { external }),

@@ -15,7 +15,7 @@ import {
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import { validateAgainstJsonSchema } from "@arnilo/prism-memory-core";
 import { createSqliteMemoryStores } from "@arnilo/prism-memory-core/sqlite";
-import fabric, { memoryFabricConfigSchema } from "@arnilo/prism-memory-fabric";
+import fabric, { memoryFabricConfigSchema, parseMemoryNoteMetadata } from "@arnilo/prism-memory-fabric";
 import observational from "@arnilo/prism-memory-observational";
 import { probeEmbedderDimensions } from "@arnilo/prism-memory-rag";
 import { historicalVariants, memoryConfigs, resolvedMemoryConfigs } from "../ablations.mjs";
@@ -38,6 +38,24 @@ const rate = (rows, key) => {
   const values = rows.map((r) => r[key]).filter((v) => v !== null && v !== undefined);
   return values.length ? values.reduce((n, v) => n + Number(v), 0) / values.length : null;
 };
+/** Aggregate note lifecycle evidence without note text: promotion writes, later use, and verification. */
+export function summarizePromotion(sessions, notes) {
+  const promoted = [...notes.values()].filter((note) => note.generatedBy === "promotion" && note.kind !== "file");
+  const verified = promoted.filter((note) => note.status === "verified").length;
+  const used = promoted.filter((note) => note.uses > 0).length;
+  return {
+    sessions,
+    promoted: promoted.length,
+    notesPerSession: sessions ? promoted.length / sessions : null,
+    verified,
+    verifiedShare: promoted.length ? verified / promoted.length : null,
+    used,
+    usedShare: promoted.length ? used / promoted.length : null,
+    candidate: promoted.filter((note) => note.status === "candidate").length,
+    archived: promoted.filter((note) => ["archived", "retired"].includes(note.status)).length,
+  };
+}
+
 export function summarizeLifecycle(rows) {
   return Object.fromEntries(
     [
@@ -208,14 +226,14 @@ export function lifecycleMock(state) {
       const called = (name) => completed.some((c) => c.name === name);
       let call;
       if (names.includes("record_observation")) {
-        const source = /\[([^\]]+)\]/.exec(goal)?.[1];
+        const source = /\[[^\]]+\] \[([^\]]+)\] message:/.exec(goal)?.[1];
         if (source && !messages.some((m) => m.role === "tool"))
           call = ["record_observation", { content: goal, sourceEntryIds: [source], relevance: "high" }];
       } else if (names.includes("record_notes")) {
         const input = JSON.parse(textOf(messages[1].content));
         const notes = input.candidates.flatMap((c) =>
           [...c.text.matchAll(/(?:Remember|Correction) (user|project|path) (preference|fact|procedure) ([a-z]+) = ([^\n]+)/g)].map((m) => ({
-            text: `${m[3]} = ${m[4]}`,
+            text: `${m[3]} = ${m[4].split(" because ")[0].slice(0, 200)}`,
             scope: m[1],
             kind: m[2],
             key: m[3],
@@ -266,7 +284,18 @@ export function lifecycleMock(state) {
         }
       }
       if (call) yield providerToolCall(toolCallContent(`mock-${state.turns}`, ...call));
-      else yield providerTextDelta("Done.");
+      else {
+        // Plan 202 Task 16: cite ids the recall tool actually showed, so use-based verification is measured.
+        const shown = new Set(
+          messages
+            .flatMap((message) => (Array.isArray(message.content) ? message.content : []))
+            .flatMap((block) =>
+              block.type === "tool_result" && Array.isArray(block.result?.hits) ? block.result.hits.map((hit) => hit.id) : [],
+            )
+            .filter((id) => typeof id === "string"),
+        );
+        yield providerTextDelta(shown.size ? `Done. ${[...shown].map((id) => `[${id}]`).join(" ")}` : "Done.");
+      }
       const inputTokens = tokens(JSON.stringify(request));
       state.mockInputTokens += inputTokens;
       state.mockOutputTokens += 2;
@@ -412,6 +441,23 @@ export async function runLifecycle(input = {}) {
     mockInputTokens: 0,
     mockOutputTokens: 0,
     calls: { observer: 0, reflector: 0, dropper: 0, embedding: 0, gatewayRetries: 0 },
+    workerErrors: [],
+    workerUsage: {
+      observer: { calls: 0, inputTokens: 0, outputTokens: 0 },
+      reflector: { calls: 0, inputTokens: 0, outputTokens: 0 },
+      dropper: { calls: 0, inputTokens: 0, outputTokens: 0 },
+    },
+    promotion: {
+      sessions: 0,
+      promoted: 0,
+      notesPerSession: null,
+      verified: 0,
+      verifiedShare: null,
+      used: 0,
+      usedShare: null,
+      candidate: 0,
+      archived: 0,
+    },
     ceilingReached: () => report.inputTokens >= options.maxInputTokens,
   };
   const account = async () => {
@@ -506,6 +552,7 @@ export async function runLifecycle(input = {}) {
       sharedResources: ["agent", "user"],
     };
     const histories = new Map(persona.projects.map((p) => [p, []]));
+    const noteStates = new Map();
     for (const project of persona.projects)
       await cp(fileURLToPath(new URL(`../fixtures/lifecycle/${project}/`, import.meta.url)), join(temp, project), { recursive: true });
     for (const step of persona.schedule) {
@@ -615,7 +662,12 @@ export async function runLifecycle(input = {}) {
           await new Promise((resolve) => setTimeout(resolve, 0));
           for (;;) {
             const status = await agent.commands.run("om:status", {}, { session });
-            if (status.lastError) throw new Error("LifecycleObserverError");
+            if (status.lastError) {
+              if (/TokenCeiling/.test(status.lastError)) throw new Error("LifecycleTokenCeiling");
+              // OM worker failures are background-only; record them and let the session complete.
+              state.workerErrors ??= [];
+              state.workerErrors.push({ step: step.id, message: String(status.lastError).slice(0, 200) });
+            }
             if (!status.inFlight) break;
             if (Date.now() > deadline) throw new Error("LifecycleObserverTimeout");
             await new Promise((resolve) => setTimeout(resolve, 20));
@@ -672,8 +724,16 @@ export async function runLifecycle(input = {}) {
                 cursor,
                 limit: 500,
               });
-              for (const record of page.records)
-                if (record.metadata?.fabric?.kind !== "file") events.push({ type: "promoted", text: record.text });
+              for (const record of page.records) {
+                const metadata = record.metadata ?? {};
+                const parsed = parseMemoryNoteMetadata(metadata);
+                const status = typeof metadata.status === "string" ? metadata.status : "verified";
+                const generatedBy = metadata.generated?.by;
+                const uses = parsed?.uses?.length ?? 0;
+                const kind = parsed?.kind;
+                noteStates.set(record.id, { id: record.id, status, generatedBy, uses, kind });
+                if (kind !== "file") events.push({ type: "promoted", text: record.text });
+              }
               cursor = page.nextCursor;
             } while (cursor);
           }
@@ -716,6 +776,7 @@ export async function runLifecycle(input = {}) {
             value,
           });
       report.metrics = summarizeLifecycle(report.sessions);
+      report.promotion = summarizePromotion(report.sessions.length, noteStates);
       if (options.output)
         await writeReport(summarize({ ...report, status: report.status === "completed" ? "running" : report.status }), options.output);
       if (report.status !== "completed") break;
@@ -755,6 +816,8 @@ export async function runLifecycle(input = {}) {
   }
   report.turns = state.turns;
   report.calls = state.calls;
+  report.workerUsage = state.workerUsage;
+  report.workerErrors = state.workerErrors ?? [];
   report.metrics = summarizeLifecycle(report.sessions);
   report.cost = {
     totalInputTokens: report.inputTokens,

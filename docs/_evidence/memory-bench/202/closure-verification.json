@@ -1,0 +1,126 @@
+{
+  "kind": "202-owner-closure-verification",
+  "date": "2026-11-02",
+  "scope": "Documentation-only closure by owner disposition; not product acceptance or a clean release-gate verdict.",
+  "runtimeChanged": false,
+  "modelCampaignStarted": false,
+  "ownedCheckProcessesRemaining": false,
+  "checks": [
+    {
+      "id": "build",
+      "command": "timeout 600s bun run build:core",
+      "exitCode": 0,
+      "status": "pass",
+      "logSha256": "7e4c685fe8775c89a2617548be0795ef158f95c51cdff3d40abd48673f1e6622"
+    },
+    {
+      "id": "typecheck",
+      "command": "timeout 1200s bun run typecheck",
+      "exitCode": 0,
+      "status": "pass",
+      "logSha256": "3efabacdecb91ba94e53a107268b7bc42eb865b0fd6dd1775b52c9891dbc24ad"
+    },
+    {
+      "id": "fabric",
+      "command": "TMPDIR=/tmp timeout 900s bun run --cwd packages/memory/fabric test",
+      "exitCode": 1,
+      "status": "failed",
+      "logSha256": "c36d3c4f9d4a78f388b69539e6aeb194163aaf9d789fe647f75ddb695cf500f6",
+      "note": "Initial concurrent run: 584 pass, 29 PostgreSQL skips, one enrichment timing failure (20.88 ms vs <2 ms)."
+    },
+    {
+      "id": "fabric-isolated",
+      "command": "TMPDIR=/tmp timeout 900s bun run --cwd packages/memory/fabric test",
+      "exitCode": 0,
+      "status": "pass",
+      "logSha256": "cacd6fd1fc5c7f6624c5dba4c151d78aa727cf6298296014cf2a0c684d231f7e",
+      "note": "Isolated rerun: 585 pass, 29 PostgreSQL skips, 0 fail."
+    },
+    {
+      "id": "core",
+      "command": "timeout 900s bun run --cwd packages/memory/core test",
+      "exitCode": 0,
+      "status": "pass",
+      "logSha256": "e0020ee58703cc9b0cf782f514c39d74358cc219e64523a9ffe5fde168e7efa8",
+      "note": "63 pass, 0 fail."
+    },
+    {
+      "id": "observational",
+      "command": "timeout 900s bun run --cwd packages/memory/observational test",
+      "exitCode": 0,
+      "status": "pass",
+      "logSha256": "1a8cba4dc44bbdfd141afb504b1606af09581959aa4928206e5244fea542ece6",
+      "note": "101 pass, 0 fail."
+    },
+    {
+      "id": "bench",
+      "command": "timeout 900s bun test --timeout=0 scripts/memory-bench",
+      "exitCode": 1,
+      "status": "failed",
+      "logSha256": "440148e631e6af7bc4fd8642d33ff8d4452107e33934367043dd510d264289ac",
+      "note": "416 pass, 3 skip, 1 fail, 1 error. task5-comparison manifest refuses uncommitted candidate product changes; dirty tree predates closure."
+    },
+    {
+      "id": "prefix",
+      "command": "timeout 300s bun test packages/memory/fabric/src/__tests__/prefix-stability.test.ts",
+      "exitCode": 0,
+      "status": "pass",
+      "logSha256": "147c7d41086a1e05eeeaf1db14edcee991eecec2226d0a236126ca914fc2de0f",
+      "note": "24 pass, 0 fail."
+    },
+    {
+      "id": "prefix-probe",
+      "command": "timeout 120s bun scripts/memory-bench/prefix-probe.mjs --out <scratch>/prefix-probe.json",
+      "exitCode": 0,
+      "status": "pass",
+      "logSha256": "b984d7d463807bebefb700a65756758c0d500bdb196986a80e71bb823dde95c3",
+      "note": "Seven scenarios; one prefix per epoch except forget and second-instance retractions (two each). Zero network calls."
+    },
+    {
+      "id": "offline",
+      "command": "timeout 180s bun scripts/memory-bench/run.mjs --offline",
+      "exitCode": 0,
+      "status": "pass",
+      "logSha256": "152ad2a1d0a69913f2ff939b03e8de6d12d44293bad53e595ac8f45cbee17e5f",
+      "note": "14 synthetic questions, 5104 input tokens; fresh artifacts moved to verification scratch."
+    },
+    {
+      "id": "example",
+      "command": "timeout 900s bun examples/long-term-memory.ts",
+      "exitCode": 0,
+      "status": "pass",
+      "logSha256": "01fb88b7ab00ab1de5e91d5ff7a9e76bfc73220b4d257b9e3ee4e7b434aee839",
+      "note": "Cross-session fact/exchange recall and project isolation example completed."
+    },
+    {
+      "id": "host",
+      "command": "timeout 900s bun run --filter @arnilo/prism-agent test",
+      "exitCode": 1,
+      "status": "failed",
+      "logSha256": "be79d0f10c901838f219495e03cbc73799661776f222b1b1552766ec05d2c27b",
+      "note": "54 pass, 1 fail: conversational-memory after-forget assertion matches the query echoed in no-matching-memory output; already documented in Task 11 notes."
+    },
+    {
+      "id": "docs",
+      "command": "timeout 600s bun test --timeout=0 src/__tests__/docs.test.ts",
+      "exitCode": 0,
+      "status": "pass",
+      "logSha256": "e2684b7cbcca31f03a44bf02ccf87b6bf67f68730416ad11743958af815a50fd",
+      "note": "65 pass, 0 fail."
+    },
+    {
+      "id": "release",
+      "command": "timeout 1800s bun scripts/release.mjs gate",
+      "exitCode": 1,
+      "status": "failed",
+      "logSha256": "592105ae8f55de57206292bee7ec45957a187abdcfdb35a1a51ffeb5eaa8f830",
+      "note": "Missing Ollama Cloud compat baseline; Kilo exports differ; kernel packed/unpacked bytes, fileCount, rootExports and sourceLines exceed ceilings. No baseline or budget was changed by closure."
+    }
+  ],
+  "notRepeated": [
+    "Historical pre-4.12 equivalence: previously different, preserved; no historical worktree replay.",
+    "Local/hosted decision-model inference or any new live screen: remains gated in plan 210.",
+    "Full safety/growth/100k-store performance campaigns: existing scoped evidence retained; rerun on final product in plan 210.",
+    "PostgreSQL integration: 29 fabric tests skipped in this run; prior Task 5.6 and Task 15 evidence retained."
+  ]
+}

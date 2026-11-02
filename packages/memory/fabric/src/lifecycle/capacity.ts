@@ -13,12 +13,19 @@ export interface CapacityLimits {
   readonly tokens: number;
 }
 
+/** The exchange tier is size-only: raw history has no merge pass and no note-count budget. */
+export interface ExchangeCapacityLimits {
+  readonly hotTokens: number;
+}
+
 /** Provisional defaults (plan 188.6 fits them): a project resizes with the code, a profile does not. */
 export const DEFAULT_CAPACITY: Readonly<Record<"user" | "agent" | "project", CapacityLimits>> = Object.freeze({
   user: { notes: 200, tokens: 20_000 },
   agent: { notes: 200, tokens: 20_000 },
   project: { notes: 500, tokens: 60_000 },
 });
+
+export const DEFAULT_EXCHANGE_CAPACITY: ExchangeCapacityLimits = Object.freeze({ hotTokens: 200_000 });
 
 export const MAX_FABRIC_CAPACITY_NOTES = 10_000;
 export const MAX_FABRIC_CAPACITY_TOKENS = 1_000_000;
@@ -88,8 +95,24 @@ export function evictionOrder(
 ): readonly CapacityNote[] {
   const storageBelow = (options.archive ?? DEFAULT_ARCHIVE_CONFIG).storageBelow;
   return notes
-    .filter((note) => note.text !== undefined && note.metadata.pinned !== true)
+    .filter((note) => note.text !== undefined && note.metadata.pinned !== true && note.metadata.kind !== "concept")
     .filter((note) => storageStrength(note.metadata, options.storageWeights) < storageBelow)
+    .map((note) => ({ note, value: scored(note, clock, options) }))
+    .sort((left, right) => left.value - right.value || compareNotes(left.note, right.note))
+    .map((item) => item.note);
+}
+
+/**
+ * Exchange demotion ignores the storage-strength protection that keeps a learned fact: raw history is
+ * bounded by size alone. Pinned exchanges still stay, because pinning is an explicit host action.
+ */
+export function exchangeDemotionOrder(
+  notes: readonly CapacityNote[],
+  clock: number,
+  options: ArchiveDecisionOptions = {},
+): readonly CapacityNote[] {
+  return notes
+    .filter((note) => note.metadata.kind === "exchange" && note.text !== undefined && note.metadata.pinned !== true)
     .map((note) => ({ note, value: scored(note, clock, options) }))
     .sort((left, right) => left.value - right.value || compareNotes(left.note, right.note))
     .map((item) => item.note);

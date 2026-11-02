@@ -597,6 +597,16 @@ This plan is a pre-publish part of roadmap **Phase 11** and depends on plan 182 
 
 ## Verification (whole plan)
 
+> **Amendment 2026-11-01 (plan 206 Task 5 follow-up).** `LiveRouteConfig` gained two optional hooks —
+> `structuredPrompt` and `errorModel` (string or `ModelConfig`) — threaded through both
+> `runProviderLiveScenarios` and `executeProviderLiveScenarios`; `liveScenarioStructuredOutput` takes
+> `prompt` and `liveScenarioErrorResponse` takes `errorModel`. They exist because a service can answer the
+> shared schema-less prompt in prose and accept an empty `messages` array, which previously forced a
+> per-provider scenario skip (plan 206 dropped its skip and its separate `live-wire.test.ts` once the hooks
+> landed). Pinned by `live_scenarios_use_per_route_structured_prompt_and_error_model` and documented in
+> `docs/testing.md`; the live Ollama Cloud row now runs the shared structured-output and error scenarios on
+> both routes (13 passed, 0 skipped). No exported symbol or signature was removed; the fields are optional.
+
 - `bun run build:core`
 - `bun run typecheck`
 - `bun run --filter '@arnilo/prism-provider-*' test`

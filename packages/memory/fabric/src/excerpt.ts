@@ -1,9 +1,15 @@
-import { stemLexical } from "@arnilo/prism-memory-core";
+import { lexicalTerms, stemLexical } from "@arnilo/prism-memory-core";
 import type { MemoryNoteHit } from "./types.js";
 
 /** Below this many content characters a later excerpt carries too little to be worth its header. */
 const MIN_EXCERPT_CHARS = 160;
-const PREAMBLE = "Cite the ids you use as [id].";
+/** Pointer cards show the user's words, capped at one short line, never the assistant reply. */
+const POINTER_MAX_CHARS = 120;
+export const PREAMBLE = "Cite the memory ids you use as [id].";
+/** Minimum confidence for a passive hit; below it only the cue is delivered. */
+export const DEFAULT_INJECT_MIN_SCORE = 0.2;
+/** At or above this confidence a hit renders full text; below it renders a pointer card. */
+export const DEFAULT_INJECT_FULL_TEXT_SCORE = 0.35;
 /**
  * The disclosure that the block is a selection, not the whole memory. Domain-neutral on purpose:
  * the product cannot know whether this run exposes the memory tools (plan 188.10 Task 1b), so the
@@ -44,7 +50,31 @@ export function queryExcerpt(content: string, queryTerms: ReadonlySet<string>, m
 }
 
 function injectionHead(hit: MemoryNoteHit): string {
-  return `- [${hit.id}] ${hit.level ?? "project"} ${hit.kind} (${hit.ingestedAt.slice(0, 10)})${hit.tRef ? ` tRef=${hit.tRef}` : ""} `;
+  const dates = hit.dates?.length ? ` dates=${hit.dates.map((date) => `${date.resolved.slice(0, 10)}/${date.precision}`).join(",")}` : "";
+  const superseded = hit.supersededBy ? ` superseded by ${hit.supersededBy.id} on ${hit.supersededBy.at.slice(0, 10)}?` : "";
+  return `- [${hit.id}] ${hit.level ?? "project"} ${hit.kind} (${hit.ingestedAt.slice(0, 10)})${hit.tRef ? ` tRef=${hit.tRef}` : ""}${dates}${superseded} `;
+}
+
+/** The hit's final confident score: pre-fusion cosine in hybrid mode, coverage/score otherwise. */
+function hitConfidence(hit: MemoryNoteHit): number {
+  return hit.similarity ?? hit.coverage ?? hit.score ?? 1;
+}
+
+/** The user half of an archived exchange; a split assistant part falls back to its own text. */
+function exchangeUserLine(content: string): string {
+  if (!content.startsWith("user: ")) return content;
+  const end = content.indexOf("\n\nassistant:");
+  return end < 0 ? content.slice("user: ".length) : content.slice("user: ".length, end);
+}
+
+/** One pointer card: id, event date, the user's first 120 characters, and matched query terms. */
+function injectionPointer(hit: MemoryNoteHit, queryTerms: ReadonlySet<string>): string {
+  const body = exchangeUserLine(hit.content).replace(/\s+/gu, " ").trim();
+  const text = body.length > POINTER_MAX_CHARS ? `${body.slice(0, POINTER_MAX_CHARS - 1)}…` : body;
+  const date = (hit.dates?.[0]?.resolved ?? hit.tRef ?? hit.ingestedAt).slice(0, 10);
+  const contentTerms = lexicalTerms(text);
+  const matched = [...queryTerms].filter((term) => contentTerms.has(term)).slice(0, 4);
+  return `- [${hit.id}] ${date} "${text}"${matched.length > 0 ? ` · ${matched.join(", ")}` : ""}`;
 }
 
 /**
@@ -57,7 +87,9 @@ function injectionHead(hit: MemoryNoteHit): string {
  * so and names the tools that can widen the search, so the agent knows the block was cut. Shown hits
  * are delivered facts first and then exchanges, each group in time order (`tRef` else `ingestedAt`,
  * ties by rank), so a later value is read last, while selection stays by rank. Rendering changes how much of a note is shown, never which ranked
- * notes are considered.
+ * notes are considered. Confidence gates delivery: a hit below `minScore` is not shown (the cue still
+ * says how many matched), a hit below `fullTextScore` renders as a pointer card, and only a hit at or
+ * above it renders its content. No gate changes ranking or adds a query or model call.
  */
 export function fitInjection(
   hits: Iterable<MemoryNoteHit>,
@@ -65,6 +97,8 @@ export function fitInjection(
   budgetTokens: number,
   topK: number,
   eligibleCount = 0,
+  minScore = DEFAULT_INJECT_MIN_SCORE,
+  fullTextScore = DEFAULT_INJECT_FULL_TEXT_SCORE,
 ): { hits: MemoryNoteHit[]; lines: string[]; tokens: number } {
   const budgetChars = budgetTokens * 4;
   const chosen: { hit: MemoryNoteHit; line: string; rank: number }[] = [];
@@ -73,7 +107,19 @@ export function fitInjection(
   let rank = 0;
   for (const hit of hits) {
     if (chosen.length >= topK) break;
+    // The ontology tier is delivered as a pointer by the caller, never as text here (plan 207 Task 4).
+    if (hit.kind === "concept") continue;
     rank += 1;
+    const confidence = hitConfidence(hit);
+    if (confidence < minScore) continue;
+    if (confidence < fullTextScore) {
+      const line = injectionPointer(hit, queryTerms);
+      if (chars + 1 + line.length <= budgetChars) {
+        chosen.push({ hit, line, rank });
+        chars += 1 + line.length;
+      }
+      continue;
+    }
     const head = injectionHead(hit);
     const whole = head + hit.content;
     if (chars + 1 + whole.length <= budgetChars) {
@@ -91,7 +137,14 @@ export function fitInjection(
     chosen.push({ hit, line, rank });
     chars += 1 + line.length;
   }
-  if (chosen.length === 0) return { hits: [], lines: [], tokens: 0 };
+  if (chosen.length === 0) {
+    // A floor can remove every hit. The cue still says memory was searched, so the agent knows the
+    // block is empty by policy rather than because nothing matched. It counts inside the budget.
+    if (eligibleCount === 0) return { hits: [], lines: [], tokens: 0 };
+    const cue = partialSelectionCue(0, eligibleCount);
+    if (chars + 1 + cue.length > budgetChars) return { hits: [], lines: [], tokens: 0 };
+    return { hits: [], lines: [PREAMBLE, cue], tokens: Math.ceil((chars + 1 + cue.length) / 4) };
+  }
   // Facts first, then the exchanges that back them; each group in time order. Selection above stays
   // by rank, so grouping changes where a note is read, never which notes made the cut.
   chosen.sort(

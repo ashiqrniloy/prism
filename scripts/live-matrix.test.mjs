@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { loadMatrix, parseEnvFile, REPO_ROOT, resolveSuiteState, runLiveMatrix, validateMatrix } from "./live-matrix.mjs";
+import { liveEnvPath, loadMatrix, parseEnvFile, REPO_ROOT, resolveSuiteState, runLiveMatrix, validateMatrix } from "./live-matrix.mjs";
 
 const matrix = loadMatrix();
 
@@ -61,7 +61,7 @@ test("model selection: every provider suite reads its PRISM_LIVE_*_MODEL overrid
       if (isProvider) assert.equal(m.wired, true, `${suite.id}: ${m.env} must be wired after the Task 4 retrofit`);
     }
   }
-  assert.equal(providerSuites, 11, "all supported provider adapters have matrix entries (liquid ships two)");
+  assert.equal(providerSuites, 12, "all supported provider adapters have matrix entries (liquid ships two)");
   const hyperModel = matrix.suites.find((s) => s.id === "providers/hyper").model[0];
   assert.equal(hyperModel.env, "PRISM_LIVE_HYPER_CHAT_MODEL");
   assert.equal(hyperModel.wired, true);
@@ -237,4 +237,26 @@ test("parseEnvFile: comments, export prefix, quotes, blank lines; hard error on 
   assert.deepEqual(parsed, { FAKE_KEY: "sk-value", FAKE_OTHER: "quoted", FAKE_QUOTE: "double quoted" });
   writeFileSync(path, "this is not dotenv\n");
   assert.throws(() => parseEnvFile(path), /expected KEY=VALUE/);
+});
+
+test("credential file default is out-of-repo: ~/.config/prism/live.env, never a path in the checkout", () => {
+  const home = mkdtempSync(join(tmpdir(), "prism-liveenv-"));
+  const previous = process.env.HOME;
+  const previousFile = process.env.PRISM_LIVE_ENV_FILE;
+  try {
+    delete process.env.PRISM_LIVE_ENV_FILE;
+    process.env.HOME = home;
+    assert.equal(liveEnvPath(), null, "no file: env-only, no repo fallback");
+    const config = join(home, ".config", "prism");
+    mkdirSync(config, { recursive: true });
+    writeFileSync(join(config, "live.env"), "FAKE_KEY=1\n");
+    assert.equal(liveEnvPath(), join(config, "live.env"));
+  } finally {
+    if (previous !== undefined) process.env.HOME = previous;
+    if (previousFile !== undefined) process.env.PRISM_LIVE_ENV_FILE = previousFile;
+  }
+  // Guard: no runner may read a credential file from inside the checkout.
+  for (const file of ["live-matrix.mjs", "decision-bench.mjs", "cache-parity/provider-probe.mjs"]) {
+    assert.doesNotMatch(readFileSync(join(REPO_ROOT, "scripts", file), "utf8"), /scripts["',\s/]+live\.env/, file);
+  }
 });

@@ -18,6 +18,7 @@ import {
   redactJson,
   type VectorScanMetadataQuery,
 } from "@arnilo/prism-memory-core";
+import type { FabricDecisions } from "../decisions.js";
 import { memoryWriteVersion } from "../directory.js";
 import {
   DEFAULT_DECAY,
@@ -96,10 +97,14 @@ export interface FabricCueBlock {
 export interface FabricCueRenderOptions {
   /** The persisted user turn, so `maxPerTurn` counts per turn rather than per build. */
   readonly turnKey?: string;
+  /** The passive tail already carries this turn's one concept pointer; a path cue adds none (plan 207 Task 4). */
+  readonly conceptTaken?: boolean;
   /** Ids already visible this turn (core and topic injection); resolved lazily. */
   readonly exclude?: () => ReadonlySet<string>;
   /** The existing visible-read dedup, resolved only when a note actually matched. */
   readonly duplicate?: () => ((note: FabricCueDuplicate) => boolean) | undefined;
+  /** The persisted user turn, used only by the opt-in P6 applicability gate. */
+  readonly query?: string;
   readonly signal?: AbortSignal;
 }
 
@@ -123,6 +128,8 @@ export interface CreateFabricCuesOptions {
   readonly clock?: () => number;
   readonly redactor?: SecretRedactor;
   readonly secrets?: readonly (string | undefined)[];
+  /** Opt-in P6 gate: drop only standing rules the model places clearly outside their band. */
+  readonly decisions?: FabricDecisions;
 }
 
 /** The index bucket of a glob: its first segment when literal, else {@link CUE_ANY_BUCKET}. */
@@ -149,6 +156,8 @@ interface SessionCues {
   readonly considered: Set<string>;
   turnKey: string | undefined;
   count: number;
+  /** Concept pointers shown this turn: at most one. */
+  concepts: number;
 }
 
 /** Workspace-relative only, as the touched-path tracker already guarantees; this is belt and braces. */
@@ -197,6 +206,7 @@ export function createFabricCues(input: CreateFabricCuesOptions): FabricCues {
         // Passive delivery shows a candidate only when no verified note covers the path; archived never.
         const status = normalizeNoteStatus(row.metadata.status as string | undefined, "verified");
         if (status !== "verified" && status !== "candidate") continue;
+        if (metadata.kind === "decision" && (metadata.decisionStatus !== "active" || status !== "verified")) continue;
         if (!isActiveNote(metadata, status === "candidate" ? { allowCandidate: true } : {})) continue;
         const entry: CueEntry = {
           id: row.id,
@@ -230,7 +240,7 @@ export function createFabricCues(input: CreateFabricCuesOptions): FabricCues {
   function sessionCues(sessionId: string): SessionCues {
     let state = sessions.get(sessionId);
     if (state === undefined) {
-      state = { considered: new Set(), turnKey: undefined, count: 0 };
+      state = { considered: new Set(), turnKey: undefined, count: 0, concepts: 0 };
       sessions.set(sessionId, state);
     }
     return state;
@@ -246,6 +256,7 @@ export function createFabricCues(input: CreateFabricCuesOptions): FabricCues {
       if (options.turnKey !== undefined && options.turnKey !== state.turnKey) {
         state.turnKey = options.turnKey;
         state.count = 0;
+        state.concepts = 0;
       }
       const remaining = maxPerTurn - state.count;
       if (remaining <= 0) return undefined;
@@ -279,11 +290,23 @@ export function createFabricCues(input: CreateFabricCuesOptions): FabricCues {
         options.signal === undefined ? {} : { signal: options.signal },
       );
       const text = new Map(records.map((record) => [record.id, record.text]));
+      let applicable = ordered;
+      if (input.decisions?.enabled("P6") && options.query !== undefined) {
+        const rules = ordered.filter((match) => match.entry.metadata.kind === "decision" && text.has(match.entry.id));
+        if (rules.length > 0) {
+          const notApplicable = await input.decisions.applies({
+            text: options.query,
+            paths,
+            decisions: rules.map((match) => ({ id: match.entry.id, text: text.get(match.entry.id)! })),
+          });
+          if (notApplicable !== undefined) applicable = ordered.filter((match) => !notApplicable.has(match.entry.id));
+        }
+      }
       const duplicate = options.duplicate?.();
       const lines: string[] = [];
       const itemIds: string[] = [];
       let tokens = 0;
-      for (const match of ordered) {
+      for (const match of applicable) {
         if (itemIds.length >= remaining) break;
         const body = text.get(match.entry.id);
         if (body === undefined) continue;
@@ -298,7 +321,19 @@ export function createFabricCues(input: CreateFabricCuesOptions): FabricCues {
         ) {
           continue;
         }
-        const line = `- [${match.entry.id}] path ${metadata.kind} (for ${match.glob})${match.entry.status === "candidate" ? " (candidate)" : ""} ${redact(body)}`;
+        if (metadata.kind === "concept") {
+          // The ontology tier is a pointer, never content (plan 207 Task 4): one per turn, no claim text.
+          if (state.concepts + (options.conceptTaken === true ? 1 : 0) >= 1) continue;
+          const pointer = `- [${match.entry.id}] concept ${metadata.subject ?? "?"} (for ${match.glob}) — memory.read ${match.entry.id}`;
+          const pointerCost = Math.ceil((pointer.length + 1) / 4);
+          if (tokens + pointerCost > budgetTokens) continue;
+          lines.push(pointer);
+          tokens += pointerCost;
+          itemIds.push(match.entry.id);
+          state.concepts += 1;
+          continue;
+        }
+        const line = `- [${match.entry.id}] path ${metadata.kind} (for ${match.glob})${match.entry.status === "candidate" ? " (candidate)" : ""} ${redact(body)}${metadata.kind === "decision" ? ` — why: memory.read ${match.entry.id}` : ""}`;
         const cost = Math.ceil((line.length + 1) / 4);
         if (tokens + cost > budgetTokens) continue;
         lines.push(line);

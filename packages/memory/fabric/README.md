@@ -110,6 +110,8 @@ For the package, a host package may provide the optional `memory-fabric.diagnost
   passively and `memory.recall` renders it `[flagged: <class>]`; only `memory.replace` or a clean
   human edit lifts it. The scan is content-only and heuristic: it quarantines, it does not prove
   safety. Audit memory with `log.md` and `git diff` (MINJA, arXiv 2503.03704).
+  `memory.forget` removes a purged id from every survivor's `links`; a later read or export never
+  exposes a dangling edge, and derived lineage rows are removed by the existing lineage walk.
 
 ## Consolidation
 
@@ -330,9 +332,9 @@ memoryFabric({
   enabled: true, // default
   retrieval: "lexical", // default; "hybrid" adds the embeddings leg
   semantic: true, // default; whether indexed notes are available
-  inject: false, // default; opt in with { query: "task" } → minSimilarity 0.2, topK 12, budgetTokens 4000
+  inject: false, // default; opt in with { query: "task" } → minSimilarity 0.2, minScore 0.2, fullTextScore 0.35, topK 12, budgetTokens 4000
   directory: true, // default when semantic or tools.root is set; or { maxTopics: 8, maxFiles: 10, maxTokens: 200 }
-  core: true, // default; or { maxTokens: 600, scopes: ["user", "project"] }
+  core: true, // default; or { maxTokens: 600, scopes: ["user", "project"], kinds: ["fact", "preference", "procedure", "decision"] }
   cues: true, // default; or { budgetTokens: 300, maxPerTurn: 2 }
   team: false, // default; or { dir: ".prism/memory", write: "ask" } — the checked-in team store
   scopes: {
@@ -356,11 +358,17 @@ memoryFabric({
   passive: false,
   // The exchange archive: off by default; {} archives each completed user turn verbatim.
   exchanges: false | { enabled: true },
+  // The ontology tier's write-path knob (plan 207). Nothing here turns the tier on: concepts do.
+  ontology: {
+    bindThreshold: 2, // matched tokens of one subject name that bind a new note; in [1, 8]
+    conceptPrior: 0.1, // added to a concept hit's score after fusion; in [0, 0.5]
+    maxClaimsRendered: 8, // claims one concept hit shows in memory.recall; in [1, 32]
+  },
   // Verification by use across separate sessions (a citation is a use, a retrieval is not).
   lifecycle: {
     verifyAfterSessions: 2,
     // Retrieval-strength decay per kind; higher forgets faster. Tuning defaults.
-    decay: { episode: 0.8, fact: 0.4, procedure: 0.4, preference: 0.2, exchange: 0.5 },
+    decay: { episode: 0.8, fact: 0.4, procedure: 0.4, preference: 0.2, decision: 0.2, exchange: 0.5 },
     // Storage-strength coefficients of `explicit + sessions·log(1+useSessions) + helpful − harmful + outcome`.
     storageWeights: { explicit: 1, sessions: 0.5, helpful: 0.5, harmful: 1, outcome: 0.5 },
     // Recall priors `w_R·σ(R) + w_S·σ(S)`; each in [0, 0.5], default 0.05.
@@ -369,6 +377,8 @@ memoryFabric({
     archive: { retrievalBelow: -2, storageBelow: 1, graceSessions: 10 },
     // Per-scope budgets; a path note spends the project budget. Tuning defaults.
     capacity: { user: { notes: 200, tokens: 20_000 }, agent: { notes: 200, tokens: 20_000 }, project: { notes: 500, tokens: 60_000 } },
+    // Raw history has its own size-only tier; excess exchanges are demoted, never deleted.
+    exchangeCapacity: { hotTokens: 200_000 },
     // Duplicates always fold; episode clusters only when `episodes` is set (one model call each).
     merge: { duplicateDice: 0.8, episodes: { minCluster: 5, model: "hyper/<id>" } },
     // A lesson verified in two projects may live at `agent`; two projects contradicting a wider
@@ -385,6 +395,10 @@ memoryFabric({
     maxOutputTokens: 8192, // default absent: the model's own parameters; capped by its limit
     thinkingLevel: "low", // default absent: the model's default
   },
+  // Off by default. An object enables one model call per explicit `memory.recall`.
+  state: false | { model: "hyper/<id>" },
+  // Off by default. Needs a decisions-capable model; absent leaves every incumbent path unchanged.
+  decisions: false | { model: "liquid-local/d1-3B", points: ["P1", "P3", "P4", "P5", "P6"] },
 });
 ```
 
@@ -404,15 +418,17 @@ files and reports `indexed`, `removed`, and `malformed` counts; pass `{ full: tr
 file. Postgres persists both stores; its existing optional `table` setting still selects the vector
 table. Agent disposal closes stores after any pending reconcile.
 
-The measured markdown operating envelope is **up to 10k small notes for local,
-low-write workloads**. At 10k, warm open was 304 ms and p95 lexical recall 20.2 ms;
-at 50k, p95 recall reached 113.5 ms and p95 writes 210 ms. Switch to Postgres above
-10k when recall must stay below 50 ms, or for concurrent/server writers. These
-single-run measurements used tmpfs, so validate your durable storage before
-adopting this envelope. Cold rebuilds can require additional incremental
-reconciliation passes before all notes are searchable. See the
-[scale evidence](../../../docs/_evidence/memory-markdown-scale-0.13.0.md)
-for workload, sizes, rebuild timings, and the opt-in command.
+The measured markdown operating envelope is **up to 10k small notes for mixed local read/write
+workloads**. The 2026-11-02 run measured warm open 309 ms, p95 lexical recall 0.93 ms and p95 write
+36.6 ms at 10k. At 50k, warm open was 1,559 ms, p95 recall 4.39 ms and p95 write 217.4 ms, so 50k is a
+measured read-heavy stress point, not the mixed-workload recommendation. Switch to SQLite or Postgres
+above 50k, for concurrent/server writers, or when 200 ms writes matter. The separate exchange envelope
+is p95 recall **1.06 ms on SQLite and 4.15 ms on Postgres at 100k exchanges** (200 queries, isolated
+throwaway schema). These are single-run tmpfs/local-container measurements; validate durable storage
+before adopting the envelope. Cold rebuilds can require additional incremental reconciliation passes
+before all notes are searchable. See the
+[markdown scale evidence](../../../docs/_evidence/memory-markdown-scale-0.13.0.md) and
+[exchange scale evidence](../../../docs/_evidence/memory-bench/202/exchange-scale.md).
 
 `{ sqlite: { path } }` and `{ postgres }` stay available but are **not inspectable without
 `memory:export`** (plan 188.1 Task 7): they hold rows, not browsable files. Relative SQLite paths
@@ -547,13 +563,16 @@ Core memory (user): [41aa…] Prefers bun over npm. [77b0…] Uses fish shell.
 Core memory (project prism): [9c1e…] Run memory suites with --timeout=0. …
 ```
 
-Only `preference`, `fact`, and `procedure` notes enter, and only when they are **verified**, not
-archived, not flagged, and still readable — a revoked or forgotten note never appears. The block
-sits after the directory block, stays inside the untrusted envelope, and its
-text passes the redactor.
+Only `preference`, `fact`, `procedure`, and `decision` notes enter, and only when they are **verified**,
+not archived, not flagged, and still readable — a revoked or forgotten note never appears. A
+decision must also be `active`: proposed and superseded decisions stay readable through explicit
+recall but never reach the prefix. A decision line ends `— why: memory.read <id>`, so the rationale
+is one read away. The block sits after the directory block, stays inside the untrusted envelope, and
+its text passes the redactor.
 
-`core: false` turns it off; `{ maxTokens, scopes }` configures it (default 600, hard 1000; scopes
-`["user", "project"]` by default, and `user` always renders first). The budget splits evenly and
+`core: false` turns it off; `{ maxTokens, scopes, kinds }` configures it (default 600, hard 1000;
+scopes `["user", "project"]` by default, and `user` always renders first; kinds default to fact,
+preference, procedure and decision). The budget splits evenly and
 unused budget flows to the other scope. Ties break by note id, so the selection and its order are
 deterministic.
 
@@ -591,12 +610,14 @@ when a file tool reads or writes a matching file — the file is the retrieval c
 
 ```text
 - [9c1e…] path procedure (for packages/memory/**) Run memory suites with --timeout=0.
+- [d12a…] path decision (for src/payments/**) Validate inputs with zod, not yup — why: memory.read d12a…
 ```
 
 Matching is a glob check over notes bucketed by each glob's first literal segment, so one touched
 path checks one bucket, not every path note. A verified note wins; a candidate shows only where no
-verified note covers the path, marked `(candidate)`. At most `cues.maxPerTurn` notes per turn (2 by
-default) within `cues.budgetTokens` (300 by default, hard 1000), ordered by storage strength `S`,
+verified note covers the path, marked `(candidate)`. A decision cue additionally requires
+`decisionStatus: "active"` and a verified row; proposed and superseded rules never show. At most
+`cues.maxPerTurn` notes per turn (2 by default, 3 in the coding preset) within `cues.budgetTokens` (300 by default, hard 1000), ordered by storage strength `S`,
 then retrieval strength `R`. Paths come from the session's touched-path tracker and must be
 workspace-relative, so a path outside the project never matches. The lines join the semantic tail
 block and stay in the untrusted envelope; the text passes the redactor.
@@ -604,7 +625,9 @@ block and stay in the untrusted envelope; the text passes the redactor.
 Cross-source dedup drops a note already in the core, already injected by topic, already cued, or
 whose text is verbatim in a visible file read. Injected cues join the citation tracker, so citing
 one counts as a use. The injected set lives in session state, so a restore never shows a cue again,
-and a turn with no new path runs no query. `cues: false` makes no index query and adds no lines.
+and a turn with no new path runs no query. `cues: false` makes no index query and adds no lines. A path-scoped
+**concept** is cued as a pointer, never its claims: `- [id] concept ledger (for packages/ledger/**) — memory.read id`,
+at most one a turn and not when the tail already carries one.
 
 ### The team store
 
@@ -641,7 +664,7 @@ and never count toward widening: only private project notes prove a cross-projec
 
 **Writing needs a person.** The agent has no write path: `memory.insert` refuses `scope: "team"`,
 and no other tool reaches the store. `memory:share { id }` moves one verified private project note
-(`fact`, `preference`, or `procedure`) into the team tree:
+(`fact`, `preference`, `procedure`, or a `concept`; see [Ontology tier](#ontology-tier)) into the team tree:
 
 ```text
 /memory:share 9c1e2a4b7d10
@@ -670,7 +693,10 @@ assistant: Noted; I will treat Monday as the launch date.
   appended (not `turn.completed`, which fires inside the provider round before it). Only an
   assistant message with **no `tool_call` block** ends a turn, so a tool round never becomes an
   exchange and tool arguments/results are never stored.
-- **Dated and source-backed.** `tRef` is the user entry's timestamp; `sourceEntryIds` are the two
+- **Dated and source-backed.** `tRef` is the user entry's timestamp. Relative dates in the turn
+  ("yesterday", "last Tuesday", "two weeks ago", "in March") are resolved against it by a
+  deterministic English resolver and stored as an additive `dates: [{ text, resolved, precision }]`
+  field; no model call is made. `sourceEntryIds` are the two
   **session entry** ids (not message ids). Passive delivery uses them to suppress an exchange whose
   turn is still in the prompt, so history is never injected twice.
 - **Scope** (settled by plan 188.9 Task 1c): `project` only when the project scope is active **and**
@@ -682,21 +708,26 @@ assistant: Noted; I will treat Monday as the launch date.
   `tRef` and the source ids and link to each other (`relation: "part"`), so recalling one part can
   expand to its siblings; each part carries `context: "part i of n"`. Other writes keep the hard
   limit.
-- **Lifecycle.** Exchanges decay with their own `lifecycle.decay.exchange` (default 0.5) and are
-  subject to the same capacity and archive rules as other notes. They are never promoted, never
-  pinned to core, never shared with the team store, and never written by a tool.
+- **Lifecycle.** Exchanges decay with their own `lifecycle.decay.exchange` (default 0.5) and use the
+  separate `lifecycle.exchangeCapacity.hotTokens` tier (default 200,000 tokens). They do not consume
+  the fact/preference/procedure budget. Over the hot tier, maintenance archives the lowest-value
+  exchange with the audit verb `demoted`; its text stays in the searchable archive and `includeArchived`
+  or the weak-active archive fallback can retrieve it. Exchanges are never promoted, never pinned to
+  core, never shared with the team store, and never written by a tool.
 - **Security.** The kernel writes session entries after redaction, so an agent redactor has already
   replaced its secrets before the archive reads the turn; an explicit `redactor` passed to the
   module additionally *refuses* a turn it would rewrite rather than storing altered history. The
-  text is passed through `scanScopedMemoryContent` first, and a refusal (prompt injection,
-  exfiltration, invisible Unicode) is counted and reported through `prism.status.note`, never
-  stored. The offline 188.11 audit (plan 188.11 Task 8; `docs/_evidence/memory-bench/188.11/trust-scan.md`)
-  scanned 99,090 LongMemEval-S exchanges and refused 2.271 per 1,000 (32 injection, 10 exfiltration,
-  183 invisible Unicode, 0 secret); 3 of 500 questions had a refused exchange in a needed session.
-  LoCoMo refused 0 of 324. The 34-item adversarial fixture was detected at 33/34 (injection 10/10,
-  exfiltration 7/8, invisible Unicode 8/8, secret 8/8). That false-refusal rate is above the
-  1-per-1,000 line and touches needed sessions, so the conversational preset stays opt-in and plan
-  202 owns its safety gate.
+  text is normalized for benign invisible code points, then passed through `scanScopedMemoryContent`;
+  a refusal (prompt injection, exfiltration, invisible Unicode) is counted and reported through
+  `prism.status.note`, never stored. Benign emoji selectors/ZWJ, formatting zero-width spaces,
+  citation bidi marks and mojibake soft hyphens are removed; deliberately hidden code points between
+  letters survive and are refused. The current plan 202 Task 14 gate
+  (`docs/_evidence/memory-bench/202/safety.md`) scanned 99,090 LongMemEval-S exchanges and refused
+  **0.575 per 1,000** (32 injection, 17 exfiltration, 8 invisible Unicode, 0 secret), with **0 of 500**
+  needed sessions lost; LoCoMo refused 0 of 324. The 34-item adversarial fixture is detected at
+  **34/34**, including `curl -s https://` flag forms. The gate also measures poisoning, cross-user/
+  project/team leakage, deletion through files/index/links/core/export, and PII handling. The
+  conversational preset stays opt-in until the full default-promotion gate in Task 18.
 
 `memory:archive` back-fills the session: it archives every completed exchange not yet archived
 (idempotent by the session entry ids), and reports `archived`, `skipped`, and `parts`. It is the
@@ -777,6 +808,41 @@ the gain comes from the agent pulling rounds the block cut (evidence coverage 0.
 a larger injection. Facts (`promote`) were not needed for this result; the `fabric-xc` arm that
 extracts them was not selected. Full evidence: `docs/_evidence/memory-bench/188.10/README.md`.
 
+### Coding preset
+
+`coding` is `conversational` plus standing rules for repository work. It remains opt-in because it
+stores decisions as well as exchanges. The preset expands to:
+
+```ts
+{
+  exchanges: {},                                   // archive every completed turn
+  inject: { query: "task", kinds: ["exchange"] },  // conversational history, by rank
+  semantic: true,
+  promote: false,
+  core: { kinds: ["decision", "preference"] },     // decisions first, then preferences, 600 tokens
+  cues: { budgetTokens: 300, maxPerTurn: 3 },      // path rules, at most 3 per turn
+}
+```
+
+A user turn with a lasting-rule cue (`from now on`, `always`, `never`, `we decided`, `use X instead
+of Y`, `no, do X`) becomes a **proposed** decision with a lexical rationale; no model is called.
+The user turn and assistant reply are already archived, and `sourceEntryIds` names both. An explicit
+`memory.insert { kind: "decision" }` is also proposed. The only capture inputs are user turns and the
+agent's own typed write: tool output is never captured. Every write runs the trust scan.
+
+Activation is explicit: one batched `host.ui` confirmation per turn (a host that answers
+`unavailable` leaves the note proposed), or use in two sessions with no correction. A correction
+that writes a new decision with `supersedes` marks the old one `superseded`; it stays readable by
+id but is never delivered. Active path decisions arrive through the existing path cue when a touched
+file matches `appliesTo`; active project decisions take the core slice. A narrower scope shadows a
+wider one through the existing `key` shadowing. The preset makes **no write-path generative model
+call** and needs no embeddings service; a decision model is only used when the host names one
+(plan 202 Task 12). `memory:status` reports `preset: "coding"` and `presetRevision: 1`.
+
+The 12-persona coding-lifecycle suite, MemoryCode, and VibeMemBench / DreamBench-SWE remain the
+measurement gate (plan 202 Task 2 robust criteria; F3/F7 in Task 14). This implementation lands the
+functional contract; the measured target stays with Plan 210 Task 9.
+
 ### Known limitations
 
 - **One benchmark family.** The verdict is LongMemEval-S only; no other suite or model family has a
@@ -793,8 +859,11 @@ extracts them was not selected. Full evidence: `docs/_evidence/memory-bench/188.
   Evidence: `docs/_evidence/memory-bench/188.10/README.md`.
 - **About 78% of injected blocks were judged irrelevant** (0.777). The tools compensate; the block
   itself is noisy. Evidence: `docs/_evidence/memory-bench/188.10/README.md`.
-- **Capacity limits against a growing exchange archive are unmeasured.** No long-run or eviction
-  campaign covered an archive that fills the configured capacity. Evidence: plan 202 Task 15.
+- **Growth is measured offline, not as model QA.** The 1,427-exchange, 12-month LongMemEval-M run
+  passed the pre-registered month-12/month-1 retrieval criterion, and the separate 100k exchange
+  store envelope passed on SQLite and Postgres. Accuracy is lexical retrieval of the expected
+  month-1 exchange, not a live model answer. Evidence:
+  `docs/_evidence/memory-bench/202/growth.md` and `exchange-scale.md`.
 - **F3: foreign-context exposure in the lifecycle suite.** The completed paid arm exposed foreign
   context in 13/24 sessions while labelled cross-project leakage stayed 0. Evidence:
   `docs/_evidence/memory-bench/188.7/findings.json` (F3).
@@ -836,6 +905,13 @@ paths relative to the root. With the markdown store the walk lists the store's o
 `notes/index.md` (the regenerated OKF root index) is named as the browsable entry point. Tags and paths
 are redacted. The index sums every active scope and keeps each scope's counts on its own line; a
 share grant widens recall, not the index.
+
+When a scope has concepts (see [Ontology tier](#ontology-tier)) the block gains one line for it, after the counts and
+topics: `project concepts: 12; subjects: payments, deploy-pipeline, auth (+9)`. It names the most used subjects first
+(recorded uses, then the notes a concept cites, then name), at most eight, and counts the rest. It shares the
+`maxTokens` budget: files shrink first, then topics, then the subjects named; the count stays. With no concepts the
+block is byte-identical to the one above. It is pinned for the session epoch with the rest of the block, so writing a
+concept mid-session does not rebuild the prefix.
 
 Three disclosure levels keep the prefix small:
 
@@ -937,6 +1013,14 @@ stopping as soon as the scope is back inside:
    archived with the verb `evicted`. A pinned note and a note at or above
    `archive.storageBelow` are never evicted: budget pressure is not a reason to shed knowledge that
    was earned.
+
+**The exchange tier is separate.** Exchange notes are excluded from the scope's notes/tokens budget
+and measured only against `lifecycle.exchangeCapacity.hotTokens` (default 200,000). Over that size,
+the lowest-value unpinned exchanges are demoted with the audit verb `demoted`; demotion only changes
+status to `archived`, so the verbatim text remains in the searchable archive. This keeps a lifetime
+transcript from evicting learned facts or growing an unbounded hot set. The 12-month growth run over
+1,427 LongMemEval-M exchanges passed the month-12/month-1 criterion in both the shipped archive path
+and a 20k-token tier stress arm (`docs/_evidence/memory-bench/202/growth.md`).
 
 Merging is **O(n log n)** per scope through key grouping and lexical candidates, with no model call.
 Episode merging costs one model call per cluster and is **off by default** until plan 188.6 fits the
@@ -1093,6 +1177,23 @@ counts (`{ full: true }` re-reads every file). Run `examples/long-term-memory.ts
 consolidates a note with `memory:consolidate` and a second process that recalls it from the markdown
 store.
 
+### OM as T0: measured promotion result
+
+Observational memory is the T0 tier: its ledger feeds the ordinary `promote` pass above; there is no
+separate `promote.observational` flag. Plan 202 Task 16 measured that path on a seven-seed offline
+lifecycle suite (24 sessions per seed, zero model calls). With promotion off → on, task success was
+**0.375 → 0.393** for fabric alone and **0.732 → 0.732** for OM+fabric. Promotion wrote **0.125** and
+**0.25** notes per session respectively; **none** of the promoted candidates was recalled and cited
+in a later session in that suite, so the use-verified share was **0**. The result does not justify
+enabling promotion in the reference host, which keeps it off. A six-run one-question live smoke on two
+free models completed every `om`, `om+fabric`, and `fabric-x-tools` arm with zero worker errors; that
+is a completion check, not a quality comparison. Evidence:
+`docs/_evidence/memory-bench/202/observational/role.{json,md}` and `arms.{json,md}`.
+
+A failed OM worker pass is background-only by contract: it fails `om.observe`, leaves the ledger
+unchanged, and does not fail the run. The benchmark now records non-budget worker failures and
+continues instead of aborting the arm; a token-ceiling cause still ends the arm as a budget result.
+
 ### Consolidation: triggers, cost and status
 
 Three triggers, no timers:
@@ -1156,18 +1257,160 @@ touch, `memory.replace`, `memory:maintain` and `memory:import`. Only a store tha
 (`tools.root`) can hold a top-level frontmatter key; on SQLite or Postgres the unknown `fabric` keys are kept in
 the row.
 
+## Ontology tier
+
+The store side of the three-tier memory (plan 207). T1 is the notes above: atomic, scoped, each with provenance. The
+ontology tier is **one `concept` note per subject** (an entity or a topic in this user's, project's or team's world),
+built on top of them. It is **opt-in and unmeasured**: nothing here changes a default, and no quality claim ships from
+it until plan 210 decides. The fabric owns storage, validity and the deletion cascade; the `@arnilo/prism-memory-wiki`
+package (a later task) owns synthesis, through the `memory.fabric` service.
+
+**The `concept` kind.** A concept is an OKF markdown file in `concepts/` (or a vector record on SQLite and Postgres):
+
+```markdown
+---
+type: "Concept"
+title: "Payments service"
+subject: "payments"
+concept_type: "entity"
+aliases: ["billing"]
+sources: [{"id":"3f1c9e2a4b70"},{"id":"9c1e2a4b7d10"}]
+---
+# Payments service
+
+- [c1] Retries use exponential backoff capped at 3 attempts.[^3f1c9e2a4b70]
+- [c2] Inputs are validated with zod, not yup.[^9c1e2a4b7d10]
+
+## Open questions
+- [q1] Whether refunds share the retry budget.[^3f1c9e2a4b70]
+```
+
+Every item is one line with a stable id (`c<n>` claim, `q<n>` open question, `x<n>` contradiction) and one or more
+footnotes naming the T1 note ids it rests on. The `subject` is `[a-z0-9.-]{1,64}`, unique per scope. Relations to other
+subjects (`part-of`, `instance-of`, `uses`, `related`) are note `links`. A claim of at most 280 characters with no
+citation is accepted only from a person (`generated.by: human`) and is labelled `(uncited, human)` wherever it is
+rendered. `subject` is also an additive field on every other kind, binding a note to a subject in its own scope; a
+binding may precede its concept.
+
+**Who writes one.** Not the model tools. `memory.insert { kind: "concept" }`, `memory.replace` and `memory.forget` on a
+concept id answer `concept_requires_ontology` (`ConceptRequiresOntologyError` on the library API), and so does
+`memory.recall` with `kinds: ["concept"]` when the fabric has no ontology (`semantic: false`). Only the ontology port, a
+person editing the file, `memory:import` and `memory:share` write one. The directory and the core block do not name a
+concept's text, and `memory:maintain` never archives, merges or evicts one.
+
+**Concepts first, then drill down.** One `memory.recall` surface, no second search tool. `concept` is in the default
+recall kinds and in `kinds: ["all"]`, and a concept hit gets the kind prior `ontology.conceptPrior` (default 0.1, in
+[0, 0.5]) after fusion and the scope prior, so a matching concept ranks above the notes it cites but never above a note
+that matches the query better. In `memory.recall` a concept renders as a header, its current claims with the ids they
+cite, and one drill-down line; a pattern no concept covers comes back as a plain note in the same call:
+
+```text
+[7a21c0d4e9b1] project concept payments 2026-11-02
+  [c1] Retries use exponential backoff capped at 3 attempts. ← 3f1c9e2a4b70
+  [c2] Inputs are validated with zod, not yup. ← 9c1e2a4b7d10
+  drill down: memory.read { ids: ["3f1c9e2a4b70", "9c1e2a4b7d10"] }
+f4f6129570f2 project [fact] path=… date=2026-10-28 matched=[…] Staging deploys run nightly…
+```
+
+Up to `ontology.maxClaimsRendered` (default 8, in [1, 32]) claims are shown, chosen by term overlap with the query and
+kept in document order. A **stale** claim is never rendered in recall; `memory.read { id }` returns the whole concept
+with claim ids and labels a stale claim `(stale)` and a person's uncited one `(uncited, human)`. `memory.read { ids }`
+on the cited notes returns them through the usual filters, and an exchange reached that way expands with `around`. As a
+second line behind the cascade, one batched read confirms that every note a claim cites is still readable here; a claim
+with an unreadable citation is not delivered. A flagged concept renders `[flagged: <class>]` and no claim. A shared team
+concept cites private notes that never travelled with it, so its drill-down reads the concept itself.
+
+**Passive delivery is a pointer.** A concept never enters the pinned core. The passive tail carries at most one concept
+per turn, as one line (`- [id] concept payments — memory.read id`), and only when it is the top fused hit and its subject
+is in play: one of its names (slug, title, alias) is in the turn's words, or a touched path falls inside the concept's
+`appliesTo` globs. A path cue for a concept is the same pointer, and the tail and the cue share the one slot. Content is
+pulled by the agent, never pushed.
+
+**Co-read.** An answering turn that cites two or more notes the model received (a recall result, a passive card or a
+`memory.read`) records a `coRead` event on each evidence note: `{ s, t, with }`, the scope-session ordinal, the turn
+index and the other ids (at most eight, the last sixteen events per note). It holds ids and indexes, never text, makes
+no model call, and rides in the turn's existing `fabric.lifecycle` background write. Concepts and working blocks take
+no part. It is the signal the concept pass (plan 207 Task 6) uses to pick what to consolidate: the memory the agent just
+retrieved and used. A recorded use of a concept also refreshes its index row, so the directory's subject order follows
+use.
+
+**Sharing.** `memory:share { id }` accepts a verified concept. The person sees its current claims and the number of
+citation ids that travel without their notes; the cited private notes are **not** copied. The team concept keeps its
+claims and cites as provenance, drops stale items, open questions, relations and use counters, is stamped
+`generated.by: human`, and replaces the team store's earlier concept for the same subject (one per subject). Lint
+(plan 207 Task 7) reports each citation as shared without evidence: it is derived from the team scope, not stored.
+Tools cannot write the team store, the trust scan quarantines a team concept like any team note, and a private concept
+with the same subject **shadows** the team one (the narrower scope wins).
+
+**The deletion cascade.** It is deterministic, calls no model and no embedder, never deletes a T1 note, and runs
+whether or not the wiki package is installed. In the same call that retracts a note:
+
+- `memory.forget`, a store delete by id (retention, import-replace), a deletion-propagation pass, a revocation or a
+  legal hold **remove every claim that cites the note**, with that claim's other citations. `sources` is recomputed,
+  the concept is marked dirty (`removed`), and a concept left with no claim is archived.
+- A correction, a supersession, an archive, a downgrade to candidate or a trust-scan flag mark each citing claim
+  **stale** (the concept is dirty with `stale`). A stale claim keeps its text; readers label it `(stale)` and never
+  deliver it passively.
+
+A deletion propagator tombstones through the store rather than through `memory.forget`, so a host that builds one
+registers `createConceptDeletionHandler(...)`, which the package provides as the `memory.fabric.concept-deletion`
+service. The cascade finds citing concepts through an in-process index built from one metadata scan and kept current by
+the port; a retraction costs a map lookup (about 0.001 ms with 2,000 concepts; the one-time build took 17 ms on the in-memory
+store, and is not yet measured on SQLite or Postgres). An import, which can bring concept files in, rebuilds it.
+
+**Binding a note to a subject.** The ontology shapes writing as well as reading (schema-assisted encoding): a T1 note
+that names a subject is bound to it when it is written, so the concept pass works on ready-made clusters.
+
+- *Deterministic, free, at write time.* With at least one concept in the note's scope, `remember` tests the note's
+  text and its keywords against the scope's subjects, by the same normalizer the lexical index uses (lowercase,
+  stopwords dropped, stemmed; whole tokens only). A subject's names are its slug, its title and its aliases. A subject
+  qualifies when one name has at least `ontology.bindThreshold` tokens (default 2) in the note, or when every token of
+  a multi-token name does. **Exactly one** qualifying subject binds the note; zero or several leave it unbound for the
+  concept pass. An explicit `subject` always wins, a rewrite keeps the subject it had, and binding never crosses scope
+  (a `user` note reads `user` subjects, a `project` or `path` note reads `project` subjects). It is a token map, not a
+  scan, and calls no model. If the index cannot load (a store without `scanMetadata`), the note is simply stored
+  unbound.
+- *Binding marks the concept dirty.* A bound note tells the curator its subject has new evidence: the concept gains
+  the `evidence` dirty reason (the pass reads `dirty()` as well as `pending()`).
+- *Extractor-assisted.* When `promote` is on, the consolidation extractor's per-call prompt lists the scope's subjects
+  (at most 64 per scope, about 1,500 tokens in all, one `slug | title | aliases` line each), and `record_notes` takes an
+  optional `subject`: a shown slug for the note's own scope, or `new` for something no shown subject covers. A slug that
+  was not shown is dropped, not rejected: the note stays unbound. `new` stores nothing today. The list is part of the
+  per-call prompt, never of the cached system text or the tool schema, so the cached bytes are identical with and
+  without an ontology; it is pinned per session epoch like the directory.
+
+**The `memory.fabric` service.** Provided during `setup` whenever `semantic` is on. A consumer lists
+`requires.services: ["memory.fabric"]` and reads it at call time (`prism.services.require`):
+
+| member | purpose |
+| --- | --- |
+| `scopes()` | readable scope levels, narrowest first |
+| `subjects(scope)` | the ontology index: subject, title, aliases, concept id, type, dirty reasons |
+| `pending(scope, { cursor, limit })` | T1 notes written after the cursor, oldest first, text capped |
+| `read(scope, ids)` | up to 32 notes through the same scope, consent, invalidation and redaction filters as `memory.read` |
+| `applyConceptEdits(scope, edits, { generatedBy })` | validate the whole batch, then write it; one bad edit rejects all |
+| `bind(scope, noteId, subject)` | bind a T1 note to a subject |
+| `dirty(scope)` | concepts that need a pass, and why |
+
+The edit vocabulary has no rewrite: `create_subject`, `add_claim`, `update_claim`, `retire_claim`, `merge_claims`
+(its `cites` are exactly the union of the merged claims' citations), `add_relation`, `add_open_question`,
+`note_contradiction`. Every text passes the trust scan and the redactor (`refused: <class>` on a hit), every citation
+must be an active evidence note readable in the same scope (`MemoryScopeError` otherwise), and only `user` and
+`project` are write scopes: `agent` concepts would come from widening and `team` concepts from `memory:share`.
+
 ## Tools
 
 | Tool | Effects | Needs |
 | --- | --- | --- |
 | `memory.view` | `read` | `tools.root` for paths; the directory needs none |
 | `memory.read` | `read` | `tools.root` for paths; a note id needs none |
-| `memory.insert` | `edit` | block, file path, or fact/preference/procedure kind |
+| `memory.insert` | `edit` | block, file path, or fact/preference/procedure/decision kind |
 | `memory.replace` | `edit` | block, file path, or note id |
 | `memory.recall` | `read` | — |
 | `memory.forget` | `write` | — |
 
-These six names and their effects are **stable at API level 1**: a host may reference them in approval and policy
+With `semantic` on, `memory.recall` also searches `concept` notes (the kind enum names it); the tool never writes or
+edits one. These six names and their effects are **stable at API level 1**: a host may reference them in approval and policy
 rules. Their descriptions may change in a minor version; the names and effects do not (see `## Compatibility`).
 
 `memory.read` accepts exactly one of `path`, `id`, `ids` (1–8), `around`, or `session`. A note read returns each note in
@@ -1185,16 +1428,70 @@ scan and emit a status warning. Stores without either capability return `not_fou
 Older notes without archive `session` metadata remain recallable and readable by id;
 navigation covers newly archived notes. No existing archive is rewritten.
 
+`memory.recall` accepts optional `from` and `to` (ISO dates or timestamps, inclusive; a date covers
+that whole UTC day) and `order: "relevance" | "time"` (default `relevance`). With a window, a note
+matches when any of its resolved event `dates` falls inside it, else when its `tRef` (or write time)
+does. Time order sorts by the earliest resolved date, oldest first, and renders `tRef` plus
+`dates=<date>/<precision>`; passive delivery renders the same resolved dates inline. A time window
+also scans archived metadata (up to 5,000 rows) instead of stopping at the relevance top-K, so an
+archived event far outside that preload is still found; larger archives need store-side date
+filtering. Month- and year-precision dates resolve to the start of that period, and an expression the
+resolver does not know is left unresolved rather than guessed. Locale gap: weekday and month names
+are English.
+
+Recall groups same-subject hits at read time and orders each group newest-first. Facts and other
+keyed notes group by `key`; exchanges group when their Task 5 subject keywords overlap at or above
+the provisional Dice floor (value-like numbers are ignored). An explicit `supersedes` edge also
+joins a group. Every earlier member carries `superseded by <id> on <date>?`; the question mark is
+the point: this is a hint, not a deletion or an invalidation, and the older note stays readable.
+Passive delivery shows the same marker. Ordering is stable and costs no model call.
+
+The opt-in `state: {}` config adds one model call over the grouped, budget-selected hits and returns
+a short current-state table (`subject | current value | [id]`) in the `memory.recall` output and
+result value. It is **not** in the conversational preset, and passive injection never calls it. The
+call receives at most 2,000 estimated input tokens; if the model fails or cites no shown id, the
+normal recall output is returned unchanged. Set `state.model` to choose the wrapper model; absent
+uses the host default.
+
+### Decision models
+
+The opt-in `decisions` field binds one [decision model](../../../docs/decisions.md) through
+`prism.models.decisions(model)`. Absent or `false`, no decision call is made and every heuristic and
+generative path behaves as before. The model must declare the `decisions` capability. Each point
+runs as one batched call (at most 64 questions), with a calibrated threshold and an abstain band;
+inside the band, or on any `DecisionsError`/timeout, the incumbent path decides and the turn
+continues. A decision never deletes, archives or rewrites a note.
+
+| Point | What it gates | Incumbent inside the band |
+| --- | --- | --- |
+| P1 durable | Coding-preset capture and the generative extractor; only a clearly durable turn reaches either | lexical cue capture / extractor |
+| P2 supersession | `consolidate.decider: "model"`: `replaces`/`contradicts`/`refines`/`unrelated` per candidate | the generative decider |
+| P3 relevance | passive-injection candidates (top 32) | relevance ranking |
+| P4 needed | skips passive injection when memory is clearly not needed | inject anyway |
+| P5 sufficient | adds an abstention when shown recall evidence is clearly not enough | the confidence floor |
+| P6 applies | path cues for standing decisions whose globs already matched | show the rule |
+| P7 instruction-like | coding-preset capture: a clear instruction attempt adds a refusal | the trust scan |
+
+P1, P3, P4 and P7 share one `evaluateTurn` request when they run for the same persisted user turn; the no-candidate P1 result is reused by the extractor gate and capture. P7 is additive only: it can refuse a capture, never
+remove a refusal from the trust scan. Only already-scoped text is sent; a hosted model receives it
+off-machine. The documented default suggestion is local `liquid-local/d1-3B`. At two requests per
+turn and roughly 1,000 input tokens per request, hosted `liquid/d1` input costs about **$0.04 per
+1,000 turns** at $0.02/Mtok; local inference costs $0 plus hardware (measured p50 330–744 ms per
+request). The checked-in `scripts/fixtures/decision-bench-memory.jsonl` has 100 labelled items per
+point with reversed-choice repeats; run `bun scripts/decision-bench.mjs --memory` on the authorized
+development screen. Thresholds and bands live in `src/decisions.ts` (tuning tier).
+
 Exchange archive keywords are enriched deterministically with normalized entities,
 numeric dates and units, and category terms (for example, flights add `travel`).
 This adds no model or embedding calls. `memory.recall` returns `unmatchedTerms`
 for terms absent from the returned notes and their indexed keys; these are not
-proof that a term is absent from the whole archive. For aggregation questions,
-use two or three differently worded queries.
+proof that a term is absent from the whole archive. For aggregation questions, list the instances
+and their ids before counting or totalling, and use two or three differently worded queries.
 
-`memory.insert` accepts exactly one of `block`, `path`, or `kind: "fact" | "preference" | "procedure"`.
-Typed notes accept `supersedes`, `tRef`, `validFrom`, `validTo`, `tags`, `keywords`, `scope`,
-`appliesTo`, and `key`. The scope rule in the description is precision-first: user-wide preferences
+`memory.insert` accepts exactly one of `block`, `path`, or `kind: "fact" | "preference" | "procedure" | "decision"`.
+Typed notes accept `supersedes`, `rationale` (decision only), `tRef`, `validFrom`, `validTo`, `tags`,
+`keywords`, `scope`, `appliesTo`, and `key`. A decision inserted by the agent is always `proposed`
+and a lifecycle candidate; it needs the user's confirmation or two sessions of use to become active. The scope rule in the description is precision-first: user-wide preferences
 → `user`; anything learned in this repository → `project`; only a lesson proven across projects →
 `agent`; `path` with `appliesTo` when the note holds for one subtree; when unsure, the narrower
 scope.
@@ -1216,24 +1513,49 @@ semantic embedding or vector/lexical query; `memory.recall` retrieves detail whe
 This default has no measured benchmark gain yet: Task 14 must supply paired benchmark evidence
 before changing it. Working memory is re-read on every build and leads the tail after the transcript.
 
-Opt in with `inject: { query: "task" }`; the defaults are `minSimilarity: 0.2`, `topK: 12` and
-`budgetTokens: 4000`, so an opted-in turn adds **about 4,000 tokens** of memory at most (measured
-mean 3,739 in the ceiling grid and 2,865 in the shipped-query delivery diagnostic over the 140
-development questions). Delivery fills by rank with **whole** notes: each
-note renders in full while it fits the remaining budget, up to `topK`, and a later note that does
-not fit whole is **skipped, not truncated** — a shorter note after it may still fit. The best
+Passive injection never delivers a concept's claims: with the ontology tier in use, the top fused hit may add one
+pointer line when its subject is in play (see [Ontology tier](#ontology-tier)); everything else in this section is about
+notes.
+
+Opt in with `inject: { query: "task" }`; the defaults are `minSimilarity: 0.2`, `minScore: 0.2`,
+`fullTextScore: 0.35`, `topK: 12` and `budgetTokens: 4000`, so an opted-in turn adds **about 4,000
+tokens** of memory at most (measured mean 3,739 in the ceiling grid and 2,865 in the shipped-query
+delivery diagnostic over the 140 development questions). Delivery fills by rank with **whole** notes:
+each note renders in full while it fits the remaining budget, up to `topK`, and a later note that
+does not fit whole is **skipped, not truncated** — a shorter note after it may still fit. The best
 matching note is always shown: when it alone exceeds the budget it renders as an excerpt centred on
 the densest run of matched query terms, of the whole budget, ending
 `(excerpt; memory.read <id> for the full note)`. Shown notes are delivered in **time order**
 (`tRef` else `ingestedAt`, ties by rank) with their date header, so a knowledge update is read after
 the value it replaces; ranking still decides *which* notes are selected. Rendering changes how much
 of a note is shown, not which notes are ranked or filtered, and adds no query, write, or model call;
-injected tokens stay within `budgetTokens` with no exception. The defaults come from the frozen
-ceiling grid (plan 188.9 Task 5): at the ~4,000-token cost anchor they deliver the most needed
-evidence of any cell whose per-ability answer visibility does not fall below the 600/3/0.35 control.
+injected tokens stay within `budgetTokens` with no exception.
+
+**Confidence gates delivery.** `minScore` drops a hit below the floor; if every hit is dropped the
+block is only `Showing 0 of M matching notes.` plus the existing directory prefix, so the agent knows
+memory was searched and chose not to paste low-confidence text. Between `minScore` and
+`fullTextScore`, an exchange renders as a **pointer card** instead of its text: id, event date, the
+user's first 120 characters, and the matched query terms, for example
+`- [e81] 2026-04-02 "I picked up the new bike…" · bike, picked`. The agent reads the note by id for
+the full exchange. A hit at or above `fullTextScore` renders as before, whole or excerpted. Pointer
+cards never show the assistant reply and are always shorter than the note text; neither floor is a
+model call, and both are tuning-tier fields under `inject`. The 0.2/0.35 starting values remain to be
+calibrated on the Task 8 development screen (plan 202, then Plan 210).
+
+**Weak tool-callers get text after two cued turns.** Adaptive delivery is on for the package and
+needs no config. It counts user turns that ask for a selection, list, count, comparison, or time
+ordering (`all`, `count`, `how many`, `latest`, `when`, …). After **two** such turns in a session with
+no `memory.*` tool call, the next passive block switches from pointer cards to full notes (still
+inside the same `budgetTokens`, still gates below `minScore`); on the second cued turn the switch is
+immediate. Any `memory.*` call — recall, read, remember, forget — resets the counter and the next turn
+returns to pointer cards. The state is per session (`fabric.delivery`), never shared across
+principals, and makes no model, embedding, or store query. `memory:status` reports it as
+`delivery: "pointers" | "excerpts"` plus a `reason`, for example
+`Delivery: excerpts (no memory tool use after 2 cued turns).` The model catalog has no tool-reliability
+field, so the start mode is always pointers (R10; plan 202 Task 10).
 
 **When the block is a selection, it says so.** If fewer notes are shown than were eligible after the
-similarity floor (before `topK` or the budget cut them), the block ends with one line:
+similarity floor and confidence gate (before `topK` or the budget cut them), the block ends with one line:
 `Showing N of M matching notes. To list, count or compare across past conversations, call
 memory.recall with several phrasings (queries) and memory.read the ids you need.` It names the two
 read tools instead of asking the host, because per-run tool availability is not visible to the
@@ -1251,24 +1573,34 @@ instructions.
 The `minSimilarity` floor (default `0.2`) is applied to the active mode's similarity: query-term
 coverage in lexical mode (calibrated in plan 188.1 Task 2) or pre-fusion vector cosine in hybrid
 mode (a tuning default). A hybrid opt-in host gets one status note naming the embedder and floor. Empty results
-inject nothing; the recall tool says `no match in any kind`.
+inject nothing; the recall tool says `no matching memory for: <terms>; scopes: <levels>`.
 
-`memory.recall` is the agent's detail channel: one call returns at most **1,200 rendered tokens**
-(the `budget`, counted on the snippet lines it prints, header, path and matched terms included) and
-each snippet is the densest window of matched query terms in its note, capped at 600 characters.
-Every line carries the note's relative path; `memory.read <id>` returns the note whole. Without
-`kinds` the tool searches **every stored kind except `working`** (that tier is already in the
-prefix), so an episode or a procedure from stored history answers without a second call. It makes
-exactly one recall query — there is no kind-discovery follow-up — and an empty result is the single
-stop line `no match in any kind`.
+`memory.recall` is the agent's detail channel: one call returns a compact **grouped summary** and at
+most **1,200 rendered tokens** in total — `budget` counts the summary, then each snippet's header,
+path and matched terms. Each snippet is the densest window of matched query terms in its note,
+capped at 600 characters. The summary is two lines: total matches, distinct sessions, date span,
+how many are shown, how many more are not, and the next page — for example
+`7 matches in 5 sessions (2026-01-04…2026-06-19); showing 4; 3 more not shown; page with
+{ query: "...", page: 2 }.`, followed by each session's count and date span (`s1×2 (…)`). It is
+counts only, never note text, and is capped under 200 rendered tokens.
+
+`topK` is the page size (default 5); `page` is zero-based over the same 32-hit ranked window, so
+`{ query, topK: 4, page: 1 }` returns hits 5–8. The summary counts that window, so a broad query
+can say `32` rather than the true archive total; page or narrow the query when it does. Every line
+carries the note's relative path; `memory.read <id>` returns the note whole. Without `kinds` the
+tool searches **every stored kind except `working`** (that tier is already in the prefix), so an
+episode or a procedure from stored history answers without a second call. It makes exactly one
+recall query — there is no kind-discovery follow-up. An empty or weak-only result is an explicit
+abstention with no hits: `no matching memory for: <terms>; scopes: <active levels>`, so the agent
+can say what it searched instead of guessing.
 
 Fabric recall uses the store's lexical leg and, in hybrid mode, the vector leg too, fused with
 `fuseRankings` before optional recency/importance scoring. Lexical-only stores use the lexical
 ranking alone. Each scope is queried separately and the union is ranked as described under
 [Recall across scopes](#recall-across-scopes); injected lines name the level (`[id] user preference
 2026-09-30 …`). Passive kinds default to `fact`, `preference`, and `file`; `inject.kinds` or
-recall's `kinds` can name others, and `kinds: ["all"]` means every kind (`working`, `episode`,
-`fact`, `preference`, `procedure`, `file`). The tool's own default is wider — every kind but
+recall's `kinds` can name others (`procedure` and `decision` are opt-in), and `kinds: ["all"]` means
+every kind (`working`, `episode`, `fact`, `preference`, `procedure`, `decision`, `file`, `exchange`). The tool's own default is wider — every kind but
 `working` — so stored history answers there without changing what an opted-in turn injects.
 Validity and consent apply to both query hits and one-hop links.
 
@@ -1374,20 +1706,21 @@ Task 5 makes for the kernel). Everything else is an implementation detail.
 - **Notes.** The rule in [Notes written by a newer version](#notes-written-by-a-newer-version): an unknown key is kept,
   an unreadable note is kept as written, and only an explicit `memory.forget` or a store delete by id removes one.
 - **Presets.** The preset names and their contracts; `conversational` is described in
-  [Conversational preset](#conversational-preset), and `CONVERSATIONAL_PRESET_REVISION` names the revision a
-  measurement ran on. A new preset name is additive.
+  [Conversational preset](#conversational-preset), `coding` in [Coding preset](#coding-preset), and
+  `CONVERSATIONAL_PRESET_REVISION` / `CODING_PRESET_REVISION` name the revision a measurement ran on.
+  A new preset name is additive.
 
 ### May change in a minor version
 
 - The value of every config field marked `tuning` in [Config stability](#config-stability), including a default that
   is also documented in `## Config`.
 - Ranking and scoring, injection budgets, the delivery format, prompt text, tool descriptions, and a preset's contents
-  inside its contract (a change to those bumps `CONVERSATIONAL_PRESET_REVISION`).
+  inside its contract (a change to those bumps `CONVERSATIONAL_PRESET_REVISION` or `CODING_PRESET_REVISION`).
 - Anything classified "Not exported" under [Stable exports](#stable-exports).
 
 ### Needs a new name or an explicit opt-in
 
-- A new stored kind (a `memory.*` kind beyond `fact`, `file`, `procedure`, `episode`, `working` and `exchange`).
+- A new stored kind (a `memory.*` kind beyond `fact`, `file`, `procedure`, `decision`, `episode`, `working` and `exchange`). `concept` is such a kind: see [Ontology tier](#ontology-tier); only the ontology port, a person, `memory:import` and `memory:share` write one, and it is delivered only as a recall hit or a pointer.
 - A new write-path model call, or any change to what a default stores.
 - A new required service (an embedder, a database, a provider key).
 - A new capability a store or embedder author must implement instead of an optional method or declared flag.
@@ -1405,6 +1738,8 @@ version). `packages/memory/fabric/src/__tests__/stability.test.ts` checks this t
 | `retrieval` | contract |
 | `inject` | contract |
 | `inject.minSimilarity` | tuning |
+| `inject.minScore` | tuning |
+| `inject.fullTextScore` | tuning |
 | `inject.topK` | tuning |
 | `inject.budgetTokens` | tuning |
 | `inject.query` | contract |
@@ -1417,6 +1752,7 @@ version). `packages/memory/fabric/src/__tests__/stability.test.ts` checks this t
 | `core` | contract |
 | `core.maxTokens` | tuning |
 | `core.scopes` | contract |
+| `core.kinds` | contract |
 | `cues` | contract |
 | `cues.budgetTokens` | tuning |
 | `cues.maxPerTurn` | tuning |
@@ -1482,6 +1818,10 @@ version). `packages/memory/fabric/src/__tests__/stability.test.ts` checks this t
 | `passive` | contract |
 | `exchanges` | contract |
 | `exchanges.enabled` | contract |
+| `ontology` | contract |
+| `ontology.bindThreshold` | tuning |
+| `ontology.conceptPrior` | tuning |
+| `ontology.maxClaimsRendered` | tuning |
 | `lifecycle` | contract |
 | `lifecycle.verifyAfterSessions` | tuning |
 | `lifecycle.decay` | contract |
@@ -1513,6 +1853,8 @@ version). `packages/memory/fabric/src/__tests__/stability.test.ts` checks this t
 | `lifecycle.capacity.project` | contract |
 | `lifecycle.capacity.project.notes` | tuning |
 | `lifecycle.capacity.project.tokens` | tuning |
+| `lifecycle.exchangeCapacity` | contract |
+| `lifecycle.exchangeCapacity.hotTokens` | tuning |
 | `lifecycle.merge` | contract |
 | `lifecycle.merge.duplicateDice` | tuning |
 | `lifecycle.merge.episodes` | contract |
@@ -1539,6 +1881,11 @@ version). `packages/memory/fabric/src/__tests__/stability.test.ts` checks this t
 | `promote.derivableFrom` | contract |
 | `promote.maxOutputTokens` | tuning |
 | `promote.thinkingLevel` | contract |
+| `state` | contract |
+| `state.model` | contract |
+| `decisions` | contract |
+| `decisions.model` | contract |
+| `decisions.points` | contract |
 | `workerLimits` | tuning |
 
 ### Stable exports
@@ -1549,8 +1896,9 @@ version). `packages/memory/fabric/src/__tests__/stability.test.ts` checks this t
   `createMemoryWorkingStore`, `createScopedMemoryPolicy`, `memoryFabricConfigSchema`, `resolveMemoryFabricConfig`,
   `resolveLifecycleConfig`, `parseMemoryNoteMetadata`, `encodeMemoryNoteMetadata`, `exportMemoryOkf`,
   `importMemoryOkf`, `runMemoryConformance`, `runScopedMemoryEval`, `SCOPE_CLOCK_COUNTER` (a store's
-  `scopeCounter` name), `CONVERSATIONAL_PRESET_REVISION`, `packageName`, and the config, status, report, note and
-  store-adjacent types.
+  `scopeCounter` name), the ontology tier's `MEMORY_FABRIC_SERVICE`, `createFabricOntology`,
+  `createConceptDeletionHandler`, `parseConceptBody`, `renderConceptBody` and their types, `CONVERSATIONAL_PRESET_REVISION`, `CODING_PRESET_REVISION`, `packageName`, and the config,
+  status, report, note and store-adjacent types.
 - **Not exported.** Prompts (`EPISODE_MERGE_SYSTEM` and the consolidation extractor prompts), tuning constants
   (`DEFAULT_*`, `MAX_*`, `MIN_*`, `HARD_*`), scoring and eviction helpers (`evictionOrder`, `shouldArchive`,
   `isActiveNote`, `capacityUsage`), and the lifecycle, directory and core-block builders. They change with ranking and

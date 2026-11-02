@@ -81,12 +81,45 @@ describe("memory fabric tools", () => {
     const note = await fabric.remember({ kind: "fact", content: "needle" });
     const recall = find(tools, "memory.recall");
     const empty = await recall.execute({ query: "unrelated" });
-    assert.match(text(empty), /no match in any kind/);
+    assert.match(text(empty), /no matching memory/);
     assert.equal((await memory.getEntry(note.id))?.lastAccessedAt, undefined);
     const hit = await recall.execute({ query: "needle" });
     assert.match(text(hit), /\[fact\].*date=.*matched=\[/);
     assert.match(text(hit), /Cite \[id\] for notes you use\./);
     assert.equal((await memory.getEntry(note.id))?.lastAccessedAt, undefined);
+  });
+
+  it("recall_tool_accepts_a_time_window_and_time_order", async () => {
+    const memory = makeMemory();
+    const { fabric, tools } = attached(memory);
+    const older = await fabric.remember({
+      kind: "fact",
+      content: "checkup january booking",
+      tRef: "2026-01-01T00:00:00.000Z",
+      dates: [{ text: "in January", resolved: "2026-01-01T00:00:00.000Z", precision: "month" }],
+    });
+    const newer = await fabric.remember({
+      kind: "fact",
+      content: "checkup february booking",
+      tRef: "2026-02-01T00:00:00.000Z",
+      dates: [{ text: "last month", resolved: "2026-02-01T00:00:00.000Z", precision: "month" }],
+    });
+    const recall = find(tools, "memory.recall");
+    const schema = recall.parameters as { properties: { from?: unknown; to?: unknown; order?: { enum: string[] } } };
+    assert.ok(schema.properties.from !== undefined && schema.properties.to !== undefined);
+    assert.deepEqual(schema.properties.order?.enum, ["relevance", "time"]);
+
+    const february = await recall.execute({ query: "checkup booking", from: "2026-02-01", to: "2026-02-28", order: "time" });
+    assert.deepEqual(
+      (february.value as { hits: Array<{ id: string }> }).hits.map((hit) => hit.id),
+      [newer.id],
+    );
+    const ordered = await recall.execute({ query: "checkup booking", order: "time" });
+    assert.deepEqual(
+      (ordered.value as { hits: Array<{ id: string }> }).hits.map((hit) => hit.id),
+      [older.id, newer.id],
+    );
+    assert.match(text(ordered), /tRef=.*dates=2026-01-01\/month/s);
   });
 
   it("memory_recall_prints_note_path", async () => {
@@ -533,7 +566,7 @@ it("explicit_kinds_search_only_those_kinds_in_one_query", async () => {
   );
   try {
     const empty = await recall.execute({ query: "cobalt", kinds: ["fact"] });
-    assert.match(text(empty), /^no match in any kind/);
+    assert.match(text(empty), /^no matching memory/);
     assert.deepEqual((empty.value as { unmatchedTerms: string[] }).unmatchedTerms, ["cobalt"]);
     assert.equal(spy.mock.calls.length, 1, "no kind-discovery query follows a zero-hit call");
     spy.mockClear();
@@ -564,12 +597,12 @@ it("fallback_counts_respect_scope_and_acl", async () => {
   await memory.remember({ entries: [held] }, { wait: true });
   await memory.forget({ ids: [held.id], hold: true });
   const { tools } = attached(memory);
-  assert.match(text(await find(tools, "memory.recall").execute({ query: "cobalt" })), /no match in any kind/);
+  assert.match(text(await find(tools, "memory.recall").execute({ query: "cobalt" })), /no matching memory/);
 });
 
 it("empty_store_recall_says_no_match_in_any_kind", async () => {
   const { tools } = attached(createMemory({ ...scope }));
   const output = text(await find(tools, "memory.recall").execute({ query: "cobalt" }));
-  assert.match(output, /no match in any kind/);
+  assert.match(output, /no matching memory/);
   assert.ok(!output.includes("try synonyms"));
 });

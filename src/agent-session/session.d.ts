@@ -90,10 +90,10 @@ export declare class RuntimeAgentSession implements Session {
      * in-place `history.push` during a run) — never history content, never an estimator.
      */
     private meterCache?;
-    /** Host hook bus (roadmap §2.4); per-agent, shared across this agent's sessions. */
-    private readonly hookBusInstance;
+    /** Host hook bus (roadmap §2.4); per-agent, shared across this agent's sessions. `reload()` swaps it. */
+    private hookBusInstance;
     /** The same bus, bound so each handler's `context.session` is a view for its registering owner. */
-    private readonly boundHooks;
+    private boundHooks;
     /** Per-owner session views, built once so hook dispatch allocates none. */
     private readonly sessionViews;
     /** Declared capabilities per package. An owner absent from it (`host`, `kernel`) is unrestricted. */
@@ -106,8 +106,8 @@ export declare class RuntimeAgentSession implements Session {
     private closing?;
     /** Serializes appends, so a state `set` racing a run's own append cannot orphan either entry. */
     private appendTail;
-    /** Slot registry (roadmap §2.5); direct assignments come from `AgentConfig.slots`. */
-    private readonly slotRegistry;
+    /** Slot registry (roadmap §2.5); direct assignments come from `AgentConfig.slots`. `reload()` swaps it. */
+    private slotRegistry;
     /** Re-entry guard for observe dispatch: an observer that throws on `hook.error` must not loop. */
     private observingHookError;
     /** Pending suspended run entry found on session resume (plan 149 Task 2 / Task 4). */
@@ -119,7 +119,9 @@ export declare class RuntimeAgentSession implements Session {
         readonly store: SessionStore;
     });
     get leafId(): string | undefined;
-    /** Host hook bus for this agent (roadmap §2.4). */
+    /** Agent-internal: whether a run holds this session, so `agent.reload()` can refuse to swap mid-run. */
+    hasActiveRun(): boolean;
+    /** Host hook bus for this agent (roadmap §2.4). Re-binds after `agent.reload()` swaps the bus. */
     hooks(): HookBus;
     /** This session as `owner` sees it. A package without `"background"` gets `capability_missing` from `background(...)`. */
     sessionContextFor(owner: string): SessionContext;
@@ -147,7 +149,7 @@ export declare class RuntimeAgentSession implements Session {
     private appendPackageState;
     /** `run.state(key)` for the loop `vendor` (roadmap §2.12.9 K5): an `external_state` log on this branch. */
     externalState(vendor: string, key: string): ExternalStateHandle;
-    /** Slot registry for this agent (roadmap §2.5). */
+    /** Slot registry for this agent (roadmap §2.5). Re-binds after `agent.reload()` swaps the registry. */
     slots(): SlotRegistry;
     /**
      * Context-fill read (plan 091 T2): the latest provider turn's input tokens —

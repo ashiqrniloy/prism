@@ -1,11 +1,11 @@
 # Phase 54 — 0.3.3 Package/Export Baseline & 0.4 Import Map Evidence
 
-Generated: `2026-10-31T17:45:31.591Z`
+Generated: `2026-11-01T14:59:05.585Z`
 Repository root version: `0.13.0`
 
 ## 1. Executive Summary & Counts
 
-- **Current repository manifests:** 50 (50 packages during consolidation transition)
+- **Current repository manifests:** 51 (50 packages during consolidation transition)
 - **Retired 0.3.x package names:** 55 (hard-frozen at final 0.3.x releases, deprecated with legacy tag)
 - **Retained package names:** 7 (`@arnilo/prism`, `@arnilo/prism-providers`, `@arnilo/prism-web-tools`, `@arnilo/prism-memory`, `@arnilo/prism-mcp`, `@arnilo/prism-acp-agent`, `@arnilo/prism-ag-ui`)
 - **New family packages:** 4 (`@arnilo/prism-core`, `@arnilo/prism-channels`, `@arnilo/prism-coding-tools`, `@arnilo/prism-office`)
@@ -579,7 +579,7 @@ Total declared exports across all packages are frozen in `scripts/compat-baselin
 | `@arnilo/prism-memory-observational` | 0 | 178 | `scripts/compat-baseline/arnilo__prism-memory-observational.txt` |
 | `@arnilo/prism-memory-core` | 0 | 294 | `scripts/compat-baseline/arnilo__prism-memory-core.txt` |
 | `@arnilo/prism-memory-rag` | 0 | 205 | `scripts/compat-baseline/arnilo__prism-memory-rag.txt` |
-| `@arnilo/prism-memory-fabric` | 0 | 478 | `scripts/compat-baseline/arnilo__prism-memory-fabric.txt` |
+| `@arnilo/prism-memory-fabric` | 0 | 484 | `scripts/compat-baseline/arnilo__prism-memory-fabric.txt` |
 | `@arnilo/prism-memory-wiki` | 0 | 133 | `scripts/compat-baseline/arnilo__prism-memory-wiki.txt` |
 | `@arnilo/prism-approval` | 0 | 11 | `scripts/compat-baseline/arnilo__prism-approval.txt` |
 | `@arnilo/prism-guardrail-packs` | 0 | 31 | `scripts/compat-baseline/arnilo__prism-guardrail-packs.txt` |
@@ -595,6 +595,7 @@ Total declared exports across all packages are frozen in `scripts/compat-baselin
 | `@arnilo/prism-provider-commandcode` | 0 | 30 | `scripts/compat-baseline/arnilo__prism-provider-commandcode.txt` |
 | `@arnilo/prism-provider-kilo` | 0 | 45 | `scripts/compat-baseline/arnilo__prism-provider-kilo.txt` |
 | `@arnilo/prism-provider-litellm` | 0 | 33 | `scripts/compat-baseline/arnilo__prism-provider-litellm.txt` |
+| `@arnilo/prism-provider-ollama-cloud` | 0 | 35 | `scripts/compat-baseline/arnilo__prism-provider-ollama-cloud.txt` |
 | `@arnilo/prism-store-jsonl` | 0 | 11 | `scripts/compat-baseline/arnilo__prism-store-jsonl.txt` |
 | `@arnilo/prism-store-codecs` | 0 | 128 | `scripts/compat-baseline/arnilo__prism-store-codecs.txt` |
 | `@arnilo/prism-store-sqlite` | 0 | 31 | `scripts/compat-baseline/arnilo__prism-store-sqlite.txt` |

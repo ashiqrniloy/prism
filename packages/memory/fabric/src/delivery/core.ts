@@ -28,23 +28,28 @@ export interface MemoryFabricCoreConfig {
   readonly maxTokens?: number;
   /** Scopes to include. Default both; `user` always renders first. */
   readonly scopes?: readonly FabricCoreScope[];
+  /** Kinds eligible for the core. Default fact, preference, procedure and decision. */
+  readonly kinds?: readonly MemoryNoteKind[];
 }
 
 export interface ResolvedFabricCoreOptions {
   readonly maxTokens: number;
   readonly scopes: readonly FabricCoreScope[];
+  readonly kinds: readonly MemoryNoteKind[];
 }
 
 export const HARD_CORE_TOKENS = 1_000;
+export const DEFAULT_CORE_KINDS: readonly MemoryNoteKind[] = Object.freeze(["fact", "preference", "procedure", "decision"]);
 export const DEFAULT_CORE_OPTIONS: ResolvedFabricCoreOptions = Object.freeze({
   maxTokens: 600,
   scopes: Object.freeze(["user", "project"]) as readonly FabricCoreScope[],
+  kinds: DEFAULT_CORE_KINDS,
 });
 
 /** One `scanMetadata` page per scope: the core is a top-S slice, not a full census. */
 const CORE_SCAN_PAGE = 500;
 const CORE_GET_BATCH = 100;
-const CORE_KINDS: ReadonlySet<string> = new Set<MemoryNoteKind>(["preference", "fact", "procedure"]);
+const CORE_KIND_NAMES: ReadonlySet<string> = new Set<MemoryNoteKind>(["preference", "fact", "procedure", "decision"]);
 
 export function resolveFabricCoreOptions(
   input: boolean | MemoryFabricCoreConfig | undefined,
@@ -64,7 +69,14 @@ export function resolveFabricCoreOptions(
     if (level !== "user" && level !== "project")
       throw new MemoryValidationError('core.scopes must be a non-empty list of "user" and "project"');
   }
-  return { maxTokens, scopes: DEFAULT_CORE_OPTIONS.scopes.filter((level) => requested.includes(level)) };
+  const kinds = config.kinds ?? DEFAULT_CORE_KINDS;
+  if (!Array.isArray(kinds) || kinds.length === 0 || new Set(kinds).size !== kinds.length) {
+    throw new MemoryValidationError("core.kinds must be a non-empty list of durable note kinds");
+  }
+  for (const kind of kinds) {
+    if (!CORE_KIND_NAMES.has(kind)) throw new MemoryValidationError("core.kinds must be a non-empty list of durable note kinds");
+  }
+  return { maxTokens, scopes: DEFAULT_CORE_OPTIONS.scopes.filter((level) => requested.includes(level)), kinds: [...kinds] };
 }
 
 /** One active scope the core reads, and the memory that holds it. */
@@ -130,20 +142,24 @@ function coreLabel(binding: FabricCoreScopeBinding): string {
 export function coreCandidateRows(
   rows: readonly MemoryVectorMetadataRow[],
   weights?: StorageWeights,
+  kinds: readonly MemoryNoteKind[] = DEFAULT_CORE_KINDS,
 ): readonly { readonly id: string; readonly metadata: MemoryNoteMetadata; readonly storage: number }[] {
   const found: { id: string; metadata: MemoryNoteMetadata; storage: number }[] = [];
   for (const row of rows) {
     const metadata = parseMemoryNoteMetadata(row.metadata);
     if (metadata === undefined) continue;
     if (normalizeNoteStatus(row.metadata?.status as string | undefined, "verified") !== "verified") continue;
-    if (!CORE_KINDS.has(metadata.kind)) continue;
+    if (!kinds.includes(metadata.kind)) continue;
     if ((metadata.flags?.length ?? 0) > 0) continue;
     if (!isActiveNote(metadata) || !isMemoryNoteValidAt(metadata, Date.now())) continue;
+    if (metadata.kind === "decision" && (metadata.decisionStatus !== "active" || metadata.status === "candidate")) continue;
     found.push({ id: row.id, metadata, storage: storageStrength(metadata, weights) });
   }
   return found.sort(
     (left, right) =>
       Number(right.metadata.pinned === true) - Number(left.metadata.pinned === true) ||
+      // A standing decision outranks an ordinary note of the same pin state (plan 202 Task 11).
+      Number(right.metadata.kind === "decision") - Number(left.metadata.kind === "decision") ||
       right.storage - left.storage ||
       (left.id < right.id ? -1 : left.id > right.id ? 1 : 0),
   );
@@ -200,7 +216,7 @@ export function createFabricCore(input: CreateFabricCoreOptions): FabricCore {
       ...(signal === undefined ? {} : { signal }),
     };
     const page = await input.scanMetadata(query);
-    const ordered = coreCandidateRows(page.rows, input.storageWeights);
+    const ordered = coreCandidateRows(page.rows, input.storageWeights, input.options.kinds);
     const lines: CoreLine[] = [];
     let tokens = 0;
     for (let index = 0; index < ordered.length && tokens < maxTokens; ) {
@@ -215,7 +231,7 @@ export function createFabricCore(input: CreateFabricCoreOptions): FabricCore {
       for (const row of batch) {
         const body = text.get(row.id);
         if (body === undefined) continue;
-        const line = `[${row.id}] ${redact(body)}`;
+        const line = `[${row.id}] ${redact(body)}${row.metadata.kind === "decision" ? ` — why: memory.read ${row.id}` : ""}`;
         const cost = Math.ceil((line.length + 1) / 4);
         if (tokens + cost > maxTokens) continue;
         lines.push({ id: row.id, line, tokens: cost });

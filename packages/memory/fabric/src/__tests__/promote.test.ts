@@ -45,12 +45,12 @@ describe("candidate lifecycle", () => {
       reject() {},
     } as unknown as HookContext;
     const draft: ContextDraft = { messages: [user("u1").message!] };
-    const projection = createFabricContext(memory, fabric.recall, { minSimilarity: 0 });
+    const projection = createFabricContext(memory, fabric.recall, { minSimilarity: 0, minScore: 0 });
     const built = await projection.build(draft, context);
     assert.doesNotMatch(JSON.stringify(built), /retry budget/, "a candidate is never injected passively");
     const verified = await fabric.remember({ kind: "fact", content: "deploys use canaries" });
     assert.equal(verified.status, undefined);
-    const injected = await createFabricContext(memory, fabric.recall, { minSimilarity: 0 }).build(draft, context);
+    const injected = await createFabricContext(memory, fabric.recall, { minSimilarity: 0, minScore: 0 }).build(draft, context);
     assert.match(JSON.stringify(injected), /deploys use canaries/);
   });
 

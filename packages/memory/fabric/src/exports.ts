@@ -29,9 +29,40 @@ export {
   importMemoryOkf,
   type MemoryOkfStores,
 } from "./okf-bundle.js";
+export {
+  type ConceptDoc,
+  type ConceptItem,
+  conceptSources,
+  MAX_CLAIM_CHARS,
+  parseConceptBody,
+  renderConceptBody,
+} from "./ontology/codec.js";
+export { ConceptFormatError, ConceptRequiresOntologyError } from "./ontology/errors.js";
+export { createConceptDeletionHandler, MEMORY_FABRIC_CONCEPT_HANDLER_SERVICE } from "./ontology/handler.js";
+export {
+  type ApplyConceptEditsOptions,
+  type ApplyConceptEditsResult,
+  type ConceptEdit,
+  type ConceptWriter,
+  createFabricOntology,
+  type FabricOntology,
+  type FabricOntologyPort,
+  MEMORY_FABRIC_SERVICE,
+  type OntologyDirtyEntry,
+  type OntologyNoteView,
+  type OntologyPendingPage,
+  type OntologySubject,
+} from "./ontology/port.js";
+export type { ConceptCascadeReport } from "./ontology/cascade.js";
+export type { FabricSubjects, SubjectListing, SubjectScopeListing } from "./ontology/index.js";
+export type { MemoryRetractEvent, MemoryRetractReason } from "./ontology/retract.js";
 export type { FabricConsolidationReport, MemoryFabricPromoteConfig, ResolvedPromoteConfig } from "./promote.js";
 export type { ScopePriors } from "./scope/recall.js";
 export {
+  CONCEPT_RELATIONS,
+  type ConceptDirtyReason,
+  type ConceptRelation,
+  type ConceptType,
   type CreateMemoryFabricOptions,
   encodeMemoryNoteMetadata,
   type FabricScopeLevel,
@@ -59,7 +90,10 @@ export {
   type MemoryFabricScopeOpenInput,
   type MemoryFabricToolsOptions,
   type MemoryFabricWriteOptions,
+  type MemoryDecisionStatus,
   type MemoryNote,
+  type MemoryNoteDate,
+  type MemoryNoteDatePrecision,
   type MemoryNoteHit,
   type MemoryNoteKind,
   type MemoryNoteLink,

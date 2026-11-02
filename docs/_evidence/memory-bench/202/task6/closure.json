@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "kind": "202-task6-closure",
+  "task": "202.6",
+  "closedAt": "2026-11-01",
+  "closureBasis": "owner instruction: close task 6 with a note",
+  "scope": {
+    "suite": "longmemeval-s",
+    "subset": "targeted",
+    "ability": "temporal-reasoning",
+    "questions": 30,
+    "candidateConfig": "fabric-x-tools",
+    "comparatorConfig": "full",
+    "provider": "kilo",
+    "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "judges": [
+      "kilo/dots-studio/dots-3-note-preview:free",
+      "kilo/cohere/north-mini-code:free"
+    ],
+    "judgeProtocol": "plain-text-v1",
+    "boundedWire": true,
+    "labelInjections": "off",
+    "freeOnly": true,
+    "paidCalls": false,
+    "costUsd": 0
+  },
+  "arms": {
+    "candidate": {
+      "scored": 30,
+      "correct": 19,
+      "accuracy": 0.6333333333333333,
+      "recallAtK": 0.9655172413793104,
+      "inputTokens": 660480,
+      "outputTokens": 50684,
+      "status": "completed",
+      "rawReport": ".cache/memory-bench/task6-quick/kilo-candidate-30.json",
+      "rawReportSha256": "fd536c9cf9deeb4dddbaba277cd5d554892759c6544580f6631a894de1952407"
+    },
+    "full": {
+      "scored": 26,
+      "correct": 6,
+      "accuracy": 0.23076923076923078,
+      "inputTokens": 3157882,
+      "outputTokens": 239402,
+      "status": "failed",
+      "statusReason": "four rows lost to free-judge stream/verdict errors",
+      "rawReport": ".cache/memory-bench/task6-quick/kilo-full-30-resume2.json",
+      "rawReportSha256": "befd60b5ac2b0f552de207bfad4c5918d2c430fc298888332ecca1b6267c4706"
+    }
+  },
+  "paired": {
+    "n": 26,
+    "candidateCorrect": 18,
+    "fullCorrect": 6,
+    "candidateAccuracy": 0.6923076923076923,
+    "fullAccuracy": 0.23076923076923078,
+    "candidateOnlyWins": 12,
+    "fullOnlyWins": 0,
+    "exactSignTestP": 0.00048828125
+  },
+  "residual": "Multi-model and baseline-model temporal confirmation remains Plan 210 Task 9."
+}

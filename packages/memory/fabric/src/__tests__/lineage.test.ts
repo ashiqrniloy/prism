@@ -1,9 +1,18 @@
-import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { collectInvalidationIds, createHashEmbedder, createMemoryVectorStore, MemoryLimitError, MemoryScopeError, MemoryValidationError, recordBlocked, revokedIdsAbsent } from "@arnilo/prism-memory-core";
-import { HARD_LINEAGE_EDGES, LINEAGE_META_KEY } from "../../../core/src/lineage.js";
-import { createMemory } from "@arnilo/prism-memory-fabric";
+import assert from "node:assert/strict";
 import type { MemoryVectorRecord } from "@arnilo/prism-memory-core";
+import {
+  collectInvalidationIds,
+  createHashEmbedder,
+  createMemoryVectorStore,
+  MemoryLimitError,
+  MemoryScopeError,
+  MemoryValidationError,
+  recordBlocked,
+  revokedIdsAbsent,
+} from "@arnilo/prism-memory-core";
+import { createMemory, createMemoryFabric, parseMemoryNoteMetadata } from "@arnilo/prism-memory-fabric";
+import { HARD_LINEAGE_EDGES, LINEAGE_META_KEY } from "../../../core/src/lineage.js";
 
 const scope = { tenantId: "t1", resourceId: "r1", threadId: "th1" };
 
@@ -22,6 +31,28 @@ function record(overrides: Partial<MemoryVectorRecord> & Pick<MemoryVectorRecord
 }
 
 describe("memory lineage", () => {
+  it("forget_removes_dangling_links_from_survivors", async () => {
+    const vectorStore = createMemoryVectorStore();
+    const memory = createMemory({ ...scope, embedder: createHashEmbedder({ dimensions: 2 }), vectorStore });
+    const fabric = createMemoryFabric({ memory, vectorStore, consolidate: false });
+    const target = await fabric.remember({ kind: "fact", content: "alpha deletion target" });
+    const survivor = await fabric.remember({
+      kind: "fact",
+      content: "survivor keeps a link",
+      links: [
+        { id: target.id, relation: "related", weight: 1 },
+        { id: "ffffffffffff", relation: "related", weight: 1 },
+      ],
+    });
+    assert.equal((await fabric.forget({ id: target.id })).deleted, 1);
+    const links = parseMemoryNoteMetadata((await memory.getEntry(survivor.id))?.metadata)?.links;
+    assert.deepEqual(
+      links?.map((link) => link.id),
+      ["ffffffffffff"],
+      "the dangling edge is gone and the other edge survives",
+    );
+  });
+
   it("forget source excludes derived recall and keeps legal hold bodies", async () => {
     const vectorStore = createMemoryVectorStore();
     const memory = createMemory({

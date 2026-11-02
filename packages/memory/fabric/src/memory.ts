@@ -68,6 +68,7 @@ import {
 import { createFabricContext } from "./context.js";
 import { createMemoryFabric } from "./create.js";
 import { noteMemoryRetraction, noteMemoryWrite } from "./directory.js";
+import { emitMemoryRetract, type MemoryRetractReason } from "./ontology/retract.js";
 import { registerMemoryFabricContext } from "./provider.js";
 import { parseMemoryNoteMetadata } from "./types.js";
 import { createMemoryWorkingStore, validateWorkingValue } from "./working-memory.js";
@@ -118,7 +119,10 @@ export function createMemory(options: CreateMemoryOptions): Memory {
     reason: MemoryInvalidationReason,
     markOptions: { hold?: boolean; supersedesId?: string; signal?: AbortSignal } = {},
   ): Promise<readonly string[]> {
-    if (vectorStore.lineage !== "invalidation" || !vectorStore.invalidate) return roots;
+    if (vectorStore.lineage !== "invalidation" || !vectorStore.invalidate) {
+      await emitMemoryRetract(memory, { ids: roots, reason: retractReasonOf(reason) });
+      return roots;
+    }
     const records = vectorStore.getByThread ? await vectorStore.getByThread(threadScope) : [];
     const ids = collectInvalidationIds(records, roots);
     const at = new Date().toISOString();
@@ -139,6 +143,7 @@ export function createMemory(options: CreateMemoryOptions): Memory {
       noteMemoryRetraction(memory);
     }
     await options.onInvalidate?.(toInvalidationEvent(markedReason, ids, hold));
+    await emitMemoryRetract(memory, { ids, reason: retractReasonOf(markedReason) });
     return ids;
   }
 
@@ -454,6 +459,7 @@ export function createMemory(options: CreateMemoryOptions): Memory {
       if (retracts) noteMemoryRetraction(memory);
     }
     noteMemoryWrite(memory);
+    if (retracts) await emitMemoryRetract(memory, { ids: [id], reason: patchRetractReason(metadata, note, previous) });
     return true;
   }
 
@@ -542,6 +548,36 @@ export function createMemory(options: CreateMemoryOptions): Memory {
     }
   }
 
+  /** Remove edges pointing at purged notes, so a later read or export never exposes a dangling id. */
+  async function removeDanglingNoteLinks(
+    threadScope: Required<MemoryScope>,
+    removed: readonly string[],
+    signal?: AbortSignal,
+  ): Promise<void> {
+    if (removed.length === 0 || vectorStore.getByThread === undefined) return;
+    const gone = new Set(removed);
+    const records = await vectorStore.getByThread(threadScope);
+    const updates: MemoryVectorRecord[] = [];
+    for (const record of records) {
+      const metadata = record.metadata;
+      const fabric = metadata?.fabric;
+      if (fabric === null || typeof fabric !== "object" || Array.isArray(fabric)) continue;
+      const links = (fabric as { readonly links?: unknown }).links;
+      if (!Array.isArray(links)) continue;
+      const kept = links.filter(
+        (link): link is JsonObject =>
+          link !== null && typeof link === "object" && !Array.isArray(link) && !gone.has(String((link as { readonly id?: unknown }).id)),
+      );
+      if (kept.length === links.length) continue;
+      const { links: _old, ...rest } = fabric as JsonObject;
+      const nextFabric: JsonObject = kept.length === 0 ? rest : { ...rest, links: kept };
+      updates.push({ ...record, metadata: { ...(metadata as JsonObject), fabric: nextFabric } });
+    }
+    if (updates.length === 0) return;
+    await vectorStore.upsert(updates, { signal });
+    noteMemoryWrite(memory);
+  }
+
   async function forgetEntries(
     filter: { ids?: readonly string[]; hold?: boolean },
     forgetOptions: { signal?: AbortSignal },
@@ -572,6 +608,7 @@ export function createMemory(options: CreateMemoryOptions): Memory {
         { signal: forgetOptions.signal },
       );
     }
+    await removeDanglingNoteLinks(threadScope, purge, forgetOptions.signal);
     return deleted;
   }
 
@@ -666,7 +703,10 @@ export function createMemory(options: CreateMemoryOptions): Memory {
         noteMemoryRetraction(memory);
       }
     }
-    if (deleted > 0) noteMemoryWrite(memory);
+    if (deleted > 0) {
+      noteMemoryWrite(memory);
+      await emitMemoryRetract(memory, { ids, reason: "deleted" });
+    }
     return { deleted, scanned };
   }
 
@@ -885,4 +925,24 @@ async function withinDeadline<T>(
     if (timeout) clearTimeout(timeout);
     signal?.removeEventListener("abort", abort);
   }
+}
+
+/** The invalidation reasons the store records, mapped onto the retraction events the ontology cascade understands. */
+function retractReasonOf(reason: MemoryInvalidationReason): MemoryRetractReason {
+  return reason === "revoked" || reason === "legal_hold" || reason === "corrected" ? reason : "forgotten";
+}
+
+/** Why a metadata patch retracted a note, in the order the lifecycle applies them. */
+function patchRetractReason(
+  metadata: JsonObject,
+  note: ReturnType<typeof parseMemoryNoteMetadata>,
+  previous: ReturnType<typeof parseMemoryNoteMetadata>,
+): MemoryRetractReason {
+  const status = metadata.status ?? "verified";
+  if (status === "archived") return "archived";
+  if (status === "retired") return "superseded";
+  if (status === "candidate") return (note?.flags?.length ?? 0) > 0 ? "flagged" : "downgraded";
+  if (note === undefined || (note.flags?.length ?? 0) > 0) return "flagged";
+  if (note.validTo !== previous?.validTo) return "superseded";
+  return "downgraded";
 }

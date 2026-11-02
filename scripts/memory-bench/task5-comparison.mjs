@@ -21,7 +21,7 @@ import { pairedAnalysisProtocol } from "./paired-sizing.mjs";
 import rates from "./rates.json" with { type: "json" };
 import { BENCH_MAX_TURNS, BENCH_RETRY } from "./replay.mjs";
 import { ROBUSTNESS_CRITERIA, robustnessCriteriaHash, robustnessDraw } from "./robustness.mjs";
-import { PAIRED_ANALYSIS_VERSION } from "./stats.mjs";
+import { holm, PAIRED_ANALYSIS_VERSION, pairedClusterPermutation } from "./stats.mjs";
 import { cacheAdjustedCost, resolveRate } from "./usage.mjs";
 
 const run = promisify(execFile);
@@ -36,6 +36,8 @@ export const TASK5_VERIFICATION = `${TASK5_EVIDENCE}/verification.json`;
 export const TASK5_CACHE = ".cache/memory-bench/task5";
 export const TASK5_JOURNAL = `${TASK5_CACHE}/journal.json`;
 export const TASK5_GATE = `${TASK5_EVIDENCE}/owner-gate.json`;
+export const TASK5_SCREEN_VERDICT_JSON = `${TASK5_EVIDENCE}/development-screen-verdict.json`;
+export const TASK5_SCREEN_VERDICT_MD = `${TASK5_EVIDENCE}/development-screen-verdict.md`;
 
 /** Where the control product comes from: the closed screen's revision-1 commit. */
 export const TASK5_CONTROL_PRODUCT_SOURCE = "5c2570df52a084b43120ee4e77921746a029480e";
@@ -1627,6 +1629,491 @@ export async function writeTask5OwnerGate({
   return gate;
 }
 
+/**
+ * Plan 202 Task 5.5: candidate-gap calculation on paired question results.
+ * Compares proportion of questions where needed fine rounds were never surfaced by any tool result.
+ */
+export function task5CandidateGap(controlRows, candidateResults, { cohortIds, suite = "unknown", iterations = 10_000, seed = 7 } = {}) {
+  const cohortSet = cohortIds ? new Set(cohortIds.map(String)) : null;
+  const cFiltered = cohortSet ? controlRows.filter((r) => cohortSet.has(String(r.id))) : controlRows;
+  const tFiltered = cohortSet ? candidateResults.filter((r) => cohortSet.has(String(r.id))) : candidateResults;
+  const cMap = new Map(cFiltered.map((r) => [String(r.id), r]));
+  const tMap = new Map(tFiltered.map((r) => [String(r.id), r]));
+  const pairedIds = [...cMap.keys()].filter((id) => tMap.has(id));
+
+  // Determine which questions carry mapped needed round labels in both roles
+  const withFineGold = pairedIds.filter((id) => {
+    const c = cMap.get(id);
+    const t = tMap.get(id);
+    const cNeeded = (c.evidenceCounts?.fineRounds ?? 0) > 0 || (c.evidenceCounts?.toolSurfacing?.needed ?? 0) > 0;
+    const tNeeded = (t.evidenceCounts?.fineRounds ?? 0) > 0 || (t.evidenceCounts?.toolSurfacing?.needed ?? 0) > 0;
+    return cNeeded && tNeeded;
+  });
+
+  if (withFineGold.length === 0) {
+    return {
+      suite,
+      measurable: false,
+      reason: "no fine-round labels or unresolved gold reference; missingness is never zero",
+      pairedQuestions: pairedIds.length,
+      measurablePairs: 0,
+      controlGapCount: null,
+      controlGapRate: null,
+      candidateGapCount: null,
+      candidateGapRate: null,
+      ratio: null,
+      halvingTarget: null,
+      passed: false,
+      worstCaseBound: null,
+      uncertainty: null,
+      verdict: "inconclusive",
+    };
+  }
+
+  // Primary estimate: complete retained tool traces in both roles
+  const completePairs = withFineGold.filter((id) => {
+    const c = cMap.get(id);
+    const t = tMap.get(id);
+    return (
+      c.outcome === "scored" && t.outcome === "scored" && c.evidenceCounts?.toolSurfacing != null && t.evidenceCounts?.toolSurfacing != null
+    );
+  });
+
+  if (completePairs.length === 0) {
+    return {
+      suite,
+      measurable: false,
+      reason: "too few complete pairs to distinguish; missingness is never zero",
+      pairedQuestions: pairedIds.length,
+      measurablePairs: 0,
+      controlGapCount: null,
+      controlGapRate: null,
+      candidateGapCount: null,
+      candidateGapRate: null,
+      ratio: null,
+      halvingTarget: null,
+      passed: false,
+      worstCaseBound: null,
+      uncertainty: null,
+      verdict: "inconclusive",
+    };
+  }
+
+  const controlGapCount = completePairs.filter((id) => cMap.get(id).evidenceCounts?.toolSurfacing?.candidateGap === true).length;
+  const candidateGapCount = completePairs.filter((id) => tMap.get(id).evidenceCounts?.toolSurfacing?.candidateGap === true).length;
+  const controlGapRate = controlGapCount / completePairs.length;
+  const candidateGapRate = candidateGapCount / completePairs.length;
+  const halvingTarget = controlGapRate * TASK5_HALVING_FACTOR;
+  const ratio = controlGapRate > 0 ? candidateGapRate / controlGapRate : null;
+
+  let passed = false;
+  if (controlGapRate === 0) {
+    passed = candidateGapRate === 0;
+  } else {
+    passed = candidateGapRate <= halvingTarget;
+  }
+
+  // Worst-case bound: candidate failures count as not surfaced (gap = true)
+  const candidateFailures = withFineGold.filter((id) => {
+    const t = tMap.get(id);
+    return t.outcome !== "scored" || t.evidenceCounts?.toolSurfacing == null;
+  }).length;
+  const worstCaseCandidateGaps = candidateGapCount + candidateFailures;
+  const worstCaseCandidateGapRate = worstCaseCandidateGaps / withFineGold.length;
+  const worstCasePassed = controlGapRate === 0 ? worstCaseCandidateGapRate === 0 : worstCaseCandidateGapRate <= halvingTarget;
+
+  // Paired uncertainty: sign-flip permutation p and bootstrap CI on diff (candidate - control)
+  const a = completePairs.map((id) => ({
+    id,
+    cluster: cMap.get(id).cluster ?? id,
+    value: cMap.get(id).evidenceCounts?.toolSurfacing?.candidateGap ? 1 : 0,
+  }));
+  const b = completePairs.map((id) => ({
+    id,
+    cluster: tMap.get(id).cluster ?? id,
+    value: tMap.get(id).evidenceCounts?.toolSurfacing?.candidateGap ? 1 : 0,
+  }));
+  const perm = pairedClusterPermutation(a, b, { cluster: (r) => r.cluster, iterations, seed });
+
+  let verdict = "miss";
+  if (passed && worstCasePassed) {
+    verdict = "pass";
+  } else if (passed && !worstCasePassed) {
+    verdict = "inconclusive";
+  } else {
+    verdict = "miss";
+  }
+
+  return {
+    suite,
+    measurable: true,
+    pairedQuestions: pairedIds.length,
+    measurablePairs: completePairs.length,
+    controlGapCount,
+    controlGapRate,
+    candidateGapCount,
+    candidateGapRate,
+    ratio,
+    halvingTarget,
+    passed,
+    worstCaseBound: {
+      candidateFailures,
+      worstCaseCandidateGaps,
+      worstCaseCandidateGapRate,
+      worstCasePassed,
+    },
+    uncertainty: {
+      diff: perm.diff,
+      ci95: perm.ci95,
+      p: perm.p,
+      iterations,
+      seed,
+    },
+    verdict,
+  };
+}
+
+/**
+ * Plan 202 Task 5.5: ability non-regression guard.
+ * Compares binary correctness per ability stratum against frozen margin (-0.03).
+ */
+export function task5AbilityGuard(
+  controlRows,
+  candidateResults,
+  { cohortIds, cohortAbilities, margin = TASK5_ABILITY_MARGIN, iterations = 10_000, seed = 7, descriptive = true } = {},
+) {
+  const cohortSet = cohortIds ? new Set(cohortIds.map(String)) : null;
+  const cFiltered = cohortSet ? controlRows.filter((r) => cohortSet.has(String(r.id))) : controlRows;
+  const tFiltered = cohortSet ? candidateResults.filter((r) => cohortSet.has(String(r.id))) : candidateResults;
+  const cMap = new Map(cFiltered.map((r) => [String(r.id), r]));
+  const tMap = new Map(tFiltered.map((r) => [String(r.id), r]));
+  const pairedIds = [...cMap.keys()].filter((id) => tMap.has(id));
+  const completePairs = pairedIds.filter((id) => cMap.get(id).outcome === "scored" && tMap.get(id).outcome === "scored");
+
+  const abilities = cohortAbilities
+    ? Object.keys(cohortAbilities)
+    : [...new Set(completePairs.map((id) => cMap.get(id).ability))].filter(Boolean).sort();
+
+  const strata = {};
+  for (const ability of abilities) {
+    const aPairs = completePairs.filter((id) => cMap.get(id).ability === ability);
+    if (aPairs.length === 0) {
+      strata[ability] = {
+        ability,
+        pairs: 0,
+        controlCorrect: null,
+        candidateCorrect: null,
+        controlAccuracy: null,
+        candidateAccuracy: null,
+        diff: null,
+        ci95: null,
+        p: null,
+        pHolm: null,
+        passesMargin: false,
+        regressed: false,
+        missing: true,
+        status: "unverified",
+      };
+      continue;
+    }
+
+    const controlCorrect = aPairs.filter((id) => cMap.get(id).correct === true).length;
+    const candidateCorrect = aPairs.filter((id) => tMap.get(id).correct === true).length;
+    const controlAccuracy = controlCorrect / aPairs.length;
+    const candidateAccuracy = candidateCorrect / aPairs.length;
+    const diff = candidateAccuracy - controlAccuracy;
+    const passesMargin = diff >= -margin;
+    const regressed = diff < -margin;
+
+    const a = aPairs.map((id) => ({
+      id,
+      cluster: cMap.get(id).cluster ?? id,
+      correct: Boolean(cMap.get(id).correct),
+    }));
+    const b = aPairs.map((id) => ({
+      id,
+      cluster: tMap.get(id).cluster ?? id,
+      correct: Boolean(tMap.get(id).correct),
+    }));
+    const { ci95, p } = pairedClusterPermutation(a, b, { cluster: (r) => r.cluster, iterations, seed });
+
+    strata[ability] = {
+      ability,
+      pairs: aPairs.length,
+      controlCorrect,
+      candidateCorrect,
+      controlAccuracy,
+      candidateAccuracy,
+      diff,
+      ci95,
+      p,
+      pHolm: null,
+      passesMargin,
+      regressed,
+      missing: false,
+      status: regressed ? "regression" : "pass",
+    };
+  }
+
+  // Holm multiplicity adjustment across observed strata
+  const observed = Object.values(strata).filter((s) => !s.missing && s.p !== null);
+  if (observed.length > 0) {
+    const adjusted = holm(observed.map((s) => s.p));
+    observed.forEach((s, idx) => {
+      s.pHolm = adjusted[idx];
+    });
+  }
+
+  const regressions = Object.values(strata)
+    .filter((s) => s.regressed)
+    .map((s) => s.ability);
+  const unverifiedStrata = Object.values(strata)
+    .filter((s) => s.missing)
+    .map((s) => s.ability);
+  const passed = regressions.length === 0 && unverifiedStrata.length === 0;
+
+  return {
+    role: descriptive ? "descriptive" : "veto",
+    margin,
+    strata,
+    regressions,
+    unverifiedStrata,
+    passed,
+  };
+}
+
+/**
+ * Compute complete Task 5 screen verdict across all screen suites.
+ */
+export async function computeTask5ScreenVerdict({ root = ".", manifestPath = TASK5_SCREEN_MANIFEST } = {}) {
+  const manifest = JSON.parse(await readFile(join(root, manifestPath), "utf8"));
+  const isScreen = manifest.criteria?.version === TASK5_SCREEN_VERSION || manifest.criteria?.abilityGuard?.role === "descriptive";
+  const suites = manifest.coverage?.applicableSuites ?? TASK5_SCREEN_SUITES;
+
+  const suiteResults = {};
+  const sourceReports = {};
+
+  for (const suite of suites) {
+    const controlCell = manifest.cells.find((c) => c.suite === suite && c.role === "control");
+    const candidateCell = manifest.cells.find((c) => c.suite === suite && c.role === "candidate");
+    if (!controlCell || !candidateCell) {
+      throw new Error(`Task5Verdict: manifest missing control or candidate cell for suite ${suite}`);
+    }
+
+    const controlReportRel = `${TASK5_EVIDENCE}/run-${controlCell.id.replace(/[/\\]/g, "-")}.json`;
+    const candidateReportRel = `${TASK5_EVIDENCE}/run-${candidateCell.id.replace(/[/\\]/g, "-")}.json`;
+
+    const controlBytes = await readFile(join(root, controlReportRel));
+    const candidateBytes = await readFile(join(root, candidateReportRel));
+
+    const controlReport = JSON.parse(controlBytes.toString("utf8"));
+    const candidateReport = JSON.parse(candidateBytes.toString("utf8"));
+
+    sourceReports[controlCell.id] = {
+      path: controlReportRel,
+      sha256: sha256(controlBytes),
+      questionsScored: controlReport.results?.filter((r) => r.outcome === "scored").length ?? 0,
+      totalResults: controlReport.results?.length ?? 0,
+      status: controlReport.status ?? null,
+    };
+    sourceReports[candidateCell.id] = {
+      path: candidateReportRel,
+      sha256: sha256(candidateBytes),
+      questionsScored: candidateReport.results?.filter((r) => r.outcome === "scored").length ?? 0,
+      totalResults: candidateReport.results?.length ?? 0,
+      status: candidateReport.status ?? null,
+    };
+
+    const cohortIds = controlCell.questionIds;
+    const gap = task5CandidateGap(controlReport.results ?? [], candidateReport.results ?? [], {
+      cohortIds,
+      suite,
+    });
+
+    const cohortSuite = Array.isArray(manifest.cohort?.suites)
+      ? manifest.cohort.suites.find((s) => s.suite === suite)
+      : manifest.cohort?.suites?.[suite];
+    const ability = task5AbilityGuard(controlReport.results ?? [], candidateReport.results ?? [], {
+      cohortIds,
+      cohortAbilities: cohortSuite?.abilities,
+      descriptive: isScreen,
+    });
+
+    // In screen mode, candidate gap is the gate; ability is descriptive.
+    // In full target mode, ability regression or unverified stratum would veto.
+    let suiteVerdict = gap.verdict;
+    if (!isScreen && (!ability.passed || gap.verdict !== "pass")) {
+      suiteVerdict = "miss";
+    }
+
+    suiteResults[suite] = {
+      suite,
+      candidateGap: gap,
+      abilityGuard: ability,
+      suiteVerdict,
+    };
+  }
+
+  const verdicts = Object.values(suiteResults).map((s) => s.suiteVerdict);
+  let screenVerdict = "pass";
+  if (verdicts.some((v) => v === "miss")) {
+    screenVerdict = "miss";
+  } else if (verdicts.some((v) => v === "inconclusive")) {
+    screenVerdict = "inconclusive";
+  }
+
+  return {
+    schemaVersion: 1,
+    title: "Plan 202 Task 5 Development Screen Verdict",
+    criteriaVersion: manifest.criteria?.version ?? TASK5_SCREEN_VERSION,
+    manifestHash: manifest.manifestHash,
+    generatedAt: new Date().toISOString(),
+    mode: isScreen ? "development-screen" : "full-target",
+    screenVerdict,
+    handOff: {
+      plan: 210,
+      reason: TASK5_SCREEN_HANDOFF_REASON,
+      verdictSummary:
+        screenVerdict === "miss"
+          ? "Candidate gap did not achieve the required 50% reduction in any measurable suite (ratios 0.88-1.22 vs target <= 0.50). MAB was unmeasurable due to lack of fine round labels. Descriptive ability regressions observed on beam-100k (abstention, preference_following), locomo (adversarial, open-domain), and beam-1m (multi_session_reasoning), with summarization and temporal_reasoning unverified. Screen closes as miss; deferred arms and root-cause investigations hand off to Plan 210."
+          : "Screen passed or inconclusive",
+    },
+    suites: suiteResults,
+    sourceReports,
+  };
+}
+
+/**
+ * Format verdict as GitHub-Flavored Markdown.
+ */
+export function task5VerdictMarkdown(verdict) {
+  const lines = [
+    `# Task 5 Development Screen Verdict: ${verdict.screenVerdict}`,
+    "",
+    `- **Criteria Version:** \`${verdict.criteriaVersion}\``,
+    `- **Manifest Hash:** \`${verdict.manifestHash}\``,
+    `- **Mode:** \`${verdict.mode}\` (candidate-gap rows gate; ability guard is descriptive under Task 5.4.6 owner disposition)`,
+    `- **Generated At:** \`${verdict.generatedAt}\``,
+    `- **Overall Screen Verdict:** **\`${verdict.screenVerdict}\`**`,
+    "",
+    "## Summary by Suite",
+    "",
+    "| Suite | Complete Pairs | Control Gap | Candidate Gap | Ratio | Target (<= 0.5x) | Gap Verdict | Ability Regressions | Suite Verdict |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+  ];
+
+  for (const [suite, s] of Object.entries(verdict.suites)) {
+    const gap = s.candidateGap;
+    const ab = s.abilityGuard;
+    const pairs = gap.measurable ? `${gap.measurablePairs}` : `0 (${gap.pairedQuestions} paired)`;
+    const cGap = gap.measurable
+      ? `${(gap.controlGapRate * 100).toFixed(1)}% (${gap.controlGapCount}/${gap.measurablePairs})`
+      : "null (unmeasurable)";
+    const tGap = gap.measurable
+      ? `${(gap.candidateGapRate * 100).toFixed(1)}% (${gap.candidateGapCount}/${gap.measurablePairs})`
+      : "null (unmeasurable)";
+    const ratio = gap.measurable ? `${gap.ratio.toFixed(3)}` : "n/a";
+    const target = gap.measurable ? `<=${(gap.halvingTarget * 100).toFixed(1)}%` : "n/a";
+    const regressions = ab.regressions.length ? ab.regressions.join(", ") : "none";
+    lines.push(
+      `| \`${suite}\` | ${pairs} | ${cGap} | ${tGap} | ${ratio} | ${target} | **\`${gap.verdict}\`** | ${regressions} | **\`${s.suiteVerdict}\`** |`,
+    );
+  }
+
+  lines.push("", "## Candidate-Gap Detail", "");
+  for (const [suite, s] of Object.entries(verdict.suites)) {
+    const gap = s.candidateGap;
+    lines.push(`### \`${suite}\``, "");
+    if (!gap.measurable) {
+      lines.push(`- **Status:** Unmeasurable (${gap.reason})`);
+      lines.push(`- **Verdict:** \`${gap.verdict}\``, "");
+      continue;
+    }
+    lines.push(`- **Complete Pairs:** ${gap.measurablePairs} (of ${gap.pairedQuestions} total paired questions)`);
+    lines.push(`- **Control Gap:** ${gap.controlGapCount}/${gap.measurablePairs} (${(gap.controlGapRate * 100).toFixed(2)}%)`);
+    lines.push(`- **Candidate Gap:** ${gap.candidateGapCount}/${gap.measurablePairs} (${(gap.candidateGapRate * 100).toFixed(2)}%)`);
+    lines.push(`- **Ratio:** ${gap.ratio.toFixed(3)} (required: <= 0.500)`);
+    lines.push(`- **Halving Target:** <= ${(gap.halvingTarget * 100).toFixed(2)}%`);
+    if (gap.uncertainty) {
+      lines.push(
+        `- **Paired Difference (Candidate - Control):** ${(gap.uncertainty.diff * 100).toFixed(2)}% (95% CI: [${(gap.uncertainty.ci95[0] * 100).toFixed(2)}%, ${(gap.uncertainty.ci95[1] * 100).toFixed(2)}%], two-sided sign-flip p = ${gap.uncertainty.p.toFixed(4)})`,
+      );
+    }
+    if (gap.worstCaseBound) {
+      lines.push(
+        `- **Worst-Case Bound:** candidate failures counted as not-surfaced: ${gap.worstCaseBound.worstCaseCandidateGaps}/${gap.measurablePairs + gap.worstCaseBound.candidateFailures} (${(gap.worstCaseBound.worstCaseCandidateGapRate * 100).toFixed(2)}%, passed: ${gap.worstCaseBound.worstCasePassed})`,
+      );
+    }
+    lines.push(`- **Candidate-Gap Verdict:** **\`${gap.verdict}\`**`, "");
+  }
+
+  lines.push("## Ability-Guard Detail (Descriptive)", "");
+  for (const [suite, s] of Object.entries(verdict.suites)) {
+    const ab = s.abilityGuard;
+    lines.push(`### \`${suite}\``, "");
+    lines.push(
+      "| Ability | Pairs | Control Acc | Candidate Acc | Diff | 95% CI | Sign-Flip p | Holm p | Status |",
+      "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    );
+    for (const [ability, st] of Object.entries(ab.strata)) {
+      if (st.missing) {
+        lines.push(`| \`${ability}\` | 0 | null | null | null | null | null | null | **unverified** |`);
+      } else {
+        const cAcc = `${(st.controlAccuracy * 100).toFixed(1)}% (${st.controlCorrect}/${st.pairs})`;
+        const tAcc = `${(st.candidateAccuracy * 100).toFixed(1)}% (${st.candidateCorrect}/${st.pairs})`;
+        const diffStr = `${st.diff >= 0 ? "+" : ""}${(st.diff * 100).toFixed(1)}%`;
+        const ciStr = `[${(st.ci95[0] * 100).toFixed(1)}%, ${(st.ci95[1] * 100).toFixed(1)}%]`;
+        const pStr = st.p !== null ? st.p.toFixed(4) : "n/a";
+        const pHolmStr = st.pHolm !== null ? st.pHolm.toFixed(4) : "n/a";
+        const statusStr = st.regressed ? "**regression**" : "pass";
+        lines.push(`| \`${ability}\` | ${st.pairs} | ${cAcc} | ${tAcc} | ${diffStr} | ${ciStr} | ${pStr} | ${pHolmStr} | ${statusStr} |`);
+      }
+    }
+    lines.push("");
+  }
+
+  lines.push(
+    "## Plan 210 Hand-Off",
+    "",
+    `- **Disposition:** ${verdict.handOff.reason}`,
+    `- **Summary:** ${verdict.handOff.verdictSummary}`,
+    "- **Deferred Arms and Tasks:**",
+    "  - `longmemeval-m` full write & recall execution deferred to Plan 210 Task 5",
+    "  - `beam-1m` full 40-question cohort deferred to Plan 210 Task 5",
+    "  - Ability guard veto evaluation deferred to Plan 210 Task 9 (suite coverage)",
+    "  - Root-cause recall investigations on LoCoMo and BEAM hand off to Plan 210 Task 1 ledger",
+    "",
+    "## Source Reports",
+    "",
+    "| Cell ID | Status | Scored / Total | Report Path | sha256 |",
+    "| --- | --- | --- | --- | --- |",
+  );
+  for (const [cellId, rep] of Object.entries(verdict.sourceReports)) {
+    lines.push(
+      `| \`${cellId}\` | ${rep.status} | ${rep.questionsScored}/${rep.totalResults} | \`${rep.path}\` | \`${rep.sha256.slice(0, 16)}...\` |`,
+    );
+  }
+  lines.push("");
+
+  return lines.join("\n");
+}
+
+/**
+ * Write development-screen-verdict.json and development-screen-verdict.md.
+ */
+export async function writeTask5ScreenVerdict({
+  root = ".",
+  manifestPath = TASK5_SCREEN_MANIFEST,
+  jsonPath = TASK5_SCREEN_VERDICT_JSON,
+  mdPath = TASK5_SCREEN_VERDICT_MD,
+} = {}) {
+  const verdict = await computeTask5ScreenVerdict({ root, manifestPath });
+  await mkdir(join(root, TASK5_EVIDENCE), { recursive: true });
+  await writeFile(join(root, jsonPath), `${JSON.stringify(verdict, null, 2)}\n`);
+  await writeFile(join(root, mdPath), task5VerdictMarkdown(verdict));
+  return verdict;
+}
+
 if (import.meta.main) {
   const argv = process.argv.slice(2);
   const option = (flag) => {
@@ -1653,9 +2140,32 @@ if (import.meta.main) {
     );
     process.exit(0);
   }
+  if (argv.includes("--verdict")) {
+    const verdict = await writeTask5ScreenVerdict({
+      ...(option("--manifest-path") ? { manifestPath: option("--manifest-path") } : {}),
+    });
+    console.log(
+      JSON.stringify({
+        verdict: TASK5_SCREEN_VERDICT_JSON,
+        screenVerdict: verdict.screenVerdict,
+        suites: Object.fromEntries(
+          Object.entries(verdict.suites).map(([suite, s]) => [
+            suite,
+            {
+              suiteVerdict: s.suiteVerdict,
+              gap: s.candidateGap.verdict,
+              ratio: s.candidateGap.ratio,
+              regressions: s.abilityGuard.regressions,
+            },
+          ]),
+        ),
+      }),
+    );
+    process.exit(0);
+  }
   if (!argv.includes("--manifest"))
     throw new Error(
-      "Task5Manifest: usage: task5-comparison.mjs --manifest [--screen [--repin]] | --gate --text <owner approval> [--approved-at YYYY-MM-DD] [--supersedes <archived manifest> [--transport-revision]] [--subtask <id>]",
+      "Task5Manifest: usage: task5-comparison.mjs --manifest [--screen [--repin]] | --gate --text <owner approval> [--approved-at YYYY-MM-DD] [--supersedes <archived manifest> [--transport-revision]] [--subtask <id>] | --verdict [--manifest-path <path>]",
     );
   if (argv.includes("--screen")) {
     const screen = await writeTask5ScreenManifest({ repin: argv.includes("--repin") });

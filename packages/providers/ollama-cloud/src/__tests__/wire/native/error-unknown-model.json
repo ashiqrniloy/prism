@@ -1,0 +1,17 @@
+{
+  "method": "POST",
+  "path": "/api/chat",
+  "requestBody": {
+    "model": "definitely-not-a-model-xyz",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hi"
+      }
+    ],
+    "stream": true
+  },
+  "status": 404,
+  "contentType": "text/plain; charset=utf-8",
+  "responseBody": "{\"error\": \"model 'definitely-not-a-model-xyz' not found. Try gemma4:31b-cloud, which is in the Free plan.\"}\n"
+}

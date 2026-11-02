@@ -16,7 +16,9 @@
       },
       "context": {
         "recentMessages": 8,
-        "compactAt": { "ratio": 0.6 }
+        "compactAt": {
+          "ratio": 0.6
+        }
       },
       "worker": {}
     },
@@ -35,6 +37,12 @@
         "scopes": [
           "user",
           "project"
+        ],
+        "kinds": [
+          "fact",
+          "preference",
+          "procedure",
+          "decision"
         ]
       },
       "cues": {
@@ -42,6 +50,10 @@
         "maxPerTurn": 2
       },
       "team": false,
+      "exchanges": {
+        "enabled": false,
+        "scope": "user"
+      },
       "lifecycle": {
         "verifyAfterSessions": 2,
         "decay": {
@@ -50,6 +62,7 @@
           "fact": 0.4,
           "preference": 0.2,
           "procedure": 0.4,
+          "decision": 0.2,
           "file": 0.4,
           "exchange": 0.5
         },
@@ -83,6 +96,9 @@
             "tokens": 60000
           }
         },
+        "exchangeCapacity": {
+          "hotTokens": 200000
+        },
         "merge": {
           "duplicateDice": 0.8
         },
@@ -92,9 +108,10 @@
           "contradictionsToSupersede": 2
         }
       },
-      "exchanges": {
-        "enabled": false,
-        "scope": "user"
+      "ontology": {
+        "bindThreshold": 2,
+        "conceptPrior": 0.1,
+        "maxClaimsRendered": 8
       },
       "promote": {
         "enabled": false,
@@ -107,7 +124,9 @@
           "package.json",
           "CLAUDE.md"
         ]
-      }
+      },
+      "state": false,
+      "decisions": false
     }
   }
 }

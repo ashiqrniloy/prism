@@ -1,0 +1,17 @@
+{
+  "method": "POST",
+  "path": "/api/chat",
+  "requestBody": {
+    "model": "gemma4:31b",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hi"
+      }
+    ],
+    "stream": true
+  },
+  "status": 401,
+  "contentType": "application/json",
+  "responseBody": "{\"error\":\"Unauthorized\"}\n"
+}

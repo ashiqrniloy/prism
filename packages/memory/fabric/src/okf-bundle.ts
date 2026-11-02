@@ -14,6 +14,7 @@ import {
   type WorkingMemoryStore,
 } from "@arnilo/prism-memory-core";
 import { noteMemoryRetraction } from "./directory.js";
+import { emitMemoryRetract } from "./ontology/retract.js";
 import { scanScopedMemoryContent } from "./scoped/trust.js";
 import {
   encodeMemoryNoteMetadata,
@@ -180,6 +181,8 @@ export async function importMemoryOkf(memory: Memory, options: ImportMemoryOkfOp
   let skippedHeld = 0;
   let removed = 0;
   let invalidations = 0;
+  const doomed: string[] = [];
+  let tombstoned: readonly MemoryInvalidationRecord[] = [];
   noteMemoryRetraction(memory);
   try {
     for await (const records of pages(bundle.vectorStore, scope, memory.limits.rebuildBatchSize, options.signal)) {
@@ -219,7 +222,6 @@ export async function importMemoryOkf(memory: Memory, options: ImportMemoryOkfOp
       imported += ready.length;
     }
     if (options.mode === "replace") {
-      const doomed: string[] = [];
       for await (const records of pages(vectorStore, scope, memory.limits.rebuildBatchSize, options.signal)) {
         // Replace never deletes a note this version cannot read; only `memory.forget` does.
         for (const record of records) {
@@ -235,6 +237,7 @@ export async function importMemoryOkf(memory: Memory, options: ImportMemoryOkfOp
     }
     // Tombstones and holds are added, never cleared; an imported hold becomes a target hold.
     const tombstones: readonly MemoryInvalidationRecord[] = await bundle.vectorStore.listInvalidated(scope, { signal: options.signal });
+    tombstoned = tombstones;
     if (vectorStore.invalidate) {
       for (let offset = 0; offset < tombstones.length; offset += INVALIDATION_BATCH) {
         await vectorStore.invalidate(scope, tombstones.slice(offset, offset + INVALIDATION_BATCH), { signal: options.signal });
@@ -251,5 +254,9 @@ export async function importMemoryOkf(memory: Memory, options: ImportMemoryOkfOp
     noteMemoryRetraction(memory);
     await bundle.close();
   }
+  // The ontology cascade: removed notes and imported tombstones take their citing claims with them, and an import
+  // always refreshes the concept index (concept files arrive with it).
+  await emitMemoryRetract(memory, { ids: doomed, reason: "import" });
+  await emitMemoryRetract(memory, { ids: tombstoned.filter((entry) => entry.hold !== true).map((entry) => entry.id), reason: "forgotten" });
   return { imported, flagged, removed, held: skippedHeld, invalidations };
 }

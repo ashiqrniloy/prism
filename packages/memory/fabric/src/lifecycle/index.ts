@@ -9,39 +9,52 @@
 import type { JsonObject } from "@arnilo/prism";
 import { type Memory, MemoryValidationError, type MemoryVectorRecord } from "@arnilo/prism-memory-core";
 import type { FabricNoteCensus } from "../promote.js";
-import {
-  encodeMemoryNoteMetadata,
-  MEMORY_NOTE_METADATA_KEY,
-  type MemoryNoteMetadata,
-  parseMemoryNoteMetadata,
-} from "../types.js";
-import { appendUseEvent, type MemoryNoteUseEvent } from "./events.js";
+import { encodeMemoryNoteMetadata, MEMORY_NOTE_METADATA_KEY, type MemoryNoteMetadata, parseMemoryNoteMetadata } from "../types.js";
+import { appendCoReadEvent, appendUseEvent, MAX_CO_READ_WITH, type MemoryNoteUseEvent } from "./events.js";
 import { type MemoryNoteStatus, normalizeNoteStatus } from "./status.js";
 
-export type { ActiveNoteOptions, MemoryNoteStatus } from "./status.js";
-export { isActiveNote, isMemoryNoteStatus, normalizeNoteStatus } from "./status.js";
 export type { ArchiveConfig, ArchiveDecisionOptions } from "./archive.js";
 export {
   ARCHIVE_SEARCH_COVERAGE,
   DEFAULT_ARCHIVE_CONFIG,
-  MAX_ARCHIVED_HITS,
   MAX_ARCHIVE_BELOW,
+  MAX_ARCHIVED_HITS,
   MAX_GRACE_SESSIONS,
   shouldArchive,
 } from "./archive.js";
-export { appendUseEvent, MAX_USE_EVENTS, type MemoryNoteUseEvent, readUseEvents } from "./events.js";
-export type { InspectNoteInput, LifecycleDecisionView, LifecycleNoteView } from "./inspect.js";
-export { describeNote, inspectNote } from "./inspect.js";
-export type { CapacityLimits, CapacityNote, CapacityUsage } from "./capacity.js";
+export type { CapacityLimits, CapacityNote, CapacityUsage, ExchangeCapacityLimits } from "./capacity.js";
 export {
   capacityForLevel,
   capacityUsage,
   DEFAULT_CAPACITY,
+  DEFAULT_EXCHANGE_CAPACITY,
   evictionOrder,
+  exchangeDemotionOrder,
   MAX_FABRIC_CAPACITY_NOTES,
   MAX_FABRIC_CAPACITY_TOKENS,
   overCapacity,
 } from "./capacity.js";
+export {
+  createScopeClock,
+  readScopeClockState,
+  SCOPE_CLOCK_COUNTER,
+  type ScopeClock,
+  type ScopeClockSessionState,
+  type ScopeClockTick,
+} from "./clock.js";
+export {
+  appendCoReadEvent,
+  appendUseEvent,
+  MAX_CO_READ_EVENTS,
+  MAX_CO_READ_WITH,
+  MAX_USE_EVENTS,
+  type MemoryNoteCoReadEvent,
+  type MemoryNoteUseEvent,
+  readCoReadEvents,
+  readUseEvents,
+} from "./events.js";
+export type { InspectNoteInput, LifecycleDecisionView, LifecycleNoteView } from "./inspect.js";
+export { describeNote, inspectNote } from "./inspect.js";
 export type { DuplicateGroup, EpisodeCluster, EpisodeSummary } from "./merge.js";
 export {
   DEFAULT_DUPLICATE_DICE,
@@ -53,10 +66,28 @@ export {
   MAX_DUPLICATE_DICE,
   MAX_EPISODE_CLUSTER,
   MAX_EPISODE_SUMMARY_CHARS,
-  mergedMetadata,
   MIN_DUPLICATE_DICE,
+  mergedMetadata,
   summarizeEpisodeCluster,
 } from "./merge.js";
+export type { ActiveNoteOptions, MemoryNoteStatus } from "./status.js";
+export { isActiveNote, isMemoryNoteStatus, normalizeNoteStatus } from "./status.js";
+export {
+  DEFAULT_DECAY,
+  DEFAULT_STORAGE_WEIGHTS,
+  DEFAULT_STRENGTH_WEIGHTS,
+  logistic,
+  MAX_STORAGE_WEIGHT,
+  MAX_STRENGTH_WEIGHT,
+  type MemoryNoteDecay,
+  noteImportance,
+  retrievalStrength,
+  type StorageWeights,
+  type StrengthPriorOptions,
+  type StrengthWeights,
+  storageStrength,
+  strengthPrior,
+} from "./strength.js";
 export type { SiblingGroup, WidenConfig, WidenGroup, WidenNote } from "./widen.js";
 export {
   crossProjectGroups,
@@ -70,30 +101,6 @@ export {
   narrowingCandidates,
   siblingGroups,
 } from "./widen.js";
-export {
-  DEFAULT_DECAY,
-  DEFAULT_STORAGE_WEIGHTS,
-  DEFAULT_STRENGTH_WEIGHTS,
-  logistic,
-  MAX_STORAGE_WEIGHT,
-  MAX_STRENGTH_WEIGHT,
-  noteImportance,
-  retrievalStrength,
-  type StrengthPriorOptions,
-  type StrengthWeights,
-  storageStrength,
-  type StorageWeights,
-  strengthPrior,
-  type MemoryNoteDecay,
-} from "./strength.js";
-export {
-  createScopeClock,
-  readScopeClockState,
-  SCOPE_CLOCK_COUNTER,
-  type ScopeClock,
-  type ScopeClockSessionState,
-  type ScopeClockTick,
-} from "./clock.js";
 
 /** Distinct sessions a candidate must be used in before it is verified. */
 export const DEFAULT_VERIFY_AFTER_SESSIONS = 2;
@@ -122,6 +129,18 @@ export interface RecordUsesOptions {
   readonly signal?: AbortSignal;
 }
 
+/** One answering turn's cited set: the ids and the session's turn index. */
+export interface CoReadSet {
+  readonly ids: readonly string[];
+  readonly turn: number;
+}
+
+export interface RecordCoReadOptions {
+  /** Scope-session ordinal written into the event. */
+  readonly clock?: number;
+  readonly signal?: AbortSignal;
+}
+
 /** Evidence a finished turn carries: outcome tags and the notes a user correction cited. */
 export interface LifecycleEvidence {
   readonly helpful?: readonly string[];
@@ -136,6 +155,12 @@ export interface FabricLifecycle {
    * `verifyAfterSessions` distinct sessions with no harmful evidence. Returns the ids it verified.
    */
   recordUses(sessionKey: string, ids: readonly string[], options?: RecordUsesOptions): Promise<readonly string[]>;
+  /**
+   * Record the answering turns that cited two or more notes together (plan 207 Task 4). Each note keeps the other
+   * ids and the turn index, never text. Only evidence notes take part: a concept or a working block does not.
+   * Metadata-only, no model call.
+   */
+  recordCoReads(events: readonly CoReadSet[], options?: RecordCoReadOptions): Promise<number>;
   /** Add the diagnostic retrieval counts; never touches status or either strength. */
   recordRetrievals(counts: Readonly<Record<string, number>>, options?: { readonly signal?: AbortSignal }): Promise<void>;
   /** Count helpful evidence, and harmful evidence that reopens a verified note for reconsolidation. */
@@ -198,7 +223,9 @@ export function createFabricLifecycle(memory: Memory): FabricLifecycle {
   async function patch(
     record: MemoryVectorRecord,
     next:
-      | ((note: MemoryNoteMetadata) => { readonly fabric: JsonObject; readonly status?: MemoryNoteStatus; readonly auditVerb?: string } | undefined)
+      | ((
+          note: MemoryNoteMetadata,
+        ) => { readonly fabric: JsonObject; readonly status?: MemoryNoteStatus; readonly auditVerb?: string } | undefined)
       | undefined,
     options: { readonly signal?: AbortSignal },
   ): Promise<boolean> {
@@ -224,14 +251,20 @@ export function createFabricLifecycle(memory: Memory): FabricLifecycle {
   async function verify(id: string, options: { readonly signal?: AbortSignal } = {}): Promise<boolean> {
     const [record] = await memory.get([id], options);
     if (!record || statusOf(record) !== "candidate") return false;
-    return patch(record, (note) => ({ fabric: evolve(note, { reconsolidate: undefined }), status: "verified" }), options);
+    return patch(
+      record,
+      (note) => ({
+        fabric: evolve(note, {
+          reconsolidate: undefined,
+          ...(note.kind === "decision" ? { decisionStatus: "active" as const } : {}),
+        }),
+        status: "verified",
+      }),
+      options,
+    );
   }
 
-  async function recordUses(
-    sessionKey: string,
-    ids: readonly string[],
-    options: RecordUsesOptions = {},
-  ): Promise<readonly string[]> {
+  async function recordUses(sessionKey: string, ids: readonly string[], options: RecordUsesOptions = {}): Promise<readonly string[]> {
     if (ids.length === 0 || sessionKey.length === 0) return [];
     const threshold = options.verifyAfterSessions ?? DEFAULT_VERIFY_AFTER_SESSIONS;
     const at = new Date(options.now ?? Date.now()).toISOString();
@@ -255,6 +288,7 @@ export function createFabricLifecycle(memory: Memory): FabricLifecycle {
               uses: appendUseEvent(note.uses ?? [], { s: clock, at } satisfies MemoryNoteUseEvent),
               useSessions,
               lastSession: sessionKey,
+              ...(promotes && note.kind === "decision" ? { decisionStatus: "active" as const } : {}),
               ...(revived === undefined ? {} : { archivedAt: undefined, archivedFrom: undefined }),
             }),
             status: promotes ? "verified" : (revived ?? status),
@@ -266,6 +300,38 @@ export function createFabricLifecycle(memory: Memory): FabricLifecycle {
       if (changed && promotes) verified.push(record.id);
     }
     return verified;
+  }
+
+  async function recordCoReads(events: readonly CoReadSet[], options: RecordCoReadOptions = {}): Promise<number> {
+    let recorded = 0;
+    for (const event of events) {
+      const ids = [...new Set(event.ids)];
+      if (ids.length < 2) continue;
+      const records = await memory.get(ids, options);
+      // A concept, a working block or an unreadable note takes no part: the signal is evidence read together.
+      const evidence = records.filter((record) => {
+        const kind = parseMemoryNoteMetadata(record.metadata)?.kind;
+        return kind !== undefined && kind !== "concept" && kind !== "working";
+      });
+      if (evidence.length < 2) continue;
+      for (const record of evidence) {
+        const others = evidence
+          .filter((other) => other.id !== record.id)
+          .map((other) => other.id)
+          .slice(0, MAX_CO_READ_WITH);
+        const changed = await patch(
+          record,
+          (note) => ({
+            fabric: evolve(note, {
+              coRead: appendCoReadEvent(note.coRead ?? [], { s: options.clock ?? 0, t: event.turn, with: others }),
+            }),
+          }),
+          options,
+        );
+        if (changed) recorded += 1;
+      }
+    }
+    return recorded;
   }
 
   async function recordRetrievals(
@@ -335,10 +401,7 @@ export function createFabricLifecycle(memory: Memory): FabricLifecycle {
     );
   }
 
-  async function supersede(
-    id: string,
-    options: { readonly now?: number; readonly signal?: AbortSignal } = {},
-  ): Promise<boolean> {
+  async function supersede(id: string, options: { readonly now?: number; readonly signal?: AbortSignal } = {}): Promise<boolean> {
     const [record] = await memory.get([id], options);
     if (!record) return false;
     const status = statusOf(record);
@@ -354,7 +417,7 @@ export function createFabricLifecycle(memory: Memory): FabricLifecycle {
   async function mergeMetadata(id: string, next: MemoryNoteMetadata, options: { readonly signal?: AbortSignal } = {}): Promise<boolean> {
     const [record] = await memory.get([id], options);
     if (!record) return false;
-    return patch(record, () => ({ fabric: evolve(next, {}) , auditVerb: "merged" }), options);
+    return patch(record, () => ({ fabric: evolve(next, {}), auditVerb: "merged" }), options);
   }
 
   async function pin(id: string, pinned = true, options: { readonly signal?: AbortSignal } = {}): Promise<boolean> {
@@ -434,6 +497,7 @@ export function createFabricLifecycle(memory: Memory): FabricLifecycle {
   return {
     verify,
     recordUses,
+    recordCoReads,
     recordRetrievals,
     recordEvidence,
     archive,

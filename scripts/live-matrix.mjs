@@ -26,6 +26,7 @@
  */
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { computeCoverage } from "./e2e-coverage-gate.mjs";
@@ -144,7 +145,7 @@ function check(root = REPO_ROOT) {
   }
   let env;
   try {
-    env = { ...loadEnvFileOpt(root), ...process.env };
+    env = { ...loadEnvFileOpt(), ...process.env };
   } catch (err) {
     console.error(`LIVE-MATRIX: ${err.message} (--check continuing with process env only)`);
     env = process.env;
@@ -185,13 +186,22 @@ export function parseEnvFile(path) {
   return map;
 }
 
-/** Default credential file: $PRISM_LIVE_ENV_FILE override, else
- * scripts/live.env when present (gitignored), else env-only. */
-function loadEnvFileOpt(root) {
-  const chosen = process.env.PRISM_LIVE_ENV_FILE ?? (existsSync(join(root, "scripts/live.env")) ? "scripts/live.env" : null);
-  if (!chosen) return {};
-  const path = chosen.startsWith("/") ? chosen : join(root, chosen);
-  if (!existsSync(path)) throw new Error(`PRISM_LIVE_ENV_FILE points at a missing file: ${chosen}`);
+/** Default credential file: $PRISM_LIVE_ENV_FILE override, else the out-of-repo
+ * ~/.config/prism/live.env when present, else env-only. Never a path inside the
+ * checkout: a credential file in the repo is one git accident away from a leak. */
+export function liveEnvPath() {
+  const path = process.env.PRISM_LIVE_ENV_FILE ?? join(process.env.HOME ?? homedir(), ".config", "prism", "live.env");
+  return existsSync(path) ? path : null;
+}
+
+function loadEnvFileOpt() {
+  const path = liveEnvPath();
+  if (!path) {
+    if (process.env.PRISM_LIVE_ENV_FILE) {
+      throw new Error(`PRISM_LIVE_ENV_FILE points at a missing file: ${process.env.PRISM_LIVE_ENV_FILE}`);
+    }
+    return {};
+  }
   return parseEnvFile(path);
 }
 
@@ -361,7 +371,7 @@ export async function runLiveMatrix(opts) {
   const report = {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
-    envFile: process.env.PRISM_LIVE_ENV_FILE ?? null,
+    envFile: liveEnvPath(),
     strict: o.strict,
     dryRun: o.dryRun,
     filter: o.filter,
@@ -397,7 +407,7 @@ function writeReport(root, report) {
 
 function usage() {
   console.log(
-    `usage: bun scripts/live-matrix.mjs [--check]\n\n  --check            validate manifest + per-suite skip/run table (no spawns)\n  (default)          run active suites whose credentials are present; skip the rest\n\nenv:\n  PRISM_LIVE_ENV_FILE      credential file (default: scripts/live.env when present)\n  PRISM_LIVE_FILTER=<sub>  only suites whose id contains <sub>\n  PRISM_LIVE_STRICT=1      any skip fails the run\n  PRISM_LIVE_DRY_RUN=1     accounting only, no spawns\n  PRISM_LIVE_CONCURRENCY=n parallel suites (default 1, sequential)\n  PRISM_LIVE_SUITE_TIMEOUT_MS  per-suite kill timer (default 600000)`,
+    `usage: bun scripts/live-matrix.mjs [--check]\n\n  --check            validate manifest + per-suite skip/run table (no spawns)\n  (default)          run active suites whose credentials are present; skip the rest\n\nenv:\n  PRISM_LIVE_ENV_FILE      credential file (default: ~/.config/prism/live.env when present)\n  PRISM_LIVE_FILTER=<sub>  only suites whose id contains <sub>\n  PRISM_LIVE_STRICT=1      any skip fails the run\n  PRISM_LIVE_DRY_RUN=1     accounting only, no spawns\n  PRISM_LIVE_CONCURRENCY=n parallel suites (default 1, sequential)\n  PRISM_LIVE_SUITE_TIMEOUT_MS  per-suite kill timer (default 600000)`,
   );
 }
 
@@ -405,7 +415,7 @@ async function main() {
   const root = REPO_ROOT;
   let env;
   try {
-    env = { ...loadEnvFileOpt(root), ...process.env };
+    env = { ...loadEnvFileOpt(), ...process.env };
   } catch (err) {
     console.error(`LIVE-MATRIX: ${err.message}`);
     process.exit(2);

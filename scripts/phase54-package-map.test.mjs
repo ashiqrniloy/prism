@@ -68,6 +68,8 @@ test("phase54 package map: partitioning - every current manifest is accounted fo
     "@arnilo/prism-provider-openai-codex",
     // Plan 205 Task 2: Command Code reuses its retired name for the new adapter.
     "@arnilo/prism-provider-commandcode",
+    // Plan 206 Task 2: the Ollama Cloud adapter; the name never shipped in 0.3.x.
+    "@arnilo/prism-provider-ollama-cloud",
     "@arnilo/prism-provider-kilo",
     // Plan 214 Task 2: the LiteLLM Proxy adapter.
     "@arnilo/prism-provider-litellm",

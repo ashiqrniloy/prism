@@ -790,6 +790,12 @@ export async function runBench(input = {}) {
       concurrencyHalvings: 0,
       overloads: 0,
     },
+    workerErrors: [],
+    workerUsage: {
+      observer: { calls: 0, inputTokens: 0, outputTokens: 0 },
+      reflector: { calls: 0, inputTokens: 0, outputTokens: 0 },
+      dropper: { calls: 0, inputTokens: 0, outputTokens: 0 },
+    },
     turns: 0,
     injectedContextTokens: 0,
     injections: [],
@@ -1402,6 +1408,7 @@ export async function runBench(input = {}) {
             visibleChannels: response.visibleChannels ?? [],
             storage: response.storage ?? { fabric: "none", sessions: "ephemeral" },
             retrievedSnippetTokens: response.retrievedSnippetTokens ?? 0,
+            sourceMessageTokens: response.sourceMessageTokens ?? 0,
             retrievalRecallAtK: response.retrievalRecallAtK ?? null,
             answerSessionHitAtK: response.answerSessionHitAtK ?? null,
             evidenceRoundCoverage: response.evidenceRoundCoverage ?? null,
@@ -1473,6 +1480,9 @@ export async function runBench(input = {}) {
         };
         await account();
         if (coding) report.metrics = summarizeCoding(options.suite, report.results);
+        report.workerUsage = state.workerUsage ?? report.workerUsage;
+        report.workerErrors = state.workerErrors ?? [];
+        report.sourceMessageTokens = report.results.reduce((sum, row) => sum + (row.sourceMessageTokens ?? 0), 0);
         if (options.output) await writeReport(summarize({ ...report, status: "running" }), options.output);
         if (report.inputTokens >= options.maxInputTokens) {
           if (report.status === "completed") report.status = "token-ceiling";
@@ -1578,6 +1588,9 @@ export async function runBench(input = {}) {
     await rm(temp, { recursive: true, force: true });
   }
   if (coding) report.metrics = summarizeCoding(options.suite, report.results);
+  report.workerUsage = state.workerUsage ?? report.workerUsage;
+  report.workerErrors = state.workerErrors ?? [];
+  report.sourceMessageTokens = report.results.reduce((sum, row) => sum + (row.sourceMessageTokens ?? 0), 0);
   // An answer-only checkpoint is not a score; it exists to be judged in its own phase.
   if (phase === "answer" && report.status === "completed") report.status = "answers";
   report.timing = timing.summary({

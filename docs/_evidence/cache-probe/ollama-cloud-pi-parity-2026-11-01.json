@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-01T10:34:31.891Z",
+  "model": "gemma4:31b",
+  "workload": "plan-203 three-turn fixture, deterministic 4-turn probe extension",
+  "prefixNonce": "ollama-parity-9e5cd20c-d7e1-4b66-a066-422fea04564e",
+  "ordering": [
+    "pi",
+    "prism-native",
+    "prism-openai"
+  ],
+  "generationRequests": 12,
+  "balanceBefore": {
+    "session": {
+      "remainingPercent": 100,
+      "resetsAt": "2026-11-01T13:00:00Z"
+    },
+    "weekly": {
+      "remainingPercent": 98.92,
+      "resetsAt": "2026-11-02T00:00:00Z"
+    },
+    "purchasedUsd": 0
+  },
+  "balanceAfter": {
+    "session": {
+      "remainingPercent": 98.6,
+      "resetsAt": "2026-11-01T13:00:00Z"
+    },
+    "weekly": {
+      "remainingPercent": 98.4,
+      "resetsAt": "2026-11-02T00:00:00Z"
+    },
+    "purchasedUsd": 0
+  },
+  "reference": {
+    "harness": "pi -p --mode json --provider ollama-cloud",
+    "piVersion": "1.4.0",
+    "extensionVersion": "0.13.1",
+    "route": "openai",
+    "model": "gemma4:31b",
+    "requests": 4,
+    "turns": [
+      {
+        "turn": 1,
+        "inputTokens": 8365,
+        "cacheReadTokens": 0,
+        "cacheWriteTokens": 0,
+        "ttftMs": 1691.4177370000002,
+        "latencyMs": 1950.9257350000003
+      },
+      {
+        "turn": 2,
+        "inputTokens": 8383,
+        "cacheReadTokens": 8352,
+        "cacheWriteTokens": 0,
+        "ttftMs": 2575.036491,
+        "latencyMs": 2581.517439
+      },
+      {
+        "turn": 3,
+        "inputTokens": 8401,
+        "cacheReadTokens": 8352,
+        "cacheWriteTokens": 0,
+        "ttftMs": 2206.590091,
+        "latencyMs": 2470.032682
+      },
+      {
+        "turn": 4,
+        "inputTokens": 8419,
+        "cacheReadTokens": 8384,
+        "cacheWriteTokens": 0,
+        "ttftMs": 1890.0784050000002,
+        "latencyMs": 2115.0704960000003
+      }
+    ],
+    "cacheReadTokens": 25088,
+    "warmCacheReadTokens": 25088,
+    "medianWarmTtftMs": 2206.590091
+  },
+  "comparisons": [
+    {
+      "route": "native",
+      "cacheReadTokens": 33504,
+      "warmCacheReadTokens": 25152,
+      "medianWarmTtftMs": 726.6240440000001,
+      "cachePass": true,
+      "warmCachePass": true,
+      "ttftPass": true
+    },
+    {
+      "route": "openai",
+      "cacheReadTokens": 33504,
+      "warmCacheReadTokens": 25152,
+      "medianWarmTtftMs": 716.5897100000002,
+      "cachePass": true,
+      "warmCachePass": true,
+      "ttftPass": true
+    }
+  ],
+  "notes": [
+    "Pi input is exclusive of cache reads; inputTokens above adds cacheRead.",
+    "Pi ran in isolated PI_CODING_AGENT_DIR; no owner auth/config file read or modified.",
+    "context_with_system supplies the same fixed transcript/tools used by probeProvider; only max_tokens is overridden to the shared 128-token cap.",
+    "TTFT is first nonempty text delta from provider-request start; not total duration.",
+    "Single bounded diagnostic, not the unimplemented plan-184 three-run coding-task gate."
+  ]
+}

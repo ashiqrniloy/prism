@@ -16,10 +16,11 @@
  *   bun scripts/decision-bench.mjs                     # default model list
  *   bun scripts/decision-bench.mjs --check             # validate + print the request plan, no network
  *   bun scripts/decision-bench.mjs --models liquid/d1.1 --limit 20 --no-flip
+ *   bun scripts/decision-bench.mjs --memory --models liquid-local/d1-3B@Q4_K_M
  *   bun scripts/decision-bench.mjs --models "liquid-local/d1-3B@Q4_K_M" --out /tmp/bench.md
  *
  * Credentials: only from the environment or the live env file
- * ($PRISM_LIVE_ENV_FILE, default ~/.config/prism/live.env then scripts/live.env).
+ * ($PRISM_LIVE_ENV_FILE, default ~/.config/prism/live.env).
  * Values are never printed. A model whose credential/server is missing is skipped
  * with a reason; nothing is fabricated.
  *
@@ -40,6 +41,9 @@ import { parseEnvFile } from "./live-matrix.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FIXTURES = join(ROOT, "scripts/fixtures/decision-bench.jsonl");
+const MEMORY_FIXTURES = join(ROOT, "scripts/fixtures/decision-bench-memory.jsonl");
+const MEMORY_POINTS = ["P1", "P2", "P3", "P4", "P5", "P6", "P7"];
+const MIN_MEMORY_ITEMS_PER_POINT = 100;
 const EVIDENCE_DIR = join(ROOT, "docs/_evidence");
 
 /** USD per million input tokens, from the vendor pages recorded in provider READMEs. */
@@ -64,6 +68,42 @@ export function loadItems(path = FIXTURES) {
       const item = JSON.parse(line);
       return { ...item, line: index + 1 };
     });
+}
+
+/** The plan 202 Task 12 memory-gate set: >=100 labelled items per decision point. */
+export function loadMemoryItems(path = MEMORY_FIXTURES) {
+  return loadItems(path);
+}
+
+/** Structural checks specific to the per-point memory set. */
+export function validateMemoryItems(items) {
+  const problems = [];
+  const seen = new Set();
+  const counts = Object.fromEntries(MEMORY_POINTS.map((point) => [point, 0]));
+  for (const item of items) {
+    if (seen.has(item.id)) problems.push(`duplicate id ${item.id}`);
+    seen.add(item.id);
+    if (!MEMORY_POINTS.includes(item.point)) problems.push(`${item.id}: unknown point ${JSON.stringify(item.point)}`);
+    else counts[item.point] += 1;
+    const q = item.question;
+    if (!q || typeof q.instructions !== "string" || !q.instructions.trim()) problems.push(`${item.id}: missing instructions`);
+    if (q?.type === "choice") {
+      const options = Object.keys(q.criteria ?? {});
+      if (options.length < 2 || options.length > 255) problems.push(`${item.id}: choice needs 2-255 options`);
+      if (!options.includes(item.label)) problems.push(`${item.id}: label ${JSON.stringify(item.label)} is not one of its options`);
+    } else if (q?.type === "noul") {
+      if (typeof item.label !== "boolean") problems.push(`${item.id}: noul label must be boolean`);
+    } else {
+      problems.push(`${item.id}: unsupported question type ${JSON.stringify(q?.type)}`);
+    }
+  }
+  for (const point of MEMORY_POINTS) {
+    if (counts[point] < MIN_MEMORY_ITEMS_PER_POINT)
+      problems.push(`${point}: expected >= ${MIN_MEMORY_ITEMS_PER_POINT} items, got ${counts[point]}`);
+  }
+  const p2 = items.filter((item) => item.point === "P2");
+  if (!p2.some((item) => item.reversed === true)) problems.push("P2: option-order-reversed repeats are missing");
+  return problems;
 }
 
 /** Structural + labelling checks on the checked-in set. Returns a list of problems. */
@@ -224,11 +264,8 @@ function comparable(item, answer) {
 
 /** Live env: process env wins; missing keys come from the owner's live env file. Never printed. */
 export function loadCredentials() {
-  const candidates = [
-    process.env.PRISM_LIVE_ENV_FILE,
-    join(process.env.HOME ?? "", ".config/prism/live.env"),
-    join(ROOT, "scripts/live.env"),
-  ].filter(Boolean);
+  // Out-of-repo only: a credential file inside the checkout is one git accident from a leak.
+  const candidates = [process.env.PRISM_LIVE_ENV_FILE, join(process.env.HOME ?? "", ".config/prism/live.env")].filter(Boolean);
   const path = candidates.find((candidate) => existsSync(candidate));
   return path ? { ...parseEnvFile(path), ...process.env } : { ...process.env };
 }
@@ -394,7 +431,10 @@ function markdown({ date, env, rows, skipped, agreements, items, options }) {
   const hw = hardwareLine(env);
   const lines = [];
   lines.push(`# Decision bench — ${date}`, "");
-  lines.push("Live run of `scripts/decision-bench.mjs` over `scripts/fixtures/decision-bench.jsonl`. ", "");
+  lines.push(
+    `Live run of \`scripts/decision-bench.mjs\` over \`scripts/fixtures/${options.memory ? "decision-bench-memory" : "decision-bench"}.jsonl\`. `,
+    "",
+  );
   lines.push("## Environment", "");
   lines.push(`- Host: ${hw.cpu} (${hw.arch}, ${hw.platform}), ${hw.memoryGB} GB RAM`);
   lines.push(`- Bun ${process.versions.bun ?? "n/a"} on Node ${process.versions.node}`);
@@ -463,14 +503,15 @@ async function main() {
   };
   const options = {
     check: argv.includes("--check"),
-    flip: !argv.includes("--no-flip"),
+    memory: argv.includes("--memory"),
+    flip: !argv.includes("--no-flip") && !argv.includes("--memory"),
     limit: flag("--limit") ? Number(flag("--limit")) : undefined,
     out: flag("--out"),
     date: new Date().toISOString().slice(0, 10),
   };
-  const items = loadItems();
-  console.log(`decision-bench: fixture ok — ${items.length} labelled items`);
-  const problems = validateItems(items);
+  const items = options.memory ? loadMemoryItems() : loadItems();
+  console.log(`decision-bench: fixture ok — ${items.length} labelled items${options.memory ? " (memory gates)" : ""}`);
+  const problems = options.memory ? validateMemoryItems(items) : validateItems(items);
   if (problems.length > 0) {
     console.error(`decision-bench: fixture problems:\n- ${problems.join("\n- ")}`);
     process.exit(1);

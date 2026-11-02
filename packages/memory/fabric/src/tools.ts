@@ -1,17 +1,20 @@
 import { createHash } from "node:crypto";
 import { relative } from "node:path";
-import type { JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
+import type { JsonObject, ModelClient, ModelRef, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import type { Memory, MemoryVectorRecord } from "@arnilo/prism-memory-core";
-import { lexicalMatches, lexicalTerms, MemoryValidationError } from "@arnilo/prism-memory-core";
+import { HARD_TOP_K_CAP, lexicalMatches, lexicalTerms, MemoryValidationError } from "@arnilo/prism-memory-core";
 import { noteRelPath } from "@arnilo/prism-memory-core/fabric";
 import { appendFabricBlock, assertFabricBlockLabel, fabricBlockId, readFabricBlock } from "./blocks.js";
 import type { FabricCitationTracker } from "./context.js";
+import type { FabricDecisions } from "./decisions.js";
 import { type FabricDirectoryHandle, pageFabricDirectory, renderFabricDirectory } from "./directory.js";
 import { queryExcerpt } from "./excerpt.js";
+import { type ConceptRender, citedByCurrentClaims, readConceptBody, renderConceptClaims, renderConceptRead } from "./ontology/render.js";
 import { createFabricFileJail, type FabricFileJail } from "./files.js";
-import { parseRecallKinds } from "./recall.js";
+import { groupRecallHits, noteTime, parseRecallKinds } from "./recall.js";
 import { selectWithScopeReserve } from "./scope/recall.js";
 import { scanScopedMemoryContent } from "./scoped/trust.js";
+import { buildStateTable, type ResolvedStateConfig } from "./state.js";
 import {
   estimateNoteTokens,
   type FabricScopeLevel,
@@ -60,12 +63,36 @@ export interface MemoryFabricToolDeps {
   readonly touchedPaths?: (sessionId: string) => readonly string[];
   /** The scope this tool set runs in; set only when the fabric is scoped. Widening writes `agent`. */
   readonly scopeLevel?: FabricScopeLevel;
+  /** Every active scope, narrowest first, for the abstention line. Defaults to `[scopeLevel ?? "project"]`. */
+  readonly scopeLevels?: readonly FabricScopeLevel[];
+  /** Opt-in StateMem wrapper: one model call per explicit `memory.recall`. */
+  readonly state?: false | ResolvedStateConfig;
+  /** Opt-in P5 sufficiency gate; only a clear "not sufficient" changes the tool's abstention. */
+  readonly decisions?: FabricDecisions;
+  readonly resolveModelClient?: (ref?: ModelRef) => ModelClient;
+  /**
+   * The ontology tier is on (plan 207 Task 4): `memory.recall` searches `concept` notes with the rest, renders each
+   * with its current claims and a drill-down line, and may name the kind. Without it a named `concept` is refused.
+   */
+  readonly ontology?: { readonly maxClaimsRendered: number };
 }
 
 /** Characters of a recalled note the tool shows; the densest matched window when the note is longer. */
 const SNIPPET_CHARS = 600;
-/** The tool default: every stored kind except `working`, which is already in the context prefix. */
-const RECALL_TOOL_KINDS: readonly MemoryNoteKind[] = MEMORY_NOTE_KINDS.filter((kind) => kind !== "working");
+/** The default hits per recall page when the caller does not pass `topK`. */
+const RECALL_PAGE_SIZE = 5;
+/** Below this best confidence a recall is treated as no match, so the agent abstains instead of guessing. */
+const RECALL_NO_MATCH_CONFIDENCE = 0.34;
+/** The grouped summary is held under this many characters (about 200 tokens including its session line). */
+const RECALL_SUMMARY_MAX_CHARS = 780;
+/** The tool default: every stored kind except `working` (already in the context prefix) and, without the ontology, `concept`. */
+const RECALL_TOOL_KINDS: readonly MemoryNoteKind[] = MEMORY_NOTE_KINDS.filter((kind) => kind !== "working" && kind !== "concept");
+const RECALL_TOOL_KINDS_WITH_ONTOLOGY: readonly MemoryNoteKind[] = MEMORY_NOTE_KINDS.filter((kind) => kind !== "working");
+/** Cited ids one recall checks for readability, in one batched read. */
+const MAX_CITE_CHECK_IDS = 256;
+/** What a memory tool answers when it is asked to write, edit, delete or search the ontology tier. */
+const CONCEPT_TOOL_REFUSAL =
+  "Concept notes belong to the ontology curator: the memory tools cannot create, edit, delete or search them directly.";
 /** One `memory.read` call reads at most this many notes by id. */
 const MAX_READ_IDS = 8;
 
@@ -119,6 +146,8 @@ interface ReadNote {
   readonly status?: MemoryNoteHit["status"];
   readonly session?: string;
   readonly tRef?: string;
+  /** The ontology subject a note is bound to; on a concept, the subject it describes. */
+  readonly subject?: string;
   readonly ingestedAt: string;
   readonly path: string;
   readonly tokenCount: number;
@@ -148,6 +177,97 @@ function notePathOf(note: {
   });
 }
 
+/** Confidence the tool uses for the abstention floor: active mode similarity, else coverage/score. */
+function hitConfidence(hit: MemoryNoteHit): number {
+  return hit.coverage ?? hit.similarity ?? hit.score ?? 0;
+}
+
+/** The active scope names shown in an abstention line, without duplicates. */
+function recallScopeNames(deps: MemoryFabricToolDeps): readonly string[] {
+  const levels = deps.scopeLevels ?? [deps.scopeLevel ?? "project"];
+  return [...new Set(levels)];
+}
+
+/** A note's event date in UTC; an invalid stored date falls back to its ingestion date. */
+function recallDate(hit: MemoryNoteHit): string {
+  const time = noteTime(hit, hit.ingestedAt);
+  const ms = Number.isFinite(time) ? time : Date.parse(hit.ingestedAt);
+  return Number.isFinite(ms) ? new Date(ms).toISOString().slice(0, 10) : hit.ingestedAt.slice(0, 10);
+}
+
+/** One clipped line, so a long query cannot make the summary unbounded. */
+function clipSummaryText(value: string, max: number): string {
+  const single = value.replace(/\s+/gu, " ").trim();
+  return single.length > max ? `${single.slice(0, max - 1)}…` : single;
+}
+
+/**
+ * The grouped recall summary (plan 202 Task 9): total, distinct sessions, each session's count and
+ * date span, and the page link that shows the rest. Counts only, never note text, so it is safe to
+ * show before the snippets. The caller includes its tokens in the rendered recall budget and trims a
+ * trailing hit if needed.
+ */
+function renderRecallSummary(input: {
+  readonly hits: readonly MemoryNoteHit[];
+  readonly total: number;
+  readonly showing: number;
+  readonly page: number;
+  readonly query: string;
+}): string[] {
+  if (input.total === 0) return [];
+  const groups = new Map<string | undefined, { count: number; first: string; last: string }>();
+  let first = "";
+  let last = "";
+  for (const hit of input.hits) {
+    const date = recallDate(hit);
+    if (first === "" || date < first) first = date;
+    if (last === "" || date > last) last = date;
+    const group = groups.get(hit.session);
+    if (group === undefined) groups.set(hit.session, { count: 1, first: date, last: date });
+    else {
+      group.count += 1;
+      if (date < group.first) group.first = date;
+      if (date > group.last) group.last = date;
+    }
+  }
+  const named = [...groups.entries()].filter(([session]) => session !== undefined) as [
+    string,
+    { count: number; first: string; last: string },
+  ][];
+  const unattributed = input.total - named.reduce((sum, [, group]) => sum + group.count, 0);
+  const noun = input.total === 1 ? "match" : "matches";
+  const sessionText = named.length === 0 ? "no recorded sessions" : `${named.length} session${named.length === 1 ? "" : "s"}`;
+  const range = first === "" ? "" : first === last ? ` (${first})` : ` (${first}…${last})`;
+  const more = Math.max(0, input.total - input.showing);
+  const head = [
+    `${input.total} ${noun} in ${sessionText}${unattributed > 0 ? ` (${unattributed} without session)` : ""}${range}; showing ${input.showing}`,
+    more > 0 ? `${more} more not shown` : "",
+    `page with { query: ${JSON.stringify(clipSummaryText(input.query, 60))}, page: ${input.page + 1} }`,
+  ]
+    .filter(Boolean)
+    .join("; ");
+  const allGroups = [...groups.entries()].sort(([left], [right]) => (left ?? "").localeCompare(right ?? ""));
+  const shown = allGroups.slice(0, 4).map(([session, group]) => {
+    const span = group.first === group.last ? group.first : `${group.first}…${group.last}`;
+    return `${session ?? "no session"}×${group.count} (${span})`;
+  });
+  if (allGroups.length > 4) shown.push(`+${allGroups.length - 4} sessions`);
+  const sessions = `Sessions: ${shown.length === 0 ? "none recorded" : shown.join(", ")}`;
+  const summary = `${head}.\n${sessions}.`;
+  return [summary.length > RECALL_SUMMARY_MAX_CHARS ? `${summary.slice(0, RECALL_SUMMARY_MAX_CHARS - 1)}…` : summary];
+}
+
+/** What a model gate sees of a hit: a concept shows only the claims delivered, never a stale or unverifiable one. */
+function evidenceText(hit: MemoryNoteHit, concepts: ReadonlyMap<string, { readonly lines: readonly string[] }>): string {
+  return hit.kind === "concept" ? (concepts.get(hit.id)?.lines.join("\n") ?? "") : hit.content;
+}
+
+/** The explicit abstention line: the query text searched and every active scope. */
+function noMatchingMemory(queries: readonly string[], scopes: readonly string[]): string {
+  const searched = queries.length === 0 ? "(none)" : queries.map((query) => clipSummaryText(query, 80)).join(" | ");
+  return `no matching memory for: ${searched}; scopes: ${scopes.join(", ")}`;
+}
+
 /**
  * The fabric's tool set: `memory.view`, `memory.read`, `memory.insert`, `memory.recall`,
  * `memory.replace`, `memory.forget`. Each call builds fresh inert definitions — nothing is registered globally and
@@ -174,6 +294,16 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
     const indexedNotesAvailable = (): boolean => deps.isIndexedNotesAvailable?.() ?? true;
     const indexedNotesUnavailable = (name: string, context: ToolExecutionContext): ToolResult =>
       fail(name, context, "indexed_notes_unavailable", "Indexed notes are disabled for this fabric; only working blocks are supported.");
+
+    /** Which of `ids` are readable in some active scope, through the same filters as `memory.read`. */
+    const readableIds = async (ids: readonly string[], signal: AbortSignal | undefined): Promise<ReadonlySet<string>> => {
+      if (ids.length === 0) return new Set();
+      const records =
+        deps.readNotes === undefined
+          ? await deps.memory.get(ids, signal === undefined ? {} : { signal })
+          : await deps.readNotes(ids, signal);
+      return new Set(records.map((record) => record.id));
+    };
 
     type FileAccess = { readonly files: FabricFileJail } | { readonly denied: ToolResult };
     const gateFiles = (name: string, context: ToolExecutionContext): FileAccess => {
@@ -322,6 +452,8 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
                 continue;
               }
               const fields = noteFields(metadata);
+              // A concept reads as its whole body with claim ids; a stale claim says so, and a person's uncited one too.
+              const content = metadata.kind === "concept" ? renderConceptRead(record.text, metadata.stale) : record.text;
               const source = {
                 id,
                 kind: metadata.kind,
@@ -337,9 +469,10 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
                 ...(fields.status === undefined ? {} : { status: fields.status }),
                 ...(fields.session === undefined ? {} : { session: fields.session }),
                 ...(fields.tRef === undefined ? {} : { tRef: fields.tRef }),
+                ...(metadata.subject === undefined ? {} : { subject: metadata.subject }),
                 ingestedAt: record.createdAt,
-                content: record.text,
-                tokenCount: estimateNoteTokens(record.text),
+                content,
+                tokenCount: estimateNoteTokens(content),
                 path: notePathOf(source),
               });
             }
@@ -348,6 +481,13 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
                 `${note.id} ${note.level ?? "project"} [${note.kind}] date=${(note.tRef ?? note.ingestedAt).slice(0, 10)}${note.session ? ` session=${note.session}` : ""} path=${note.path}\n${note.content}`,
             );
             for (const id of missing) lines.push(`${id} not_found`);
+            // A note the model read may be cited; a read is not a retrieval, so it only joins the shown set.
+            if (context.sessionId && notes.length > 0) {
+              deps.tracker?.received(
+                context.sessionId,
+                notes.map((note) => note.id),
+              );
+            }
             return ok(readName, context, { found: notes.length > 0, notes, missing }, lines.join("\n\n"));
           }
           const access = gateFiles(readName, context);
@@ -368,12 +508,12 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
         name: insertName,
         kind: "edit",
         description:
-          "Append to fabric memory. Pass `block` to append to a labeled working block, or `path` to append to a file under the memory root (which also refreshes that file's recallable note). Pass kind fact, preference, or procedure to write a typed durable note. Exactly one target is required. For durable notes, `keywords` should include synonyms and aliases: they are indexed with extra weight. Scope rule: user-wide preferences go to `user`; anything learned in this repository goes to `project`; only a lesson proven across projects goes to `agent`; use `path` with appliesTo for a note that holds for one subtree only; when unsure, choose the narrower scope.",
+          "Append to fabric memory. Pass `block` to append to a labeled working block, or `path` to append to a file under the memory root (which also refreshes that file's recallable note). Pass kind fact, preference, procedure, or decision to write a typed durable note; a decision is a proposed rule with a rationale and becomes active only after the user confirms it or it is used in two sessions. Exactly one target is required. For durable notes, `keywords` should include synonyms and aliases: they are indexed with extra weight. Scope rule: user-wide preferences go to `user`; anything learned in this repository goes to `project`; only a lesson proven across projects goes to `agent`; use `path` with appliesTo for a note that holds for one subtree only; when unsure, choose the narrower scope.",
         parameters: {
           type: "object",
           properties: {
             text: { type: "string", description: "Text to append or remember." },
-            kind: { type: "string", enum: ["fact", "preference", "procedure"] },
+            kind: { type: "string", enum: ["fact", "preference", "procedure", "decision"] },
             scope: {
               type: "string",
               enum: ["user", "agent", "project", "path"],
@@ -387,6 +527,7 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
               description: "Project-root-relative globs; required exactly when scope is path.",
             },
             key: { type: "string", description: "Stable subject id ([a-z0-9.-]{1,64}) for shadowing and widening." },
+            rationale: { type: "string", description: "Why the decision was chosen; kind decision only." },
             supersedes: { type: "string" },
             tRef: { type: "string" },
             validFrom: { type: "string" },
@@ -404,9 +545,10 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
           const hasPath = typeof args.path === "string";
           if ([args.block, args.path, args.kind].filter((value) => value !== undefined).length !== 1)
             throw new MemoryValidationError("insert requires exactly one of block, path or kind");
+          if (args.kind === "concept") return fail(insertName, context, "concept_requires_ontology", CONCEPT_TOOL_REFUSAL);
           if (args.kind !== undefined) {
-            if (args.kind !== "fact" && args.kind !== "preference" && args.kind !== "procedure")
-              throw new MemoryValidationError("kind must be fact, preference or procedure");
+            if (args.kind !== "fact" && args.kind !== "preference" && args.kind !== "procedure" && args.kind !== "decision")
+              throw new MemoryValidationError("kind must be fact, preference, procedure or decision");
             // The team store is shared, reviewed memory: only `memory:share` writes it, with approval.
             if (args.scope === "team") {
               return fail(
@@ -427,17 +569,30 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
             if (!indexedNotesAvailable()) return indexedNotesUnavailable(insertName, context);
             const scan = scanScopedMemoryContent(text);
             if (!scan.ok) return fail(insertName, context, `refused: ${scan.class}`, `refused: ${scan.class}`);
+            if (args.kind === "decision" && args.scope === "agent") {
+              return fail(
+                insertName,
+                context,
+                "decision_scope",
+                "A decision is a user, project or path rule; agent scope is for cross-project lessons only.",
+              );
+            }
             const note = await deps.remember(
               {
                 kind: args.kind,
                 content: text,
+                ...(args.kind === "decision" ? { decisionStatus: "proposed" as const } : {}),
                 ...Object.fromEntries(
-                  ["supersedes", "tRef", "validFrom", "validTo", "tags", "keywords", "scope", "appliesTo", "key"]
+                  ["rationale", "supersedes", "tRef", "validFrom", "validTo", "tags", "keywords", "scope", "appliesTo", "key"]
                     .filter((key) => args[key] !== undefined)
                     .map((key) => [key, args[key]]),
                 ),
               },
-              { signal: context.signal, sessionId: context.sessionId },
+              {
+                signal: context.signal,
+                sessionId: context.sessionId,
+                ...(args.kind === "decision" ? { status: "candidate" as const } : {}),
+              },
             );
             return ok(insertName, context, { found: true, ...note }, `Remembered ${note.id} [${note.kind}].`);
           }
@@ -528,6 +683,9 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
             if (!indexedNotesAvailable()) return indexedNotesUnavailable(replaceName, context);
             noteMemory = (await deps.noteMemory?.(args.id, context.signal)) ?? deps.memory;
             const entry = await noteMemory.getEntry(args.id, options);
+            if (entry !== undefined && parseMemoryNoteMetadata(entry.metadata)?.kind === "concept") {
+              return fail(replaceName, context, "concept_requires_ontology", CONCEPT_TOOL_REFUSAL);
+            }
             if (entry !== undefined && unreadableNoteReason(entry.metadata) !== undefined)
               return fail(
                 replaceName,
@@ -584,7 +742,7 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
         name: recallName,
         kind: "search",
         description:
-          "Recall fabric notes. Pass `query`, or `queries` with up to 4 phrasings (synonyms, aliases) fused into one ranked list. Returns ranked snippets with ids, scope, kind, dates, note paths, and the matched terms; each snippet is the densest matched window of its note. Defaults to every stored kind except working, and to 1,200 rendered tokens of output. Use memory.read with an id for a note in full. For aggregation questions, issue two or three differently-worded queries.",
+          "Recall fabric notes. Pass `query`, or `queries` with up to 4 phrasings (synonyms, aliases) fused into one ranked list. Returns ranked snippets with ids, scope, kind, dates, note paths, and the matched terms, preceded by a grouped summary: matches, distinct sessions, per-session counts and dates, and how many more are not shown. Each snippet is the densest matched window of its note. Defaults to every stored kind except working, and to 1,200 rendered tokens of output. Use memory.read with an id for a note in full. For aggregation questions, list the instances and their ids before counting or totalling, and issue two or three differently-worded queries.",
         parameters: {
           type: "object",
           properties: {
@@ -598,11 +756,39 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
             },
             kinds: {
               type: "array",
-              items: { type: "string", enum: ["fact", "preference", "procedure", "file", "working", "episode", "exchange", "all"] },
-              description: 'Kinds to search; defaults to every kind except working. `["all"]` searches every kind.',
+              items: {
+                type: "string",
+                enum: [
+                  "fact",
+                  "preference",
+                  "procedure",
+                  "file",
+                  "working",
+                  "episode",
+                  "exchange",
+                  ...(deps.ontology === undefined ? [] : ["concept"]),
+                  "all",
+                ],
+              },
+              description:
+                deps.ontology === undefined
+                  ? 'Kinds to search; defaults to every kind except working. `["all"]` searches every kind.'
+                  : 'Kinds to search; defaults to every kind except working, concepts included. `["all"]` searches every kind.',
             },
-            topK: { type: "integer", description: "Maximum hits." },
+            topK: { type: "integer", minimum: 1, description: "Maximum hits per page." },
+            page: {
+              type: "integer",
+              minimum: 0,
+              description: "Zero-based page over the ranked window (page size topK, default 5); defaults to 0.",
+            },
             asOf: { type: "string", description: "ISO timestamp used for the validity window; defaults to now." },
+            from: { type: "string", description: "ISO date/time; only notes dated on or after it. A date covers that whole UTC day." },
+            to: { type: "string", description: "ISO date/time; only notes dated on or before it. A date covers that whole UTC day." },
+            order: {
+              type: "string",
+              enum: ["relevance", "time"],
+              description: "relevance (default) keeps the ranked order; time orders resolved dates oldest first.",
+            },
             budget: { type: "integer", description: "Ceiling on the summed tokens of the rendered snippet lines; default 1200." },
             includeArchived: {
               type: "boolean",
@@ -613,13 +799,30 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
         async execute(args, context) {
           if (!indexedNotesAvailable()) return indexedNotesUnavailable(recallName, context);
           const queries = readQueries(args);
-          const kinds = readKinds(args.kinds) ?? RECALL_TOOL_KINDS;
+          const parsedKinds = readKinds(args.kinds);
+          // Concept-first recall is the ontology option's surface (plan 207 Task 4); without it a named concept is
+          // refused, and `all` leaves the ontology tier out.
+          if (deps.ontology === undefined && Array.isArray(args.kinds) && args.kinds.includes("concept")) {
+            return fail(recallName, context, "concept_requires_ontology", CONCEPT_TOOL_REFUSAL);
+          }
+          const requestedKinds = deps.ontology === undefined ? parsedKinds?.filter((kind) => kind !== "concept") : parsedKinds;
+          const kinds = requestedKinds ?? (deps.ontology === undefined ? RECALL_TOOL_KINDS : RECALL_TOOL_KINDS_WITH_ONTOLOGY);
+          const page = typeof args.page === "number" ? args.page : 0;
+          if (!Number.isSafeInteger(page) || page < 0) throw new MemoryValidationError("page must be a non-negative safe integer");
+          const pageSize = typeof args.topK === "number" ? args.topK : RECALL_PAGE_SIZE;
+          if (!Number.isSafeInteger(pageSize) || pageSize < 1) throw new MemoryValidationError("topK must be a positive safe integer");
+          const pageStart = page * pageSize;
+          if (pageStart >= HARD_TOP_K_CAP) throw new MemoryValidationError(`page is outside the ${HARD_TOP_K_CAP}-hit recall window`);
+          // Fetch the whole 32-hit window so the summary can count what this page does not show.
           const options = {
-            // Lexical mode returns weak coverage hits so the agent can judge them; hybrid keeps the cosine floor.
+            // Lexical mode uses coverage; hybrid keeps its cosine floor. Weak-only results are abstentions below.
             minSimilarity: deps.memory.retrieval === "lexical" ? 0 : 0.35,
             kinds,
-            ...(typeof args.topK === "number" ? { topK: args.topK } : {}),
+            topK: HARD_TOP_K_CAP,
             ...(typeof args.asOf === "string" ? { asOf: args.asOf } : {}),
+            ...(typeof args.from === "string" ? { from: args.from } : {}),
+            ...(typeof args.to === "string" ? { to: args.to } : {}),
+            ...(args.order === "time" ? { order: "time" as const } : {}),
             ...(args.includeArchived === true ? { includeArchived: true } : {}),
             ...(context.signal === undefined ? {} : { signal: context.signal }),
             ...(deps.touchedPaths === undefined ? {} : { touchedPaths: deps.touchedPaths(context.sessionId) }),
@@ -636,37 +839,130 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
             });
           }
           const budget = typeof args.budget === "number" ? args.budget : 1200;
-          const ranked = [...fused.values()].sort((a, b) => b.score - a.score).map(({ hit }) => hit);
+          const ranked = groupRecallHits([...fused.values()].sort((a, b) => b.score - a.score).map(({ hit }) => hit)).slice(
+            0,
+            HARD_TOP_K_CAP,
+          );
           const queryTerms = new Set<string>();
           for (const query of queries) for (const term of lexicalTerms(query)) queryTerms.add(term);
-          // Render before selecting: the budget counts what the model reads, header, path and snippet included.
+          const pageRanked = ranked.slice(pageStart, pageStart + pageSize);
+          // Concepts first, then drill down (plan 207 Task 4): a concept hit shows its current claims with the ids they
+          // cite. The cascade already removed a forgotten note's claims; this is the second line, one batched read that
+          // drops a claim whose citations are not all readable here. A shared team concept cites private notes that
+          // never travelled with it, so its claims stand on the share itself.
+          const conceptRenders = new Map<string, ConceptRender>();
+          const conceptHits = pageRanked.filter((hit) => hit.kind === "concept" && (hit.flags?.length ?? 0) === 0);
+          if (deps.ontology !== undefined && conceptHits.length > 0) {
+            const checked = conceptHits.filter((hit) => hit.level !== "team");
+            const wanted = new Set<string>();
+            for (const hit of checked) {
+              const doc = readConceptBody(hit.content);
+              if (doc !== undefined) for (const id of citedByCurrentClaims(doc, hit.stale)) wanted.add(id);
+            }
+            const readable = await readableIds([...wanted].slice(0, MAX_CITE_CHECK_IDS), context.signal);
+            for (const hit of conceptHits) {
+              conceptRenders.set(
+                hit.id,
+                renderConceptClaims(hit.id, {
+                  text: hit.content,
+                  stale: hit.stale,
+                  queryTerms,
+                  max: deps.ontology.maxClaimsRendered,
+                  ...(hit.level === "team" ? { evidence: false } : { readable }),
+                }),
+              );
+            }
+          }
+          // Render before selecting: the budget counts what the model reads, header, path, snippet and summary included.
           const rendered = new Map(
-            ranked.map((hit) => {
+            pageRanked.map((hit) => {
+              if (hit.kind === "concept") {
+                const flagged = hit.flags?.length ? ` [flagged: ${hit.flags.join(", ")}]` : "";
+                const lifecycle = hit.status === "archived" ? " [archived]" : "";
+                const header = `[${hit.id}] ${hit.level ?? "project"} concept ${hit.subject ?? "?"}${lifecycle}${flagged} ${recallDate(hit)}`;
+                const body = conceptRenders.get(hit.id)?.lines ?? [];
+                return [hit.id, [header, ...body].join("\n")] as const;
+              }
               const matched = lexicalMatches(
                 queryTerms,
                 lexicalTerms([hit.content, ...(hit.keywords ?? []), ...(hit.tags ?? []), hit.context ?? "", hit.path ?? ""].join("\n")),
               );
               const flagged = hit.flags?.length ? ` [flagged: ${hit.flags.join(", ")}]` : "";
               const lifecycle = hit.status === "candidate" ? " (candidate)" : hit.status === "archived" ? " [archived]" : "";
-              const line = `${hit.id} ${hit.level ?? "project"} [${hit.kind}]${lifecycle}${flagged} path=${notePathOf(hit)} date=${hit.ingestedAt.slice(0, 10)}${hit.session ? ` session=${hit.session}` : ""} matched=[${matched.join(", ")}] ${queryExcerpt(hit.content, queryTerms, SNIPPET_CHARS)}`;
+              const superseded = hit.supersededBy ? ` superseded by ${hit.supersededBy.id} on ${hit.supersededBy.at.slice(0, 10)}?` : "";
+              const dates = hit.dates?.length
+                ? ` dates=${hit.dates.map((date) => `${date.resolved.slice(0, 10)}/${date.precision}`).join(",")}`
+                : "";
+              const tRef = args.order === "time" && hit.tRef ? ` tRef=${hit.tRef}` : "";
+              const line = `${hit.id} ${hit.level ?? "project"} [${hit.kind}]${lifecycle}${flagged}${superseded} path=${notePathOf(hit)} date=${hit.ingestedAt.slice(0, 10)}${tRef}${dates}${hit.session ? ` session=${hit.session}` : ""} matched=[${matched.join(", ")}] ${queryExcerpt(hit.content, queryTerms, SNIPPET_CHARS)}`;
               return [hit.id, line] as const;
             }),
           );
-          const hits = selectWithScopeReserve(ranked, {
-            budget,
-            tokens: (hit) => Math.max(1, Math.ceil((rendered.get(hit.id) ?? "").length / 4)),
+          const tokensOf = (hit: MemoryNoteHit): number => Math.max(1, Math.ceil((rendered.get(hit.id) ?? "").length / 4));
+          const summaryInput = { hits: ranked, total: ranked.length, showing: 0, page, query: queries[0] ?? "" };
+          const summaryReserve = Math.ceil((renderRecallSummary(summaryInput).join("\n").length || 0) / 4);
+          let hits = selectWithScopeReserve(pageRanked, {
+            budget: Math.max(0, budget - summaryReserve),
+            tokens: tokensOf,
             level: (hit) => hit.level ?? "project",
           });
+          const top = hits.length === 0 ? 0 : Math.max(...hits.map(hitConfidence));
+          let summaryLines: string[] = [];
+          if (hits.length > 0 && top >= RECALL_NO_MATCH_CONFIDENCE) {
+            summaryLines = renderRecallSummary({ ...summaryInput, showing: hits.length });
+            while (
+              summaryLines.length > 0 &&
+              hits.length > 1 &&
+              hits.reduce((sum, hit) => sum + tokensOf(hit), 0) + Math.ceil(summaryLines.join("\n").length / 4) > budget
+            ) {
+              hits = hits.slice(0, -1);
+              summaryLines = renderRecallSummary({ ...summaryInput, showing: hits.length });
+            }
+            if (hits.reduce((sum, hit) => sum + tokensOf(hit), 0) + Math.ceil(summaryLines.join("\n").length / 4) > budget)
+              summaryLines = [];
+          }
+          // P5 can add an abstention; a sufficient/abstained/error answer keeps the incumbent floor.
+          if (hits.length > 0 && deps.decisions?.enabled("P5")) {
+            const sufficient = await deps.decisions.sufficient({
+              query: queries.join(" | "),
+              evidence: hits.map((hit) => ({ id: hit.id, text: evidenceText(hit, conceptRenders) })),
+            });
+            if (sufficient === false) {
+              hits = [];
+              summaryLines = [];
+            }
+          }
+          // A weak-only result is an abstention, not a guess: terms and scopes remain in the line.
+          if (top < RECALL_NO_MATCH_CONFIDENCE) {
+            hits = [];
+            summaryLines = [];
+          }
           if (context.sessionId && hits.length > 0) {
             deps.tracker?.show(
               context.sessionId,
               hits.map((hit) => hit.id),
             );
           }
-          const lines = hits.map((hit) => rendered.get(hit.id) ?? "");
-          const top = hits.length === 0 ? 0 : Math.max(...hits.map((hit) => hit.coverage ?? hit.similarity ?? hit.score));
-          if (lines.length === 0) lines.push("no match in any kind");
-          else if (top < 0.34) lines.push("Weak match: try synonyms, an alias, or other terms.");
+          let stateTable: string | undefined;
+          if (deps.state !== undefined && deps.state !== false && deps.resolveModelClient !== undefined && hits.length > 0) {
+            try {
+              stateTable = await buildStateTable({
+                query: queries.join(" | "),
+                hits: hits.filter((hit) => hit.kind !== "concept"),
+                client: deps.resolveModelClient(deps.state.model),
+                ...(context.signal === undefined ? {} : { signal: context.signal }),
+              });
+            } catch {
+              // The wrapper is an aid: a failed model call leaves the normal recall output intact.
+              stateTable = undefined;
+            }
+          }
+          const lines = [
+            ...summaryLines,
+            ...(stateTable === undefined ? [] : ["Current state (model-generated; cite ids):", stateTable]),
+            ...hits.map((hit) => rendered.get(hit.id) ?? ""),
+          ];
+          if (lines.length === 0) lines.push(noMatchingMemory(queries, recallScopeNames(deps)));
           if (hits.length > 0) lines.push("Cite [id] for notes you use.");
           const matchedTerms = new Set(
             hits.flatMap((hit) =>
@@ -677,8 +973,22 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
             ),
           );
           const unmatchedTerms = [...queryTerms].filter((term) => !matchedTerms.has(term));
-          if (unmatchedTerms.length) lines.push(`Unmatched terms in returned notes: ${unmatchedTerms.join(", ")}. Try another phrasing.`);
-          return ok(recallName, context, { hits, explain: [], unmatchedTerms }, lines.join("\n"));
+          if (unmatchedTerms.length && hits.length > 0)
+            lines.push(`Unmatched terms in returned notes: ${unmatchedTerms.join(", ")}. Try another phrasing.`);
+          return ok(
+            recallName,
+            context,
+            {
+              hits,
+              explain: [],
+              unmatchedTerms,
+              page,
+              total: ranked.length,
+              ...(summaryLines.length === 0 ? {} : { summary: summaryLines.join("\n") }),
+              ...(stateTable === undefined ? {} : { state: stateTable }),
+            },
+            lines.join("\n"),
+          );
         },
       },
       {
@@ -701,6 +1011,13 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
             ...(args.hold === true ? { hold: true } : {}),
           };
           if (target.id !== undefined && !indexedNotesAvailable()) return indexedNotesUnavailable(forgetName, context);
+          if (target.id !== undefined) {
+            const holder = (await deps.noteMemory?.(target.id, context.signal)) ?? deps.memory;
+            const entry = await holder.getEntry(target.id, { signal: context.signal });
+            if (entry !== undefined && parseMemoryNoteMetadata(entry.metadata)?.kind === "concept") {
+              return fail(forgetName, context, "concept_requires_ontology", CONCEPT_TOOL_REFUSAL);
+            }
+          }
           if (target.block !== undefined) assertFabricBlockLabel(target.block);
           const result = await deps.forget(target, {
             ...(context.signal === undefined ? {} : { signal: context.signal }),

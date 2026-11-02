@@ -57,6 +57,8 @@ describe("provider transport primitives", () => {
   it("classifies quota, auth, rate, transient, permanent, and unknown provider failures", () => {
     for (const [error, expected] of [
       [Object.assign(new Error('{"error":{"code":"GoUsageLimitError"}}'), { code: 429 }), "quota"],
+      [Object.assign(new Error("weekly limit reached for this plan"), { code: 429 }), "quota"],
+      [Object.assign(new Error("session limit reached for this plan"), { code: 429 }), "quota"],
       [Object.assign(new Error("unauthorized"), { code: 401 }), "auth"],
       [Object.assign(new Error("slow down"), { code: 429 }), "rate_limited"],
       [Object.assign(new Error("connection reset"), { code: "ECONNRESET" }), "transient"],
