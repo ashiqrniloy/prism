@@ -244,9 +244,11 @@ export const PACKAGE_NOTES = {
     "library — shared memory contracts, vector stores, lineage, propagation, and scoring; no slot and no capability",
   "@arnilo/prism-memory-rag": "capability — indexed retrieval with a rag_search tool, an opt-in context block, and the embeddings service",
   "@arnilo/prism-memory-fabric":
-    "capability — working, semantic, and scoped memory with the memory.* tools, a context block, and per-session state",
+    "capability — T1 of the three-tier memory, the store of record: working, semantic, and scoped notes with the memory.* tools, a context block, and per-session state",
   "@arnilo/prism-memory-wiki":
-    "capability — the LLM Wiki knowledge compiler: four wiki tools, four commands, bundled skills, and the prism-wiki CLI",
+    "capability — T2 of the three-tier memory, opt-in and unmeasured: concept notes over the fabric, consolidated from cited evidence",
+  "@arnilo/prism-memory-observational":
+    "capability — T0 of the three-tier memory: observes the session, keeps a source-backed ledger, and compacts from it",
   "@arnilo/prism-tools-work":
     "capability — /connectors, /documents, /sheets, /diagrams, /document-extraction, /document-reader, /sandbox, /skills, /tools subpaths",
   "@arnilo/prism-tools-browser":

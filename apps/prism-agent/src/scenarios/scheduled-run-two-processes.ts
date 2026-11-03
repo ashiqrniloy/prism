@@ -72,7 +72,9 @@ export async function scheduledRunTwoProcesses(options: ScheduledRunOptions): Pr
   const probe = createSqlitePersistence({ filename: storePath });
   const state = async () => {
     const page = await probe.checkpoints.listCheckpoints({ ...SCHEDULE_OWNERSHIP, namespace: "headless.schedules", limit: 10 });
-    return page.items.find((row) => row.key === BRIEF_SCHEDULE)?.value as { scheduleSessionId: string; lastFiring?: { status: string } } | undefined;
+    return page.items.find((row) => row.key === BRIEF_SCHEDULE)?.value as
+      | { scheduleSessionId: string; lastFiring?: { status: string } }
+      | undefined;
   };
   const firings = async () => {
     const current = await state();

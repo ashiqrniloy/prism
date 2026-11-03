@@ -1,6 +1,6 @@
 import { it } from "bun:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
@@ -79,6 +79,33 @@ it("fabric_reconcile_quarantines_a_poisoned_file_and_clears_it_when_clean", asyn
     const note = parseMemoryNoteMetadata(cleaned?.metadata);
     assert.equal(note?.flags, undefined, "a clean human edit lifts the quarantine");
     assert.notEqual(note?.status, "candidate");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+it("fabric_reconcile_indexes_a_staged_extract_and_skips_its_original", async () => {
+  const root = await mkdtemp(join(tmpdir(), "fabric-reconcile-source-"));
+  const vectorStore = createMemoryVectorStore();
+  const memory = createMemory({
+    tenantId: "t",
+    resourceId: "r",
+    threadId: "s",
+    embedder: createHashEmbedder({ dimensions: 8 }),
+    vectorStore,
+    workingStore: createMemoryWorkingStore(),
+  });
+  const scope = memory.scope as { tenantId: string; resourceId: string; threadId: string };
+  try {
+    const staged = join(root, "sources", "2026-11-03T00-00-00Z-runbook");
+    await mkdir(staged, { recursive: true });
+    // A text original would duplicate its extract as evidence, and a binary one is not a note at all.
+    await writeFile(join(staged, "source.md"), "# Runbook\n\nbody");
+    await writeFile(join(staged, "source.pdf"), "%PDF-1.4 binary-ish");
+    await writeFile(join(staged, "extract.md"), "# Runbook\n\nbody");
+    await reconcileFabricFiles({ root, memory, vectorStore });
+    const paths = (await vectorStore.getByThread!(scope)).map((row) => parseMemoryNoteMetadata(row.metadata)?.path);
+    assert.deepEqual(paths, ["sources/2026-11-03T00-00-00Z-runbook/extract.md"]);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

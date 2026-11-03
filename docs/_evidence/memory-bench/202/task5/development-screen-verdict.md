@@ -3,7 +3,7 @@
 - **Criteria Version:** `202-task5-candidate-gap-v2-screen`
 - **Manifest Hash:** `8828ec96fa4efde255ca7b07d4d855123486a14a6b2531dc461df3d4476c26a7`
 - **Mode:** `development-screen` (candidate-gap rows gate; ability guard is descriptive under Task 5.4.6 owner disposition)
-- **Generated At:** `2026-11-02T20:38:08.646Z`
+- **Generated At:** `2026-11-03T05:43:29.716Z`
 - **Overall Screen Verdict:** **`miss`**
 
 ## Summary by Suite

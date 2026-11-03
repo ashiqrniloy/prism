@@ -1,24 +1,25 @@
 /**
- * `@arnilo/prism-memory-wiki` — the LLM Wiki knowledge compiler as a native package (plan 158 Task 5).
+ * `@arnilo/prism-memory-wiki` — the ontology tier of Prism's three-tier memory (plan 207).
  *
- * The package owns the 0.12 wiki library (manifest, ingest, compiler, linter, profiles, search,
- * retire/re-point) and adds the package surface the roadmap §2.9 row asks for: four wiki tools, four
- * package commands (`wiki-init`, `wiki-refresh`, `wiki-lint`, `wiki-ingest`), the bundled
- * `wiki-searcher` / `wiki-maintainer` skills, a `context.build` guidance injector, and the
- * `prism-wiki` CLI.
+ * The fabric (T1) keeps atomic, scoped notes as evidence. This package maintains the ontology on top of it:
+ * one concept note per subject, every claim citing the T1 notes or ingested sources it rests on. It stores
+ * nothing of its own: concepts are fabric notes, read with `memory.recall` and `memory.read`, and forgetting
+ * a cited note removes the claims that rested on it (the fabric's deletion cascade, no model call).
  *
- * Cost: no model call. `qmd` and the Context7 hydrator run only from a tool or command call, and
- * `url` ingest needs the `web.fetch` service (the wiki never fetches on its own). Setup writes
- * nothing unless `autoDeploySkills: true` asks for the 0.12 workspace deploy.
+ * It requires the `memory.fabric` service and fails closed without it. The fabric provides that service only
+ * when `semantic` memory is on, so `semantic: false` fails the same way.
+ *
+ * Cost: setup makes no model call. The concept pass is a background job on the model named in
+ * `consolidate.model`; installing this package is what opts in to it.
  *
  * ```ts
- * import toolsWeb from "@arnilo/prism-tools-web";
+ * import memoryFabric from "@arnilo/prism-memory-fabric";
  * import memoryWiki from "@arnilo/prism-memory-wiki";
  * import { createAgent } from "@arnilo/prism";
  *
  * const agent = await createAgent({
  *   model: "openai/gpt-5",
- *   packages: [toolsWeb({ backend: "obscura" }), memoryWiki({ wikiRoot: ".wiki", profile: "codebase" })],
+ *   packages: [memoryFabric({ preset: "coding" }), memoryWiki({ consolidate: { model: "openai/gpt-5-mini" } })],
  * });
  * ```
  */

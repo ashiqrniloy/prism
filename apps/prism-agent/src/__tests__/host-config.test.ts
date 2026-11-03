@@ -1,8 +1,8 @@
+import { afterEach, test } from "bun:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, test } from "bun:test";
 import type { HostConfig } from "../host/index.js";
 import { loadHostConfig } from "../host/index.js";
 import { createResearchWorker } from "../host/research.js";
@@ -91,9 +91,7 @@ test("research_worker_registers_web_fetch_with_search_backend", async () => {
       assert.ok(names.includes("web_search"), "the search backend stays registered");
       assert.ok(names.includes("web_fetch"), "the worker can read what it finds");
       assert.equal(names.includes("obscura_fetch"), false, "native Obscura tools stay off in the host");
-      const notes = agent
-        .inspect()
-        .statusNotes.filter((entry) => entry.level === "warn" && entry.package === "@arnilo/prism-tools-web");
+      const notes = agent.inspect().statusNotes.filter((entry) => entry.level === "warn" && entry.package === "@arnilo/prism-tools-web");
       assert.deepEqual(notes, [], "a resolved key and a keyless fetch need no note");
     } finally {
       await agent.dispose();

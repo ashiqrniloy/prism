@@ -32,6 +32,8 @@ export interface ConceptItem {
   readonly text: string;
   /** Cited note ids, in first-use order, no duplicates. */
   readonly cites: readonly string[];
+  /** A person wrote or last changed this item (`[c1 human]` in the file). The curator never updates, retires or merges it. */
+  readonly human?: true;
 }
 
 export interface ConceptDoc {
@@ -43,7 +45,7 @@ export interface ConceptDoc {
 
 const NOTE_ID = /^[0-9a-f]{12}$/;
 const CITE = /\[\^([0-9a-f]{12})\]/g;
-const ITEM_LINE = /^- \[([cqx][1-9][0-9]{0,5})\] (.*)$/;
+const ITEM_LINE = /^- \[([cqx][1-9][0-9]{0,5})( human)?\] (.*)$/;
 const SECTION = { "## Open questions": "question", "## Contradictions": "contradiction" } as const;
 const ID_PREFIX: Record<ConceptItemKind, string> = { claim: "c", question: "q", contradiction: "x" };
 
@@ -117,7 +119,7 @@ export function parseConceptBody(text: string, options: ParseConceptOptions = {}
     if (seen.has(id)) throw new ConceptFormatError("body_shape", `item id ${id} appears twice`);
     seen.add(id);
     const cites: string[] = [];
-    const body = match[2]!.replace(CITE, (_all, cite: string) => {
+    const body = match[3]!.replace(CITE, (_all, cite: string) => {
       if (!cites.includes(cite)) cites.push(cite);
       return "";
     });
@@ -126,7 +128,7 @@ export function parseConceptBody(text: string, options: ParseConceptOptions = {}
       throw new ConceptFormatError("uncited_claim", `item ${id} cites no note; only a person may write an uncited claim`);
     }
     if (cites.length > MAX_ITEM_CITES) throw new ConceptFormatError("cites_too_many", `item ${id} cites too many notes`);
-    const item: ConceptItem = { id, text: itemText, cites };
+    const item: ConceptItem = { id, text: itemText, cites, ...(match[2] === undefined ? {} : { human: true as const }) };
     (section === "claim" ? claims : section === "question" ? questions : contradictions).push(item);
     if (claims.length > MAX_CONCEPT_ITEMS || questions.length > MAX_CONCEPT_ITEMS || contradictions.length > MAX_CONCEPT_ITEMS) {
       throw new ConceptFormatError("too_many_items", `a concept holds at most ${MAX_CONCEPT_ITEMS} items of one kind`);
@@ -138,7 +140,7 @@ export function parseConceptBody(text: string, options: ParseConceptOptions = {}
 }
 
 function renderItem(item: ConceptItem): string {
-  return `- [${item.id}] ${item.text}${item.cites.map((cite) => `[^${cite}]`).join("")}`;
+  return `- [${item.id}${item.human === true ? " human" : ""}] ${item.text}${item.cites.map((cite) => `[^${cite}]`).join("")}`;
 }
 
 /** Deterministic render: `parseConceptBody(renderConceptBody(doc))` equals `doc`. */

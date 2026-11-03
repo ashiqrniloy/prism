@@ -106,6 +106,16 @@ Prism's own packages are optional, just like third-party ones. None of them is i
 | Integrations | `@arnilo/prism-mcp`, `@arnilo/prism-hooks-json`, `@arnilo/prism-observability`, `@arnilo/prism-workflows`, `@arnilo/prism-delegate` |
 | Vendor coding agents | `@arnilo/prism-driver-process`: a generic driver that runs a host-written adapter for any coding-agent binary (system prompt, tools, skills, sub-agents), under the user's own subscription where the vendor's terms allow it, with every message, thinking block, skill activation, and tool call captured as events. No vendor adapter is shipped. |
 
+### Memory
+
+Memory is three tiers over one store, and each tier is its own package. Nothing is installed or on by default.
+
+**Standing rules.** `@arnilo/prism-memory-fabric` keeps the preferences, procedures and decisions a person stated or confirmed as typed notes. A small pinned block of them sits in the prompt prefix and stays byte-identical between turns, and a rule that applies to one subtree arrives as a short cue when the agent touches matching files. A rule is proposed until the person confirms it or it is used in two sessions.
+
+**The record.** The same fabric stores facts and, when `exchanges` is on, every completed turn verbatim. The agent searches it with `memory.recall` and reads what it needs in full with `memory.read`; retrieval is lexical and needs no embeddings. `@arnilo/prism-memory-observational` is the tier below it: it observes the session in the background, and the fabric's promotion pass can read its observations and write them as candidate notes that earn trust by use. Writing and recalling the record makes no model call unless the host opts in to one.
+
+**The ontology.** `@arnilo/prism-memory-wiki` adds one concept per subject over the record: itemized claims, each citing the notes it rests on. An agent reads concepts first, because `memory.recall` returns a matching concept before the plain notes, then drills down with `memory.read` on the notes a claim cites. Forgetting a cited note removes the claims that rested on it, with no model call. The cost is a background model call per due subject on the model the host names in `consolidate.model`; installing the package is what opts in. The tier is unmeasured, so nothing here claims it improves answers.
+
 **Host libraries** connect an agent to the outside world or to a person, so they are libraries rather than packages. They take an `Agent` and serve it, or route its requests: `@arnilo/prism-acp`, `@arnilo/prism-ag-ui`, `@arnilo/prism-mcp-server`, `@arnilo/prism-channels`, `@arnilo/prism-remote` (serve an agent to remote clients, or connect to one), and `@arnilo/prism-headless` (answer host-port requests without a person).
 
 **Prism Agent** is the reference host. It is a coding agent built only on `@arnilo/prism` and the manifest, and it is not published. Its [walkthrough](apps/prism-agent/README.md) shows how a host assembles the pieces above.

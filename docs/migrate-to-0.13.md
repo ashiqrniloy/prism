@@ -85,6 +85,25 @@ The 0.12 config fields and registries are removed, not aliased. Each maps to a h
 | `@arnilo/prism-all` | retired; install the packages you list |
 | `@arnilo/prism-mcp`, `@arnilo/prism-ag-ui`, `@arnilo/prism-channels`, `@arnilo/prism-evals`, `@arnilo/prism-workflows`, `@arnilo/prism-model-router` | the same name, reused by the 0.13 package or host library |
 
+## Wiki → ontology tier
+
+`@arnilo/prism-memory-wiki` is no longer a second page store. It is the ontology tier over the fabric: concept notes in the fabric's own store, each claim citing the notes it rests on. It requires `@arnilo/prism-memory-fabric` (with `semantic` memory on) and fails closed with `missing_service` without it. There is no alias for any 0.12 name.
+
+| 0.12 wiki | 0.13 |
+| --- | --- |
+| `wiki_search` | `memory.recall` (concept notes rank ahead of plain notes whenever the store holds any) |
+| `wiki_read_page` | `memory.read` |
+| `wiki_record_insight` | `memory.insert` (a `decision` note) |
+| `.wiki/` pages, `.manifest.json`, `log.md` | `concept` notes (OKF markdown under the fabric store's `concepts/`) |
+| `wiki-init`, `wiki-refresh` | none; the concept pass maintains the ontology from T1 evidence |
+| `wiki-lint` | `wiki:lint [scope]`: a read-only report over concept claims (unresolved or stale citations, alias collisions, uncited human claims, ontology gaps); it checks cited claims, not `.wiki/` pages |
+| `wiki-ingest` command | `wiki:ingest`; the `wiki_ingest` tool keeps its name and inputs. Sources now stage under `<tools.root>/sources/<id>/` and are indexed as fabric `file` notes (the fabric needs `tools.root`); the result carries `noteId`, `scope`, `indexed` and `subject`, and no longer carries a `.wiki/` filing checklist |
+| `wiki-searcher`, `wiki-maintainer` skills, the `wiki-guidance` hook | removed; the fabric's directory and `memory.recall` do the discovery |
+| `prism-wiki` bin, `runCli` | removed |
+| `createWikiDeletionHandler`, `retireWikiSources`, `repointWikiSources`, `createWikiRepointHandler` | removed; forgetting a cited note removes the claims that cited it inside the fabric (`memory.fabric.concept-deletion` for a host-built propagator) |
+| config `wikiRoot`, `rawRoots`, `profile`, `qmdPath`, `autoDeploySkills` | removed; unknown config fails closed. New: `consolidate`, `ingest` |
+| code-base mapping (`profile: "codebase"`) | none in this package; use a code-intelligence tool |
+
 ## Removed root exports and where each went
 
 | Removed from `@arnilo/prism` | 0.13 home |

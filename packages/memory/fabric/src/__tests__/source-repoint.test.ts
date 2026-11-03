@@ -3,23 +3,36 @@
  *
  * Covers the store-side move (chunk keys, `_rag.sourceId`, citation ids, and lineage
  * edges rewritten in one transaction with embeddings reused verbatim), the ACL
- * fail-closed posture, the wiki projection following the move, the propagation
+ * fail-closed posture, the propagation
  * interaction (edges now point at the new source, the old one no longer owns the
  * derived rows), and `listInvalidatedIds` feeding observational-memory
  * `invalidatedIds` so already-emitted blocks go stale on the next build.
  */
-import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
 import type { SessionEntry } from "@arnilo/prism";
+import {
+  applySourceRenames,
+  createDeletionPropagator,
+  createHashEmbedder,
+  createMemoryVectorStore,
+  listInvalidatedIds,
+  MemoryAbortError,
+  MemoryLimitError,
+  type MemoryScope,
+  MemoryScopeError,
+  MemoryValidationError,
+  type MemoryVectorRecord,
+  repointSource,
+  type SourceRename,
+  type SourceRenameEvent,
+  type VectorStore,
+} from "@arnilo/prism-memory-core";
 import { OBSERVATIONS_RECORDED } from "@arnilo/prism-memory-observational";
-import { buildObservationalMemoryProjection } from "../../../observational/src/projection.js";
-import { applySourceRenames, createDeletionPropagator, createHashEmbedder, createMemoryVectorStore, listInvalidatedIds, MemoryAbortError, MemoryLimitError, type MemoryScope, MemoryScopeError, MemoryValidationError, type MemoryVectorRecord, repointSource, type SourceRename, type SourceRenameEvent, type VectorStore } from "@arnilo/prism-memory-core";
-import { HARD_REPOINT_RECORDS } from "../../../core/src/repoint.js";
 import { chunkText, indexChunks, type RagScope, retrieveContext } from "@arnilo/prism-memory-rag";
-import { createWikiRepointHandler, repointWikiSources } from "@arnilo/prism-memory-wiki";
+import { HARD_REPOINT_RECORDS } from "../../../core/src/repoint.js";
+import { buildObservationalMemoryProjection } from "../../../observational/src/projection.js";
 
 const thread: Required<MemoryScope> = { tenantId: "t1", resourceId: "r1", threadId: "th1" };
 const ragScope: RagScope = { tenantId: thread.tenantId, resourceId: thread.resourceId, corpusId: thread.threadId };
@@ -79,11 +92,11 @@ describe("grant-change re-pointing", () => {
       from: "doc:a",
       to: "doc:b",
       authorization: alice,
-      handlers: [{ kind: "wiki", repoint: () => 2 }],
+      handlers: [{ kind: "derived", repoint: () => 2 }],
     });
     assert.equal(result.movedChunks, chunkBefore.length);
     assert.equal(result.rewrittenEdges, 1);
-    assert.deepEqual(result.layers, { wiki: 2 });
+    assert.deepEqual(result.layers, { derived: 2 });
     assert.equal(result.batched, true);
     assert.equal(transactions, 1);
 
@@ -403,92 +416,6 @@ describe("paged re-pointing", () => {
   });
 });
 
-describe("wiki re-pointing", () => {
-  async function wikiFixture(): Promise<string> {
-    const root = await mkdtemp(join(tmpdir(), "prism-wiki-repoint-"));
-    await mkdir(join(root, ".wiki", "entities"), { recursive: true });
-    await writeFile(
-      join(root, ".wiki", ".manifest.json"),
-      `${JSON.stringify(
-        {
-          version: "1.0.0",
-          profile: "codebase",
-          wikiRoot: join(root, ".wiki"),
-          rawRoots: ["."],
-          sourceFileHashes: { "docs/old.md": "abc123" },
-          entities: {
-            auth: {
-              id: "auth",
-              title: "Auth",
-              category: "entity",
-              tags: ["security"],
-              rawSources: ["docs/old.md"],
-              anchors: [{ filePath: "docs/old.md", startLine: 1, endLine: 9, symbol: "login", sourceHash: "abc123" }],
-              lastCompiledAt: "2026-01-01T00:00:00.000Z",
-            },
-          },
-        },
-        null,
-        2,
-      )}\n`,
-      "utf8",
-    );
-    await writeFile(
-      join(root, ".wiki", "entities", "auth.md"),
-      "---\ntitle: Auth\nsources:\n  - resource: docs/old.md#L1-L9\n    title: docs/old.md\n---\n\n# Auth\n\n## Raw Sources\n- `docs/old.md`\n",
-      "utf8",
-    );
-    return root;
-  }
-
-  it("moves manifest references, hashes, page text, and the log", async () => {
-    const root = await wikiFixture();
-    try {
-      const result = await repointWikiSources({ workspaceRoot: root, from: ["docs/old.md"], to: ["./docs/new.md"] });
-      assert.deepEqual(result.repointed, ["auth"]);
-      assert.deepEqual(result.movedSources, [{ from: "docs/old.md", to: "docs/new.md" }]);
-      const manifest = JSON.parse(await readFile(join(root, ".wiki", ".manifest.json"), "utf8"));
-      assert.deepEqual(manifest.entities.auth.rawSources, ["docs/new.md"]);
-      assert.equal(manifest.entities.auth.anchors[0].filePath, "docs/new.md");
-      assert.deepEqual(manifest.sourceFileHashes, { "docs/new.md": "abc123" });
-      const page = await readFile(join(root, ".wiki", "entities", "auth.md"), "utf8");
-      assert.equal(page.includes("docs/old.md"), false);
-      assert.ok(page.includes("docs/new.md#L1-L9"));
-      assert.ok(page.includes("- `docs/new.md`"));
-      const log = await readFile(join(root, ".wiki", "log.md"), "utf8");
-      assert.ok(log.includes("Repointed"));
-      // Index pages were rewritten alongside the manifest.
-      assert.ok((await readFile(join(root, ".wiki", "index.md"), "utf8")).includes("Auth"));
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("runs as a re-point handler layer over a store move", async () => {
-    const root = await wikiFixture();
-    try {
-      const { store } = await seeded();
-      await store.setSourceAccess(thread, [
-        { sourceId: "docs/old.md", principalIds: ["alice"], accessVersion: 1 },
-        { sourceId: "docs/new.md", principalIds: ["alice"], accessVersion: 1 },
-      ]);
-      const result = await repointSource({
-        scope: thread,
-        vectorStore: store,
-        from: "docs/old.md",
-        to: "docs/new.md",
-        authorization: alice,
-        handlers: [createWikiRepointHandler({ workspaceRoot: root })],
-      });
-      assert.equal(result.layers.wiki, 2);
-      const manifest = JSON.parse(await readFile(join(root, ".wiki", ".manifest.json"), "utf8"));
-      assert.deepEqual(manifest.entities.auth.rawSources, ["docs/new.md"]);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-});
-
 describe("observational-memory staleness bridge", () => {
   it("turns scope invalidations into invalidatedIds so already-emitted blocks go stale", async () => {
     const store = createMemoryVectorStore();
@@ -586,7 +513,7 @@ describe("host rename batch", () => {
       ],
       handlers: [
         {
-          kind: "wiki",
+          kind: "derived",
           repoint: (context) => {
             handlerCalls.push(context.from);
             return 1;
@@ -614,7 +541,7 @@ describe("host rename batch", () => {
     );
     assert.deepEqual(
       moved.map((event) => event.layers),
-      [{ wiki: 1 }, { wiki: 1 }],
+      [{ derived: 1 }, { derived: 1 }],
     );
 
     const after = sourceIdsOf(await store.getByThread(thread));
@@ -774,7 +701,7 @@ describe("host rename batch", () => {
           signal: controller.signal,
           handlers: [
             {
-              kind: "wiki",
+              kind: "derived",
               repoint: () => {
                 controller.abort();
                 return 0;

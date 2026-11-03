@@ -27,6 +27,7 @@
     "@arnilo/prism-memory-fabric": "workspace:*",
     "@arnilo/prism-memory-observational": "workspace:*",
     "@arnilo/prism-memory-rag": "workspace:*",
+    "@arnilo/prism-memory-wiki": "workspace:*",
     "@arnilo/prism-provider-hyper": "workspace:*",
     "@arnilo/prism-remote": "workspace:*",
     "@arnilo/prism-store-sqlite": "workspace:*",

@@ -1,18 +1,15 @@
-import { UNTRUSTED_EXTERNAL_TRUST, type ToolDefinition } from "@arnilo/prism";
+import { type ToolDefinition, UNTRUSTED_EXTERNAL_TRUST } from "@arnilo/prism";
 import { MemoryValidationError } from "@arnilo/prism-memory-core";
-import { ingestImageBlock, ingestOptionsFrom, ingestWikiSource, renderIngestBrief } from "../ingest.js";
+import { ingestImageBlock, ingestSource, renderIngestBrief } from "../ingest.js";
 import type { WikiExtensionOptions, WikiIngestInput } from "../types.js";
 
 export const WIKI_INGEST_TOOL_NAME = "wiki_ingest";
 
 export function createWikiIngestTool(options: WikiExtensionOptions = {}): ToolDefinition {
-  const ingestOptions = ingestOptionsFrom(options);
-  const workspaceRoot = options.workspaceRoot ?? process.cwd();
-
   return {
     name: WIKI_INGEST_TOOL_NAME,
     description:
-      "Stages a text/file/image/PDF/URL source into the wiki raw layer (immutable original + utf8 extract) and returns a filing brief. URL sources need the web.fetch service. Follow the brief to file the knowledge into `.wiki/` pages.",
+      "Ingests a text/file/image/PDF/URL source: stages the immutable original and a utf8 extract under the memory root's sources/ folder, indexes the extract as a file note, and queues it for the next concept pass. Returns the note id to cite and an extract preview. URL sources need the web.fetch service.",
     parameters: {
       type: "object",
       properties: {
@@ -54,9 +51,10 @@ export function createWikiIngestTool(options: WikiExtensionOptions = {}): ToolDe
         throw new MemoryValidationError("Invalid input: wiki_ingest requires exactly one of text, path, or url");
       }
 
-      const staged = await ingestWikiSource(input, ingestOptions);
+      const staged = await ingestSource(input, options, context.signal);
       const brief = renderIngestBrief(staged);
-      const image = await ingestImageBlock(staged, workspaceRoot);
+      const stageRoot = options.port?.()?.sourceRoot();
+      const image = stageRoot === undefined ? undefined : await ingestImageBlock(staged, stageRoot);
 
       return {
         toolCallId: context.toolCallId,

@@ -2,19 +2,8 @@ import { beforeAll, test } from "bun:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import type { ExperimentReportRecord } from "@arnilo/prism";
-import {
-  assertEvaluationThreshold,
-  defineDataset,
-  EvalDatasetError,
-  EvalThresholdError,
-  type ExperimentReport,
-} from "@arnilo/prism-evals";
-import {
-  HOST_EVAL_DATASET,
-  HOST_EVAL_ITEMS,
-  type HostEvalItemExpected,
-  type HostEvalItemInput,
-} from "../../evals/dataset.js";
+import { assertEvaluationThreshold, defineDataset, EvalDatasetError, EvalThresholdError, type ExperimentReport } from "@arnilo/prism-evals";
+import { HOST_EVAL_DATASET, HOST_EVAL_ITEMS, type HostEvalItemExpected, type HostEvalItemInput } from "../../evals/dataset.js";
 import {
   assertHostEvalDatasetMatchesBaseline,
   assertHostEvalGate,
@@ -51,15 +40,8 @@ test("host_eval_suite_passes_invariants_and_pass_hat_k", () => {
       state_match: { k: 4, minimum: 1 },
     },
   });
-  assert.ok(
-    suiteCpuMs < 20_000,
-    `expected offline host eval suite under 20s CPU budget, took ${Math.round(suiteCpuMs)}ms`,
-  );
-  assert.equal(
-    readFileSync(DEFAULT_BASELINE_PATH, "utf8"),
-    baselineRawBefore,
-    "running the eval test must never rewrite baseline.json",
-  );
+  assert.ok(suiteCpuMs < 20_000, `expected offline host eval suite under 20s CPU budget, took ${Math.round(suiteCpuMs)}ms`);
+  assert.equal(readFileSync(DEFAULT_BASELINE_PATH, "utf8"), baselineRawBefore, "running the eval test must never rewrite baseline.json");
 });
 
 test("host_eval_suite_does_not_regress_from_baseline", () => {

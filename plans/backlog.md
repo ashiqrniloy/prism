@@ -1228,8 +1228,58 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 
 ## Restore inherited plan 202 closure checks before release
 
+- Update (2026-11-03, plan 207): the host after-forget test, the Ollama Cloud and Kilo baselines and the kernel budgets are resolved (see "Clear the inherited release-gate blockers"). Only the Task 5 manifest dirty-tree check remains.
 - Section: Further Actions
 - Priority: P1
 - Source: plans/202-Phase-11-Part-O12-Memory-Robustness-And-Recall-Beyond-Full-Context.md
 - What: Plan 210 verification prerequisites own Task 5's manifest test refusing the existing dirty candidate checkout and the host after-forget test matching its echoed query. Release-path plans 185/186 require reviewed Ollama Cloud/Kilo compatibility baselines and resolved kernel size/export budgets. Repeat the affected checks after the owning repairs.
 - Why: Fresh closure verification reproduced these inherited blockers; closing by owner disposition does not mean acceptance or release gates passed. Exact results are in `docs/_evidence/memory-bench/202/closure-verification.json`. The initial fabric timing failure passed on an isolated rerun; 29 PostgreSQL tests remain skipped in the closure run.
+
+## Decide the ontology default and keep the tier honest
+
+- Section: Further Actions
+- Priority: P1
+- Source: plans/207-Phase-11-Part-O13-Memory-Three-Tier-Architecture-Ontology-Wiki-Over-The-Fabric.md
+- What: Plan 210 decides, on plan 208's criteria and the held-out run, whether `ontology: true` and `@arnilo/prism-memory-wiki` stay opt-in, become a preset, or are removed.
+- Why: This plan ships the tier unmeasured and makes no quality claim; the reference host option stays default-off until that verdict.
+
+## Cache evidence for a concept written mid-session
+
+- Section: Further Actions
+- Priority: P2
+- Source: plans/207-Phase-11-Part-O13-Memory-Three-Tier-Architecture-Ontology-Wiki-Over-The-Fabric.md
+- What: Add an ontology scenario to a new prefix probe, or extend plan 202's probe in a plan allowed to re-pin it.
+- Why: The frozen `prefix-probe.mjs` was rerun unchanged, so the ontology's cache stability rests on `prefix-stability.test.ts` rather than the probe artifact.
+
+## Decide whether the concept curator may cite exchanges
+
+- Section: Further Actions
+- Priority: P3
+- Source: plans/207-Phase-11-Part-O13-Memory-Three-Tier-Architecture-Ontology-Wiki-Over-The-Fabric.md
+- What: Plan 208 tests giving exchanges keywords or showing a cluster's neighbouring exchanges to the curator.
+- Why: Exchanges carry no enrichment keywords, so a keyword cluster contains only typed notes and concepts cite no exchange today.
+
+## Clean up failed or flagged source ingests
+
+- Section: Further Actions
+- Priority: P4
+- Source: plans/207-Phase-11-Part-O13-Memory-Three-Tier-Architecture-Ontology-Wiki-Over-The-Fabric.md
+- What: A `wiki:lint` check or an ingest rollback for a `sources/<id>/` directory with no indexed `extract.md`.
+- Why: Staging is not atomic with indexing; a failed ingest leaves an orphan directory and a flagged source is staged but not indexed.
+
+## Clear the inherited release-gate blockers
+
+- Closed (2026-11-03): resolved except the dirty-tree guard. `release.mjs gate` exits 0: 199 committed `tsc`-emitted `src/**/*.d.ts` files deleted (and gitignored), kernel ceilings rebaselined with attribution, Kilo and Ollama Cloud baselines regenerated after review, host after-forget test corrected. `Task5Manifest: the candidate product has uncommitted changes` remains and clears only on a clean checkout.
+- Section: Further Actions
+- Priority: P1
+- Source: plans/207-Phase-11-Part-O13-Memory-Three-Tier-Architecture-Ontology-Wiki-Over-The-Fabric.md
+- What: Plans 185/186 and 210 supply the Ollama Cloud baseline, the Kilo compat review, the kernel budget ceilings and the host after-forget test fix.
+- Why: Plan 207's whole-plan `release.mjs gate` still fails on these; none comes from the ontology tier. The fabric, wiki and memory-core baselines are clean.
+
+## Revisit sources counted as minNotes notes
+
+- Section: Compromises Made
+- Priority: P3
+- Source: plans/207-Phase-11-Part-O13-Memory-Three-Tier-Architecture-Ontology-Wiki-Over-The-Fabric.md
+- Compromise: An ingested source counts as `minNotes` notes in the accumulation triggers so one source is due on its own.
+- Implications: Ingesting many small files costs one background model call each; a threshold per source size would be fairer.

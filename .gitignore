@@ -6,6 +6,12 @@ manifest/schema.json
 # compiled example demos (emitted by docs.test tsc step; never commit)
 examples/*.js
 node_modules/
+
+# in-place tsc declaration emit beside sources: never commit (the kernel size budget counts src/**/*.d.ts as source).
+# The four hand-written ambient declarations are already tracked; a new one needs `git add -f`.
+src/**/*.d.ts
+packages/**/src/**/*.d.ts
+apps/**/src/**/*.d.ts
 release-artifacts/
 bug-reports/
 code-reviews/

@@ -11,12 +11,13 @@
 import { createHash } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import type { Memory, MemoryVectorRecord } from "@arnilo/prism-memory-core";
+import type { Memory, MemoryVectorRecord, VectorStore } from "@arnilo/prism-memory-core";
 import { MemoryValidationError } from "@arnilo/prism-memory-core";
 import { type MemoryNoteStatus, normalizeNoteStatus } from "../lifecycle/status.js";
 import { createMemory } from "../memory.js";
 import { conceptSources, renderConceptBody } from "../ontology/codec.js";
 import { readConceptBody } from "../ontology/render.js";
+import { reviewConceptEdit } from "../ontology/review.js";
 import { scanScopedMemoryContent } from "../scoped/trust.js";
 import {
   encodeMemoryNoteMetadata,
@@ -114,6 +115,8 @@ export type FabricTeamShareResult =
 
 export interface FabricTeam {
   readonly memory: Memory;
+  /** The team store itself, for the read-only ontology scope. */
+  readonly store: VectorStore;
   readonly options: ResolvedFabricTeamOptions;
   /** Absolute path of the derived index, outside the checked-in tree. */
   readonly index: string;
@@ -141,7 +144,12 @@ export async function createFabricTeam(input: {
     throw new MemoryValidationError("the team index must live outside the team directory");
   }
   await mkdir(dirname(indexPath), { recursive: true, mode: 0o700 });
-  const stores = await createMarkdownMemoryStores({ root: input.options.dir, index: { path: indexPath } });
+  // A person's git change to a shared concept is reviewed like any edit: the codec, the trust scan, the human marker.
+  const stores = await createMarkdownMemoryStores({
+    root: input.options.dir,
+    index: { path: indexPath },
+    reviewEdit: (record, previous) => reviewConceptEdit(record, previous),
+  });
   const scope = { tenantId: TEAM_TENANT, resourceId: TEAM_RESOURCE, threadId: TEAM_THREAD };
   const memory = createMemory({ ...scope, vectorStore: stores.vectorStore, workingStore: stores.workingStore });
   const signal = input.signal;
@@ -309,6 +317,7 @@ export async function createFabricTeam(input: {
 
   return {
     memory,
+    store: stores.vectorStore,
     options: input.options,
     index: input.index,
     quarantined,

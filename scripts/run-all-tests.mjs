@@ -78,7 +78,6 @@ export const GATE_FILES = [
   "scripts/live-doc-check.test.mjs",
   "scripts/version-literal-gate.test.mjs",
   "scripts/workflow-liveness.test.mjs",
-  "scripts/wiki-scratch-isolation.test.mjs",
   "scripts/blocked-gate.test.mjs",
   "scripts/branch-coverage.test.mjs",
   "scripts/phase126-sqlite-mapping.test.mjs",

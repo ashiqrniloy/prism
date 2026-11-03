@@ -88,7 +88,21 @@ export interface CreateMarkdownMemoryStoresOptions {
    * counted, its file is never rewritten, renamed or moved by this store, and its text stays in the index.
    */
   readonly classifyNote?: NoteClassifier;
+  /**
+   * Looks at a note whose file changed outside this store, before it is indexed. `previous` is the indexed record the
+   * edit replaces, when there is one. Return `undefined` to index the file as parsed, `{ record }` to index (and write
+   * back to the file) a reviewed version, or `{ reject }` to keep `previous` indexed, leave the file as the person
+   * wrote it, and log the rejection. Never called for an unreadable note.
+   */
+  readonly reviewEdit?: MarkdownNoteReviewer;
 }
+
+/** What a {@link MarkdownNoteReviewer} decided about one externally changed note file. */
+export type MarkdownNoteReview =
+  | { readonly record: MemoryVectorRecord; readonly reject?: undefined }
+  | { readonly reject: { readonly verb: string; readonly note: string }; readonly record?: undefined };
+
+export type MarkdownNoteReviewer = (record: MemoryVectorRecord, previous: MemoryVectorRecord | undefined) => MarkdownNoteReview | undefined;
 
 /** Notes the index holds but this version cannot read, by reason. */
 export interface MarkdownUnreadableCounts {
@@ -190,6 +204,7 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
   const indexPath = options.index?.path !== undefined ? resolve(root, options.index.path) : join(root, INDEX_DB_FILE);
   const fileMapPath = join(root, FILE_MAP_FILE);
   const classifyNote = options.classifyNote;
+  const reviewEdit = options.reviewEdit;
 
   let force = !existsSync(indexPath);
   let sqlite: SqliteMemoryStores;
@@ -461,7 +476,28 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
         if (!forceFull && known && known.mtimeMs === info.mtimeMs && known.size === info.size) continue;
         try {
           const content = await readFile(abs, "utf8");
-          const record = parseNoteFile(content, rel, classifyNote);
+          const parsed = parseNoteFile(content, rel, classifyNote);
+          let record = parsed;
+          let rewritten = false;
+          if (reviewEdit !== undefined && unreadableReason(parsed) === undefined) {
+            const previous = (await sqlite.vectorStore.getByIds(parsed, [parsed.id]))[0];
+            const review = reviewEdit(parsed, previous);
+            if (review?.reject !== undefined) {
+              // Keep the last valid version indexed and the person's file as written; the log says why.
+              const keep = previous ?? parsed;
+              const keptBlocked = blockedIn(keep, states.get(stateKey(keep.tenantId, keep.resourceId))?.threads[keep.threadId]);
+              fileMap[rel] = fileMapEntry(keep, rel, fabricKind(keep), keptBlocked || isArchived(keep, false, Date.now()), info, content);
+              report.malformed += 1;
+              report.errors.push(`${rel}: ${review.reject.verb}: ${review.reject.note}`);
+              logs.push({ date: today, verb: review.reject.verb, id: parsed.id, by: "human", note: review.reject.note });
+              processed += 1;
+              continue;
+            }
+            if (review?.record !== undefined) {
+              record = review.record;
+              rewritten = true;
+            }
+          }
           await sqlite.vectorStore.upsert(
             [record.embedding.length === 0 && record.embedderId !== undefined ? withoutEmbedderId(record) : record],
             {
@@ -471,10 +507,18 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
           const kind = fabricKind(record);
           const blocked = blockedIn(record, states.get(stateKey(record.tenantId, record.resourceId))?.threads[record.threadId]);
           const archived = blocked || isArchived(record, false, Date.now()) || rel.includes("/archive/");
-          fileMap[rel] = fileMapEntry(record, rel, kind, archived, info, content);
+          let written = info;
+          let text = content;
+          if (rewritten) {
+            // The file is canonical: a reviewed record (per-claim markers, a quarantine flag) is written back in place.
+            text = renderNoteFile(record);
+            await atomicWriteFile(abs, text);
+            written = await stat(abs);
+          }
+          fileMap[rel] = fileMapEntry(record, rel, kind, archived, written, text);
           report.indexed += 1;
           const by = provenanceActor(record);
-          logs.push({ date: today, verb: "indexed", id: record.id, ...(by === undefined ? {} : { by }) });
+          logs.push({ date: today, verb: rewritten ? "reviewed" : "indexed", id: record.id, ...(by === undefined ? {} : { by }) });
         } catch (error) {
           report.malformed += 1;
           report.errors.push(`${rel}: ${error instanceof Error ? error.message : String(error)}`);

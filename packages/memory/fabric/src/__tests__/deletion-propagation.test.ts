@@ -3,14 +3,12 @@
  *
  * Covers the orchestration contract (lineage-closed tombstone set, one batched
  * transaction, registered handlers), the query-time tombstone guard on the RAG
- * path, privilege (existing memory ACL), wiki projection retirement, and the
+ * path, privilege (existing memory ACL), and the
  * bounded 1k-artifact propagation budget.
  */
-import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
 import {
   createDeletionPropagator,
   createHashEmbedder,
@@ -21,9 +19,8 @@ import {
   type MemoryVectorRecord,
 } from "@arnilo/prism-memory-core";
 import { createMemory } from "@arnilo/prism-memory-fabric";
-import { createRagDeletionHandler, chunkText, replaceSource, retrieveContext } from "@arnilo/prism-memory-rag";
-import { createWikiDeletionHandler, retireWikiSources } from "@arnilo/prism-memory-wiki";
 import type { RagScope } from "@arnilo/prism-memory-rag";
+import { chunkText, createRagDeletionHandler, replaceSource, retrieveContext } from "@arnilo/prism-memory-rag";
 
 const scope: Required<MemoryScope> = { tenantId: "t1", resourceId: "r1", threadId: "th1" };
 const authority = { tenantId: "t1", principalId: "p1", groupIds: ["eng"] };
@@ -77,16 +74,16 @@ describe("deletion propagation", () => {
         },
       ],
     });
-    propagator.register({ kind: "wiki", delete: () => 1 });
-    assert.deepEqual([...propagator.kinds], ["observational", "wiki"]);
-    assert.throws(() => propagator.register({ kind: "wiki", delete: () => 0 }), MemoryValidationError);
+    propagator.register({ kind: "derived", delete: () => 1 });
+    assert.deepEqual([...propagator.kinds], ["observational", "derived"]);
+    assert.throws(() => propagator.register({ kind: "derived", delete: () => 0 }), MemoryValidationError);
 
     const result = await propagator.propagate("doc:erp");
     assert.deepEqual([...result.ids].sort(), ["doc:erp", "summary:erp", "summary:erp:digest"]);
     assert.equal(result.tombstoned, 3);
     assert.equal(result.batched, true);
     assert.equal(transactions, 1);
-    assert.deepEqual(result.layers, { observational: 3, wiki: 1 });
+    assert.deepEqual(result.layers, { observational: 3, derived: 1 });
     assert.deepEqual(seen, [["doc:erp", "summary:erp", "summary:erp:digest"]]);
 
     // Tombstones, not dangling rows: every row survives for explainability.
@@ -254,79 +251,5 @@ describe("deletion propagation", () => {
     assert.equal(transactions, 1);
     assert.ok(elapsed < 2_000, `propagation took ${elapsed}ms`);
     assert.equal((await store.listInvalidated(scope)).length, 1_001);
-  });
-});
-
-describe("wiki projection retirement", () => {
-  function entity(id: string, rawSources: readonly string[], anchors: readonly string[]) {
-    return {
-      id,
-      title: id,
-      category: "module" as const,
-      tags: [],
-      rawSources,
-      anchors: anchors.map((filePath) => ({ filePath, startLine: 1, endLine: 1 })),
-      lastCompiledAt: new Date(0).toISOString(),
-    };
-  }
-
-  async function fixture() {
-    const workspaceRoot = await mkdtemp(join(tmpdir(), "prism-wiki-retire-"));
-    const wikiRoot = join(workspaceRoot, ".wiki");
-    await mkdir(join(wikiRoot, "entities"), { recursive: true });
-    await writeFile(
-      join(wikiRoot, ".manifest.json"),
-      JSON.stringify(
-        {
-          version: "1.0.0",
-          profile: "codebase",
-          wikiRoot,
-          rawRoots: ["docs"],
-          sourceFileHashes: { "docs/a.md": "a", "docs/b.md": "b", "docs/c.md": "c" },
-          entities: {
-            alpha: entity("alpha", ["docs/a.md", "docs/b.md"], ["docs/a.md", "docs/b.md"]),
-            beta: entity("beta", ["docs/b.md"], ["docs/b.md"]),
-            gamma: entity("gamma", ["docs/c.md"], ["docs/c.md"]),
-          },
-        },
-        null,
-        2,
-      ),
-      "utf8",
-    );
-    for (const id of ["alpha", "beta", "gamma"]) await writeFile(join(wikiRoot, "entities", `${id}.md`), `# ${id}\n`, "utf8");
-    const manifest = async () => JSON.parse(await readFile(join(wikiRoot, ".manifest.json"), "utf8"));
-    return { workspaceRoot, wikiRoot, manifest };
-  }
-
-  it("retires fully-derived pages, prunes shared ones, and logs the tombstone", async () => {
-    const { workspaceRoot, wikiRoot, manifest } = await fixture();
-    const result = await retireWikiSources({ workspaceRoot, sourcePaths: ["./docs/a.md"], at: "2026-05-01T00:00:00.000Z" });
-    assert.deepEqual([...result.retired], []);
-    assert.deepEqual([...result.pruned], ["alpha"]);
-    assert.deepEqual([...result.removedSources], ["docs/a.md"]);
-    const next = await manifest();
-    assert.deepEqual(next.entities.alpha.rawSources, ["docs/b.md"]);
-    assert.deepEqual(
-      next.entities.alpha.anchors.map((anchor: { filePath: string }) => anchor.filePath),
-      ["docs/b.md"],
-    );
-    assert.equal(next.sourceFileHashes["docs/a.md"], undefined);
-    assert.match(await readFile(join(wikiRoot, "log.md"), "utf8"), /Retired.*deleted sources: docs\/a\.md/);
-
-    const second = await retireWikiSources({ workspaceRoot, sourcePaths: ["docs/b.md"] });
-    assert.deepEqual([...second.retired], ["alpha", "beta"]);
-    assert.deepEqual([...second.removedSources], ["docs/b.md"]);
-    const finalManifest = await manifest();
-    assert.deepEqual(Object.keys(finalManifest.entities), ["gamma"]);
-    assert.equal(finalManifest.sourceFileHashes["docs/b.md"], undefined);
-    await assert.rejects(readFile(join(wikiRoot, "entities", "beta.md"), "utf8"));
-    assert.match(await readFile(join(wikiRoot, "index.md"), "utf8"), /gamma/);
-
-    // Handler default: the prism source id is the raw path.
-    const handler = createWikiDeletionHandler({ workspaceRoot });
-    assert.equal(await handler.delete({ sourceId: "docs/c.md", ids: [], scope, signal: undefined }), 1);
-    assert.deepEqual(Object.keys((await manifest()).entities), []);
-    await rm(workspaceRoot, { recursive: true, force: true });
   });
 });

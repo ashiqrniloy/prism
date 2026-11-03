@@ -1,6 +1,6 @@
 # Phase 54 — 0.3.3 Package/Export Baseline & 0.4 Import Map Evidence
 
-Generated: `2026-11-01T14:59:05.585Z`
+Generated: `2026-11-03T05:19:00.267Z`
 Repository root version: `0.13.0`
 
 ## 1. Executive Summary & Counts
@@ -577,10 +577,10 @@ Total declared exports across all packages are frozen in `scripts/compat-baselin
 | `@arnilo/prism-advisor` | 0 | 52 | `scripts/compat-baseline/arnilo__prism-advisor.txt` |
 | `@arnilo/prism-memory-compaction` | 0 | 42 | `scripts/compat-baseline/arnilo__prism-memory-compaction.txt` |
 | `@arnilo/prism-memory-observational` | 0 | 178 | `scripts/compat-baseline/arnilo__prism-memory-observational.txt` |
-| `@arnilo/prism-memory-core` | 0 | 294 | `scripts/compat-baseline/arnilo__prism-memory-core.txt` |
+| `@arnilo/prism-memory-core` | 0 | 296 | `scripts/compat-baseline/arnilo__prism-memory-core.txt` |
 | `@arnilo/prism-memory-rag` | 0 | 205 | `scripts/compat-baseline/arnilo__prism-memory-rag.txt` |
-| `@arnilo/prism-memory-fabric` | 0 | 484 | `scripts/compat-baseline/arnilo__prism-memory-fabric.txt` |
-| `@arnilo/prism-memory-wiki` | 0 | 133 | `scripts/compat-baseline/arnilo__prism-memory-wiki.txt` |
+| `@arnilo/prism-memory-fabric` | 0 | 646 | `scripts/compat-baseline/arnilo__prism-memory-fabric.txt` |
+| `@arnilo/prism-memory-wiki` | 0 | 89 | `scripts/compat-baseline/arnilo__prism-memory-wiki.txt` |
 | `@arnilo/prism-approval` | 0 | 11 | `scripts/compat-baseline/arnilo__prism-approval.txt` |
 | `@arnilo/prism-guardrail-packs` | 0 | 31 | `scripts/compat-baseline/arnilo__prism-guardrail-packs.txt` |
 | `@arnilo/prism-governance` | 0 | 190 | `scripts/compat-baseline/arnilo__prism-governance.txt` |

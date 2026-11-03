@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, test } from "bun:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { spawnSync } from "node:child_process";
 import type { HostConfig } from "../host/index.js";
-import { headlessApprovalSuspendsThenChannelResumes, type HeadlessApprovalResult } from "../scenarios/headless-approval.js";
+import { type HeadlessApprovalResult, headlessApprovalSuspendsThenChannelResumes } from "../scenarios/headless-approval.js";
 
 const MODEL = { provider: "mock", model: "m", limits: { contextWindow: 64_000, maxOutputTokens: 0 } };
 

@@ -57,10 +57,10 @@ Each native package documents itself in its README; the kernel pages above cover
 
 - [`@arnilo/prism-memory-compaction`](../packages/memory/compaction/README.md): LLM summarization compaction for Prism.
 - [`@arnilo/prism-memory-core`](../packages/memory/core/README.md): Shared memory contracts, stores, lineage, propagation, and scoring used by the Prism memory packages.
-- [`@arnilo/prism-memory-fabric`](../packages/memory/fabric/README.md): Working, semantic, and scoped memory for Prism agents.
-- [`@arnilo/prism-memory-observational`](../packages/memory/observational/README.md): Observational memory for Prism.
+- [`@arnilo/prism-memory-fabric`](../packages/memory/fabric/README.md): Tier 1 of the three-tier memory, the store of record: working, semantic, and scoped memory for Prism agents.
+- [`@arnilo/prism-memory-observational`](../packages/memory/observational/README.md): Tier 0 of the three-tier memory: observational memory for Prism.
 - [`@arnilo/prism-memory-rag`](../packages/memory/rag/README.md): Retrieval-augmented generation for Prism agents.
-- [`@arnilo/prism-memory-wiki`](../packages/memory/wiki/README.md): The LLM Wiki knowledge compiler for Prism agents.
+- [`@arnilo/prism-memory-wiki`](../packages/memory/wiki/README.md): Tier 2 of the three-tier memory, opt-in and unmeasured: concept notes over the fabric, consolidated from cited evidence.
 - [`@arnilo/prism-context-engineering`](../packages/context/engineering/README.md): Context engineering for Prism agents.
 - [`@arnilo/prism-context-files`](../packages/context/files/README.md): AGENTS.md and SYSTEM.md context layers for Prism agents, trust-gated and cached per session.
 
@@ -177,10 +177,10 @@ The generated inventory below derives from [`scripts/package-truth.json`](../scr
 | `@arnilo/prism-mcp-server` | 0.13.0 | library — host library serving Prism tools, resources, and prompts over MCP (stdio and Streamable HTTP transports) |
 | `@arnilo/prism-memory-compaction` | 0.13.0 | capability |
 | `@arnilo/prism-memory-core` | 0.13.0 | library — shared memory contracts, vector stores, lineage, propagation, and scoring; no slot and no capability |
-| `@arnilo/prism-memory-fabric` | 0.13.0 | capability — working, semantic, and scoped memory with the memory.* tools, a context block, and per-session state |
-| `@arnilo/prism-memory-observational` | 0.13.0 | capability |
+| `@arnilo/prism-memory-fabric` | 0.13.0 | capability — T1 of the three-tier memory, the store of record: working, semantic, and scoped notes with the memory.* tools, a context block, and per-session state |
+| `@arnilo/prism-memory-observational` | 0.13.0 | capability — T0 of the three-tier memory: observes the session, keeps a source-backed ledger, and compacts from it |
 | `@arnilo/prism-memory-rag` | 0.13.0 | capability — indexed retrieval with a rag_search tool, an opt-in context block, and the embeddings service |
-| `@arnilo/prism-memory-wiki` | 0.13.0 | capability — the LLM Wiki knowledge compiler: four wiki tools, four commands, bundled skills, and the prism-wiki CLI |
+| `@arnilo/prism-memory-wiki` | 0.13.0 | capability — T2 of the three-tier memory, opt-in and unmeasured: concept notes over the fabric, consolidated from cited evidence |
 | `@arnilo/prism-model-router` | 0.13.0 | capability — policy around hook routing turns across candidates with budget, circuit, and rate-limit controls |
 | `@arnilo/prism-observability` | 0.13.0 | capability — OpenTelemetry spans and metrics over the agent event catalog as observe handlers; exports nothing itself |
 | `@arnilo/prism-remote` | 0.13.0 | library — host library serving a Prism agent to remote clients and connecting to remote agents over prism.remote/1 |

@@ -36,6 +36,14 @@ export interface HostConfig {
   readonly embeddings?: { readonly model: ModelRef };
   /** Opt-in memory for the research and coding workers. `coding` adds standing decisions and path rules. */
   readonly memory?: "conversational" | "coding";
+  /**
+   * Opt-in ontology tier (needs `memory`): adds `@arnilo/prism-memory-wiki` beside the fabric, so a background pass
+   * consolidates the fabric's notes into cited concepts that `memory.recall` returns first. Default off. The pass
+   * is extra model calls, on `ontologyModel` when set and on the agent's own model otherwise.
+   */
+  readonly ontology?: boolean;
+  /** The concept pass's model. A ref, never a key. */
+  readonly ontologyModel?: ModelRef;
   /** Passed to tools-research and to `limits.maxContinuations`. Default 1. */
   readonly maxRepairs?: number;
   /**
@@ -90,6 +98,8 @@ const HOST_KEYS = new Set([
   "web",
   "embeddings",
   "memory",
+  "ontology",
+  "ontologyModel",
   "maxRepairs",
   "gate",
   "external",
@@ -210,6 +220,15 @@ export function loadHostConfig(path: string): HostConfig {
   if (parsed.memory !== undefined && parsed.memory !== "conversational" && parsed.memory !== "coding") {
     throw new Error("prism-agent config memory must be conversational or coding");
   }
+  if (parsed.ontology !== undefined && typeof parsed.ontology !== "boolean") {
+    throw new Error("prism-agent config ontology must be a boolean");
+  }
+  if (parsed.ontology === true && parsed.memory === undefined) {
+    throw new Error("prism-agent config ontology needs memory: the ontology tier consolidates the fabric's notes");
+  }
+  if (parsed.ontologyModel !== undefined && parsed.ontology !== true) {
+    throw new Error("prism-agent config ontologyModel needs ontology: true");
+  }
   if (parsed.maxRepairs !== undefined && (typeof parsed.maxRepairs !== "number" || !Number.isInteger(parsed.maxRepairs))) {
     throw new Error("prism-agent config maxRepairs must be an integer");
   }
@@ -303,6 +322,8 @@ export function loadHostConfig(path: string): HostConfig {
     },
     ...(embeddings === undefined ? {} : { embeddings }),
     ...(parsed.memory === "conversational" || parsed.memory === "coding" ? { memory: parsed.memory } : {}),
+    ...(parsed.ontology === true ? { ontology: true } : {}),
+    ...(parsed.ontologyModel === undefined ? {} : { ontologyModel: modelRef(parsed.ontologyModel, "ontologyModel") }),
     ...(typeof parsed.maxRepairs === "number" ? { maxRepairs: parsed.maxRepairs } : {}),
     ...(gate === undefined ? {} : { gate }),
     ...(external === undefined ? {} : { external }),

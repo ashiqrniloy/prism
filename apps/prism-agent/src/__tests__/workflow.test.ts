@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DEFAULT_MAX_FAN_OUT } from "@arnilo/prism-workflows";
-import { REMOTE_ENDPOINT, type HostConfig } from "../host/index.js";
+import { type HostConfig, REMOTE_ENDPOINT } from "../host/index.js";
 import { gateThrowFails, orchestratedWorkflow } from "../scenarios/orchestrated-workflow.js";
 
 const MODEL = { provider: "mock", model: "m", limits: { contextWindow: 64_000, maxOutputTokens: 0 } };

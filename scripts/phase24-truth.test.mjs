@@ -256,7 +256,7 @@ test("peer policy Decision B: all code packages peer the 0.x kernel window", () 
       "@arnilo/prism-ag-ui": ["@arnilo/prism-mcp"],
       "@arnilo/prism-tools-coding": ["@arnilo/prism-workflows"], // plan 168 Task 7: the goal→verify helper runs the workflow engine
       "@arnilo/prism-memory-rag": ["@arnilo/prism-tools-web"], // type-only optional peer: the web.fetch service shape
-      "@arnilo/prism-memory-wiki": ["@arnilo/prism-tools-web"], // type-only optional peer: the web.fetch service shape
+      "@arnilo/prism-memory-wiki": ["@arnilo/prism-memory-fabric", "@arnilo/prism-tools-web"], // fabric: the memory.fabric port type (plan 207 Task 5); web: type-only optional peer, the web.fetch service shape
       "@arnilo/prism-tools-web": ["@arnilo/prism-mcp"],
       "@arnilo/prism-tools-computer-use": ["@arnilo/prism-mcp"],
     });

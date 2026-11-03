@@ -591,21 +591,11 @@
     "@arnilo/prism-memory-wiki": {
       ".": {
         "suites": [
-          "packages/memory/wiki/src/__tests__/cli.test.ts",
+          "examples/three-tier-memory.ts",
           "packages/memory/wiki/src/__tests__/commands.test.ts",
-          "packages/memory/wiki/src/__tests__/compiler.test.ts",
-          "packages/memory/wiki/src/__tests__/context7-hydrator.test.ts",
-          "packages/memory/wiki/src/__tests__/contradictions.test.ts",
-          "packages/memory/wiki/src/__tests__/e2e-codebase.test.ts",
-          "packages/memory/wiki/src/__tests__/e2e-pkm.test.ts",
           "packages/memory/wiki/src/__tests__/ingest.test.ts",
-          "packages/memory/wiki/src/__tests__/linter.test.ts",
-          "packages/memory/wiki/src/__tests__/manifest.test.ts",
           "packages/memory/wiki/src/__tests__/package.test.ts",
-          "packages/memory/wiki/src/__tests__/primitive-seams.test.ts",
-          "packages/memory/wiki/src/__tests__/profiles.test.ts",
-          "packages/memory/wiki/src/__tests__/qmd-client.test.ts",
-          "packages/memory/wiki/src/__tests__/skills.test.ts",
+          "packages/memory/wiki/src/__tests__/retired-names.test.ts",
           "packages/memory/wiki/src/__tests__/tools.test.ts"
         ],
         "mode": ""

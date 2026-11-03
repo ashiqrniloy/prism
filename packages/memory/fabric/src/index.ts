@@ -70,9 +70,10 @@ import { createScopeClock, readScopeClockState, SCOPE_CLOCK_COUNTER } from "./li
 import { citationEvidence } from "./lifecycle/evidence.js";
 import { createFabricLifecycle, describeNote, type FabricLifecycle, inspectNote, normalizeNoteStatus } from "./lifecycle/index.js";
 import { createMemory } from "./memory.js";
+import { exportMemoryOkf, importMemoryOkf } from "./okf-bundle.js";
 import { createConceptDeletionHandler, MEMORY_FABRIC_CONCEPT_HANDLER_SERVICE } from "./ontology/handler.js";
 import { createFabricOntology, MEMORY_FABRIC_SERVICE } from "./ontology/port.js";
-import { exportMemoryOkf, importMemoryOkf } from "./okf-bundle.js";
+import { reviewConceptEdit } from "./ontology/review.js";
 import { readPromoteState } from "./promote.js";
 import { reconcileFabricFiles } from "./reconcile.js";
 import { renderProjectFile } from "./scope/identity.js";
@@ -236,6 +237,26 @@ const definition = definePackage<MemoryFabricConfig>({
           scopes: memories.map(({ level, memory: scoped }) => ({ level, memory: scoped })),
           store: vectorStore,
           bindThreshold: config.ontology.bindThreshold,
+          // Ingested sources (plan 207 Task 8) are `file` notes under tools.root, written by the ordinary write path.
+          ...(config.tools.root === undefined
+            ? {}
+            : {
+                sourceRoot: resolve(config.tools.root),
+                indexSource: async (source) => {
+                  const note = await fabric.remember(
+                    {
+                      kind: "file",
+                      scope: "project",
+                      path: source.path,
+                      content: source.text.slice(0, memory.limits.maxEntryTextChars),
+                      contentHash: source.contentHash,
+                      ...(source.keywords === undefined || source.keywords.length === 0 ? {} : { keywords: source.keywords }),
+                    },
+                    { generatedBy: "host", ...(source.signal === undefined ? {} : { signal: source.signal }) },
+                  );
+                  return { id: note.id, ...(note.subject === undefined ? {} : { subject: note.subject }) };
+                },
+              }),
         })
       : undefined;
     if (ontology !== undefined) {
@@ -311,6 +332,8 @@ const definition = definePackage<MemoryFabricConfig>({
           index: join(config.tools.root, ".team-index", `${teamProject.resourceId.split("--").at(-1)}.sqlite`),
         });
         prism.onDispose(() => team?.close());
+        // The team ontology is read-only here: lint and the status command read it, nothing in this process writes it.
+        ontology?.attach({ level: "team", memory: team.memory, store: team.store });
         if (team.quarantined > 0) {
           prism.status.note("warn", `memory-fabric: ${team.quarantined} team note(s) quarantined by the trust scan`);
         }
@@ -776,6 +799,8 @@ const definition = definePackage<MemoryFabricConfig>({
             try {
               return await stores.reindex!(options);
             } finally {
+              // A person's edit may have changed a concept's sources or subject: the index rescans on next use.
+              for (const level of ontology?.scopes() ?? []) ontology?.index(level)?.invalidate();
               projection.refresh();
             }
           }),
@@ -867,6 +892,8 @@ async function resolveStore(
       root: dir,
       ...(config.limits === undefined ? {} : { limits: config.limits }),
       classifyNote: (record) => unreadableNoteReason(record.metadata),
+      // A person's edit to a concept file is reviewed before it is indexed (plan 207 Task 7).
+      reviewEdit: (record, previous) => reviewConceptEdit(record, previous),
     });
     return {
       vectorStore: stores.vectorStore,

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
 import type { Memory, VectorStore } from "@arnilo/prism-memory-core";
 import { createFabricFileJail } from "./files.js";
 import { scanScopedMemoryContent } from "./scoped/trust.js";
@@ -10,6 +10,12 @@ function excludedSqlite(absolute: string, paths: string | readonly string[]): bo
   const list = typeof paths === "string" ? [paths] : paths;
   return list.some((path) => absolute === path || absolute.startsWith(`${path}-`));
 }
+
+/**
+ * An ingested source's immutable original (`sources/<id>/source.<ext>`). Only its `extract.md` is a `file` note: the
+ * original may be binary, and a text original would duplicate its extract as evidence (plan 207 Task 8).
+ */
+const STAGED_ORIGINAL = /^sources\/[^/]+\/source\.[A-Za-z0-9]+$/;
 
 /** One bounded startup pass; incomplete listings never imply that a file was deleted. */
 export async function reconcileFabricFiles(options: {
@@ -63,6 +69,7 @@ export async function reconcileFabricFiles(options: {
       const key = relative(files.root, absolute);
       if (options.notesDir !== undefined && (key === options.notesDir || key.startsWith(`${options.notesDir}/`))) continue;
       if (options.sqlitePath && excludedSqlite(absolute, options.sqlitePath)) continue;
+      if (STAGED_ORIGINAL.test(key.split(sep).join("/"))) continue;
       if (entry.kind === "directory") {
         await walk(path);
         continue;

@@ -1,53 +1,47 @@
-import type { PackageCommand } from "@arnilo/prism";
-import { WikiLinter } from "../engine/linter.js";
-import type { LintReport, WikiExtensionOptions } from "../types.js";
+import type { JsonObject, PackageCommand } from "@arnilo/prism";
+import type { FabricOntologyPort, FabricScopeLevel } from "@arnilo/prism-memory-fabric";
+import { lintOntology, type WikiLintReport } from "../lint.js";
 
-export async function lintWiki(options: WikiExtensionOptions = {}): Promise<LintReport> {
-  const wikiRoot = options.wikiRoot ?? ".wiki";
-  const workspaceRoot = options.workspaceRoot ?? process.cwd();
-  const linter = new WikiLinter();
-  return linter.lint(wikiRoot, workspaceRoot);
+export const WIKI_LINT_COMMAND_NAME = "wiki:lint";
+const LINT_SCOPES = ["user", "agent", "team", "project"] as const;
+
+export function renderLint(report: WikiLintReport): string {
+  const head = report.ok
+    ? `wiki lint: ok, ${report.findings.length} finding${report.findings.length === 1 ? "" : "s"}.`
+    : "wiki lint: FAILED (unresolved citation or alias collision).";
+  const lines = report.scopes.flatMap((entry) => [
+    `- ${entry.scope}: ${entry.concepts} concept${entry.concepts === 1 ? "" : "s"}, ${entry.findings.length} finding${entry.findings.length === 1 ? "" : "s"}`,
+    ...entry.findings.map(
+      (finding) => `    ${finding.rule}${finding.subject === undefined ? "" : ` ${finding.subject}`}: ${finding.detail}`,
+    ),
+  ]);
+  return [head, ...lines, ...(report.skipped === undefined ? [] : [`skipped: ${report.skipped}.`])].join("\n");
 }
 
-/** First few pruned pages/paths shown in command and CLI text; the report itself is uncapped. */
-const PRUNED_PREVIEW = 3;
-
-/**
- * Non-fatal pruned-source line shared by the `wiki-lint` command and the standalone CLI: a count plus
- * the first few workspace-relative page and source paths, kept separate from anchors/links/orphans.
- */
-export function renderPrunedSources(report: LintReport): string {
-  const shown = report.prunedSources.slice(0, PRUNED_PREVIEW);
-  const detail = shown
-    .map(
-      (entry) =>
-        `${entry.page} (${entry.missing.slice(0, PRUNED_PREVIEW).join(", ")}${entry.missing.length > PRUNED_PREVIEW ? ", …" : ""})`,
-    )
-    .join("; ");
-  const rest = report.prunedSources.length - shown.length;
-  return `${report.prunedSources.length} entity page(s) need re-filing after source pruning: ${detail}${rest > 0 ? `, +${rest} more` : ""}`;
-}
-
-export function createWikiLintCommand(options: WikiExtensionOptions = {}): PackageCommand {
+/** `wiki:lint [scope]`: a read-only health report over the ontology. Makes no model call. */
+export function createWikiLintCommand(
+  port: () => FabricOntologyPort | undefined,
+  options: { readonly maxClaimsPerConcept: number; readonly passStarts: () => readonly string[] },
+): PackageCommand {
   return {
-    name: "wiki-lint",
-    description: "Check wiki health for broken links, dead source line anchors, and orphan pages.",
-    async run(_args, _context) {
-      const report = await lintWiki(options);
-
-      const prunedText = report.prunedSources.length > 0 ? renderPrunedSources(report) : "";
-      const statusText = report.ok
-        ? prunedText === ""
-          ? "✅ Wiki health check passed. No broken links or dead anchors found."
-          : `✅ Wiki health check passed. ${prunedText}.`
-        : `⚠️ Wiki health check found issues: ${report.deadAnchors.length} dead anchor(s), ${report.brokenLinks.length} broken link(s), ${report.orphans.length} orphan(s)${prunedText === "" ? "" : `; plus ${prunedText}`}.`;
-
-      return {
-        name: "wiki-lint",
-        value: report,
-        content: [{ type: "text", text: statusText }],
-        metadata: { ok: report.ok },
-      };
+    name: WIKI_LINT_COMMAND_NAME,
+    description:
+      "Lint the ontology: unresolved or stale citations, uncited human claims, alias collisions, missing relations and ontology gaps. Read-only; makes no model call.",
+    args: {
+      type: "object",
+      properties: { scope: { type: "string", enum: [...LINT_SCOPES], description: "One scope; default every readable scope." } },
+      additionalProperties: false,
+    },
+    async run(args): Promise<JsonObject> {
+      const fabric = port();
+      if (fabric === undefined) return { ok: false, text: "wiki: the memory.fabric service is not available." };
+      const scope = (args as { scope?: FabricScopeLevel }).scope;
+      const report = await lintOntology(fabric, {
+        ...(scope === undefined ? {} : { scopes: [scope] }),
+        maxClaimsPerConcept: options.maxClaimsPerConcept,
+        passStarts: options.passStarts(),
+      });
+      return { ...(report as unknown as JsonObject), text: renderLint(report) };
     },
   };
 }

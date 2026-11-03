@@ -1,8 +1,8 @@
 import type { AgentEvent, ProviderEvent, ProviderRequest, Session } from "@arnilo/prism";
 import { definePackage } from "@arnilo/prism";
 import { providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism/testing";
-import type { HostConfig } from "../host/config.js";
 import { createCodingWorker } from "../host/coding.js";
+import type { HostConfig } from "../host/config.js";
 
 const TOOL = "long_result";
 const BODY = "x".repeat(6_000);

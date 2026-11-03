@@ -159,10 +159,10 @@ checks.push(["the failure carries no document content", Boolean(missingPeer) && 
 
 const ingest = extraction.createDocumentIngest({ extract: async () => ({ markdown: "SMOKE-MARKDOWN", format: "odt", ocrUsed: false }) });
 const wiki = await import("@arnilo/prism-memory-wiki");
-const workspace = await mkdtemp(join(tmpdir(), "prism-work-smoke-"));
-const staged = await wiki.ingestWikiSource({ text: "SMOKE-MARKDOWN", title: "Hello" }, { workspaceRoot: workspace });
-checks.push(["the wiki package stages a source from the published tarball", staged.extract === "SMOKE-MARKDOWN"]);
-checks.push(["the wiki package exports the memoryWiki factory and the prism-wiki CLI", typeof wiki.memoryWiki === "function" && typeof wiki.runCli === "function"]);
+checks.push([
+  "the wiki package exports the memoryWiki factory, its definition and the ingest tool name, and no retired CLI",
+  typeof wiki.memoryWiki === "function" && wiki.default === wiki.definition && wiki.WIKI_INGEST_TOOL_NAME === "wiki_ingest" && wiki.runCli === undefined,
+]);
 const parsed = await ingest.parser.parse({ uri: "hello.odt", data: odt, mediaType: "application/vnd.oasis.opendocument.text" });
 checks.push(["rag parser returns the markdown plus untrusted metadata", parsed.text === "SMOKE-MARKDOWN" && parsed.metadata.untrusted === true && parsed.metadata.inert === true && parsed.metadata.injectionCapable === true]);
 checks.push(["rag metadata never carries the markdown body", JSON.stringify(parsed.metadata).includes("SMOKE-MARKDOWN") === false]);

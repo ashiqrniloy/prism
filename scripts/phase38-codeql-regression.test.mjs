@@ -24,7 +24,6 @@ import { describe, it } from "bun:test";
 import { trimTrailingSlashes } from "@arnilo/prism";
 import { sanitizeCacheKey } from "@arnilo/prism/provider-kit";
 import { htmlParser, pdfParser } from "@arnilo/prism-memory-rag";
-import { parseMarkdownHeading, parseSkillMarkdown } from "@arnilo/prism-memory-wiki";
 import { parseCodingPlanTodos } from "@arnilo/prism-tools-coding";
 
 describe("phase38 codeql regressions", () => {
@@ -97,21 +96,6 @@ describe("phase38 codeql regressions", () => {
       const parsed = await htmlParser.parse({ text: bypass, mediaType: "text/html" });
       assert.ok(!/<script/u.test(parsed.text), `output must not contain a reformed script tag: ${JSON.stringify(parsed.text)}`);
     }
-  });
-
-  it("wiki heading + skill parsing stay linear and keep documented semantics", () => {
-    // Positive.
-    assert.deepEqual(parseMarkdownHeading("## Section title"), { level: 2, text: "Section title" });
-    // Negative: 7 hashes, bare hash, and non-heading lines never match.
-    assert.equal(parseMarkdownHeading("####### seven"), undefined);
-    assert.equal(parseMarkdownHeading("#nospace"), undefined);
-    assert.equal(parseMarkdownHeading("plain line"), undefined);
-    // Exploit-shaped: heading run of 1_000_000 hashes resolves instantly.
-    const started = performance.now();
-    assert.equal(parseMarkdownHeading("#".repeat(1_000_000)), undefined);
-    assert.ok(performance.now() - started < 100);
-    const skill = parseSkillMarkdown("---\nname: deploy\n---\n# Deploy");
-    assert.equal(skill.name, "deploy");
   });
 
   it("phase26 journey fixture uses crypto randomness (alerts 52-55)", () => {

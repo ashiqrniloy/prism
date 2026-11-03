@@ -1,5 +1,11 @@
 # @arnilo/prism-memory-observational
 
+**Tier 0 of Prism's three-tier memory:** it watches the session as it happens. Its ledger of source-backed
+observations compacts the session and, with the ordinary `promote` pass, feeds candidate notes to
+[`@arnilo/prism-memory-fabric`](../fabric/README.md) (T1, the store of record); [`@arnilo/prism-memory-wiki`](../wiki/README.md)
+(T2, opt-in) consolidates those notes into cited concepts. It works alone, and the
+[example](../../../examples/three-tier-memory.ts) runs all three.
+
 Observational memory as a package (roadmap §2.11): the observer, the ledger, `recall`, the context
 block, and ledger-driven compaction. Installing the package is the opt-in; the `om` command turns it
 on per session.

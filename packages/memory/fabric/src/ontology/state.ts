@@ -20,6 +20,12 @@ import {
 export interface OntologyScope {
   readonly level: FabricScopeLevel;
   readonly memory: Memory;
+  /**
+   * The store this scope's notes live in, when it is not the fabric's main store: the team store is its own markdown
+   * tree. Such a scope is listed by thread, not by metadata scan: a hand-written note has no consent record, and a
+   * metadata scan skips exactly those.
+   */
+  readonly store?: VectorStore;
 }
 
 export interface ConceptRow {
@@ -57,10 +63,15 @@ export function rowFromMetadata(id: string, metadata: JsonObject | undefined): C
 
 const SCAN_PAGE = 500;
 
-async function scanConceptRows(memory: Memory, store: VectorStore, signal: AbortSignal | undefined): Promise<ConceptRow[]> {
+async function scanConceptRows(
+  memory: Memory,
+  store: VectorStore,
+  signal: AbortSignal | undefined,
+  byThread: boolean,
+): Promise<ConceptRow[]> {
   const rows: ConceptRow[] = [];
   const { tenantId, resourceId, threadId } = memory.scope;
-  if (store.scanMetadata !== undefined) {
+  if (store.scanMetadata !== undefined && !byThread) {
     let cursor: string | undefined;
     do {
       const page = await store.scanMetadata({
@@ -102,7 +113,12 @@ export interface ConceptIndex {
   version(): number;
 }
 
-export function createConceptIndex(deps: { readonly memory: Memory; readonly store: VectorStore }): ConceptIndex {
+export function createConceptIndex(deps: {
+  readonly memory: Memory;
+  readonly store: VectorStore;
+  /** List by thread instead of by metadata scan (a store whose notes may carry no consent record). */
+  readonly byThread?: boolean;
+}): ConceptIndex {
   let byId: Map<string, ConceptRow> | undefined;
   let bySubject: Map<string, string> | undefined;
   let byCited: Map<string, Set<string>> | undefined;
@@ -135,7 +151,7 @@ export function createConceptIndex(deps: { readonly memory: Memory; readonly sto
   async function ensure(signal: AbortSignal | undefined): Promise<void> {
     if (byId !== undefined) return;
     loading ??= (async () => {
-      const rows = await scanConceptRows(deps.memory, deps.store, signal);
+      const rows = await scanConceptRows(deps.memory, deps.store, signal, deps.byThread === true);
       byId = new Map();
       bySubject = new Map();
       byCited = new Map();

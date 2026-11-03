@@ -1,3 +1,0 @@
-# Decisions
-
-*None indexed yet.*

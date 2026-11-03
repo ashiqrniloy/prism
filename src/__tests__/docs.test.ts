@@ -1491,6 +1491,7 @@ describe("docs", () => {
         "examples/open-connector-sidecar.ts",
         "examples/scoped-memory.ts",
         "examples/memory-lifecycle.ts",
+        "examples/three-tier-memory.ts",
         "examples/skills-progressive-disclosure.ts",
         "examples/caveman-ponytail.ts",
         "examples/hooks-json.ts",
@@ -1555,6 +1556,11 @@ describe("docs", () => {
           assert.ok(out.includes('"scheduledFirings":1'));
           assert.ok(out.includes('"route":"channel","kind":"confirm","status":"answered"'));
           assert.ok(!out.includes("123456:headless-demo-dummy"), "headless demo emitted its dummy credential");
+        }
+        if (file === "examples/three-tier-memory.ts") {
+          const tiers = JSON.parse(out.trim().split("\n").at(-1) ?? "{}") as { tiers: Record<string, number> };
+          assert.deepEqual(tiers.tiers, { t0Observations: 2, t1Facts: 3, t2Concepts: 1 });
+          assert.ok(out.includes("memory.forget: 3 claims -> 2"), "forgetting a cited note removed its claim");
         }
         if (file === "examples/connected-slack-mcp.ts") {
           assert.deepEqual(JSON.parse(out), {

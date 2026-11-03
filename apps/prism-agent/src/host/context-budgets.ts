@@ -28,9 +28,7 @@ export function contextBudgetFor(ref: ModelRef): ContextBudget | undefined {
 /** Listed model: its measured budget; unlisted: the relative 0.6 gate only. */
 export function compactionTriggerFor(ref: ModelRef): CompactionTrigger {
   const budget = contextBudgetFor(ref);
-  return budget === undefined
-    ? { type: "input_ratio", ratio: 0.6 }
-    : { type: "threshold_tokens", tokens: budget.inputTokens };
+  return budget === undefined ? { type: "input_ratio", ratio: 0.6 } : { type: "threshold_tokens", tokens: budget.inputTokens };
 }
 
 /** One batched fold per ~10% of the measured budget; unlisted models keep the package minimum. */
@@ -53,10 +51,7 @@ export function contextBudgetNotice(ref: ModelRef): PackageInstance {
     requires: { api: 1 },
     setup(prism) {
       if (contextBudgetFor(ref) !== undefined) return;
-      prism.status.note(
-        "info",
-        `${modelKey(ref)} has no measured context-rot budget; using input_ratio 0.6 of the model input cap`,
-      );
+      prism.status.note("info", `${modelKey(ref)} has no measured context-rot budget; using input_ratio 0.6 of the model input cap`);
     },
   })();
 }

@@ -1,18 +1,14 @@
 {
   "name": "@arnilo/prism-memory-wiki",
   "version": "0.13.0",
-  "description": "The LLM Wiki knowledge compiler for Prism agents: wiki tools, four package commands, bundled skills, and the prism-wiki CLI.",
+  "description": "The ontology tier for Prism memory: concept notes over the fabric, consolidated from cited evidence.",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
-  "bin": {
-    "prism-wiki": "./src/cli.ts"
-  },
   "files": [
     "src",
     "!src/**/__tests__",
-    "skills",
     "README.md",
     "CHANGELOG.md",
     "LICENSE"
@@ -23,6 +19,7 @@
   },
   "peerDependencies": {
     "@arnilo/prism": ">=0.13.0 <1.0.0",
+    "@arnilo/prism-memory-fabric": "^0.13.0",
     "@arnilo/prism-tools-web": "^0.13.0"
   },
   "peerDependenciesMeta": {
@@ -32,9 +29,11 @@
   },
   "dependencies": {
     "@arnilo/prism-memory-core": "^0.13.0",
+    "@arnilo/prism-memory-observational": "^0.13.0",
     "@arnilo/prism-memory-rag": "^0.13.0"
   },
   "devDependencies": {
+    "@arnilo/prism-memory-fabric": "file:../fabric",
     "@arnilo/prism-tools-web": "file:../../tools/web",
     "@types/node": "^22.20.0",
     "typescript": "^7.0.2"
@@ -54,8 +53,9 @@
   "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/memory/wiki#readme",
   "keywords": [
     "prism",
+    "memory",
+    "ontology",
     "wiki",
-    "knowledge",
     "package"
   ],
   "sideEffects": false,

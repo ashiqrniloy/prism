@@ -7,13 +7,7 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": [
-      "**",
-      "!**/dist",
-      "!**/node_modules",
-      "!**/coverage",
-      "!**/*.json"
-    ]
+    "includes": ["**", "!**/dist", "!**/node_modules", "!**/coverage", "!**/*.json"]
   },
   "formatter": {
     "enabled": true,
@@ -56,9 +50,7 @@
   },
   "overrides": [
     {
-      "includes": [
-        "src/**"
-      ],
+      "includes": ["src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -68,9 +60,7 @@
       }
     },
     {
-      "includes": [
-        "examples/**"
-      ],
+      "includes": ["examples/**"],
       "linter": {
         "rules": {
           "style": {
@@ -80,9 +70,7 @@
       }
     },
     {
-      "includes": [
-        "packages/hosts/acp/src/**"
-      ],
+      "includes": ["packages/hosts/acp/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -92,9 +80,7 @@
       }
     },
     {
-      "includes": [
-        "packages/hosts/ag-ui/src/**"
-      ],
+      "includes": ["packages/hosts/ag-ui/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -104,9 +90,7 @@
       }
     },
     {
-      "includes": [
-        "packages/integrations/mcp/src/**"
-      ],
+      "includes": ["packages/integrations/mcp/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -116,9 +100,7 @@
       }
     },
     {
-      "includes": [
-        "packages/memory/core/src/**"
-      ],
+      "includes": ["packages/memory/core/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -128,9 +110,7 @@
       }
     },
     {
-      "includes": [
-        "packages/memory/fabric/src/**"
-      ],
+      "includes": ["packages/memory/wiki/src/__tests__/**"],
       "linter": {
         "rules": {
           "style": {
@@ -140,9 +120,7 @@
       }
     },
     {
-      "includes": [
-        "packages/context/engineering/src/**"
-      ],
+      "includes": ["packages/memory/fabric/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -152,9 +130,7 @@
       }
     },
     {
-      "includes": [
-        "packages/memory/rag/src/**"
-      ],
+      "includes": ["packages/context/engineering/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -164,9 +140,7 @@
       }
     },
     {
-      "includes": [
-        "packages/tools/work/src/**"
-      ],
+      "includes": ["packages/memory/rag/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -176,9 +150,7 @@
       }
     },
     {
-      "includes": [
-        "packages/tools/coding/src/**"
-      ],
+      "includes": ["packages/tools/work/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -188,9 +160,7 @@
       }
     },
     {
-      "includes": [
-        "packages/tools/web/src/**"
-      ],
+      "includes": ["packages/tools/coding/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -200,9 +170,7 @@
       }
     },
     {
-      "includes": [
-        "packages/policy/governance/src/**"
-      ],
+      "includes": ["packages/tools/web/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -212,9 +180,7 @@
       }
     },
     {
-      "includes": [
-        "packages/providers/*/src/**"
-      ],
+      "includes": ["packages/policy/governance/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -224,9 +190,7 @@
       }
     },
     {
-      "includes": [
-        "packages/tools/browser/src/**"
-      ],
+      "includes": ["packages/providers/*/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -236,9 +200,7 @@
       }
     },
     {
-      "includes": [
-        "packages/tools/openapi/src/**"
-      ],
+      "includes": ["packages/tools/browser/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -248,9 +210,7 @@
       }
     },
     {
-      "includes": [
-        "packages/tools/computer-use/src/**"
-      ],
+      "includes": ["packages/tools/openapi/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -260,9 +220,7 @@
       }
     },
     {
-      "includes": [
-        "packages/memory/compaction/src/**"
-      ],
+      "includes": ["packages/tools/computer-use/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -272,9 +230,7 @@
       }
     },
     {
-      "includes": [
-        "packages/memory/observational/src/**"
-      ],
+      "includes": ["packages/memory/compaction/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -284,9 +240,7 @@
       }
     },
     {
-      "includes": [
-        "apps/prism-agent/src/**"
-      ],
+      "includes": ["packages/memory/observational/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -296,9 +250,7 @@
       }
     },
     {
-      "includes": [
-        "packages/drivers/process/src/**"
-      ],
+      "includes": ["apps/prism-agent/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -308,9 +260,7 @@
       }
     },
     {
-      "includes": [
-        "packages/hosts/devtools/src/**"
-      ],
+      "includes": ["packages/drivers/process/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -320,9 +270,7 @@
       }
     },
     {
-      "includes": [
-        "packages/hosts/evals/src/**"
-      ],
+      "includes": ["packages/hosts/devtools/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -332,9 +280,7 @@
       }
     },
     {
-      "includes": [
-        "packages/hosts/headless/src/**"
-      ],
+      "includes": ["packages/hosts/evals/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -344,9 +290,7 @@
       }
     },
     {
-      "includes": [
-        "packages/hosts/remote/src/**"
-      ],
+      "includes": ["packages/hosts/headless/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -356,9 +300,7 @@
       }
     },
     {
-      "includes": [
-        "packages/integrations/observability/src/**"
-      ],
+      "includes": ["packages/hosts/remote/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -368,9 +310,7 @@
       }
     },
     {
-      "includes": [
-        "packages/integrations/workflows/src/**"
-      ],
+      "includes": ["packages/integrations/observability/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -380,9 +320,7 @@
       }
     },
     {
-      "includes": [
-        "packages/policy/guardrail-packs/src/**"
-      ],
+      "includes": ["packages/integrations/workflows/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -392,9 +330,7 @@
       }
     },
     {
-      "includes": [
-        "packages/policy/model-router/src/**"
-      ],
+      "includes": ["packages/policy/guardrail-packs/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -404,9 +340,17 @@
       }
     },
     {
-      "includes": [
-        "packages/stores/codecs/src/**"
-      ],
+      "includes": ["packages/policy/model-router/src/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/stores/codecs/src/**"],
       "linter": {
         "rules": {
           "style": {

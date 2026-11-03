@@ -1,121 +1,7 @@
-export type WikiProfileType = "codebase" | "pkm" | "hybrid" | "auto";
+import type { FabricOntologyPort, FabricScopeLevel } from "@arnilo/prism-memory-fabric";
+import type { WikiPassReport } from "./consolidate/pass.js";
 
-export type SearchMode = "search" | "vsearch" | "query";
-
-export interface WikiSourceAnchor {
-  readonly filePath: string;
-  readonly startLine: number;
-  readonly endLine: number;
-  readonly symbol?: string;
-  readonly sourceHash: string;
-}
-
-export interface WikiEntityMetadata {
-  readonly id: string;
-  readonly title: string;
-  readonly category: "entity" | "concept" | "module" | "decision" | "person" | "tool";
-  readonly description?: string;
-  readonly tags: readonly string[];
-  readonly rawSources: readonly string[];
-  readonly anchors: readonly WikiSourceAnchor[];
-  readonly lastCompiledAt: string;
-}
-
-export interface WikiManifest {
-  readonly version: "1.0.0";
-  readonly profile: WikiProfileType;
-  readonly wikiRoot: string;
-  readonly rawRoots: readonly string[];
-  readonly sourceFileHashes: Record<string, string>;
-  readonly entities: Record<string, WikiEntityMetadata>;
-}
-
-export interface SourceDelta {
-  readonly added: readonly string[];
-  readonly modified: readonly string[];
-  readonly deleted: readonly string[];
-  readonly unchanged: readonly string[];
-  readonly affectedEntities: readonly string[];
-}
-
-export interface QmdSearchResult {
-  readonly docId: string;
-  readonly file: string;
-  readonly score: number;
-  readonly snippet: string;
-  readonly title?: string;
-}
-
-export interface HydratedSearchHit {
-  readonly title: string;
-  readonly wikiPath: string;
-  readonly breadcrumbs: readonly string[];
-  readonly summary: string;
-  readonly anchors: readonly WikiSourceAnchor[];
-  readonly isStale: boolean;
-  readonly rawScore: number;
-}
-
-export interface WikiSearchResponse {
-  readonly query: string;
-  readonly mode: SearchMode;
-  readonly hits: readonly HydratedSearchHit[];
-  readonly formattedMarkdown: string;
-}
-
-export interface DeadAnchor {
-  readonly entityId: string;
-  readonly anchor: WikiSourceAnchor;
-  readonly reason: "file_missing" | "symbol_missing" | "lines_shifted" | "content_changed";
-}
-
-export interface BrokenLink {
-  readonly sourceFile: string;
-  readonly target: string;
-}
-
-/** An entity page whose raw sources are gone: the projection outlived its inputs. */
-export interface PrunedSource {
-  /** Entity page path relative to the wiki root, e.g. `entities/acme.md`. */
-  readonly page: string;
-  /** Workspace-relative source paths that no longer exist on disk, sorted. */
-  readonly missing: readonly string[];
-}
-
-export interface LintReport {
-  readonly deadAnchors: readonly DeadAnchor[];
-  readonly brokenLinks: readonly BrokenLink[];
-  readonly orphans: readonly string[];
-  readonly gaps: readonly string[];
-  /**
-   * Entity pages whose `rawSources` (manifest) or listed sources (`## Raw Sources`) are missing
-   * on disk or were pruned by `retireWikiSources`/`repointWikiSources`. Non-fatal: re-filing a
-   * pruned page is maintainer work, so `ok` ignores this list.
-   */
-  readonly prunedSources: readonly PrunedSource[];
-  readonly ok: boolean;
-}
-
-export interface WikiExtensionOptions {
-  /** Root directory where .wiki/ lives. Defaults to `.wiki` in project root. */
-  readonly wikiRoot?: string;
-  /** Directories containing raw source files (code, notes, docs). Defaults to workspace root. */
-  readonly rawRoots?: readonly string[];
-  /** Operating profile. Defaults to "auto". */
-  readonly profile?: WikiProfileType;
-  /** Path to qmd binary or executable name. Defaults to "qmd". */
-  readonly qmdPath?: string;
-  /** Optional custom workspace root. Defaults to process.cwd(). */
-  readonly workspaceRoot?: string;
-  /** Callback to auto-deploy skills to .agents/skills/ on setup/init. Defaults to false. */
-  readonly autoDeploySkills?: boolean;
-  /** Host-injected fetcher for `url` ingest sources. The wiki never fetches itself.
-   *  Return null to fail closed. `@arnilo/prism-memory-wiki` wires this from the `web.fetch` service;
-   *  hosts that call the library directly may pass their own. */
-  readonly fetchUrl?: (input: WikiIngestUrlHookInput) => Promise<WikiIngestFetch | null>;
-}
-
-/** Content to stage for {@link ingestWikiSource}. Exactly one source is used: `path` > `bytes` > `url` > `text`. */
+/** Content to stage for the ingest. Exactly one source is used: `path` > `bytes` > `url` > `text`. */
 export interface WikiIngestInput {
   /** Inline utf8 text (staged as `source.txt` unless `filename` gives an extension). */
   readonly text?: string;
@@ -146,12 +32,10 @@ export interface WikiIngestFetch {
 }
 
 export interface WikiIngestOptions {
-  /** Root the wiki lives in. Defaults to process.cwd(). */
+  /** Workspace root that contains `path` sources. Defaults to process.cwd(). */
   readonly workspaceRoot?: string;
-  /** Wiki root used for the log append (only if it already exists). Defaults to `.wiki`. */
-  readonly wikiRoot?: string;
-  /** Raw layer root. Defaults to `raw/ingest` under `workspaceRoot` (never inside `.wiki/`). */
-  readonly ingestRoot?: string;
+  /** Where `sources/<id>/` is staged: the fabric's `tools.root`. Defaults to `workspaceRoot`. */
+  readonly stageRoot?: string;
   /** Input byte cap. Defaults to 32 MiB. */
   readonly maxInputBytes?: number;
   /** Extract byte cap; larger extracts are truncated. Defaults to 2 MiB. */
@@ -160,14 +44,15 @@ export interface WikiIngestOptions {
   readonly fetchUrl?: (input: WikiIngestUrlHookInput) => Promise<WikiIngestFetch | null>;
 }
 
-export interface WikiIngestResult {
-  /** Directory name under the ingest root: `<utc>-<slug>` (content-hash suffix on collision). */
+/** What staging produced. Paths are relative to the stage root (the fabric's `tools.root`). */
+export interface WikiStagedSource {
+  /** Directory name under `sources/`: `<utc>-<slug>` (content-hash suffix on collision). */
   readonly id: string;
-  /** Workspace-relative staged directory, e.g. `raw/ingest/2026-05-01T12-00-00Z-paper`. */
+  /** Staged directory, e.g. `sources/2026-05-01T12-00-00Z-paper`. */
   readonly rawDir: string;
-  /** Workspace-relative immutable original, e.g. `raw/ingest/.../source.pdf`. */
+  /** Immutable original, e.g. `sources/.../source.pdf`. */
   readonly sourcePath: string;
-  /** Workspace-relative utf8 extract, always `raw/ingest/.../extract.md`. */
+  /** The utf8 extract, always `sources/.../extract.md`. This is the `file` note's path. */
   readonly extractPath: string;
   /** Derived media type (undefined for unknown binaries the hook handled). */
   readonly mediaType?: string;
@@ -177,4 +62,55 @@ export interface WikiIngestResult {
   readonly extract: string;
   /** True when the extract hit the `maxExtractBytes` cap. */
   readonly truncated: boolean;
+  /** SHA-256 (hex) of the extract text. */
+  readonly contentHash: string;
+  /** Enrichment keywords derived from the title and extract. */
+  readonly keywords: readonly string[];
+}
+
+/** The `wiki_ingest` result: the staged paths plus the fabric `file` note that now carries the extract. */
+export interface WikiIngestResult extends Omit<WikiStagedSource, "contentHash" | "keywords"> {
+  /** Scope of the `file` note. */
+  readonly scope: FabricScopeLevel;
+  /** False when the trust scan refused the text: the files are staged but nothing was indexed. */
+  readonly indexed: boolean;
+  /** The `file` note id; claims cite it. Absent when not indexed. */
+  readonly noteId?: string;
+  /** The subject the note was bound to at write time, when exactly one fit. */
+  readonly subject?: string;
+  /** The trust class that refused the text. */
+  readonly refused?: string;
+}
+
+/** What the ingest tool and command need from the package: the workspace root, the fetch seam and the caps. */
+export interface WikiExtensionOptions {
+  /** Workspace root for `path` sources. Defaults to process.cwd(). */
+  readonly workspaceRoot?: string;
+  readonly maxInputBytes?: number;
+  readonly maxExtractBytes?: number;
+  /** The `memory.fabric` port, resolved per call: it supplies the stage root and indexes the extract. */
+  readonly port?: () => FabricOntologyPort | undefined;
+  /** Host-injected fetcher for `url` ingest sources. The wiki never fetches itself.
+   *  Return null to fail closed. `@arnilo/prism-memory-wiki` wires this from the `web.fetch` service. */
+  readonly fetchUrl?: (input: WikiIngestUrlHookInput) => Promise<WikiIngestFetch | null>;
+}
+
+/** One readable scope in `wiki:status`. Counts only: the report never carries note or claim text. */
+export interface WikiStatusScope {
+  readonly scope: string;
+  /** Concept notes in the scope. */
+  readonly subjects: number;
+  /** Concepts that need a pass. */
+  readonly dirty: number;
+  /** Dirty concepts by reason (`removed`, `stale`, `evidence`, `edited`). */
+  readonly reasons: Readonly<Record<string, number>>;
+}
+
+/** The `wiki:status` result. Computed from the `memory.fabric` port; no model call. */
+export interface WikiStatusReport {
+  readonly scopes: readonly WikiStatusScope[];
+  readonly subjects: number;
+  readonly dirty: number;
+  /** The last concept pass that did work in this process, with its cost. Absent before the first one. */
+  readonly last?: WikiPassReport;
 }

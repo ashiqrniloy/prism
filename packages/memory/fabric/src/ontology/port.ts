@@ -83,6 +83,31 @@ export interface OntologyNoteView {
   readonly key?: string;
   readonly tRef?: string;
   readonly status?: string;
+  /** Enrichment keywords the write path stored (generic category words), for clustering unbound notes. */
+  readonly keywords?: readonly string[];
+  /** Typed links the note carries (ids and relation only). A concept's links point at other concepts. */
+  readonly links?: readonly { readonly id: string; readonly relation?: string }[];
+  /** Co-read events (ids and indexes only), the curator's primary trigger (plan 207 Task 6). */
+  readonly coRead?: readonly { readonly s: number; readonly t: number; readonly with: readonly string[] }[];
+  /** `file` notes only: the path under the source root. Ingested sources live under `sources/`. */
+  readonly path?: string;
+  /** Who wrote this note last (`generated.by`); `human` marks a concept a person edited. */
+  readonly generatedBy?: string;
+  /** A concept's item ids whose citation was retracted or changed and that no edit has resolved yet. */
+  readonly stale?: readonly string[];
+}
+
+/** Narrows {@link FabricOntologyPort.pending}; every filter is evaluated in the same metadata scan. */
+export interface OntologyPendingOptions {
+  readonly cursor?: string;
+  readonly limit?: number;
+  /** Only notes bound to this subject. */
+  readonly subject?: string;
+  /** Only notes bound to no subject. */
+  readonly unbound?: boolean;
+  /** Only notes that carry at least one co-read event. */
+  readonly coRead?: boolean;
+  readonly signal?: AbortSignal;
 }
 
 export interface OntologyPendingPage {
@@ -141,16 +166,45 @@ export interface ApplyConceptEditsResult {
   readonly archived: readonly string[];
 }
 
+/** A staged source to index as a `file` note in the `project` scope (plan 207 Task 8). */
+export interface OntologySourceInput {
+  /** Path relative to {@link FabricOntologyPort.sourceRoot}. The file is already staged there. */
+  readonly path: string;
+  /** The extract; capped to the entry limit when indexed. */
+  readonly text: string;
+  /** SHA-256 (hex) of the staged file's text, so the startup reconcile sees the note as current. */
+  readonly contentHash: string;
+  /** Enrichment keywords, so an unbound source can cluster with related notes. */
+  readonly keywords?: readonly string[];
+  readonly signal?: AbortSignal;
+}
+
+export interface OntologySourceResult {
+  /** False when the trust scan refused the text; nothing was written. */
+  readonly indexed: boolean;
+  readonly scope: FabricScopeLevel;
+  /** The `file` note id; claims cite it. Absent when refused. */
+  readonly id?: string;
+  /** The subject the note was bound to at write time. Absent when unbound or refused. */
+  readonly subject?: string;
+  /** The trust class that refused the text. */
+  readonly refused?: string;
+}
+
 export interface FabricOntologyPort {
   /** Readable scope levels, narrowest first. */
   scopes(): readonly FabricScopeLevel[];
+  /** The directory sources are staged under (the fabric's `tools.root`), or `undefined` when it has none. */
+  sourceRoot(): string | undefined;
+  /**
+   * Index a staged source as a `file` note in the `project` scope: the trust scan first, then the ordinary write
+   * path (deterministic binding, dirty marking, no model call). Throws when the fabric has no source root.
+   */
+  indexSource(input: OntologySourceInput): Promise<OntologySourceResult>;
   /** The ontology index: one entry per live concept of a scope. */
   subjects(scope: FabricScopeLevel, options?: { readonly signal?: AbortSignal }): Promise<readonly OntologySubject[]>;
   /** T1 notes written after `cursor`, oldest first. */
-  pending(
-    scope: FabricScopeLevel,
-    options?: { readonly cursor?: string; readonly limit?: number; readonly signal?: AbortSignal },
-  ): Promise<OntologyPendingPage>;
+  pending(scope: FabricScopeLevel, options?: OntologyPendingOptions): Promise<OntologyPendingPage>;
   /** Up to {@link MAX_ONTOLOGY_READ_IDS} notes, through the same filters as `memory.read`. */
   read(scope: FabricScopeLevel, ids: readonly string[], options?: { readonly signal?: AbortSignal }): Promise<readonly OntologyNoteView[]>;
   /** Validate the whole batch, then write it; any invalid edit rejects the batch and writes nothing. */
@@ -163,6 +217,16 @@ export interface FabricOntologyPort {
   bind(scope: FabricScopeLevel, noteId: string, subject: string, options?: { readonly signal?: AbortSignal }): Promise<boolean>;
   /** Concepts that need a pass, and why. */
   dirty(scope: FabricScopeLevel, options?: { readonly signal?: AbortSignal }): Promise<readonly OntologyDirtyEntry[]>;
+  /**
+   * The trust class the fabric would refuse `text` for (`prompt-injection`, `exfil`, `invisible-unicode`), or
+   * `undefined` when it is clean. The curator uses it to drop one offending edit instead of the whole answer.
+   */
+  screen(text: string): string | undefined;
+  /**
+   * The curator looked at a subject's new evidence and had nothing to add: clear the `evidence` reason so the
+   * subject is not offered again until another note is bound to it. `stale`, `removed` and `edited` stay.
+   */
+  settle(scope: FabricScopeLevel, subject: string, options?: { readonly signal?: AbortSignal }): Promise<boolean>;
 }
 
 export interface FabricOntology {
@@ -184,6 +248,8 @@ export interface FabricOntology {
   refresh(ids: readonly string[], options?: { readonly signal?: AbortSignal }): Promise<void>;
   /** The index of a scope, for diagnostics and tests. */
   index(scope: FabricScopeLevel): ConceptIndex | undefined;
+  /** Every scope level this ontology reads, including a read-only team scope. */
+  scopes(): readonly FabricScopeLevel[];
   /** What the write path binds notes with and what the extractor prompt and the directory show (Task 3). */
   readonly subjects: FabricSubjects;
 }
@@ -193,6 +259,8 @@ const ACTIVE_STATUSES = new Set(["verified", "candidate"]);
 
 interface ScopeState extends OntologyScope {
   readonly index: ConceptIndex;
+  /** The store this scope reads: its own, or the fabric's. */
+  readonly source: VectorStore;
 }
 
 interface Working {
@@ -212,6 +280,10 @@ export function createFabricOntology(deps: {
   readonly now?: () => Date;
   /** `ontology.bindThreshold`: matched tokens of one name that bind a note (default 2). */
   readonly bindThreshold?: number;
+  /** The fabric's `tools.root`: where ingested sources are staged. */
+  readonly sourceRoot?: string;
+  /** Writes one `file` note through the fabric's own write path. Without it `indexSource` fails closed. */
+  readonly indexSource?: (input: OntologySourceInput) => Promise<{ readonly id: string; readonly subject?: string }>;
 }): FabricOntology {
   const now = deps.now ?? (() => new Date());
   const redact = deps.redact ?? ((text: string) => text);
@@ -220,11 +292,12 @@ export function createFabricOntology(deps: {
   const cascades = new Map<Memory, ConceptCascade>();
 
   const register = (scope: OntologyScope): ScopeState => {
-    const index = createConceptIndex({ memory: scope.memory, store: deps.store });
-    const state: ScopeState = { ...scope, index };
+    const source = scope.store ?? deps.store;
+    const index = createConceptIndex({ memory: scope.memory, store: source, byThread: scope.store !== undefined });
+    const state: ScopeState = { ...scope, index, source };
     if (!attached.has(scope.memory)) {
       attached.add(scope.memory);
-      const cascade = createConceptCascade({ memory: scope.memory, store: deps.store, index, now });
+      const cascade = createConceptCascade({ memory: scope.memory, store: source, index, now });
       cascades.set(scope.memory, cascade);
       setMemoryRetractListener(scope.memory, async (event) => {
         await cascade.handle(event);
@@ -263,6 +336,14 @@ export function createFabricOntology(deps: {
       ...(note.key === undefined ? {} : { key: note.key }),
       ...(note.tRef === undefined ? {} : { tRef: note.tRef }),
       ...(status === undefined ? {} : { status }),
+      ...(note.keywords === undefined || note.keywords.length === 0 ? {} : { keywords: note.keywords }),
+      ...(note.links === undefined || note.links.length === 0
+        ? {}
+        : { links: note.links.map((link) => ({ id: link.id, ...(link.relation === undefined ? {} : { relation: link.relation }) })) }),
+      ...(note.coRead === undefined || note.coRead.length === 0 ? {} : { coRead: note.coRead }),
+      ...(note.kind === "file" && note.path !== undefined ? { path: note.path } : {}),
+      ...(note.generated === undefined ? {} : { generatedBy: note.generated.by }),
+      ...(note.stale === undefined || note.stale.length === 0 ? {} : { stale: note.stale }),
     };
   };
 
@@ -289,6 +370,15 @@ export function createFabricOntology(deps: {
     if (found === undefined) throw new ConceptFormatError("unknown_claim", `no claim ${id} in ${work.meta.subject}`);
     return found;
   }
+
+  /** A person's item (marked, or with no citation at all) is read-only to everyone but a person. */
+  const protectedItem = (item: ConceptItem): boolean => item.human === true || item.cites.length === 0;
+  const refuseHuman = (item: ConceptItem, writer: ConceptWriter): void => {
+    if (writer !== "human" && protectedItem(item)) {
+      throw new ConceptFormatError("claim_human", `item ${item.id} was written by a person; only a person changes it`);
+    }
+  };
+  const mark = (writer: ConceptWriter): { readonly human?: true } => (writer === "human" ? { human: true } : {});
 
   const itemCites = (cites: unknown, writer: ConceptWriter): readonly string[] => {
     const valid = validateCites(cites);
@@ -383,19 +473,20 @@ export function createFabricOntology(deps: {
           const cites = itemCites(edit.cites, writer);
           track(cites);
           const text = checkText(validateItemText(edit.text));
-          replaceItems(work, "claims", [...work.doc.claims, { id: nextItemId(work.doc, "claim"), text, cites }]);
+          replaceItems(work, "claims", [...work.doc.claims, { id: nextItemId(work.doc, "claim"), text, cites, ...mark(writer) }]);
           break;
         }
         case "update_claim": {
           const work = await need(edit.subject);
           const existing = claim(work, edit.claimId);
+          refuseHuman(existing, writer);
           const cites = itemCites(edit.cites, writer);
           track(cites);
           const text = checkText(validateItemText(edit.text));
           replaceItems(
             work,
             "claims",
-            work.doc.claims.map((item) => (item.id === existing.id ? { id: item.id, text, cites } : item)),
+            work.doc.claims.map((item) => (item.id === existing.id ? { id: item.id, text, cites, ...mark(writer) } : item)),
           );
           work.resolved.add(existing.id);
           break;
@@ -403,6 +494,7 @@ export function createFabricOntology(deps: {
         case "retire_claim": {
           const work = await need(edit.subject);
           const existing = claim(work, edit.claimId);
+          refuseHuman(existing, writer);
           if (typeof edit.reason !== "string" || edit.reason.trim().length === 0 || edit.reason.length > 200) {
             throw new ConceptFormatError("reason_shape", "retire_claim needs a reason of at most 200 characters");
           }
@@ -420,6 +512,7 @@ export function createFabricOntology(deps: {
             throw new ConceptFormatError("merge_shape", "merge_claims names at least two claims");
           const merged = [...new Set(edit.claimIds)].map((id) => claim(work, id));
           if (merged.length < 2) throw new ConceptFormatError("merge_shape", "merge_claims names at least two distinct claims");
+          for (const item of merged) refuseHuman(item, writer);
           const cites = itemCites(edit.cites, writer);
           const union = new Set(merged.flatMap((item) => item.cites));
           // The merged claim keeps every citation of the claims it replaces, and adds none it cannot show.
@@ -430,7 +523,10 @@ export function createFabricOntology(deps: {
           const text = checkText(validateItemText(edit.text));
           const gone = new Set(merged.map((item) => item.id));
           const survivors = work.doc.claims.filter((item) => !gone.has(item.id));
-          replaceItems(work, "claims", [...survivors, { id: nextItemId({ ...work.doc, claims: work.doc.claims }, "claim"), text, cites }]);
+          replaceItems(work, "claims", [
+            ...survivors,
+            { id: nextItemId({ ...work.doc, claims: work.doc.claims }, "claim"), text, cites, ...mark(writer) },
+          ]);
           for (const id of gone) work.resolved.add(id);
           break;
         }
@@ -454,7 +550,7 @@ export function createFabricOntology(deps: {
           const cites = itemCites(edit.cites, writer);
           track(cites);
           const text = checkText(validateItemText(edit.text));
-          replaceItems(work, "questions", [...work.doc.questions, { id: nextItemId(work.doc, "question"), text, cites }]);
+          replaceItems(work, "questions", [...work.doc.questions, { id: nextItemId(work.doc, "question"), text, cites, ...mark(writer) }]);
           break;
         }
         case "note_contradiction": {
@@ -463,7 +559,10 @@ export function createFabricOntology(deps: {
           const cites = itemCites([...new Set([...fromClaims, ...validateCites(edit.noteIds ?? [], "noteIds")])], writer);
           track(cites);
           const text = checkText(validateItemText(edit.text));
-          replaceItems(work, "contradictions", [...work.doc.contradictions, { id: nextItemId(work.doc, "contradiction"), text, cites }]);
+          replaceItems(work, "contradictions", [
+            ...work.doc.contradictions,
+            { id: nextItemId(work.doc, "contradiction"), text, cites, ...mark(writer) },
+          ]);
           break;
         }
         default:
@@ -565,7 +664,24 @@ export function createFabricOntology(deps: {
   });
 
   const port: FabricOntologyPort = {
-    scopes: () => deps.scopes.map((scope) => scope.level),
+    scopes: () => [...states.keys()],
+    sourceRoot: () => deps.sourceRoot,
+    async indexSource(input) {
+      if (deps.indexSource === undefined || deps.sourceRoot === undefined) {
+        throw new MemoryValidationError("sources need the fabric's tools.root and indexed notes (semantic memory)");
+      }
+      // Fails closed when the project scope is not readable here, like every other write.
+      const level: FabricScopeLevel = "project";
+      stateOf(level);
+      const scan = scanScopedMemoryContent(input.text);
+      if (!scan.ok) return { indexed: false, scope: level, refused: scan.class };
+      const note = await deps.indexSource(input);
+      return { indexed: true, scope: level, id: note.id, ...(note.subject === undefined ? {} : { subject: note.subject }) };
+    },
+    screen(text) {
+      const scan = scanScopedMemoryContent(text);
+      return scan.ok ? undefined : scan.class;
+    },
     async subjects(scope, options = {}) {
       const state = stateOf(scope);
       return (await state.index.subjects(options.signal)).map((row) => ({
@@ -582,10 +698,10 @@ export function createFabricOntology(deps: {
       const limit = Math.min(Math.max(1, Math.trunc(options.limit ?? DEFAULT_ONTOLOGY_PENDING)), MAX_ONTOLOGY_PENDING);
       const { tenantId, resourceId } = state.memory.scope;
       const rows: { id: string; createdAt: string }[] = [];
-      if (deps.store.scanMetadata === undefined) throw new MemoryValidationError("pending notes need a store with scanMetadata");
+      if (state.source.scanMetadata === undefined) throw new MemoryValidationError("pending notes need a store with scanMetadata");
       let cursor: string | undefined;
       do {
-        const page = await deps.store.scanMetadata({
+        const page = await state.source.scanMetadata({
           scope: { tenantId, resourceId },
           limit: 500,
           ...(cursor === undefined ? {} : { cursor }),
@@ -596,6 +712,9 @@ export function createFabricOntology(deps: {
           const status = typeof row.metadata?.status === "string" ? row.metadata.status : "verified";
           if (note === undefined || note.kind === "concept" || note.kind === "working" || note.kind === "episode") continue;
           if (!ACTIVE_STATUSES.has(status) || (note.flags?.length ?? 0) > 0) continue;
+          if (options.subject !== undefined && note.subject !== options.subject) continue;
+          if (options.unbound === true && note.subject !== undefined) continue;
+          if (options.coRead === true && (note.coRead?.length ?? 0) === 0) continue;
           rows.push({ id: row.id, createdAt: row.createdAt });
         }
         cursor = page.nextCursor;
@@ -678,6 +797,25 @@ export function createFabricOntology(deps: {
         .filter((row) => row.dirty.length > 0)
         .map((row) => ({ subject: row.subject, conceptId: row.id, reasons: row.dirty }));
     },
+    async settle(scope, subject, options = {}) {
+      const state = writable(scope);
+      validateNoteKey(subject);
+      const row = await state.index.bySubject(subject, options.signal);
+      if (row === undefined || !row.dirty.includes("evidence")) return false;
+      const ok = await state.memory.patchMetadata(
+        row.id,
+        (metadata) => {
+          const note = parseMemoryNoteMetadata(metadata);
+          if (note === undefined) return metadata;
+          const { dirty: _dirty, ...rest } = note;
+          const dirty = (note.dirty ?? []).filter((reason) => reason !== "evidence");
+          return { ...metadata, fabric: encodeMemoryNoteMetadata({ ...rest, ...(dirty.length === 0 ? {} : { dirty }) }) };
+        },
+        options.signal === undefined ? {} : { signal: options.signal },
+      );
+      if (ok) state.index.upsert({ ...row, dirty: row.dirty.filter((reason) => reason !== "evidence") });
+      return ok;
+    },
   };
 
   return {
@@ -711,5 +849,6 @@ export function createFabricOntology(deps: {
       }
     },
     index: (level) => states.get(level)?.index,
+    scopes: () => [...states.keys()],
   };
 }

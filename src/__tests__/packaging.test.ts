@@ -353,11 +353,14 @@ describe("packaging guard", () => {
     );
 
     const wiki = readPkg("packages/memory/wiki");
-    assert.equal((wiki.bin as Record<string, string>)["prism-wiki"], "./src/cli.ts", "prism-wiki ships from the wiki package");
+    assert.equal(wiki.bin, undefined, "the prism-wiki bin is retired with the 0.12 compiler (plan 207 Task 5)");
     const wikiFiles = getPackList("packages/memory/wiki", "@arnilo/prism-memory-wiki");
-    for (const required of ["src/cli.ts", "src/index.ts", "skills/wiki-maintainer/SKILL.md", "skills/wiki-searcher/SKILL.md"]) {
-      assert.ok(wikiFiles.includes(required), `wiki pack missing ${required}`);
-    }
+    assert.ok(wikiFiles.includes("src/index.ts"), "wiki pack missing src/index.ts");
+    assert.equal(
+      wikiFiles.some((file) => file.startsWith("skills/") || file.startsWith("src/cli")),
+      false,
+      "the wiki pack ships no bundled skills and no CLI",
+    );
 
     // No memory tarball may ship the retired family's build output or its canary fixture.
     for (const dir of ["packages/memory/core", "packages/memory/rag", "packages/memory/fabric", "packages/memory/wiki"]) {

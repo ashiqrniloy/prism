@@ -14,7 +14,14 @@ import {
   type WorkflowStreamEvent,
 } from "@arnilo/prism-workflows";
 import type { HostConfig } from "../host/config.js";
-import { createCodingWorker, createExternalWorker, createOrchestrator, createResearchWorker, connectRemoteWorker, sessionIndex } from "../host/index.js";
+import {
+  connectRemoteWorker,
+  createCodingWorker,
+  createExternalWorker,
+  createOrchestrator,
+  createResearchWorker,
+  sessionIndex,
+} from "../host/index.js";
 import { buildWorkflow } from "../host/workflow.js";
 import { externalScript } from "./external-worker-attribution.js";
 import { writeObscuraFixture } from "./fixtures/obscura-fixture.js";
@@ -178,7 +185,11 @@ export async function gateThrowFails(): Promise<string> {
     limits: { maxSupersteps: 4 },
     nodes: {
       start: functionNode({ execute: () => "ok" }),
-      tests: gateNode({ check: () => { throw new Error("gate blew"); } }),
+      tests: gateNode({
+        check: () => {
+          throw new Error("gate blew");
+        },
+      }),
     },
     edges: [["start", "tests"]],
   });
@@ -189,4 +200,3 @@ export async function gateThrowFails(): Promise<string> {
     return error instanceof Error ? `${error.name}: ${error.message}` : String(error);
   }
 }
-

@@ -1,5 +1,11 @@
 # @arnilo/prism-memory-fabric
 
+**Tier 1 of Prism's three-tier memory, and the only store of record.** Typed notes and verbatim exchanges live here;
+[`@arnilo/prism-memory-observational`](../observational/README.md) (T0) observes the session and feeds this store's
+candidate notes, and [`@arnilo/prism-memory-wiki`](../wiki/README.md) (T2, opt-in) consolidates them into cited
+concepts. The other two tiers read and write through this package and keep nothing of their own; the
+[example](../../../examples/three-tier-memory.ts) runs all three.
+
 Working, semantic, and scoped memory for Prism agents: the `memory.view`, `memory.read`,
 `memory.insert`, `memory.replace`, `memory.recall`, and `memory.forget` tools, a `context.build` block, and
 per-session enablement. It is the native-package successor to the 0.12
@@ -1263,7 +1269,7 @@ The store side of the three-tier memory (plan 207). T1 is the notes above: atomi
 ontology tier is **one `concept` note per subject** (an entity or a topic in this user's, project's or team's world),
 built on top of them. It is **opt-in and unmeasured**: nothing here changes a default, and no quality claim ships from
 it until plan 210 decides. The fabric owns storage, validity and the deletion cascade; the `@arnilo/prism-memory-wiki`
-package (a later task) owns synthesis, through the `memory.fabric` service.
+package owns synthesis, through the `memory.fabric` service.
 
 **The `concept` kind.** A concept is an OKF markdown file in `concepts/` (or a vector record on SQLite and Postgres):
 
@@ -1337,10 +1343,41 @@ use.
 **Sharing.** `memory:share { id }` accepts a verified concept. The person sees its current claims and the number of
 citation ids that travel without their notes; the cited private notes are **not** copied. The team concept keeps its
 claims and cites as provenance, drops stale items, open questions, relations and use counters, is stamped
-`generated.by: human`, and replaces the team store's earlier concept for the same subject (one per subject). Lint
-(plan 207 Task 7) reports each citation as shared without evidence: it is derived from the team scope, not stored.
+`generated.by: human`, and replaces the team store's earlier concept for the same subject (one per subject). The wiki
+package's `wiki:lint` reports each citation as shared without evidence: it is derived from the team scope, not stored.
 Tools cannot write the team store, the trust scan quarantines a team concept like any team note, and a private concept
 with the same subject **shadows** the team one (the narrower scope wins).
+
+**A person's edit.** A concept is a file people browse, diff in git and edit. The markdown store hands every concept
+file that changed outside the store (a save, a pull, `memory:reindex`) to a reviewer before it is indexed, in the
+private store and in the checked-in team store alike. The reviewer calls no model:
+
+- *The body must still parse.* A body that breaks the item grammar (a line that is not a claim, a known section or the
+  title; an item in the wrong section; a repeated id) is rejected. The last valid version stays indexed and readable,
+  the file is left exactly as the person wrote it, and `log.md` gets one `invalid-concept` line, with the reason, naming
+  the writer `human`. The same broken file is not judged again until it changes. Fix the file or restore it from git;
+  the next curator write replaces it.
+- *What a person changed is theirs.* Every item whose text or citations changed, and every new item, is marked
+  `[c1 human]` in the file. The marker is part of the body grammar and not of the text, so a model cannot forge it by
+  writing "human" in a claim. A marked item, and any item with no citation, is read-only to everyone but a person: the
+  port refuses `update_claim`, `retire_claim` and `merge_claims` on it with `claim_human`, whoever the writer is, and
+  the curator's own later writes keep the marker. The file is rewritten in place with the markers, because the file is
+  the record: a rebuild reads them back. With no earlier indexed version to compare against (a fresh index over files
+  that were already there), the file is taken as written and only its own markers count.
+- *The index follows the body.* `sources` is re-derived from the footnotes, `title` from the heading, and a stale mark
+  on an item the person changed is cleared; the concept gets the dirty reason `edited` until the curator next writes it.
+  `generated` becomes `{ by: human }`.
+- *The trust scan still runs.* The title, aliases and body are scanned. A hit quarantines the concept as a `candidate`
+  with `flags`, so it is never delivered, in recall or passively; a clean edit lifts the flag. A person's edit never
+  bypasses the scan.
+
+The deletion cascade still wins over a person: forgetting a cited note removes the claim that cited it, human or not.
+An uncited claim is never touched by the cascade.
+
+**The team ontology.** With `team` on, the checked-in team concepts are a read-only scope of the same port (`scopes()`
+lists `team`, `subjects`, `read` and `dirty` answer for it) so the wiki's lint can review them like code. The port
+never writes `team`: `applyConceptEdits` and `bind` on it fail with `MemoryScopeError`, and only `memory:share` and a
+person's commit change that tree.
 
 **The deletion cascade.** It is deterministic, calls no model and no embedder, never deletes a T1 note, and runs
 whether or not the wiki package is installed. In the same call that retracts a note:
@@ -1386,11 +1423,13 @@ that names a subject is bound to it when it is written, so the concept pass work
 | --- | --- |
 | `scopes()` | readable scope levels, narrowest first |
 | `subjects(scope)` | the ontology index: subject, title, aliases, concept id, type, dirty reasons |
-| `pending(scope, { cursor, limit })` | T1 notes written after the cursor, oldest first, text capped |
-| `read(scope, ids)` | up to 32 notes through the same scope, consent, invalidation and redaction filters as `memory.read` |
+| `pending(scope, { cursor, limit, subject, unbound, coRead })` | T1 notes written after the cursor, oldest first, text capped; `subject`, `unbound` and `coRead` narrow it in the same metadata scan (one scan per call) |
+| `read(scope, ids)` | up to 32 notes through the same scope, consent, invalidation and redaction filters as `memory.read`; a note view also carries its `keywords`, `links` (ids and relation), `coRead` events (ids and indexes only), `generatedBy` and, for a concept, its `stale` item ids |
 | `applyConceptEdits(scope, edits, { generatedBy })` | validate the whole batch, then write it; one bad edit rejects all |
 | `bind(scope, noteId, subject)` | bind a T1 note to a subject |
 | `dirty(scope)` | concepts that need a pass, and why |
+| `settle(scope, subject)` | the curator saw a subject's new evidence and had nothing to add: clear the `evidence` reason (`stale`, `removed` and `edited` stay) |
+| `screen(text)` | the trust class the fabric would refuse `text` for, or `undefined`; lets a curator drop one offending edit instead of the batch |
 
 The edit vocabulary has no rewrite: `create_subject`, `add_claim`, `update_claim`, `retire_claim`, `merge_claims`
 (its `cites` are exactly the union of the merged claims' citations), `add_relation`, `add_open_question`,

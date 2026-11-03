@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseArgs, UsageError } from "../cli/args.js";
-import { scheduledRunTwoProcesses, type ScheduledRunResult } from "../scenarios/scheduled-run-two-processes.js";
+import { type ScheduledRunResult, scheduledRunTwoProcesses } from "../scenarios/scheduled-run-two-processes.js";
 
 let root: string;
 let skip: ScheduledRunResult;

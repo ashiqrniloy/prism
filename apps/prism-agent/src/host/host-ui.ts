@@ -1,5 +1,5 @@
 import type { HostUi, HostUiRequestKind, OwnershipScope } from "@arnilo/prism";
-import { policyDefault, routeHostUi, type ResumeAuthority, type RoutedHostUi } from "@arnilo/prism-headless";
+import { policyDefault, type ResumeAuthority, type RoutedHostUi, routeHostUi } from "@arnilo/prism-headless";
 import type { CheckpointStore } from "@arnilo/prism-workflows";
 
 /**

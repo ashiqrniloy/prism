@@ -3,13 +3,13 @@ import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { type Agent, createAgent, type HostUi } from "@arnilo/prism";
-import { channelHostUi, type ChannelConnectionHandle, connectTelegram, createChannelPairingStore } from "@arnilo/prism-channels";
+import { createScriptedHostUi, mockProvider, providerDone, providerTextDelta } from "@arnilo/prism/testing";
+import { type ChannelConnectionHandle, channelHostUi, connectTelegram, createChannelPairingStore } from "@arnilo/prism-channels";
 import { createResumeAuthority, type RoutedAnswer } from "@arnilo/prism-headless";
 import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
-import { createScriptedHostUi, mockProvider, providerDone, providerTextDelta } from "@arnilo/prism/testing";
 import type { CheckpointStore } from "@arnilo/prism-workflows";
-import { buildHostUi, createCodingWorker, type HostConfig, loadHostConfig } from "../host/index.js";
 import { exitCode } from "../cli/exit-codes.js";
+import { buildHostUi, createCodingWorker, type HostConfig, loadHostConfig } from "../host/index.js";
 import { mockPackages } from "./mock-seam.js";
 
 const CONNECTION_ID = "telegram-default";

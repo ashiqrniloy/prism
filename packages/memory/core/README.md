@@ -205,6 +205,13 @@ the metadata can add reasons through `classifyNote(record)` (the fabric adds `in
 `stores.unreadable()` returns the same counts. A store whose `.index-files.json` predates this version learns
 which files are unreadable on the next `rebuild()`.
 
+`reviewEdit(record, previous)` is the owning package's chance to look at a note whose file changed outside the store,
+before it is indexed. `previous` is the indexed version the edit replaces, when there is one. Return `undefined` to
+index the file as parsed, `{ record }` to index a reviewed version and write it back to the same file, or
+`{ reject: { verb, note } }` to keep `previous` indexed, leave the file as written, count it in `malformed` and log
+`verb` (with `note`) against the writer `human` once, until the file changes. It is never called for an unreadable note. The
+fabric uses it to review a person's edit to a concept note.
+
 Top-level frontmatter keys this version does not know are kept in `metadata.okf.extra` and written back on every
 render, so a readable note edited by a newer version keeps them through a touch, an edit or an import.
 

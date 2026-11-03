@@ -34,6 +34,7 @@
         "@arnilo/prism-memory-fabric": "workspace:*",
         "@arnilo/prism-memory-observational": "workspace:*",
         "@arnilo/prism-memory-rag": "workspace:*",
+        "@arnilo/prism-memory-wiki": "workspace:*",
         "@arnilo/prism-provider-hyper": "workspace:*",
         "@arnilo/prism-remote": "workspace:*",
         "@arnilo/prism-store-sqlite": "workspace:*",
@@ -351,7 +352,6 @@
       },
       "devDependencies": {
         "@arnilo/prism-memory-rag": "file:../rag",
-        "@arnilo/prism-memory-wiki": "file:../wiki",
         "@types/node": "^22.20.0",
         "@types/pg": "^8.23.1",
         "pg": "^8.23.0",
@@ -403,20 +403,20 @@
     "packages/memory/wiki": {
       "name": "@arnilo/prism-memory-wiki",
       "version": "0.13.0",
-      "bin": {
-        "prism-wiki": "./src/cli.ts",
-      },
       "dependencies": {
         "@arnilo/prism-memory-core": "^0.13.0",
+        "@arnilo/prism-memory-observational": "^0.13.0",
         "@arnilo/prism-memory-rag": "^0.13.0",
       },
       "devDependencies": {
+        "@arnilo/prism-memory-fabric": "file:../fabric",
         "@arnilo/prism-tools-web": "file:../../tools/web",
         "@types/node": "^22.20.0",
         "typescript": "^7.0.2",
       },
       "peerDependencies": {
         "@arnilo/prism": ">=0.13.0 <1.0.0",
+        "@arnilo/prism-memory-fabric": "^0.13.0",
         "@arnilo/prism-tools-web": "^0.13.0",
       },
       "optionalPeers": [

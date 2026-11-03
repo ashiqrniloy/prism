@@ -1,9 +1,9 @@
-import { UNTRUSTED_EXTERNAL_TRUST, type PackageCommand } from "@arnilo/prism";
+import { type PackageCommand, UNTRUSTED_EXTERNAL_TRUST } from "@arnilo/prism";
 import { MemoryValidationError } from "@arnilo/prism-memory-core";
-import { ingestImageBlock, ingestOptionsFrom, ingestWikiSource, renderIngestBrief } from "../ingest.js";
+import { ingestImageBlock, ingestSource, renderIngestBrief } from "../ingest.js";
 import type { WikiExtensionOptions, WikiIngestInput } from "../types.js";
 
-export const WIKI_INGEST_COMMAND_NAME = "wiki-ingest";
+export const WIKI_INGEST_COMMAND_NAME = "wiki:ingest";
 
 function ingestInput(args: Record<string, unknown>): WikiIngestInput {
   const input: WikiIngestInput = {
@@ -14,19 +14,16 @@ function ingestInput(args: Record<string, unknown>): WikiIngestInput {
   };
   const sources = [input.text !== undefined, input.path !== undefined, input.url !== undefined].filter(Boolean).length;
   if (sources !== 1) {
-    throw new MemoryValidationError("Invalid input: /wiki-ingest requires exactly one of text, path, or url");
+    throw new MemoryValidationError("Invalid input: /wiki:ingest requires exactly one of text, path, or url");
   }
   return input;
 }
 
 export function createWikiIngestCommand(options: WikiExtensionOptions = {}): PackageCommand {
-  const ingestOptions = ingestOptionsFrom(options);
-  const workspaceRoot = options.workspaceRoot ?? process.cwd();
-
   return {
     name: WIKI_INGEST_COMMAND_NAME,
     description:
-      "Stage a text/file/image/PDF/URL source into the wiki raw layer (immutable original + utf8 extract) and produce a filing brief for the wiki-maintainer skill. URL sources need the web.fetch service.",
+      "Ingest a text/file/image/PDF/URL source: stage the immutable original and a utf8 extract under the memory root's sources/ folder, index the extract as a file note and queue it for the next concept pass. URL sources need the web.fetch service.",
     args: {
       type: "object",
       properties: {
@@ -49,12 +46,11 @@ export function createWikiIngestCommand(options: WikiExtensionOptions = {}): Pac
     },
     async run(args, _context) {
       const input = ingestInput(args as Record<string, unknown>);
-      const staged = await ingestWikiSource(input, ingestOptions);
+      const staged = await ingestSource(input, options);
       const brief = renderIngestBrief(staged);
 
-      // Automatic filing is the caller's job: the 0.12 host-driver seam is gone, so the command
-      // returns the brief and the agent that invoked it follows the wiki-maintainer skill.
-      const image = await ingestImageBlock(staged, workspaceRoot);
+      const stageRoot = options.port?.()?.sourceRoot();
+      const image = stageRoot === undefined ? undefined : await ingestImageBlock(staged, stageRoot);
       return {
         name: WIKI_INGEST_COMMAND_NAME,
         value: { ...staged },
@@ -66,6 +62,9 @@ export function createWikiIngestCommand(options: WikiExtensionOptions = {}): Pac
           rawDir: staged.rawDir,
           sourcePath: staged.sourcePath,
           extractPath: staged.extractPath,
+          indexed: staged.indexed,
+          ...(staged.noteId === undefined ? {} : { noteId: staged.noteId }),
+          ...(staged.subject === undefined ? {} : { subject: staged.subject }),
           ...(staged.mediaType ? { mediaType: staged.mediaType } : {}),
           ...(image ? { imageEmbedded: true } : { imageEmbedded: false }),
         },

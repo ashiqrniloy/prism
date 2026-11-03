@@ -712,9 +712,9 @@
       "command": "bun test --timeout=0 src",
       "cwd": "packages/memory/wiki",
       "requires": [],
-      "scope": "Wiki lifecycle over real fs trees (init/refresh/lint/search fallback; qmd child-process client degrades without the binary).",
+      "scope": "Ontology tier package over the real fabric: the memory.fabric requirement, wiki:status counts, the scripted concept pass (cited edits, fail-closed answers, repair), claim lint and source staging over real fs trees.",
       "cost": "Hermetic; no network.",
-      "notes": "Always-runnable leg; qmd real-binary probe (PRISM_TEST_QMD_BIN) can be added later without matrix changes.",
+      "notes": "Always-runnable leg; the concept pass has no live leg (plan 208 measures it).",
       "package": "@arnilo/prism-memory-wiki"
     },
     {

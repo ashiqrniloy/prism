@@ -1,10 +1,10 @@
+import { afterAll as after, beforeAll as before, describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll as after, beforeAll as before, describe, it } from "bun:test";
 import { MemoryValidationError } from "@arnilo/prism-memory-core";
-import { ingestWikiSource } from "../ingest.js";
+import { ingestWikiSource, sourceKeywords } from "../ingest.js";
 
 const UNCOMPRESSED_PDF = "%PDF-1.4\n/Type /Page\nBT (Hello \\(PDF\\)) Tj ET";
 
@@ -18,7 +18,7 @@ async function staged(name: string): Promise<string> {
 
 describe("ingestWikiSource", () => {
   before(async () => {
-    root = await mkdtemp(join(tmpdir(), "prism-wiki-ingest-"));
+    root = await mkdtemp(join(tmpdir(), "prism-ingest-"));
   });
   after(async () => {
     await rm(root, { recursive: true, force: true });
@@ -30,7 +30,7 @@ describe("ingestWikiSource", () => {
 
     assert.equal(result.mediaType, "text/plain");
     assert.equal(result.truncated, false);
-    assert.match(result.sourcePath, /^raw\/ingest\/\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}Z-hello-note\/source\.txt$/);
+    assert.match(result.sourcePath, /^sources\/\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}Z-hello-note\/source\.txt$/);
     assert.equal(result.extractPath, `${result.rawDir}/extract.md`);
     assert.equal(await readFile(join(workspace, result.sourcePath), "utf8"), "hello wiki");
     assert.equal(await readFile(join(workspace, result.extractPath), "utf8"), "hello wiki");
@@ -70,7 +70,7 @@ describe("ingestWikiSource", () => {
     assert.match(result.extract, /no OCR|No text extraction/i);
   });
 
-  it("ingest_path_escape_rejected", async () => {
+  it("path_outside_workspace_rejected", async () => {
     const workspace = await staged("escape");
     await assert.rejects(
       () => ingestWikiSource({ path: join(root, "outside.txt"), title: "X" }, { workspaceRoot: workspace }),
@@ -99,26 +99,32 @@ describe("ingestWikiSource", () => {
     );
   });
 
-  it("ingest_missing_wiki_does_not_throw_on_log", async () => {
-    const workspace = await staged("nowiki");
-    const result = await ingestWikiSource({ text: "orphan" }, { workspaceRoot: workspace });
-    assert.ok(result.sourcePath);
-    await assert.rejects(() => readFile(join(workspace, ".wiki", "log.md"), "utf8")); // no scaffold
-  });
-
-  it("ingest_appends_log_when_wiki_exists", async () => {
-    const workspace = await staged("withwiki");
-    await mkdir(join(workspace, ".wiki"));
-    await ingestWikiSource({ text: "logged", title: "Logged Note" }, { workspaceRoot: workspace });
-    const log = await readFile(join(workspace, ".wiki", "log.md"), "utf8");
-    assert.match(log, /\*\*Ingested\*\*: Logged Note →/);
-    assert.match(log, /extract\.md/);
-  });
-
   it("ingest_title_sanitized_to_single_line_and_slug", async () => {
     const workspace = await staged("slug");
     const result = await ingestWikiSource({ text: "x", title: "My\nTitle: Weird!!" }, { workspaceRoot: workspace });
     assert.ok(result.rawDir.endsWith("-my-title-weird"));
+  });
+
+  it("ingest_stage_root_is_separate_from_the_workspace_and_a_symlinked_sources_dir_is_rejected", async () => {
+    const workspace = await staged("split-ws");
+    const stage = await staged("split-stage");
+    await writeFile(join(workspace, "a.md"), "# A\n\nbody", "utf8");
+    const result = await ingestWikiSource({ path: "a.md" }, { workspaceRoot: workspace, stageRoot: stage });
+    assert.match(result.rawDir, /^sources\//);
+    assert.equal(await readFile(join(stage, result.extractPath), "utf8"), "# A\n\nbody");
+    assert.equal(result.contentHash.length, 64);
+
+    const outside = await staged("split-outside");
+    const jailed = await staged("split-jailed");
+    await symlink(outside, join(jailed, "sources"));
+    await assert.rejects(() => ingestWikiSource({ text: "x", title: "T" }, { stageRoot: jailed }), /escapes the fabric root/);
+  });
+
+  it("ingest_keywords_come_from_the_title_and_frequent_words_without_stop_words", () => {
+    const words = sourceKeywords("Payments runbook", "The refund queue drains the refund queue. Retry the queue; refund twice.");
+    assert.deepEqual(words.slice(0, 2), ["payments", "runbook"]);
+    assert.ok(words.includes("refund") && words.includes("queue"));
+    assert.equal(words.includes("the"), false);
   });
 
   it("ingest_requires_content", async () => {
@@ -128,10 +134,7 @@ describe("ingestWikiSource", () => {
 
   it("ingest_url_without_hook_fails_closed", async () => {
     const workspace = await staged("url-no-hook");
-    await assert.rejects(
-      () => ingestWikiSource({ url: "https://example.com/paper.md" }, { workspaceRoot: workspace }),
-      /web\.fetch/,
-    );
+    await assert.rejects(() => ingestWikiSource({ url: "https://example.com/paper.md" }, { workspaceRoot: workspace }), /web\.fetch/);
   });
 
   it("ingest_url_ssrf_private_host_rejected_before_hook", async () => {

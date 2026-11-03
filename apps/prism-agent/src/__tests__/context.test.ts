@@ -8,12 +8,16 @@ import { mockProvider } from "@arnilo/prism/testing";
 import { createCodingWorker } from "../host/coding.js";
 import type { HostConfig } from "../host/config.js";
 import { createResearchWorker } from "../host/research.js";
-import { longSession, type LongSessionResult } from "../scenarios/long-session.js";
+import { type LongSessionResult, longSession } from "../scenarios/long-session.js";
 
 const BUDGET_MODEL = "opencode-go/mimo-v2.5";
 const MOCK = "mock/m";
 
-function config(root: string, coding: HostConfig["models"]["coding"] = MOCK, research: HostConfig["models"]["research"] = MOCK): HostConfig {
+function config(
+  root: string,
+  coding: HostConfig["models"]["coding"] = MOCK,
+  research: HostConfig["models"]["research"] = MOCK,
+): HostConfig {
   return {
     models: { orchestrator: MOCK, coding, research },
     storePath: join(root, "sessions.db"),
@@ -117,7 +121,8 @@ function turnRequests(result: LongSessionResult) {
   return result.requests.filter(
     (request) =>
       !request.messages.some(
-        (message) => message.role === "user" && message.content.some((part) => part.type === "text" && part.text.startsWith("<conversation>")),
+        (message) =>
+          message.role === "user" && message.content.some((part) => part.type === "text" && part.text.startsWith("<conversation>")),
       ),
   );
 }
@@ -150,13 +155,22 @@ test("long_session_stays_bounded", async () => {
     const turns = turnRequests(result);
     assert.ok(turns.length >= result.turns, "every turn reached the provider");
     assert.ok(compactions(result).length >= 1, "auto-compaction ran");
-    assert.ok(compactions(result).some((event) => event.type === "compaction.completed" && event.trigger === "auto"), "the configured trigger voted");
+    assert.ok(
+      compactions(result).some((event) => event.type === "compaction.completed" && event.trigger === "auto"),
+      "the configured trigger voted",
+    );
 
     const counts = turns.map(foldedCount);
     assert.ok(Math.max(...counts) > 0, "the fold ran");
     const advances = counts.slice(1).map((count, index) => count - counts[index]!);
-    assert.ok(advances.some((advance) => advance >= 2), "fold advanced in a batch");
-    assert.ok(advances.some((advance) => advance === 0), "some turns held the prefix");
+    assert.ok(
+      advances.some((advance) => advance >= 2),
+      "fold advanced in a batch",
+    );
+    assert.ok(
+      advances.some((advance) => advance === 0),
+      "some turns held the prefix",
+    );
 
     for (let index = 1; index < turns.length; index += 1) {
       if (counts[index] !== counts[index - 1]) continue;
@@ -173,7 +187,10 @@ test("long_session_stays_bounded", async () => {
 
     const trigger = Math.floor(resolveInputCap({}, model) * 0.6);
     for (const event of accounted(result)) {
-      assert.ok(event.totalTokens <= trigger + 4_000, `request accounting ${event.totalTokens} stayed within trigger ${trigger} + one turn`);
+      assert.ok(
+        event.totalTokens <= trigger + 4_000,
+        `request accounting ${event.totalTokens} stayed within trigger ${trigger} + one turn`,
+      );
     }
   } finally {
     rmSync(root, { recursive: true, force: true });

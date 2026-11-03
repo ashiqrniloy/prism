@@ -12,6 +12,7 @@ import { toolsCoding } from "@arnilo/prism-tools-coding";
 import type { HostConfig, HostDeps } from "./config.js";
 import { hostPortOf } from "./config.js";
 import { compactionTriggerFor, contextBudgetNotice, foldClearAtLeastTokensFor, observationalCompactAtFor } from "./context-budgets.js";
+import { ontologyPackages } from "./ontology.js";
 import { sqlitePackage } from "./store.js";
 
 const COMPACTION = "@arnilo/prism-memory-compaction";
@@ -41,6 +42,7 @@ export async function createCodingWorker(config: HostConfig, deps: HostDeps = {}
       ...(config.memory === undefined
         ? []
         : [memoryFabric({ preset: config.memory, tools: { root: join(dirname(config.storePath), "memory") } })]),
+      ...ontologyPackages(config, config.workspace),
       contextFiles({ root: config.workspace }),
       hooksFromWorkspace(config.workspace),
       observational({ context: { compactAt: observationalCompactAtFor(config.models.coding) } }),

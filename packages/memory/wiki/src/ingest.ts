@@ -1,13 +1,19 @@
 import { Buffer as NodeBuffer } from "node:buffer";
+import { createHash } from "node:crypto";
 import { mkdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { basename, extname, join, relative, resolve, sep } from "node:path";
 import { assertSsrfAllowedUrl, MediaContentError } from "@arnilo/prism";
 import { MemoryLimitError, MemoryValidationError } from "@arnilo/prism-memory-core";
-import { HARD_MAX_DOCUMENT_BYTES_CAP } from "@arnilo/prism-memory-rag";
-import { pdfParser } from "@arnilo/prism-memory-rag";
-import { prependLog, wikiDate } from "./engine/okf.js";
-import { hashContent } from "./manifest.js";
-import type { WikiExtensionOptions, WikiIngestFetch, WikiIngestInput, WikiIngestOptions, WikiIngestResult } from "./types.js";
+import type { OntologySourceResult } from "@arnilo/prism-memory-fabric";
+import { HARD_MAX_DOCUMENT_BYTES_CAP, pdfParser } from "@arnilo/prism-memory-rag";
+import type {
+  WikiExtensionOptions,
+  WikiIngestFetch,
+  WikiIngestInput,
+  WikiIngestOptions,
+  WikiIngestResult,
+  WikiStagedSource,
+} from "./types.js";
 
 const DEFAULT_MAX_INPUT_BYTES = 32 * 1024 * 1024;
 const DEFAULT_MAX_EXTRACT_BYTES = 2 * 1024 * 1024;
@@ -29,7 +35,11 @@ const IMAGE_MEDIA_TYPES: Record<string, string> = {
   ".webp": "image/webp",
 };
 
-/** Single display line: control chars and newlines become spaces (same sanitizer as wiki_record_insight). */
+function hashContent(content: Uint8Array): string {
+  return createHash("sha256").update(content).digest("hex");
+}
+
+/** Single display line: control chars and newlines become spaces. */
 function toSingleLine(value: string): string {
   return value.replace(/[\u0000-\u001f\u007f]/g, " ").trim();
 }
@@ -45,45 +55,57 @@ export function ingestSlug(title: string): string {
   return slug || "untitled";
 }
 
+/** The directory under the stage root that holds one folder per ingested source. */
+export const SOURCES_DIR = "sources";
+
 /** Wiki-extension options → `ingestWikiSource` options (the extension owns workspace trust, not callers). */
 export function ingestOptionsFrom(options: WikiExtensionOptions): WikiIngestOptions {
   return {
     workspaceRoot: options.workspaceRoot,
-    wikiRoot: options.wikiRoot,
     fetchUrl: options.fetchUrl,
+    ...(options.maxInputBytes === undefined ? {} : { maxInputBytes: options.maxInputBytes }),
+    ...(options.maxExtractBytes === undefined ? {} : { maxExtractBytes: options.maxExtractBytes }),
   };
 }
 
 const BRIEF_PREVIEW_CHARS = 8192;
 const IMAGE_INLINE_BYTES = 256 * 1024;
 
-/** Karpathy filing brief for the wiki-maintainer skill: paths + capped extract preview (labeled untrusted). */
-export function renderIngestBrief(staged: WikiIngestResult): string {
+/** The ingest brief: where the source went, what happens to it next, and a capped extract preview (the kernel labels it untrusted). */
+export function renderIngestBrief(result: WikiIngestResult): string {
+  const next = result.indexed
+    ? [
+        `Indexed as ${result.scope}-scope file note \`${result.noteId}\`; cite that id in any claim that rests on this source.`,
+        result.subject === undefined
+          ? "It is not bound to a subject yet: the next concept pass proposes one or declines. Run `/wiki:consolidate` to file it now."
+          : `Bound to subject \`${result.subject}\`, which is queued for the next concept pass. Run \`/wiki:consolidate\` to file it now.`,
+      ]
+    : [
+        `Not indexed: the trust scan refused the text (${result.refused}). The files are staged but the source is not offered to the concept pass.`,
+      ];
   return [
-    `Ingested source \`${staged.id}\` staged at \`${staged.rawDir}\`.`,
-    ...(staged.url ? [`Source URL: ${staged.url}`] : []),
-    `Original: \`${staged.sourcePath}\``,
-    `Extract: \`${staged.extractPath}\`${staged.truncated ? " (truncated)" : ""}`,
+    `Ingested source \`${result.id}\` staged at \`${result.rawDir}\`.`,
+    ...(result.url ? [`Source URL: ${result.url}`] : []),
+    `Original: \`${result.sourcePath}\``,
+    `Extract: \`${result.extractPath}\`${result.truncated ? " (truncated)" : ""}`,
     "",
-    "Filing checklist (Karpathy wiki):",
-    "1. Read the extract and decide which entity/concept/decision pages it belongs to.",
-    "2. Update or create pages under `.wiki/` and keep `index.md` categorized.",
-    "3. Leave files in the raw layer untouched — it is immutable.",
+    "The original is immutable; leave the staged files untouched.",
+    ...next,
     "",
     // The kernel envelopes this brief (UNTRUSTED_EXTERNAL_TRUST); a second banner here would duplicate it.
     "Extract preview:",
     "",
-    staged.extract.slice(0, BRIEF_PREVIEW_CHARS),
+    result.extract.slice(0, BRIEF_PREVIEW_CHARS),
   ].join("\n");
 }
 
 /** Image sources: inline small images (base64), omit for huge ones — the brief already carries the path pointer. */
 export async function ingestImageBlock(
-  staged: WikiIngestResult,
-  workspaceRoot: string,
+  staged: Pick<WikiStagedSource, "id" | "mediaType" | "sourcePath">,
+  stageRoot: string,
 ): Promise<{ type: "image"; mimeType: string; data: string; name: string } | undefined> {
   if (!staged.mediaType?.startsWith("image/")) return undefined;
-  const abs = resolve(workspaceRoot, staged.sourcePath);
+  const abs = resolve(stageRoot, staged.sourcePath);
   const info = await stat(abs).catch(() => undefined);
   if (!info || info.size > IMAGE_INLINE_BYTES) return undefined;
   return { type: "image", mimeType: staged.mediaType, data: (await readFile(abs)).toString("base64"), name: staged.id };
@@ -127,25 +149,26 @@ function toPosix(value: string): string {
 }
 
 /**
- * Stage a source into the wiki's immutable raw layer (`<ingestRoot>/ingest/<utc>-<slug>/`) and
- * derive a utf8 `extract.md` the compiler/agent can read. No LLM, no network.
+ * Stage a source under `<stageRoot>/sources/<utc>-<slug>/` (the original, immutable, and a utf8 `extract.md`).
+ * `stageRoot` is the fabric's `tools.root`, so the extract is a fabric `file` note and the same jail covers it.
+ * No LLM, no network.
  *
  * Content source precedence: `path` > `bytes` > `url` > `text` (at most one is used; `path` stages the
  * file itself). `filename` supplies the extension for `bytes`/`text` inputs (default `txt`).
  *
  * Extraction matrix (no new deps):
  * - text formats (.txt/.md/.json/.csv/.html): utf8 decode
- * - .pdf: built-in uncompressed parser; compressed PDFs need `options.extractDocument`
+ * - .pdf: the rag PDF parser; a PDF it cannot read fails closed
  * - images: stub extract naming the source — no OCR, the model must view the image
  * - `url`: host `fetchUrl` hook only (never fetched here; SSRF-checked first) or fail closed
  * - anything else: fail closed
  */
-export async function ingestWikiSource(input: WikiIngestInput, options: WikiIngestOptions = {}): Promise<WikiIngestResult> {
+export async function ingestWikiSource(input: WikiIngestInput, options: WikiIngestOptions = {}): Promise<WikiStagedSource> {
   const maxInputBytes = options.maxInputBytes ?? DEFAULT_MAX_INPUT_BYTES;
   const maxExtractBytes = options.maxExtractBytes ?? DEFAULT_MAX_EXTRACT_BYTES;
   const workspaceRoot = options.workspaceRoot ?? process.cwd();
-  const ingestRoot = resolve(workspaceRoot, options.ingestRoot ?? "raw/ingest");
-  const wikiRoot = resolve(workspaceRoot, options.wikiRoot ?? ".wiki");
+  const stageRoot = resolve(options.stageRoot ?? workspaceRoot);
+  const ingestRoot = join(stageRoot, SOURCES_DIR);
 
   if (!input.path && input.bytes === undefined && input.url === undefined && !(typeof input.text === "string" && input.text.length > 0)) {
     throw new MemoryValidationError("ingest requires text, path, bytes + filename, or url + fetchUrl hook");
@@ -222,7 +245,7 @@ export async function ingestWikiSource(input: WikiIngestInput, options: WikiInge
   const rawDir = join(ingestRoot, id);
   const sourceAbsPath = join(rawDir, `source.${ext}`);
   const extractAbsPath = join(rawDir, "extract.md");
-  const sourceRelPath = toPosix(relative(workspaceRoot, sourceAbsPath));
+  const sourceRelPath = toPosix(relative(stageRoot, sourceAbsPath));
 
   // Extract text per the matrix. No host extractor: PDF uses the built-in parser, CSV/text decode as
   // UTF-8, images get the no-OCR stub, and anything else fails closed.
@@ -237,7 +260,7 @@ export async function ingestWikiSource(input: WikiIngestInput, options: WikiInge
   } else if (mediaType === "application/pdf") {
     // ponytail: built-in parser is capped at the RAG hard cap (8 MiB).
     const parsed = await pdfParser.parse(
-      { uri: "wiki-ingest", mediaType, data: bytes },
+      { uri: "wiki:ingest", mediaType, data: bytes },
       { maxBytes: Math.min(maxInputBytes, HARD_MAX_DOCUMENT_BYTES_CAP) },
     );
     extract = parsed.text;
@@ -258,32 +281,81 @@ export async function ingestWikiSource(input: WikiIngestInput, options: WikiInge
   const truncated = extractBuffer.byteLength > maxExtractBytes;
   const extractText = truncated ? extractBuffer.subarray(0, maxExtractBytes).toString("utf8") : extract;
 
+  // The staged tree must stay inside the stage root even when `sources/` is a symlink.
+  await mkdir(stageRoot, { recursive: true });
   await mkdir(rawDir, { recursive: true });
+  const realStage = await realpath(stageRoot);
+  const realRaw = await realpath(rawDir);
+  if (realRaw !== realStage && !realRaw.startsWith(realStage + sep)) {
+    throw new MemoryValidationError("ingest staging directory escapes the fabric root");
+  }
   await writeFile(sourceAbsPath, bytes, { mode: 0o644 });
   await writeFile(extractAbsPath, extractText, { encoding: "utf8", mode: 0o644 });
 
-  // Append to the wiki log only when the wiki root already exists — ingest never scaffolds.
-  if (
-    await stat(wikiRoot)
-      .then((entry) => entry.isDirectory())
-      .catch(() => false)
-  ) {
-    const logPath = join(wikiRoot, "log.md");
-    const existing = await readFile(logPath, "utf8").catch(() => undefined);
-    const log = prependLog(existing, wikiDate(now.toISOString()), [
-      { verb: "Ingested", text: `${title} → ${toPosix(relative(workspaceRoot, extractAbsPath))}` },
-    ]);
-    await writeFile(logPath, log, "utf8");
-  }
-
   return {
     id,
-    rawDir: toPosix(relative(workspaceRoot, rawDir)),
+    rawDir: toPosix(relative(stageRoot, rawDir)),
     sourcePath: sourceRelPath,
-    extractPath: toPosix(relative(workspaceRoot, extractAbsPath)),
+    extractPath: toPosix(relative(stageRoot, extractAbsPath)),
+    contentHash: hashContent(NodeBuffer.from(extractText, "utf8")),
+    keywords: image ? sourceKeywords(title, "") : sourceKeywords(title, extractText),
     ...(mediaType ? { mediaType } : {}),
     ...(sourceUrl ? { url: sourceUrl } : {}),
     extract: extractText,
     truncated,
+  };
+}
+
+const STOP_WORDS = new Set(
+  "about above after again also and any are because been before being between both but can could did does doing down during each few for from further had has have having her here hers him his how into its itself just more most not off once only other our out over own same she should some such than that the their them then there these they this those through too under until very was were what when where which while who whom why will with would you your".split(
+    " ",
+  ),
+);
+
+/**
+ * Enrichment keywords for the `file` note, with no model call: the title's words first, then the extract's most
+ * frequent words. They let an unbound source cluster with related notes and help the deterministic binding.
+ */
+export function sourceKeywords(title: string, extract: string, limit = 8): readonly string[] {
+  const words = (text: string): string[] => text.toLowerCase().match(/[a-z][a-z0-9-]{3,}/g) ?? [];
+  const out = new Set<string>();
+  for (const word of words(title)) if (!STOP_WORDS.has(word)) out.add(word);
+  const counts = new Map<string, number>();
+  for (const word of words(extract.slice(0, 20_000))) if (!STOP_WORDS.has(word)) counts.set(word, (counts.get(word) ?? 0) + 1);
+  const ranked = [...counts].filter(([, count]) => count >= 2).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
+  for (const [word] of ranked) out.add(word);
+  return [...out].slice(0, limit);
+}
+
+/**
+ * Stage a source and index its extract as a fabric `file` note (one staged write, one index, no model call). The
+ * fabric binds the note when exactly one subject fits and marks that concept for the next pass; an unbound note is
+ * offered to the pass as a cluster candidate. Fails closed, before anything is fetched or written, when the fabric
+ * has no `tools.root`.
+ */
+export async function ingestSource(input: WikiIngestInput, options: WikiExtensionOptions, signal?: AbortSignal): Promise<WikiIngestResult> {
+  const port = options.port?.();
+  const root = port?.sourceRoot();
+  if (port === undefined || root === undefined) {
+    throw new MemoryValidationError(
+      "wiki_ingest needs the fabric's tools.root: sources are staged under <tools.root>/sources and indexed as file notes",
+    );
+  }
+  const staged = await ingestWikiSource(input, { ...ingestOptionsFrom(options), stageRoot: root });
+  const indexed: OntologySourceResult = await port.indexSource({
+    path: staged.extractPath,
+    text: staged.extract,
+    contentHash: staged.contentHash,
+    keywords: staged.keywords,
+    ...(signal === undefined ? {} : { signal }),
+  });
+  const { keywords: _keywords, contentHash: _contentHash, ...rest } = staged;
+  return {
+    ...rest,
+    scope: indexed.scope,
+    indexed: indexed.indexed,
+    ...(indexed.id === undefined ? {} : { noteId: indexed.id }),
+    ...(indexed.subject === undefined ? {} : { subject: indexed.subject }),
+    ...(indexed.refused === undefined ? {} : { refused: indexed.refused }),
   };
 }

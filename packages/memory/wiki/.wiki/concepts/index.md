@@ -1,3 +1,0 @@
-# Concepts
-
-*None indexed yet.*

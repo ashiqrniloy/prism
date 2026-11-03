@@ -34,7 +34,6 @@
   },
   "devDependencies": {
     "@arnilo/prism-memory-rag": "file:../rag",
-    "@arnilo/prism-memory-wiki": "file:../wiki",
     "@types/node": "^22.20.0",
     "@types/pg": "^8.23.1",
     "pg": "^8.23.0",

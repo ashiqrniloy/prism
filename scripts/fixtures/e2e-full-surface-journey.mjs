@@ -250,9 +250,10 @@ await section("@arnilo/prism-memory-compaction: compaction strategies", async ()
   assert.equal(typeof om.foldObservationalMemoryLedger, "function", "observational memory must export the ledger fold");
 });
 
-await section("@arnilo/prism-memory-wiki: knowledge compiler", async () => {
+await section("@arnilo/prism-memory-wiki: ontology tier", async () => {
   const wiki = await import("@arnilo/prism-memory-wiki");
-  assert.equal(typeof wiki.WikiCompiler, "function");
+  assert.equal(typeof wiki.memoryWiki, "function");
+  assert.deepEqual(wiki.default.requires?.services, ["memory.fabric"], "the ontology tier requires the fabric service");
 });
 
 await section("@arnilo/prism-workflows: .", async () => {

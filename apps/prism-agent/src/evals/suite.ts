@@ -25,22 +25,17 @@ import {
   EvalDatasetError,
   EvalThresholdError,
   type ExperimentReport,
-  injectionHooks,
   type InjectionSpec,
+  injectionHooks,
   runExperiment,
   type ScorerInput,
   toExperimentReportRecord,
 } from "@arnilo/prism-evals";
-import {
-  EVAL_SOURCE_A,
-  HOST_EVAL_DATASET,
-  type HostEvalItemExpected,
-  type HostEvalItemInput,
-} from "../../evals/dataset.js";
+import { EVAL_SOURCE_A, HOST_EVAL_DATASET, type HostEvalItemExpected, type HostEvalItemInput } from "../../evals/dataset.js";
 import { createCodingWorker, createResearchWorker, type HostApprovalMode, type HostConfig } from "../host/index.js";
-import type { CitationVerdict } from "../scenarios/research-citations.js";
 import { createEvalWorkerFixtures, EVAL_MOCK_MODEL } from "../scenarios/fixtures/eval-provider.js";
 import { writeObscuraFixture } from "../scenarios/fixtures/obscura-fixture.js";
+import type { CitationVerdict } from "../scenarios/research-citations.js";
 
 const EVALS_DIR = fileURLToPath(new URL("../../evals", import.meta.url));
 export const DEFAULT_BASELINE_PATH = join(EVALS_DIR, "baseline.json");
@@ -210,15 +205,8 @@ export async function runHostEvalSuite(
 ): Promise<ExperimentReport<HostEvalItemInput, HostEvalItemExpected>> {
   const dataset = options.dataset ?? HOST_EVAL_DATASET;
   const trials = options.trials ?? HOST_EVAL_TRIALS;
-  const splits =
-    options.split === undefined
-      ? ["dev", "heldout"]
-      : Array.isArray(options.split)
-        ? options.split
-        : [options.split];
-  const selectedItems = dataset.items.filter(
-    (item) => item.split === undefined || splits.includes(item.split as "dev" | "heldout"),
-  );
+  const splits = options.split === undefined ? ["dev", "heldout"] : Array.isArray(options.split) ? options.split : [options.split];
+  const selectedItems = dataset.items.filter((item) => item.split === undefined || splits.includes(item.split as "dev" | "heldout"));
 
   const root = mkdtempSync(join(tmpdir(), "prism-agent-eval-suite-"));
   const workspace = join(root, "workspace");
@@ -330,11 +318,7 @@ export async function runHostEvalSuite(
         writeInitialFiles(workspace, item.input.initialFiles);
         return item.input.worker === "coding" ? codingAgent! : researchAgent!;
       },
-      toEnvironment: async (
-        item,
-        result,
-        timeline?: ScorerInput["timeline"],
-      ): Promise<HostEvalEnvironment> => {
+      toEnvironment: async (item, result, timeline?: ScorerInput["timeline"]): Promise<HostEvalEnvironment> => {
         const files = snapshotWorkspaceFiles(workspace);
         let citationVerdict: CitationVerdict | undefined;
         if (item.input.worker === "research" && researchAgent && result?.sessionId) {
@@ -468,9 +452,7 @@ export function enforceLiveEvalTokenCeiling(
   );
   const inputTokens = report.aggregate.cost?.inputTokens ?? trialTokens;
   if (inputTokens > maxInputTokens) {
-    throw new EvalThresholdError(
-      `Live eval gate input tokens (${inputTokens}) exceeded ceiling (${maxInputTokens})`,
-    );
+    throw new EvalThresholdError(`Live eval gate input tokens (${inputTokens}) exceeded ceiling (${maxInputTokens})`);
   }
 }
 

@@ -247,6 +247,62 @@ test("markdown_malformed_file_is_skipped_and_reported", async () => {
   expect(report.errors[0]).toContain("broken--deadbeef.md");
 });
 
+test("markdown_review_edit_rewrites_the_file_or_rejects_and_keeps_the_last_valid_version", async () => {
+  const root = tempRoot();
+  const seen: Array<{ text: string; previous: string | undefined }> = [];
+  const store = await createMarkdownMemoryStores({
+    root,
+    reviewEdit: (next, previous) => {
+      seen.push({ text: next.text, previous: previous?.text });
+      if (next.text.includes("REJECT")) return { reject: { verb: "invalid-test", note: "refused by the reviewer" } };
+      if (next.text.includes("STAMP")) {
+        return {
+          record: {
+            ...next,
+            text: next.text.replace("STAMP", "STAMPED"),
+            metadata: { ...next.metadata, generated: { by: "human", at: "2026-11-03T00:00:00.000Z" } },
+          },
+        };
+      }
+      return undefined;
+    },
+  });
+  stores.push(store);
+  await store.vectorStore.upsert([record("eeee00005555", "body text")]);
+  const abs = join(root, findNoteFile(root, "eeee00005555"));
+  // The frontmatter `description` repeats the body, so edit the last occurrence (the body itself).
+  const edit = (from: string, to: string) => {
+    const text = readFileSync(abs, "utf8");
+    const at = text.lastIndexOf(from);
+    writeFileSync(abs, text.slice(0, at) + to + text.slice(at + from.length));
+  };
+  // Accepted unchanged: indexed as parsed, the reviewer saw the indexed version it replaces.
+  edit("body text", "body text two");
+  await store.reconcile();
+  expect(seen.at(-1)).toEqual({ text: expect.stringContaining("body text two"), previous: "body text" });
+  // Reviewed: the reviewed record is indexed and written back to the person's file, and the log names the writer.
+  edit("body text two", "STAMP");
+  await store.reconcile();
+  expect(readFileSync(abs, "utf8")).toContain("STAMPED");
+  const [stamped] = await store.vectorStore.getByIds(scope, ["eeee00005555"]);
+  expect(stamped?.text).toContain("STAMPED");
+  expect(readFileSync(join(root, "log.md"), "utf8")).toContain("**reviewed** (human)");
+  // Rejected: the last valid version stays indexed, the file is left as written, the log says why, once.
+  edit("STAMPED", "REJECT");
+  const report = await store.reconcile();
+  expect(report.malformed).toBe(1);
+  expect(report.errors[0]).toContain("invalid-test");
+  const [kept] = await store.vectorStore.getByIds(scope, ["eeee00005555"]);
+  expect(kept?.text).toContain("STAMPED");
+  expect(readFileSync(abs, "utf8")).toContain("REJECT");
+  await store.reconcile();
+  const rejections = readFileSync(join(root, "log.md"), "utf8")
+    .split("\n")
+    .filter((line) => line.includes("invalid-test"));
+  expect(rejections).toHaveLength(1);
+  expect(rejections[0]).toContain("refused by the reviewer");
+});
+
 test("markdown_paths_reject_traversal_and_symlink_escape", async () => {
   const root = tempRoot();
   const store = await open(root);
@@ -339,7 +395,7 @@ test("markdown_resource_file_is_written_under_lock_and_not_indexed", async () =>
   const root = tempRoot();
   const store = await open(root);
   const target = { tenantId: "t", resourceId: "projects/demo--0123abcd" };
-  await store.updateResourceFile(target, "project.md", () => "---\ntype: \"project\"\n---\n\none\n");
+  await store.updateResourceFile(target, "project.md", () => '---\ntype: "project"\n---\n\none\n');
   await store.updateResourceFile(target, "project.md", (current) => `${current ?? ""}two\n`);
   const content = readFileSync(join(root, "t/projects/demo--0123abcd/project.md"), "utf8");
   expect(content).toContain("one");

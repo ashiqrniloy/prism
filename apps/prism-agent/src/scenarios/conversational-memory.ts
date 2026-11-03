@@ -16,7 +16,7 @@ export interface ConversationalMemoryResult {
   readonly afterForget: string;
 }
 
-function textOf(result: ToolResult): string {
+export function textOf(result: ToolResult): string {
   return (result.content ?? []).map((block) => (block.type === "text" ? block.text : "")).join("\n");
 }
 
@@ -27,7 +27,7 @@ function hitId(value: unknown): string {
   return id;
 }
 
-async function runTurn(session: Session, text: string): Promise<AgentEvent[]> {
+export async function runTurn(session: Session, text: string): Promise<AgentEvent[]> {
   const events: AgentEvent[] = [];
   const pump = (async () => {
     for await (const event of session.subscribe()) events.push(event);

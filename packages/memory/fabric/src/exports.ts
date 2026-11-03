@@ -2,19 +2,20 @@
 // eviction helpers, and the lifecycle/directory/core builders stay inside the package; importers
 // that need them (tests, `scripts/memory-bench`) use a relative source path. The root barrel in
 // `index.ts` adds the package definition, `memoryFabric`, the config surface and `createMemory`.
-export { createMemoryFabric } from "./create.js";
-export type { FabricCoreScope } from "./delivery/core.js";
-export type { MemoryFabricDirectoryConfig, ResolvedFabricDirectoryOptions } from "./directory.js";
+
+export type { ResolvedMemoryFabricStore, ResolvedMergeConfig, ResolvedWidenConfig } from "./config.js";
 export type { ConsolidationExtractionReason } from "./consolidation/extract.js";
 export type { PromotionWeights } from "./consolidation/score.js";
+export { createMemoryFabric } from "./create.js";
+export type { FabricCoreScope } from "./delivery/core.js";
 export type { ResolvedFabricCuesOptions } from "./delivery/cues.js";
-export type { ResolvedMemoryFabricStore, ResolvedMergeConfig, ResolvedWidenConfig } from "./config.js";
+export type { MemoryFabricDirectoryConfig, ResolvedFabricDirectoryOptions } from "./directory.js";
 export {
   type ArchiveConfig,
   type CapacityLimits,
+  type MemoryNoteDecay,
   type MemoryNoteStatus,
   type MemoryNoteUseEvent,
-  type MemoryNoteDecay,
   type RecordUsesOptions,
   SCOPE_CLOCK_COUNTER,
   type StorageWeights,
@@ -29,6 +30,7 @@ export {
   importMemoryOkf,
   type MemoryOkfStores,
 } from "./okf-bundle.js";
+export type { ConceptCascadeReport } from "./ontology/cascade.js";
 export {
   type ConceptDoc,
   type ConceptItem,
@@ -39,6 +41,7 @@ export {
 } from "./ontology/codec.js";
 export { ConceptFormatError, ConceptRequiresOntologyError } from "./ontology/errors.js";
 export { createConceptDeletionHandler, MEMORY_FABRIC_CONCEPT_HANDLER_SERVICE } from "./ontology/handler.js";
+export type { FabricSubjects, SubjectListing, SubjectScopeListing } from "./ontology/index.js";
 export {
   type ApplyConceptEditsOptions,
   type ApplyConceptEditsResult,
@@ -50,11 +53,12 @@ export {
   MEMORY_FABRIC_SERVICE,
   type OntologyDirtyEntry,
   type OntologyNoteView,
+  type OntologyPendingOptions,
   type OntologyPendingPage,
+  type OntologySourceInput,
+  type OntologySourceResult,
   type OntologySubject,
 } from "./ontology/port.js";
-export type { ConceptCascadeReport } from "./ontology/cascade.js";
-export type { FabricSubjects, SubjectListing, SubjectScopeListing } from "./ontology/index.js";
 export type { MemoryRetractEvent, MemoryRetractReason } from "./ontology/retract.js";
 export type { FabricConsolidationReport, MemoryFabricPromoteConfig, ResolvedPromoteConfig } from "./promote.js";
 export type { ScopePriors } from "./scope/recall.js";
@@ -66,6 +70,7 @@ export {
   type CreateMemoryFabricOptions,
   encodeMemoryNoteMetadata,
   type FabricScopeLevel,
+  type MemoryDecisionStatus,
   type MemoryFabric,
   type MemoryFabricConsolidateOptions,
   type MemoryFabricConsolidateResult,
@@ -90,7 +95,6 @@ export {
   type MemoryFabricScopeOpenInput,
   type MemoryFabricToolsOptions,
   type MemoryFabricWriteOptions,
-  type MemoryDecisionStatus,
   type MemoryNote,
   type MemoryNoteDate,
   type MemoryNoteDatePrecision,
