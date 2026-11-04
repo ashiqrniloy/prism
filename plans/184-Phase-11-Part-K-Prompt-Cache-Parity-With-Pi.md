@@ -1,5 +1,7 @@
 # Phase 11 Part K — prompt-cache parity with pi
 
+> **Superseded by plan 215 (2026-11-04).** On the owner's decision to cut one consolidated 0.13.0 release plan after plan 208, with the memory packages published as experimental, every open task here moved to [plan 215](215-Phase-11-Part-AI-Release-0.13.0-Experimental-Memory-Host-Adoption-Cache-Parity-Freeze-Acceptance-And-Publish.md) with its criteria intact; the task lines below name the new numbers. This file is kept as history and is not executed.
+
 ## Objectives
 
 - Prove that the providers shipped in 0.13.0 get a prompt-cache hit rate at least as high as a reference agent harness on the same model and workload. The reference is **pi** (`pi` 1.3.0, already on the dev machine with Hyper and OpenCode Go configured), run headless, for both providers (owner decision 2026-10-16, replacing the earlier Crush/OpenCode choice).
@@ -58,7 +60,7 @@ OpenRouter never uses `openrouter/free` or `openrouter/auto` for this comparison
 
 ## Tasks
 
-- [ ] Task 1: Reference harness check: pi headless (read-only)
+- [ ] Task 1: Reference harness check: pi headless (read-only) — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 21 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional: The task note records, for pi (`pi --version`, 1.3.0 on 2026-10-16, dated):
       - (a) **Routing pi through the proxy without editing `~/.pi`.** How to point pi's `hyper` and `opencode-go` providers at a custom base URL for one run: a run-scoped agent/config directory, a run-scoped models file, or an `--extension`. Verify against pi's docs (find-docs) and the installed source. The run must leave `~/.pi/agent/*` unchanged; Task 3 checks this with a checksum before and after. If pi can only take a base URL from a config that also holds credentials, record that and choose the option that passes the key through env (`--api-key` is rejected because it puts the key in process arguments).
@@ -99,7 +101,7 @@ OpenRouter never uses `openrouter/free` or `openrouter/auto` for this comparison
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 2: Wire-level prefix stability
+- [ ] Task 2: Wire-level prefix stability — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 22 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional: `prefixStabilityConformance` (`src/testing/prefix-stability-conformance.ts`) gains `encode?: (request: ProviderRequest) => Promise<JsonObject>`, plus `segments?: (body) => { tools?: unknown; system?: unknown; messages: unknown[] }` with defaults for the OpenAI Chat and Anthropic Messages formats. For each consecutive pair it asserts:
       - `JSON.stringify(tools)` is equal;
@@ -139,7 +141,7 @@ OpenRouter never uses `openrouter/free` or `openrouter/auto` for this comparison
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 3: The parity runner
+- [ ] Task 3: The parity runner — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 23 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional: `scripts/cache-parity/` contains:
       - `fixture/`: a small git repository template (about 15 files, one failing unit test and a short README), so a coding agent needs several reads, an edit, and a test run.
@@ -199,7 +201,7 @@ OpenRouter never uses `openrouter/free` or `openrouter/auto` for this comparison
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 4: The parity gate and the first run
+- [ ] Task 4: The parity gate and the first run — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 24 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional: `scripts/live-matrix.json` gains `release/cache-parity`: `requires: ["PRISM_LIVE_PROVIDER_TESTS", "PRISM_LIVE_CACHE_PARITY", "HYPER_API_KEY", "OPENCODE_GO_API_KEY"]` plus `pi` on `PATH` with both providers ready (`pi auth` reports them; a missing binary or provider skips the cell with a reason, and strict mode fails it). Cells: Hyper chat route, Hyper Anthropic route, OpenCode Go chat route, OpenCode Go Anthropic route, with models from Task 1, plus the pinned OpenRouter Anthropic cell above. The row's `optional` list includes `PRISM_LIVE_OPENROUTER_PAID` and `OPENROUTER_API_KEY`; the runner enables that cell only for paid flag `1` and owner authorization, without gating the four existing cells on an OpenRouter key. Explicit paid opt-in with a missing key fails strict mode. `scope` lists all five cells; `cost` states 120 requests per enabled cell, and the separate provider probe's `turns` generation requests (default 4) plus catalog discovery. The OpenRouter cell invokes `pi -p --mode json --provider openrouter` with its pinned model and Task 1's isolation flags. While unauthorized, record the cell as `unmeasurable` with a reason; do not claim parity.
     - Functional: The gate passes when, for every conclusive cell, Prism's median `hitRate` is at least pi's median `hitRate`, and no Prism run reports `usage_mismatch`. An `inconclusive` cell fails strict mode and is rerun once.

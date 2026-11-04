@@ -1,5 +1,7 @@
 # Phase 11 Part N — retired-name sweep, publish 0.13.0, and npm deprecation
 
+> **Superseded by plan 215 (2026-11-04).** On the owner's decision to cut one consolidated 0.13.0 release plan after plan 208, with the memory packages published as experimental, every open task here moved to [plan 215](215-Phase-11-Part-AI-Release-0.13.0-Experimental-Memory-Host-Adoption-Cache-Parity-Freeze-Acceptance-And-Publish.md) with its criteria intact; the task lines below name the new numbers. This file is kept as history and is not executed.
+
 ## Objectives
 
 - Run the final retired-name sweep as a standing test, and update the planning and execution skill references for the post-0.13 world.
@@ -31,7 +33,7 @@ The plan does not change a kernel contract, so it has no review; the owner gates
 
 ## Tasks
 
-- [ ] Task 1: The final retired-name sweep and the post-train references
+- [ ] Task 1: The final retired-name sweep and the post-train references — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 35 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional: `scripts/retired-names.json` lists every name the train retired: the export names and subpaths from the 0.12.1 → 0.13.0 baseline diff, the retired package names, the retired error codes and classes recorded in plans 143–174, and the CLI flags. `scripts/retired-names.test.mjs` greps `src/ packages/ apps/ scripts/ examples/ docs/` (excluding `dist/`, `node_modules/`, `plans/`, `docs/history/`, `docs/_evidence/`, `CHANGELOG.md`, `docs/migrate-to-0.13.md`, `scripts/retired-names.json`, `scripts/deprecations-0.13.json`, and the compat baselines' history) and fails on any hit. It runs in `bun run test`.
     - Functional: The planning and execution skill references describe the post-0.13 world:
@@ -71,7 +73,7 @@ The plan does not change a kernel contract, so it has no review; the owner gates
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 2: Publish 0.13.0, apply the deprecations, switch to independent versioning, and record Phase 11 Done (owner-gated)
+- [ ] Task 2: Publish 0.13.0, apply the deprecations, switch to independent versioning, and record Phase 11 Done (owner-gated) — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 39 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Prerequisite (recorded 2026-10-15, after plan 175 Task 8): plans 176 (Phase 11 Part C — tool-gate integrity, narrow-only ownership, fail-closed dispose) and 177 (Phase 11 Part D — host isolation and security hardening) both **block this task**. They reopen the surface frozen by plan 174 Task 9 and change kernel and host-library contracts, so they must complete and regenerate the compat baselines before the 0.13.0 tag is pushed. The version cut itself (plan 175 Task 7) stands.
     - Functional: Pre-flight, on a clean tree at the release commit:

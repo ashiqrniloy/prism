@@ -1,5 +1,7 @@
 # Phase 11 Part O14 — Three-tier memory evaluation: pre-registered criteria, claim support, safety and the default
 
+> **Amended 2026-11-04 (owner decision):** Plan 215 (the consolidated 0.13.0 release) runs alongside this plan rather than after it. Run Task 5's screen from a dedicated git worktree at a pinned commit (commit the current 208 work first), so plan 215's kernel and wiki edits cannot change a running screen. Land Task 8 before plan 215 Task 39 publishes. See [plan 215](215-Phase-11-Part-AI-Release-0.13.0-Experimental-Memory-Host-Adoption-Cache-Parity-Freeze-Acceptance-And-Publish.md) (the consolidated 0.13.0 release). Plans 209–210 move after 0.13.0 as the memory track; the ontology tier ships inside the experimental `memory-wiki` package.
+
 ## Objectives
 
 - Measure the ontology tier that plan 207 builds, against the same preset without it, before any claim or default ships. This is the 202 discipline applied to the new tier:

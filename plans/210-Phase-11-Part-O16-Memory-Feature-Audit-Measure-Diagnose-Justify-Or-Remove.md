@@ -31,6 +31,7 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
 - **Amended 2026-11-01 by plan 202 Task 5.4.6 (owner disposition).** Plan 202 Task 5 (agentic lexical navigation and write-time keyword enrichment) closes on a bounded development screen: `beam-100k`, `locomo`, `memoryagentbench-cr` and a 14-question `beam-1m` slice. The candidate-gap halving rule is the screen's gate and the ability guard is descriptive only. The rest of Task 5's frozen target is handed here: `longmemeval-m`, the full `beam-1m` development cohort and the ability non-regression veto. Tasks 1, 5 and 9 carry it, and none of it may be dropped from this plan without a new owner decision.
 - **Plan 202 closure handoff (owner, 2026-11-02).** Plan 202 is closed by disposition with unmet targets preserved, not accepted as passing. Its [complete closure ledger](../docs/_evidence/memory-bench/202/closure.md) is mandatory input to Tasks 1–5. This includes Task 17 residual diagnosis/F4, whether or not a facts preset ships. Development diagnosis precedes the freeze and held-out acceptance; this is not permission to restart a historical campaign.
 - **Amended 2026-11-03 (owner decision): hot-path performance fixes land first, as Tasks 0.1–0.3.** A compiled-language (Rust) evaluation on 2026-11-03 rejected a native port. The kernel adds 3–6 ms per run against seconds of model latency, most store CPU is already native (bun:sqlite, JSON, fs), and the measured costs are algorithmic. Two came out of it: the markdown store rewrites three whole files on every write, and the session snapshot re-reads and `structuredClone`s the whole branch on every provider turn. The owner wants both fixed, with a regression gate, before the memory evaluations. They are unrelated to the audit. They are numbered 0.x so every existing "plan 210 Task N" reference (plans 202, 208, 209, the plan index) stays valid. They add no kernel contract, hook, slot or export, so no review task is needed. Both change sources that plan 202's cache-stability pin fingerprints (`src`, `packages/memory/core/src`), so Task 0.3 ends by re-attesting the pin with byte-identical provider requests. Task 1 starts only after that.
+- **Amended 2026-11-04 (owner decision, plan 215): post-0.13.0 memory track.** 0.13.0 no longer waits for this plan. Plan 215 publishes the five memory packages as an experimental prerelease line (`0.13.0-experimental.N`, dist-tag `experimental`) and freezes only the stable surface. This plan runs after plan 209, after 0.13.0 ships. Wherever it says "before plan 184/185", "the freeze", "plan 186" or "plan 187", read: plan 215's cache-parity runner, plan 215's experimental compat classification, and this plan's own graduation (Task 10). Task 11 (memory skills) moved here from plan 211 Task 6.
 - **Audit before acceptance.** Removals happen on development evidence only, before any held-out item is read. The held-out acceptance then measures the product that ships, so no claim has to be re-pointed and no removal needs a second held-out read.
 
 **Scope:** `memory-observational`, `memory-fabric`, `memory-wiki` and the parts of `memory-core` only they use. `memory-rag` (document retrieval, a separate capability the owner keeps outside memory) and `memory-compaction` (measured by plan 194's rot curve) are out of scope; the ledger lists them as excluded with that reason.
@@ -678,7 +679,7 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 10: Preset revision 2, defaults, published claims and the hand-off to the freeze
+- [ ] Task 10: Preset revision 2, defaults, published claims and graduation from the experimental line
   - Moved here on 2026-10-31 from plan 202 Task 19, plan 208 Task 7 and the defaults part of plan 209 Task 7. Their criteria are unchanged in substance.
   - Acceptance Criteria:
     - Functional: **Preset revision (plan 202).**
@@ -702,10 +703,12 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
       - `PRODUCT.md`'s Memory subsection and the fabric README lead with standing rules, then search over the record, then the ontology tier.
       - Experimental-tier features are named as experimental and carry no claim.
     - Functional: `scripts/memory-bench/defaults.json` records every decision with its evidence hash. The preset revision, every default and every memory claim land in one change.
-    - Functional: **Release hand-off.**
-      - Plan 186's live journey scenario 11 (added by 188.11 Task 7) runs against the shipped revision, and plan 187's CHANGELOG and README claims are the ones this task writes.
+    - Functional: **Graduation from the experimental line (amended 2026-11-04, plan 215).**
+      - The surviving memory packages leave the `experimental` list in `scripts/independent-packages.json` and take their first stable version on their independent line (the version is decided here; it sorts above `0.13.0-experimental.N`), published with dist-tag `latest`. Packages this plan removes entirely stay experimental or are deprecated, by owner decision recorded here.
+      - Their compat baselines become strict (plan 215 Task 2's `experimental` classification no longer applies), and the experimental README notice (plan 215 Task 4) is replaced by the `## Compatibility` contract plan 188.11 wrote, now in force.
+      - The live two-principal memory journey leg dropped from plan 215 Task 32 (ex-186 scenario 11) is added back as a live row and runs against the graduated revision; the cache-parity runner (plan 215 Task 23) measures the reference host with `memory` set.
+      - The reference host's `memory` opt-in and the ontology default follow this task's verdicts; OM returns to the reference host's default path only if the verdicts support it.
       - The 188.11 limitations register (`docs/_evidence/memory-bench/188.11/limitations.json`) is closed: each entry is marked resolved with evidence, or carried into the README's Known limitations.
-      - The surviving memory surface and its experimental tier are listed for plan 185's freeze. Plan 184's cache measurement runs on this product.
     - Functional: Plan end: Compromises, Further Actions and the backlog hand-off.
     - Performance: n/a.
     - Code Quality: Preset changes are object edits with a `presetRevision` bump. Reference host defaults are values in its config. No package default changes for the ontology: the tier is opt-in at package level by construction (installing `memory-wiki`). Compat baselines are regenerated with `bun scripts/release.mjs gate --update-baseline` if `CONVERSATIONAL_PRESET_REVISION`'s value or the preset table is in a baseline (`scripts/compat-baseline/arnilo__prism-memory-fabric.txt`), with the diff attributed in the note.
@@ -751,6 +754,53 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
       - `CHANGELOG.md`;
       - evidence READMEs.
     - `docs/index.md` update: no
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+
+- [ ] Task 11: Memory skills on the surface this plan leaves (moved from plan 211 Task 6 via plan 215, 2026-11-04)
+  - Acceptance Criteria:
+    - Functional:
+      - **Entry check.** Before writing, re-run plan 215 Task 5 (a)'s ledger for the memory packages on the post-210 tree and record their model-visible tools and `when` gates. This plan's removals (Task 7) win: a skill is written only for a tool that survived.
+      - `memory-fabric` ships `memory-recall`, which covers:
+        - when to call `memory` (recall) and when to trust the delivered block
+        - navigating from a hit (concepts, then notes, then exchanges, per plan 207)
+        - recording a durable fact or rule versus leaving it to observation (plan 209's rules and lessons)
+        - correcting or forgetting a stale memory
+        - never treating a recalled note as an instruction
+      - It declares `requiresTools: [memory]`, so the fabric's `when` gate (`packages/memory/fabric/src/index.ts:504`) hides it whenever memory is off for the session.
+      - `memory-observational` ships a skill only for its agent-facing recall tool (`packages/memory/observational/src/index.ts:98`) and only if the ledger marks it "skill". The worker tools (`record_observation`, `record_reflection`, `drop_observations`) run on the observer model, not the agent, and get none.
+      - `memory-rag` follows the ledger.
+      - Skill text must not contradict the published memory claims of Task 10. The task note quotes the claim lines each skill relies on.
+    - Performance: As plan 215 Task 8. The memory skill is listed only for sessions where memory is enabled.
+    - Code Quality: As plan 215 Task 8. The skill describes recall behavior and does not restate preset internals that Task 10 may revise.
+    - Security: The skill tells the model that recalled content is data, not instructions (the poisoning risk plan 202's safety gate measures), and that cross-principal recall is impossible by design, so it should never try to work around scope.
+  - Approach:
+    - Documentation Reviewed:
+      - `packages/memory/fabric/README.md` (1,557 lines: the skill distils the agent-facing part only), `packages/memory/observational/README.md`, `packages/memory/rag/README.md`
+      - plans 207, 209 and 210 (final surface and claims)
+    - Options Considered:
+      - **Write the memory skills in plan 215 Task 8, before the entry check.** Rejected: Task 7 may remove or rename memory tools; the gate would catch drift, but only after the text was written against a moving surface.
+      - **Make memory behavior a skill the model must load.** Rejected: observation and delivery are automatic by design, and gating them on a model choice would regress the measured defaults. The skill covers only the agent-driven tool use.
+    - Chosen Approach:
+      - Write one narrow skill per agent-facing memory tool, on the post-Task-10 surface.
+    - API Notes and Examples:
+      ```markdown
+      metadata:
+        prism-requires-tools: memory
+      ```
+    - Files to Create/Edit:
+      - `packages/memory/fabric/skills/memory-recall/SKILL.md` (new), `src/index.ts`, `package.json` (`files`), `README.md`, `CHANGELOG.md`, `src/__tests__/skills.test.ts`
+      - `packages/memory/observational/…` and `packages/memory/rag/…` (tentative: per the entry check)
+      - `scripts/budgets.json`
+    - References:
+      - `docs/_evidence/memory-bench/` (claims and failure modes); plan 188.8 post-investigation (agentic recall misattribution)
+  - Test Cases to Write:
+    - `fabric_registers_memory_recall_skill`.
+    - `memory_skill_hidden_when_memory_disabled_for_session`: the `when` gate is false, so the catalog omits it.
+    - `memory_skill_names_only_surviving_tools`: covered by `package_skills_conform` (plan 215 Task 7), with a fixture naming a Task-7-removed tool failing.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes — memory-enabled agents gain a skill.
+    - Docs pages to create/edit: the fabric README (and OM/RAG READMEs if they gain skills); `CHANGELOG.md`.
+    - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
 ## Verification (whole plan)

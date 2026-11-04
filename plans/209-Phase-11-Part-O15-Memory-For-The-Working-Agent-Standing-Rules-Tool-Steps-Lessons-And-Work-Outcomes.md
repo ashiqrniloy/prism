@@ -1,5 +1,7 @@
 # Phase 11 Part O15 — Memory for the working agent: standing rules, tool steps, cited lessons and work-outcome evaluation
 
+> **Post-0.13.0 memory track (owner decision 2026-11-04, plan 215).** 0.13.0 ships the memory packages as an experimental prerelease line and no longer waits for this plan. Run it after plan 215 publishes, then plan 210, which graduates the memory packages to stable. Content unchanged; references to plans 184–187 and the freeze now mean plan 215's corresponding tasks and plan 210 Task 10's graduation.
+
 ## Objectives
 
 - Close the gaps between Prism's memory and the design an agent would choose for itself (the 2026-10-31 first-principles assessment), without duplicating what plans 202 and 207 already build:

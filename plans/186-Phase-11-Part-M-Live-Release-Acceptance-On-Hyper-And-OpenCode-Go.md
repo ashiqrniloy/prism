@@ -1,5 +1,7 @@
 # Phase 11 Part M — live release acceptance on real providers (Hyper and OpenCode Go)
 
+> **Superseded by plan 215 (2026-11-04).** On the owner's decision to cut one consolidated 0.13.0 release plan after plan 208, with the memory packages published as experimental, every open task here moved to [plan 215](215-Phase-11-Part-AI-Release-0.13.0-Experimental-Memory-Host-Adoption-Cache-Parity-Freeze-Acceptance-And-Publish.md) with its criteria intact; the task lines below name the new numbers. This file is kept as history and is not executed.
+
 ## Objectives
 
 - Define how Prism accepts a release against real model providers: tiers, entry criteria, credential handling, cost budget, run procedure, evidence, failure triage, and sign-off.
@@ -33,7 +35,7 @@ This plan is a pre-publish part of roadmap **Phase 11**. It adds release methodo
 
 ## Tasks
 
-- [ ] Task 1: The release acceptance methodology
+- [ ] Task 1: The release acceptance methodology — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 30 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional: `docs/live-testing.md` gains a section "Release acceptance on live providers" with these parts:
       - **Tiers.** T0 hermetic (`bun run test`, mock provider and recorded wire fixtures). T1 wire scenarios per shipped provider (`providers/{hyper,opencode-go,typesafe,laya}`, plan 183; `providers/{liquid,liquid-local}`, plan 196; `providers/openrouter`, plan 203), including the `decide` rows of plans 195–196. T2 the SDK journey on Hyper *and* OpenCode Go (`release/journey-*`). T2c cache parity against pi run headless (`release/cache-parity`, plan 184). T3 packed post-publish smoke (`scripts/post-publish-smoke.mjs`). A release needs T0, T1 for all seven provider rows (six packages; `liquid` has hosted and local rows), T2 on both providers, and T2c green before the tag, and T3 green after publish.
@@ -96,7 +98,7 @@ This plan is a pre-publish part of roadmap **Phase 11**. It adds release methodo
     - `docs/index.md` update: no — the page is already indexed.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 2: Live pre-flight check
+- [ ] Task 2: Live pre-flight check — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 31 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional: `scripts/live-preflight.mjs --suite <id-or-prefix>` reads every matching row's `requires`/`requiresAny` from `scripts/live-matrix.json`. It prints one row per check:
       - the env file resolved from `PRISM_LIVE_ENV_FILE` (or the manifest default) exists, is a regular file, and has mode `0600` or stricter;
@@ -148,7 +150,7 @@ This plan is a pre-publish part of roadmap **Phase 11**. It adds release methodo
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 3: The provider-agnostic SDK journey
+- [ ] Task 3: The provider-agnostic SDK journey — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 32 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional: `apps/prism-agent/src/__tests__/live-provider-journey.test.ts` skips with a reason unless all of these are set: `PRISM_LIVE_PROVIDER_TESTS=1`, `PRISM_LIVE_RELEASE_JOURNEY=1`, `PRISM_LIVE_JOURNEY_PROVIDER` (`hyper` | `opencode-go`), and that provider's key. The fixture maps the provider name to its package instance (`hyper({ apiKey: "env:HYPER_API_KEY" })` or `opencodeGo({ apiKey: "env:OPENCODE_GO_API_KEY" })`) and its model variable. Nothing else in the suite names a provider. Agents are built only through `createAgent` and first-party packages, in a temp git repository, with these scenarios:
       1. **Stream contract.** One text run: event order `run.started → turn.started → message.delta* → message.completed → turn.completed → run.completed`; usage reported (`usage.estimated !== true`) and following the inclusive usage rule (plan 182 Task 4: `cacheReadTokens + cacheWriteTokens ≤ inputTokens`).
@@ -203,7 +205,7 @@ This plan is a pre-publish part of roadmap **Phase 11**. It adds release methodo
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 4: Register the suites and wire them into the release
+- [ ] Task 4: Register the suites and wire them into the release — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 33 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional: `scripts/live-matrix.json` gains two rows. `release/journey-hyper`: `package: "@arnilo/prism-agent"`, `status: "active"`, `cwd: "apps/prism-agent"`, `command: "PRISM_LIVE_JOURNEY_PROVIDER=hyper bun test --timeout=0 src/__tests__/live-provider-journey.test.ts"`, `requires: ["PRISM_LIVE_PROVIDER_TESTS", "PRISM_LIVE_RELEASE_JOURNEY", "HYPER_API_KEY"]`, `model: [{ env: "PRISM_LIVE_HYPER_JOURNEY_MODEL", default: "deepseek-v4-pro", wired: true }]`, `scope`, and `cost` from Task 3. `release/journey-opencode-go` is the same with `OPENCODE_GO_API_KEY` and `PRISM_LIVE_OPENCODE_GO_JOURNEY_MODEL`; its default model comes from plan 183 Task 1 (e).
     - Functional: `node scripts/generate-live-docs.mjs --write` refreshes the table; `scripts/live-doc-check.test.mjs` and `scripts/live-matrix.test.mjs` pass.
@@ -236,7 +238,7 @@ This plan is a pre-publish part of roadmap **Phase 11**. It adds release methodo
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 5: First acceptance run and evidence (owner provides the keys)
+- [ ] Task 5: First acceptance run and evidence (owner provides the keys) — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 34 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional: Prerequisites: plans 181–185 are complete; the owner confirms that `~/.config/prism/live.env` holds the seven keys (`HYPER_API_KEY`, `OPENCODE_GO_API_KEY`, `TYPESAFE_API_KEY`, `LIQUID_API_KEY`, `OPENROUTER_API_KEY`, `KILO_API_KEY`, `LITELLM_API_KEY`) with spend caps, confirms authorization for the selected OpenRouter and Kilo models (paid cache remains separately gated), and approves the Kilo device-login verification URL; `scripts/litellm/up.mjs` runs the local LiteLLM proxy; `laya-serve` and `llama-server` (`d1-3B`) are running on the dev machine; `pi` is installed with Hyper and OpenCode Go configured. The executor then:
       1. runs `bun scripts/live-preflight.mjs --suite providers/ --probe` and `bun scripts/live-preflight.mjs --suite release/ --probe`, including the OpenRouter, Kilo, and LiteLLM discovery/key checks before their strict T1 runs;

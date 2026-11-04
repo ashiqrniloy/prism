@@ -1,5 +1,7 @@
 # Phase 11 Part AE — module skills: procedural knowledge shipped with every package
 
+> **Superseded by plan 215 (2026-11-04).** On the owner's decision to cut one consolidated 0.13.0 release plan after plan 208, with the memory packages published as experimental, every open task here moved to [plan 215](215-Phase-11-Part-AI-Release-0.13.0-Experimental-Memory-Host-Adoption-Cache-Parity-Freeze-Acceptance-And-Publish.md) with its criteria intact; the task lines below name the new numbers. This file is kept as history and is not executed.
+
 ## Objectives
 
 - Give an agent built on Prism the procedural knowledge it needs to use each module well (web tools, coding tools, browser, OpenAPI, delegation, office documents, research, memory) without the host writing or shipping any of it.
@@ -24,7 +26,7 @@
 
 ## Tasks
 
-- [ ] Task 1: Phase review (read-only)
+- [ ] Task 1: Phase review (read-only) — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 5 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional: The task note records:
       - (a) **Tool and skill ledger.** For each package that registers a model-visible tool, at its registration site, the tools it registers under its default and its fullest config, any `when` gate, and its current skills. Sites: `packages/tools/web/src/index.ts:381`, `packages/tools/coding/src/index.ts:300`, `packages/tools/browser/src/index.ts:111`, `packages/tools/openapi/src/index.ts:111`, `packages/tools/computer-use/src/index.ts:143`, `packages/tools/work/src/index.ts:269`, `packages/tools/research/src/index.ts:93`, `packages/integrations/delegate/src/index.ts:65`, `packages/integrations/advisor/src/index.ts:84`, `packages/memory/fabric/src/index.ts:504` (`when`), `packages/memory/observational/src/index.ts:98` (`when`), `packages/memory/rag/src/index.ts:134`, `packages/context/engineering/src/index.ts:149`, plus `@arnilo/prism-mcp` (external tools, no fixed names) and `packages/memory/wiki` (as left by plans 207 and 210). For each package, a decision: **skill** (the procedure spans several calls, or needs a judgment that one tool description cannot hold), **description only** (a single-call tool whose description already carries when and how), or **none** (no model-visible tool). Give each "skill" row a proposed name and a one-line description draft.
@@ -64,7 +66,7 @@
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 2: Skills are listed only when their tools are available (kernel)
+- [ ] Task 2: Skills are listed only when their tools are available (kernel) — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 6 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional:
       - `Skill` gains `readonly requiresTools?: readonly string[]`. `parseSkillFile` reads it from frontmatter `metadata.prism-requires-tools`, a space-separated string as Agent Skills `allowed-tools` is written. A malformed value (not a string, or a token that is not a valid tool name) makes `parseSkillFile` throw. For a package skill, that fails the package's setup, as any `addDir` read failure does (`docs/packages.md:112`). For a discovered skill, `context-files` skips it with a status note.
@@ -134,7 +136,7 @@
     - `docs/index.md` update: no (edits inside indexed pages).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 3: The package skill contract and its gate
+- [ ] Task 3: The package skill contract and its gate — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 7 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional:
       - `docs/packages.md` gains "Writing a package skill". It covers:
@@ -198,7 +200,7 @@
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 4: Tool package skills — web, coding, browser, OpenAPI, office
+- [ ] Task 4: Tool package skills — web, coding, browser, OpenAPI, office — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 8 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional:
       - Each package the Task 1 ledger marks "skill" ships its skills under `skills/<name>/SKILL.md`, registers them with `prism.skills.addDir`, and lists `skills` in `package.json` `files`. Expected set (the ledger may change it):
@@ -245,7 +247,7 @@
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 5: Integration skills — delegation and advisor
+- [ ] Task 5: Integration skills — delegation and advisor — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 9 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional:
       - `delegate` ships `delegation`: when to delegate versus doing the work, writing a self-contained brief, forwarding context (plan 191), reading child results, and avoiding fan-out loops. It is registered with `addDir` and declares `requiresTools` with the delegate tool names.
@@ -281,7 +283,7 @@
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 6: Memory skills on the surface plan 210 left
+- [ ] Task 6: Memory skills on the surface plan 210 left — Dropped by plan 215 (2026-11-04): moved to plan 210 Task 11 (memory skills follow the memory track; the memory packages are experimental in 0.13.0)
   - Acceptance Criteria:
     - Functional:
       - **Entry check.** Before writing, re-run Task 1 (a) for the memory packages on the post-210 tree and record their model-visible tools and `when` gates. Plan 210's removals win: a skill is written only for a tool that survived.
@@ -328,7 +330,7 @@
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 7: Skills reach vendor agents through `serveTools`
+- [ ] Task 7: Skills reach vendor agents through `serveTools` — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 10 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional:
       - `@arnilo/prism-mcp-server` exports `skillResources(skills, servedToolNames)`. It returns one `serveTools` resource (`{ uri: "prism-skill://<name>", name, mimeType: "text/markdown", text }`) per skill whose `requiresTools` is non-empty and a subset of the served tools. The text is the skill's `SKILL.md` content (frontmatter included), so a vendor agent reads standard Agent Skills markdown.
@@ -371,7 +373,7 @@
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 8: Paired skill evaluations and the ship rule (owner gate, paid)
+- [ ] Task 8: Paired skill evaluations and the ship rule (owner gate, paid) — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 11 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional:
       - `scripts/skill-evals/criteria.json` is written and committed before any paid run (pre-registration).
@@ -426,7 +428,7 @@
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 9: Example, reference host, and hand-off to plan 184
+- [ ] Task 9: Example, reference host, and hand-off to plan 184 — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 12 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional:
       - `examples/package-skills.ts` runs on the mock provider. It builds an agent with `tools-web` and `tools-coding`, prints `inspect().skills` (showing `package` and `requiresTools`), runs one turn with `tools.only: ["read"]`, and shows `web-research` absent from the catalog and `load_skill("web-research")` returning `skill_unavailable`.

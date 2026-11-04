@@ -1,5 +1,7 @@
 # Phase 11 Part L — kernel surface reduction, shape freeze, and forward compatibility
 
+> **Superseded by plan 215 (2026-11-04).** On the owner's decision to cut one consolidated 0.13.0 release plan after plan 208, with the memory packages published as experimental, every open task here moved to [plan 215](215-Phase-11-Part-AI-Release-0.13.0-Experimental-Memory-Host-Adoption-Cache-Parity-Freeze-Acceptance-And-Publish.md) with its criteria intact; the task lines below name the new numbers. This file is kept as history and is not executed.
+
 ## Objectives
 
 - Reduce the root `@arnilo/prism` export surface to what hosts and packages need, moving domain modules and network plumbing to subpaths and deleting unused internals, before the surface is frozen.
@@ -33,7 +35,7 @@ This plan is a pre-publish part of roadmap **Phase 11**. **Tasks 2–5 moved her
 
 ## Tasks
 
-- [ ] Task 1: Entry check against plan 179's review (read-only)
+- [ ] Task 1: Entry check against plan 179's review (read-only) — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 25 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional: The task note re-runs plan 179 Task 1's inventories on the current tree and records the differences:
       - (c) the root-surface table: rows whose callers vanished with the 17 provider packages (for example `pinnedFetch`'s `providers/alibaba` and `providers/openai/images` callers, `trimTrailingSlashes`' 39 provider files), and any export plan 182 added to the kit (`createRoutedProvider`, `normalizeUsage`, `replayFetch`, codec options);
@@ -76,7 +78,7 @@ This plan is a pre-publish part of roadmap **Phase 11**. **Tasks 2–5 moved her
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 2: Reduce the root surface
+- [ ] Task 2: Reduce the root surface — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 26 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional: Apply plan 179 Task 1 (c)'s table:
       - `artifacts.ts` exports move to a new subpath `@arnilo/prism/artifacts` (plan 179 Task 1 (c): four consumers — `tools-work`, `tools-coding`, `tools-web`, `evals`);
@@ -124,7 +126,7 @@ This plan is a pre-publish part of roadmap **Phase 11**. **Tasks 2–5 moved her
     - `docs/index.md` update: yes if `docs/net.md` is created — one-sentence entry.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 3: Retire migration-era shapes
+- [ ] Task 3: Retire migration-era shapes — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 27 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional: Credentials: `resolveCredentialValue` and `CredentialValueSource` are deleted from the kernel (`src/credentials/legacy.ts`). `CredentialRecord` is **kept** — plan 179 Task 1 (d) found `packages/credentials/keyring` imports it from `@arnilo/prism` and uses it in its public store API; move it out of `legacy.ts` (e.g. `src/credentials/record.ts`) and keep its export. Every low-level provider factory (`createAnthropicMessagesProvider`, the OpenAI family factories, and the rest from plan 179 Task 1 (d)) takes `apiKey?: SecretSource` where `SecretSource = () => Promise<string | undefined>` is exported from `@arnilo/prism/provider-kit` (the shape `refSource` already returns, `src/provider-kit/provider-package.ts:72`). A literal string `apiKey` no longer type-checks. Explicitly migrate `packages/providers/openrouter/src/provider.ts` (`createOpenRouterProvider`, `OpenRouterProviderOptions`) and `src/models.ts` (`listOpenRouterModels`, `ListOpenRouterModelsOptions`) to `SecretSource`, including discovery's `resolveCredentialValue` caller; the manifest-facing `openrouter({ apiKey: "env:OPENROUTER_API_KEY" })` remains ref-only, with `refSource` bridging to the low-level factory/discovery.
     - Functional: Channels: `webhookSecret` and the bot token accept `env:`/`keyring:` refs only (literal → `literal_secret`), resolved through the credentials slot; channels' private `CredentialValueSource` type is deleted.
@@ -169,7 +171,7 @@ This plan is a pre-publish part of roadmap **Phase 11**. **Tasks 2–5 moved her
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 4: Freeze the shape of the surface
+- [ ] Task 4: Freeze the shape of the surface — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 28 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional: `extractDeclaredSurface` records, per exported name, the full normalized declaration: interface and class bodies (members sorted, whitespace collapsed, comments stripped), type alias right-hand sides, function overload signatures, and enum members. A re-exported name resolves to its declaration in the package's declaration graph instead of recording the `export … from` statement.
     - Functional: The gate reports, per name, `removed`, `changed` (with a unified diff of the normalized text), and `added`. Changes that are additive by rule are classified `compatible` and do not fail: a new optional interface member, a new union member on a type the kernel only produces (listed in a `producerOnlyTypes` table in `scripts/release-gates.mjs`: `AgentEventPayload`, `HostUiRequest`, `AgentFinishReason`, …), a new overload. Everything else fails unless `--allow-break` and a migration note.
@@ -211,7 +213,7 @@ This plan is a pre-publish part of roadmap **Phase 11**. **Tasks 2–5 moved her
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 5: Compatibility promise and forward-compatibility rules
+- [ ] Task 5: Compatibility promise and forward-compatibility rules — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 29 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional: `docs/compatibility.md` (API page structure) states:
       - what is stable (the root exports, every subpath in `exports`, the hook catalog, slot contracts, `PackageAPI`, `HostPort`, event payloads, the manifest format, the session entry schema);

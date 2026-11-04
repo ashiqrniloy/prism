@@ -1,5 +1,7 @@
 # Phase 11 Part AF — host builder kit: a skill and an MCP server for agents that build hosts
 
+> **Superseded by plan 215 (2026-11-04).** On the owner's decision to cut one consolidated 0.13.0 release plan after plan 208, with the memory packages published as experimental, every open task here moved to [plan 215](215-Phase-11-Part-AI-Release-0.13.0-Experimental-Memory-Host-Adoption-Cache-Parity-Freeze-Acceptance-And-Publish.md) with its criteria intact; the task lines below name the new numbers. This file is kept as history and is not executed.
+
 ## Objectives
 
 - Make it easy for a coding agent (Claude Code, Codex, Cursor, or a Prism agent) to build or change a Prism host correctly, against the Prism version the project actually has installed.
@@ -39,7 +41,7 @@
 
 ## Tasks
 
-- [ ] Task 1: Phase review (read-only)
+- [ ] Task 1: Phase review (read-only) — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 13 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional: The task note records:
       - (a) **Placement.** Why this is a host library under `packages/hosts/`. Precedent: `@arnilo/prism-devtools`, a developer tool over the public `Agent` surface with a bin (`packages/hosts/devtools/package.json`). Why it is not kernel: the kernel has zero runtime dependencies, and MCP needs `@modelcontextprotocol/server`. Why it is not a package: it adds nothing to an agent. Also check the roadmap's §2 host-library lists (`roadmap.md:109`, `:634`) and record whether they need the new row (the Phase 11 bullet is added by this plan; a §2 table row is added in Task 2 if the review says so).
@@ -95,7 +97,7 @@
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 2: The package and its generated reference indexes
+- [ ] Task 2: The package and its generated reference indexes — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 14 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional:
       - `packages/hosts/host-builder/` is created with:
@@ -162,7 +164,7 @@
     - `docs/index.md` update: yes — "`@arnilo/prism-host-builder`: Skill, MCP server, and installer that help coding agents build and change Prism hosts against the installed version."
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 3: The `prism-host-builder` skill and the drift gate
+- [ ] Task 3: The `prism-host-builder` skill and the drift gate — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 15 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional:
       - `skills/prism-host-builder/SKILL.md` has:
@@ -228,7 +230,7 @@
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 4: The MCP server — lookup tools, docs resources, prompts
+- [ ] Task 4: The MCP server — lookup tools, docs resources, prompts — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 16 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional:
       - `prism-host-builder mcp [--root <dir>]` serves over stdio through `servePrismMcpStdio` (`packages/hosts/mcp-server/src/server.ts:205`). Tools:
@@ -288,7 +290,7 @@
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 5: Checking the host's own code — inspect, manifest, conformance
+- [ ] Task 5: Checking the host's own code — inspect, manifest, conformance — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 17 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional:
       - The server takes check targets only from its start flags, never from tool arguments:
@@ -350,7 +352,7 @@
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 6: The installer
+- [ ] Task 6: The installer — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 18 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional:
       - `prism-host-builder install --target <t> [--mcp] [--root <dir>] [--force] [--dry-run]`. Targets come from Task 1 (d): `claude`, `codex`, `cursor`, `agents` (generic `.agents/skills`, which Prism's `contextFiles` also discovers), and `prism`.
@@ -398,7 +400,7 @@
     - `docs/index.md` update: no.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 7: A Prism agent as the builder — example and walkthrough
+- [ ] Task 7: A Prism agent as the builder — example and walkthrough — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 19 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional:
       - `examples/host-builder-agent.ts` builds a Prism agent on the mock provider with:
@@ -438,7 +440,7 @@
     - `docs/index.md` update: no (the walkthrough and package are already linked).
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 8: Builder evaluation and claims (owner gate, paid)
+- [ ] Task 8: Builder evaluation and claims (owner gate, paid) — Dropped by plan 215 (2026-11-04): carried into plan 215 Task 20 (one consolidated 0.13.0 release plan; owner decision)
   - Acceptance Criteria:
     - Functional:
       - `scripts/host-builder-evals/criteria.json` is committed before any paid run. It defines:
