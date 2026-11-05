@@ -148,7 +148,8 @@ test("skill_eval_evidence_contains_no_secret", async () => {
   assert.throws(() => assertNoSecret("Authorization: Bearer abcdefghijklmnopqrstuvwxyz0123", []), /key-shaped/);
   // Every committed evidence file is clean.
   if (!existsSync(EVIDENCE_DIR)) return;
-  for (const name of await readdir(EVIDENCE_DIR)) assertNoSecret(readFileSync(join(EVIDENCE_DIR, name), "utf8"), []);
+  for (const entry of await readdir(EVIDENCE_DIR, { recursive: true, withFileTypes: true }))
+    if (entry.isFile()) assertNoSecret(readFileSync(join(entry.parentPath ?? entry.path, entry.name), "utf8"), []);
 });
 
 // ── the ship rule on synthetic reports ─────────────────────────────────────────
@@ -195,6 +196,21 @@ test("skill_eval_ship_rule_fails_a_significant_regression_then_removes", () => {
   assert.match(decision.reason, /significant regression/);
   assert.equal(applyRound(decision, 1), "rewrite");
   assert.equal(applyRound(decision, 2), "remove");
+});
+
+test("skill_eval_ship_rule_unscored_records_are_inconclusive_not_a_regression", () => {
+  const noSkill = syntheticReport({ id: "n", pass: ten(true), loaded: ten(null) });
+  const skill = syntheticReport({ id: "s", pass: ten(true), loaded: ten(true) });
+  skill.aggregate.failedCount = 1;
+  const decision = decideShip({ skillReport: skill, noSkillReport: noSkill, criteria });
+  assert.equal(decision.verdict, "inconclusive");
+  assert.match(decision.reason, /unscored/);
+  assert.equal(applyRound(decision, 1), "inconclusive");
+  const lazy = syntheticReport({ id: "l", pass: ten(true), loaded: ten(false) });
+  lazy.aggregate.failedCount = 1;
+  const failed = decideShip({ skillReport: lazy, noSkillReport: noSkill, criteria });
+  assert.equal(failed.verdict, "fail");
+  assert.match(failed.reason, /recall/);
 });
 
 test("skill_eval_ship_rule_fails_low_recall_and_never_loaded", () => {

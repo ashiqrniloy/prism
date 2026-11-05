@@ -1,0 +1,311 @@
+{
+  "skill": "delegating-work",
+  "package": "@arnilo/prism-delegate",
+  "plan": "215 Task 11",
+  "round": 2,
+  "mode": "live",
+  "startedAt": "2026-11-05T19:26:34.443Z",
+  "finishedAt": "2026-11-05T19:47:59.003Z",
+  "criteriaHash": "93e773a3c5cc678b7542b38e70aaebf2baaa135b15f7cbf42a2f2cf7ee4d6ca8",
+  "criteriaLockedAt": "2026-11-05T12:21:40.016Z",
+  "datasetContentHash": "sha256:f2f9c8349450784652b5ea91d2123af3345d66f0546013186255e4d31f4cbba3",
+  "datasetVersion": "1",
+  "skillsRevision": "sha256:37c5fc108e18472c7f207fc432186a3bdf9bd249c7f44268938842caf07c8dcb",
+  "runtimeRevision": "dcd26c2449cfe433b1652ce7b972fe7e9f3e8d9e",
+  "trials": 3,
+  "providers": [
+    {
+      "provider": "commandcode",
+      "model": "meta/muse-spark-1.3-contributor",
+      "arms": {
+        "skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 1,
+            "ci95": {
+              "low": 1,
+              "high": 1
+            },
+            "items": 13,
+            "records": 39
+          },
+          "failedCount": 0,
+          "toolMisuse": 0,
+          "inputTokens": 184260,
+          "cacheReadTokens": 105937,
+          "uncachedInputTokens": 78323,
+          "outputTokens": 22434,
+          "costComplete": false,
+          "meanDurationMs": 48724.39458092309,
+          "durationMs": {
+            "p50": 16064.009606000036,
+            "p95": 30116.67894600006
+          }
+        },
+        "no-skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 1,
+            "ci95": {
+              "low": 1,
+              "high": 1
+            },
+            "items": 13,
+            "records": 38
+          },
+          "failedCount": 1,
+          "toolMisuse": 0,
+          "inputTokens": 80495,
+          "cacheReadTokens": 54163,
+          "uncachedInputTokens": 26332,
+          "outputTokens": 18609,
+          "costComplete": false,
+          "meanDurationMs": 50076.15943700007,
+          "durationMs": {
+            "p50": 16125.175214999355,
+            "p95": 32759.017371000722
+          }
+        }
+      },
+      "decision": {
+        "verdict": "inconclusive",
+        "roundVerdict": "inconclusive",
+        "reason": "1 unscored record(s) from provider or harness failures; rerun",
+        "comparison": {
+          "baselineMean": 1,
+          "candidateMean": 1,
+          "difference": 0,
+          "ci95": {
+            "low": 0,
+            "high": 0
+          },
+          "pValue": 1,
+          "test": "paired_permutation",
+          "qValue": 1,
+          "significant": false
+        },
+        "trigger": {
+          "triggerTrials": 30,
+          "nonTriggerTrials": 9,
+          "loaded": 30,
+          "loadedOnTrigger": 30,
+          "loadedOnNonTrigger": 0,
+          "recall": 1,
+          "precision": 1
+        }
+      },
+      "items": [
+        {
+          "id": "delegate-count-errors",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "delegate-sum-invoice",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "delegate-extract-emails",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "delegate-diff-config",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "delegate-longest-word",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "delegate-iso-dates",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "delegate-classify-reviews",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "delegate-average",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "delegate-find-bug",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "delegate-cheapest-quote",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "delegate-none-capital",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "delegate-none-leap",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 2,
+            "trials": 3,
+            "unscored": 1,
+            "firstError": "run failed: Command Code request failed: 503 {\"error\":{\"message\":\"Upstream model provider is temporarily unavailable. Please try again in a moment.\",\"type\":\"ove"
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "delegate-none-synonym",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        }
+      ]
+    }
+  ],
+  "verdict": "inconclusive"
+}

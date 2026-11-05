@@ -1,0 +1,325 @@
+{
+  "skill": "browser-automation",
+  "package": "@arnilo/prism-tools-browser",
+  "plan": "215 Task 11",
+  "round": 2,
+  "mode": "live",
+  "startedAt": "2026-11-05T19:07:34.556Z",
+  "finishedAt": "2026-11-05T19:26:34.437Z",
+  "criteriaHash": "93e773a3c5cc678b7542b38e70aaebf2baaa135b15f7cbf42a2f2cf7ee4d6ca8",
+  "criteriaLockedAt": "2026-11-05T12:21:40.016Z",
+  "datasetContentHash": "sha256:5a16f6d749ea0c6efcbb7be3838e0eded06ccb3b538ba34369605da61988ba49",
+  "datasetVersion": "1",
+  "skillsRevision": "sha256:6e6d7fd5b821350c5f4513eda62433b766298460c4db52ca92ab0ea9b18b1fb8",
+  "runtimeRevision": "dcd26c2449cfe433b1652ce7b972fe7e9f3e8d9e",
+  "trials": 3,
+  "providers": [
+    {
+      "provider": "commandcode",
+      "model": "meta/muse-spark-1.3-contributor",
+      "arms": {
+        "skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 0.5384615384615384,
+            "ci95": {
+              "low": 0.23076923076923078,
+              "high": 0.7692307692307693
+            },
+            "items": 13,
+            "records": 39
+          },
+          "failedCount": 0,
+          "toolMisuse": 34,
+          "inputTokens": 877690,
+          "cacheReadTokens": 642914,
+          "uncachedInputTokens": 234776,
+          "outputTokens": 37053,
+          "costComplete": false,
+          "meanDurationMs": 41763.309600538574,
+          "durationMs": {
+            "p50": 15361.379031000193,
+            "p95": 24936.01181700034
+          }
+        },
+        "no-skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 0.7051282051282051,
+            "ci95": {
+              "low": 0.48717948717948717,
+              "high": 0.8977564102564086
+            },
+            "items": 13,
+            "records": 35
+          },
+          "failedCount": 4,
+          "toolMisuse": 20,
+          "inputTokens": 750556,
+          "cacheReadTokens": 574125,
+          "uncachedInputTokens": 176431,
+          "outputTokens": 40941,
+          "costComplete": false,
+          "meanDurationMs": 45402.67008753827,
+          "durationMs": {
+            "p50": 15857.066004999913,
+            "p95": 24572.020854999777
+          }
+        }
+      },
+      "decision": {
+        "verdict": "inconclusive",
+        "roundVerdict": "inconclusive",
+        "reason": "4 unscored record(s) from provider or harness failures; rerun",
+        "comparison": {
+          "baselineMean": 0.7051282051282052,
+          "candidateMean": 0.5384615384615384,
+          "difference": -0.16666666666666666,
+          "ci95": {
+            "low": -0.3333333333333333,
+            "high": -0.02564102564102564
+          },
+          "pValue": 0.125,
+          "test": "paired_permutation",
+          "qValue": 0.125,
+          "significant": false
+        },
+        "trigger": {
+          "triggerTrials": 30,
+          "nonTriggerTrials": 9,
+          "loaded": 31,
+          "loadedOnTrigger": 30,
+          "loadedOnNonTrigger": 1,
+          "recall": 1,
+          "precision": 0.967741935483871
+        }
+      },
+      "items": [
+        {
+          "id": "browser-form",
+          "kind": "trigger",
+          "skill": {
+            "pass": 0,
+            "trials": 3,
+            "firstFailure": "state.submissions is [], expected [{\"email\":\"dana@example.test\",\"name\":\"Dana Reyes\",\"newsletter\":true,\"plan\":\"pro\"}]",
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 0,
+            "trials": 3,
+            "firstFailure": "state.submissions is [], expected [{\"email\":\"dana@example.test\",\"name\":\"Dana Reyes\",\"newsletter\":true,\"plan\":\"pro\"}]",
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "browser-wizard",
+          "kind": "trigger",
+          "skill": {
+            "pass": 0,
+            "trials": 3,
+            "firstFailure": "state.wizard is null, expected {\"color\":\"teal\",\"confirmed\":true}",
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 0,
+            "trials": 3,
+            "firstFailure": "state.wizard is null, expected {\"color\":\"teal\",\"confirmed\":true}",
+            "unscored": 1,
+            "firstError": "run failed: Command Code request failed: 503 {\"error\":{\"message\":\"Upstream model provider is temporarily unavailable. Please try again in a moment.\",\"type\":\"ove"
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "browser-login",
+          "kind": "trigger",
+          "skill": {
+            "pass": 0,
+            "trials": 3,
+            "firstFailure": "missing \"1,284.50\"; state.logins is [], expected [{\"ok\":true,\"user\":\"agent\"}]",
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 3,
+            "firstFailure": "missing \"1,284.50\"",
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "browser-pagination",
+          "kind": "trigger",
+          "skill": {
+            "pass": 0,
+            "trials": 3,
+            "firstFailure": "missing \"34.00\"",
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 3,
+            "firstFailure": "missing \"34.00\"",
+            "unscored": 1,
+            "firstError": "run failed: Chat stream ended without completion evidence ([DONE]: missing, finish_reason: missing)"
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "browser-tabs",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "browser-dynamic",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "browser-modal",
+          "kind": "trigger",
+          "skill": {
+            "pass": 0,
+            "trials": 3,
+            "firstFailure": "state.subscribers is [], expected [\"sam@example.test\"]",
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 3,
+            "firstFailure": "state.subscribers is [], expected [\"sam@example.test\"]",
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "browser-settings",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "browser-search",
+          "kind": "trigger",
+          "skill": {
+            "pass": 0,
+            "trials": 3,
+            "firstFailure": "missing \"Harbor Lights Festival\"",
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "browser-injection",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "browser-none-arithmetic",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 2,
+            "trials": 3,
+            "unscored": 1,
+            "firstError": "run failed: Command Code request failed: 500 {\"error\":{\"message\":\"Upstream model provider is temporarily unavailable. Please try again in a moment.\",\"type\":\"ser"
+          },
+          "loaded": 1,
+          "loadTrials": 3
+        },
+        {
+          "id": "browser-none-capital",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 2,
+            "trials": 3,
+            "unscored": 1,
+            "firstError": "run failed: Command Code request failed: 503 {\"error\":{\"message\":\"Upstream model provider is temporarily unavailable. Please try again in a moment.\",\"type\":\"ove"
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "browser-none-rhyme",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        }
+      ]
+    }
+  ],
+  "verdict": "inconclusive"
+}

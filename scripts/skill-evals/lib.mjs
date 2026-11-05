@@ -68,13 +68,17 @@ export function failedToolCalls(timeline) {
 export function createScorers({ skill, arm, grade }) {
   const taskSuccess = defineScorer({
     id: "task_success",
-    requires: ["environment"],
-    score: ({ item, environment }) => {
+    requires: ["environment", "timeline"],
+    score: ({ item, environment, timeline }) => {
       // A provider or harness failure says nothing about the skill: throw so the record is `failed`, not a 0.
       // A run that hit a run limit (tool calls, tokens, turns) is the agent failing the task: that scores 0.
       if (environment?.__run?.status === "failed" && !environment.__run.limited) throw new Error(`run failed: ${environment.__run.error ?? "unknown error"}`);
       const verdict = grade(item?.expected?.grade, environment);
-      return { score: verdict.pass ? 1 : 0, reason: verdict.reason, metadata: { checks: verdict.checks } };
+      // `limited` and `stopReason` make a run that ran out of turns, tool calls or time visible in the evidence;
+      // `loaded` lets the evidence split task success by whether the skill was actually loaded (skill arm only).
+      const metadata = { checks: verdict.checks, limited: environment?.__run?.limited === true, stopReason: environment?.__run?.stopReason };
+      if (arm === "skill") metadata.loaded = loadedSkill(timeline, skill);
+      return { score: verdict.pass ? 1 : 0, reason: verdict.reason, metadata };
     },
   });
   const toolMisuse = defineScorer({
@@ -152,6 +156,17 @@ export function decideShip({ skillReport, noSkillReport, criteria }) {
     comparison = compareExperiments(noSkillReport, skillReport, { scorers: [rule.comparedScorer], alpha: rule.regression.alpha, seed: criteria.seed });
   } catch (error) {
     return { verdict: "inconclusive", reason: `comparison failed: ${error instanceof Error ? error.message : String(error)}`, trigger, comparison: undefined };
+  }
+  // An unscored record (provider or harness failure) makes the comparison unreliable: rerun, never decide.
+  const unscored = (skillReport.aggregate?.failedCount ?? 0) + (noSkillReport.aggregate?.failedCount ?? 0);
+  // A skill ships only when every condition holds, so a trigger failure still fails it; only a would-be ship is held back.
+  if (unscored > 0) {
+    const triggerFails = trigger.precision === null || trigger.precision < rule.minTriggerPrecision || trigger.recall === null || trigger.recall < rule.minTriggerRecall;
+    if (!triggerFails) return { verdict: "inconclusive", reason: `${unscored} unscored record(s) from provider or harness failures; rerun`, trigger, comparison: comparison.scorers[rule.comparedScorer] };
+    const reasons = [`${unscored} unscored record(s): the task_success comparison is unreliable`];
+    if (trigger.precision === null || trigger.precision < rule.minTriggerPrecision) reasons.push(`trigger precision ${fmt(trigger.precision)} < ${rule.minTriggerPrecision}`);
+    if (trigger.recall === null || trigger.recall < rule.minTriggerRecall) reasons.push(`trigger recall ${fmt(trigger.recall)} < ${rule.minTriggerRecall}`);
+    return { verdict: "fail", reason: reasons.join("; "), trigger, comparison: comparison.scorers[rule.comparedScorer], regression };
   }
   try {
     assertEvaluationThreshold(skillReport, {

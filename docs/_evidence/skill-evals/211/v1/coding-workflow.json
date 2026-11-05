@@ -1,0 +1,314 @@
+{
+  "skill": "coding-workflow",
+  "package": "@arnilo/prism-tools-coding",
+  "plan": "215 Task 11",
+  "round": 1,
+  "mode": "live",
+  "startedAt": "2026-11-05T14:23:55.468Z",
+  "finishedAt": "2026-11-05T14:42:00.143Z",
+  "criteriaHash": "93e773a3c5cc678b7542b38e70aaebf2baaa135b15f7cbf42a2f2cf7ee4d6ca8",
+  "criteriaLockedAt": "2026-11-05T12:21:40.016Z",
+  "datasetContentHash": "sha256:c019b118e58c0e787d6355b64958ae4cc028f28397d818165a361fd17b6c29ab",
+  "datasetVersion": "1",
+  "skillsRevision": "sha256:2bbb12e469eb35683da8257d8532dd18cbaf450becf5c55091a18c78db3eedca",
+  "runtimeRevision": "dcd26c2449cfe433b1652ce7b972fe7e9f3e8d9e",
+  "trials": 3,
+  "providers": [
+    {
+      "provider": "commandcode",
+      "model": "Qwen/Qwen3.7-Flash",
+      "arms": {
+        "skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 0.8717948717948717,
+            "ci95": {
+              "low": 0.6666666666666667,
+              "high": 1
+            },
+            "items": 13,
+            "records": 39
+          },
+          "failedCount": 0,
+          "toolMisuse": 4,
+          "inputTokens": 769272,
+          "cacheReadTokens": 739128,
+          "uncachedInputTokens": 30144,
+          "outputTokens": 24403,
+          "costComplete": false,
+          "meanDurationMs": 41864.255829076916,
+          "durationMs": {
+            "p50": 12940.333218,
+            "p95": 31353.530952
+          }
+        },
+        "no-skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 0.9230769230769232,
+            "ci95": {
+              "low": 0.7948717948717949,
+              "high": 1
+            },
+            "items": 13,
+            "records": 39
+          },
+          "failedCount": 0,
+          "toolMisuse": 0,
+          "inputTokens": 758023,
+          "cacheReadTokens": 729122,
+          "uncachedInputTokens": 28901,
+          "outputTokens": 25494,
+          "costComplete": false,
+          "meanDurationMs": 40700.17628792306,
+          "durationMs": {
+            "p50": 13369.96404500003,
+            "p95": 28935.855900999974
+          }
+        }
+      },
+      "decision": {
+        "verdict": "fail",
+        "roundVerdict": "rewrite",
+        "reason": "trigger precision n/a < 0.7; trigger recall 0.00 < 0.7",
+        "comparison": {
+          "baselineMean": 0.9230769230769229,
+          "candidateMean": 0.8717948717948718,
+          "difference": -0.05128205128205128,
+          "ci95": {
+            "low": -0.1794871794871795,
+            "high": 0.05128205128205129
+          },
+          "pValue": 0.75,
+          "test": "paired_permutation",
+          "qValue": 0.75,
+          "significant": false
+        },
+        "trigger": {
+          "triggerTrials": 30,
+          "nonTriggerTrials": 9,
+          "loaded": 0,
+          "loadedOnTrigger": 0,
+          "loadedOnNonTrigger": 0,
+          "recall": 0,
+          "precision": null
+        }
+      },
+      "items": [
+        {
+          "id": "code-off-by-one",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-add-slugify",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-rename-across-files",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-missing-price",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-rounding-two-files",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-config-page-size",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 3,
+            "firstFailure": "tests failed (exit 1)",
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-add-chunk",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-remove-deprecated",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 2,
+            "trials": 3,
+            "firstFailure": "forbidden pattern still in src/totals.js",
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-missing-await",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-validate-qty",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-none-capital",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-none-percent",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-none-reverse",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 0,
+            "trials": 3,
+            "firstFailure": "missing \"yrassecen\"",
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 3,
+            "firstFailure": "missing \"yrassecen\"",
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        }
+      ]
+    }
+  ],
+  "verdict": "rewrite"
+}

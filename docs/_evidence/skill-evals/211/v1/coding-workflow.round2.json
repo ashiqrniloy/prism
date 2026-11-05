@@ -1,0 +1,314 @@
+{
+  "skill": "coding-workflow",
+  "package": "@arnilo/prism-tools-coding",
+  "plan": "215 Task 11",
+  "round": 2,
+  "mode": "live",
+  "startedAt": "2026-11-05T14:55:28.181Z",
+  "finishedAt": "2026-11-05T15:13:15.360Z",
+  "criteriaHash": "93e773a3c5cc678b7542b38e70aaebf2baaa135b15f7cbf42a2f2cf7ee4d6ca8",
+  "criteriaLockedAt": "2026-11-05T12:21:40.016Z",
+  "datasetContentHash": "sha256:c019b118e58c0e787d6355b64958ae4cc028f28397d818165a361fd17b6c29ab",
+  "datasetVersion": "1",
+  "skillsRevision": "sha256:d8762ce6a1a898dde3c5e876f03d59b976c8215d6ec78f7e7363afb9a5138f0e",
+  "runtimeRevision": "dcd26c2449cfe433b1652ce7b972fe7e9f3e8d9e",
+  "trials": 3,
+  "providers": [
+    {
+      "provider": "commandcode",
+      "model": "Qwen/Qwen3.7-Flash",
+      "arms": {
+        "skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 0.9487179487179488,
+            "ci95": {
+              "low": 0.8717948717948717,
+              "high": 1
+            },
+            "items": 13,
+            "records": 39
+          },
+          "failedCount": 0,
+          "toolMisuse": 2,
+          "inputTokens": 778764,
+          "cacheReadTokens": 748086,
+          "uncachedInputTokens": 30678,
+          "outputTokens": 26044,
+          "costComplete": false,
+          "meanDurationMs": 40547.843651307674,
+          "durationMs": {
+            "p50": 13838.24871,
+            "p95": 25880.294152999995
+          }
+        },
+        "no-skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 0.9487179487179488,
+            "ci95": {
+              "low": 0.8717948717948717,
+              "high": 1
+            },
+            "items": 13,
+            "records": 39
+          },
+          "failedCount": 0,
+          "toolMisuse": 1,
+          "inputTokens": 765461,
+          "cacheReadTokens": 735927,
+          "uncachedInputTokens": 29534,
+          "outputTokens": 27504,
+          "costComplete": false,
+          "meanDurationMs": 41092.32072799997,
+          "durationMs": {
+            "p50": 14653.07148699998,
+            "p95": 27581.67198699992
+          }
+        }
+      },
+      "decision": {
+        "verdict": "fail",
+        "roundVerdict": "remove",
+        "reason": "trigger recall 0.07 < 0.7",
+        "comparison": {
+          "baselineMean": 0.9487179487179488,
+          "candidateMean": 0.9487179487179488,
+          "difference": 0,
+          "ci95": {
+            "low": 0,
+            "high": 0
+          },
+          "pValue": 1,
+          "test": "paired_permutation",
+          "qValue": 1,
+          "significant": false
+        },
+        "trigger": {
+          "triggerTrials": 30,
+          "nonTriggerTrials": 9,
+          "loaded": 2,
+          "loadedOnTrigger": 2,
+          "loadedOnNonTrigger": 0,
+          "recall": 0.06666666666666667,
+          "precision": 1
+        }
+      },
+      "items": [
+        {
+          "id": "code-off-by-one",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-add-slugify",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 1,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-rename-across-files",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-missing-price",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-rounding-two-files",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-config-page-size",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-add-chunk",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-remove-deprecated",
+          "kind": "trigger",
+          "skill": {
+            "pass": 2,
+            "trials": 3,
+            "firstFailure": "forbidden pattern still in src/totals.js",
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 2,
+            "trials": 3,
+            "firstFailure": "forbidden pattern still in src/totals.js",
+            "unscored": 0
+          },
+          "loaded": 1,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-missing-await",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-validate-qty",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-none-capital",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-none-percent",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-none-reverse",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 2,
+            "trials": 3,
+            "firstFailure": "missing \"yrassecen\"",
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 2,
+            "trials": 3,
+            "firstFailure": "missing \"yrassecen\"",
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        }
+      ]
+    }
+  ],
+  "verdict": "remove"
+}

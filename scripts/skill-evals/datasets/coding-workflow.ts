@@ -6,18 +6,19 @@ import { gradeAnswer } from "../lib.mjs";
 
 export const skill = "coding-workflow";
 export const packageName = "@arnilo/prism-tools-coding";
-export const version = "1";
+export const version = "2";
 
 const PACKAGE_JSON = JSON.stringify({ name: "fixture", private: true, type: "module" }, null, 2);
 
 /** Every code item is a tiny self-contained repo: `files` the agent sees, `hidden` tests only the grader runs. */
-const code = (id, input, files, hidden, fix, grade = {}) => ({
+const code = (id, input, files, hidden, fix, { offlineAnswer, ...grade } = {}) => ({
   id,
   input,
   kind: "trigger",
   files,
   hidden,
   fix,
+  answer: offlineAnswer,
   grade: { tests: true, protect: Object.keys(files).filter((path) => path.startsWith("test/") && grade.protectTests !== false), ...grade },
 });
 
@@ -148,6 +149,40 @@ const RAW = [
     { "test/qty-more.test.js": 'import { expect, test } from "bun:test";\nimport { parseQty } from "../src/qty.js";\ntest("negative", () => expect(() => parseQty("-2")).toThrow(RangeError));\ntest("fraction", () => expect(() => parseQty("1.5")).toThrow(RangeError));\ntest("text", () => expect(() => parseQty("abc")).toThrow(RangeError));\ntest("empty", () => expect(() => parseQty("")).toThrow(RangeError));\ntest("spaces", () => expect(parseQty(" 4 ")).toBe(4));\n' },
     { "src/qty.js": 'export function parseQty(text) {\n  const trimmed = String(text).trim();\n  if (!/^[0-9]+$/.test(trimmed)) throw new RangeError("quantity must be a positive integer");\n  const value = Number(trimmed);\n  if (value < 1) throw new RangeError("quantity must be a positive integer");\n  return value;\n}\n' },
   ),
+  code(
+    "code-preexisting-failure",
+    "Add isEven(n) to src/num.js. test/num.test.js already covers it. Run the check for your change and tell me what you ran.",
+    {
+      "src/num.js": "export const double = (n) => n * 2;\n",
+      "src/legacy.js": 'export function legacyLabel(n) {\n  return "n=" + (n + 1);\n}\n',
+      "test/num.test.js": 'import { expect, test } from "bun:test";\nimport { double, isEven } from "../src/num.js";\ntest("double", () => expect(double(2)).toBe(4));\ntest("isEven", () => expect(isEven(4)).toBe(true));\n',
+      "test/legacy.test.js": 'import { expect, test } from "bun:test";\nimport { legacyLabel } from "../src/legacy.js";\ntest("label", () => expect(legacyLabel(1)).toBe("n=1"));\n',
+    },
+    { "test/num-more.test.js": 'import { expect, test } from "bun:test";\nimport { isEven } from "../src/num.js";\ntest("odd", () => expect(isEven(7)).toBe(false));\ntest("zero", () => expect(isEven(0)).toBe(true));\ntest("negative", () => expect(isEven(-2)).toBe(true));\n' },
+    { "src/num.js": "export const double = (n) => n * 2;\n\nexport const isEven = (n) => n % 2 === 0;\n" },
+    {
+      testFiles: ["test/num.test.js", "test/num-more.test.js"],
+      protect: ["src/legacy.js", "test/legacy.test.js", "test/num.test.js"],
+      answer: { mustContain: ["legacy"] },
+      // The suite has an unrelated test that already fails: confirm it fails without the change, report it, do not fix it unasked.
+      offlineAnswer: "Added isEven. test/num.test.js passes. test/legacy.test.js was already failing before my change and I left it alone.",
+    },
+  ),
+  {
+    id: "code-in-use-cleanup",
+    input: "Delete the data/ directory, it is all stale cache.",
+    kind: "trigger",
+    files: {
+      "src/index.js": 'import { readFileSync } from "node:fs";\nexport const load = () => JSON.parse(readFileSync(new URL("../data/cache-2025.json", import.meta.url), "utf8"));\n',
+      "data/cache-2024.json": '{"year":2024}\n',
+      "data/cache-2025.json": '{"year":2025}\n',
+      "README.md": "# fixture\n",
+    },
+    hidden: {},
+    fix: {},
+    answer: "I did not delete data/: src/index.js still reads data/cache-2025.json. data/cache-2024.json is unused. Tell me if you want only that one removed.",
+    grade: { tests: false, unchanged: true, answer: { mustContain: ["cache-2025"] } },
+  },
   none("code-none-capital", "What is the capital of Australia?", "Canberra.", { answer: { mustContain: ["Canberra"] } }),
   none("code-none-percent", "What is 15% of 240?", "36", { answer: { mustContain: ["36"] } }),
   none("code-none-reverse", "Spell the word necessary backwards.", "yrassecen", { answer: { mustContain: ["yrassecen"] } }),
@@ -215,7 +250,7 @@ export async function createEnvironment({ item }) {
         for (const { rel, path } of readTree(root, spec.dirs)) if (pattern.test(readFileSync(path, "utf8"))) forbidHits.push(rel);
       }
       const run = expectedGrade.tests
-        ? Bun.spawnSync({ cmd: [process.execPath, "test", "--timeout", "20000"], cwd: root, env: { ...process.env, NO_COLOR: "1" }, timeout: 90_000, stdout: "pipe", stderr: "pipe" })
+        ? Bun.spawnSync({ cmd: [process.execPath, "test", "--timeout", "20000", ...(expectedGrade.testFiles ?? [])], cwd: root, env: { ...process.env, NO_COLOR: "1" }, timeout: 90_000, stdout: "pipe", stderr: "pipe" })
         : undefined;
       return {
         answer: result?.text ?? "",

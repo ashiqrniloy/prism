@@ -59,6 +59,14 @@ graders and the scorers are wired together, not that any skill helps. Paid runs 
 (owner decision 2026-11-05); the router aliases `openrouter/free` and `openrouter/auto` are refused. Models come from
 `PRISM_LIVE_SKILL_EVAL_{HYPER,OPENCODE,OPENROUTER,KILO,COMMANDCODE}_MODEL`.
 
-Evidence is `docs/_evidence/skill-evals/211/<skill>.json` and `.md` (round 2 adds `.round2`). It records the skill text
+Evidence is `docs/_evidence/skill-evals/211/<skill>.json` and `.md` (round 2 adds `.round2`); protocol v1 evidence is kept in `211/v1/`. It records the skill text
 revision, dataset hash, criteria hash, per-arm task success with intervals, the paired comparison, trigger precision
-and recall, tool misuse, tokens (cached and uncached), cost and latency, and a per-item table.
+and recall, tool misuse, how many runs ended on a run limit (turns, tool calls or time), task success split by whether the skill was loaded, tokens (cached and uncached), cost and latency, and a per-item table.
+
+## Protocol versions
+
+`criteria.json` records its history in `protocolHistory`. Version 2 (2026-11-06) followed a review of version 1: the
+first protocol measured mostly whether a model reaches for a skill, and its browser items ended on the turn limit in both
+arms because the skill text omitted the `snapshotId` rule. Version 2 rewrote the skill text and descriptions, raised the
+browser run limits, added two items per dataset that need the skill's content, and made the evidence show limit hits and
+the loaded/not-loaded split. Rounds restart at 1.

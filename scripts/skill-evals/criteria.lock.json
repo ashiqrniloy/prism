@@ -1,17 +1,17 @@
 {
-  "criteriaHash": "93e773a3c5cc678b7542b38e70aaebf2baaa135b15f7cbf42a2f2cf7ee4d6ca8",
+  "criteriaHash": "305bb1539cbecc375145262b3b92ca319e19eb8c8ee86139882ea9d61e009531",
   "datasets": {
-    "web-research": "sha256:54fc7ef8bc79d4b9693c72446ffc022b7b00b70fee5c70ed62034bd21eb956e3",
-    "coding-workflow": "sha256:c019b118e58c0e787d6355b64958ae4cc028f28397d818165a361fd17b6c29ab",
-    "browser-automation": "sha256:5a16f6d749ea0c6efcbb7be3838e0eded06ccb3b538ba34369605da61988ba49",
-    "delegating-work": "sha256:f2f9c8349450784652b5ea91d2123af3345d66f0546013186255e4d31f4cbba3"
+    "web-research": "sha256:743ca0eff24062aa96893c9a4a2ab524f675995770ef4486bc25c6bf3166834c",
+    "coding-workflow": "sha256:961a0a55ba93d4358b019dd51731bc199d42d2fc4f7a275614bbd2831229019a",
+    "browser-automation": "sha256:38047b4b00cf3ce410b9b9d653f15db02c9066b8e9ad0605ac23de41cec21412",
+    "delegating-work": "sha256:15a5431c23fd2aeeee6df4e7ed4fb02d74ea490252066bd5f605ad62cc66a44b"
   },
   "skills": {
-    "web-research": "sha256:21944a196016df08e64ec2b7a50097cd319ffc3cc1dd5ee9da4bff4e133a651c",
-    "coding-workflow": "sha256:2bbb12e469eb35683da8257d8532dd18cbaf450becf5c55091a18c78db3eedca",
-    "browser-automation": "sha256:895319a8e28b1d66a4031f6809144c1e382826d23076c9aea0f7decaa7c6f80a",
-    "delegating-work": "sha256:b5eb943868674e3e7894c6a05fcf2bcf00b91c5ed5b2de62950810c94cc42c8b"
+    "web-research": "sha256:d03b2a8dadae18a871a0b939403746cdb6e0e31f5a7e6c008b522d00a59a940e",
+    "coding-workflow": "sha256:fb0d99a86eb66dffafef871aadc6d7d275708301a36ed645815c7bae7f13716d",
+    "browser-automation": "sha256:292879628109fd21dac31ea6e41f01def073a3ed6afc55afcf6f4d7ddc27acbf",
+    "delegating-work": "sha256:297d5b3b0e854cebaee76df17791d9314ad9c15a3c02c3ec91c86a6ade36958f"
   },
-  "registeredAt": "2026-11-05T12:21:40.016Z",
-  "gitHead": "22d7482ab23d1941c4a619955effc5be6e0fb6da"
+  "registeredAt": "2026-11-05T19:49:35.988Z",
+  "gitHead": "dcd26c2449cfe433b1652ce7b972fe7e9f3e8d9e"
 }

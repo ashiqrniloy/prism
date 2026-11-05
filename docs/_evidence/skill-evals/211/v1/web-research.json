@@ -1,0 +1,315 @@
+{
+  "skill": "web-research",
+  "package": "@arnilo/prism-tools-web",
+  "plan": "215 Task 11",
+  "round": 1,
+  "mode": "live",
+  "startedAt": "2026-11-05T12:25:08.769Z",
+  "finishedAt": "2026-11-05T12:37:19.926Z",
+  "criteriaHash": "93e773a3c5cc678b7542b38e70aaebf2baaa135b15f7cbf42a2f2cf7ee4d6ca8",
+  "criteriaLockedAt": "2026-11-05T12:21:40.016Z",
+  "datasetContentHash": "sha256:54fc7ef8bc79d4b9693c72446ffc022b7b00b70fee5c70ed62034bd21eb956e3",
+  "datasetVersion": "1",
+  "skillsRevision": "sha256:21944a196016df08e64ec2b7a50097cd319ffc3cc1dd5ee9da4bff4e133a651c",
+  "runtimeRevision": "dcd26c2449cfe433b1652ce7b972fe7e9f3e8d9e",
+  "trials": 3,
+  "providers": [
+    {
+      "provider": "commandcode",
+      "model": "Qwen/Qwen3.7-Flash",
+      "arms": {
+        "skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 0.8461538461538461,
+            "ci95": {
+              "low": 0.6153846153846154,
+              "high": 1
+            },
+            "items": 13,
+            "records": 39
+          },
+          "failedCount": 0,
+          "toolMisuse": 0,
+          "inputTokens": 247503,
+          "cacheReadTokens": 212606,
+          "uncachedInputTokens": 34897,
+          "outputTokens": 14793,
+          "costComplete": false,
+          "meanDurationMs": 26669.524737307693,
+          "durationMs": {
+            "p50": 6959.273079000006,
+            "p95": 21783.62140200002
+          }
+        },
+        "no-skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 0.8461538461538461,
+            "ci95": {
+              "low": 0.6666666666666666,
+              "high": 1
+            },
+            "items": 13,
+            "records": 39
+          },
+          "failedCount": 0,
+          "toolMisuse": 0,
+          "inputTokens": 231770,
+          "cacheReadTokens": 157686,
+          "uncachedInputTokens": 74084,
+          "outputTokens": 17758,
+          "costComplete": false,
+          "meanDurationMs": 29542.70219315381,
+          "durationMs": {
+            "p50": 7029.039686000033,
+            "p95": 22574.972100000014
+          }
+        }
+      },
+      "decision": {
+        "verdict": "fail",
+        "roundVerdict": "rewrite",
+        "reason": "trigger precision n/a < 0.7; trigger recall 0.00 < 0.7",
+        "comparison": {
+          "baselineMean": 0.8461538461538461,
+          "candidateMean": 0.8461538461538461,
+          "difference": 4.270088556250602e-18,
+          "ci95": {
+            "low": -0.07692307692307693,
+            "high": 0.07692307692307693
+          },
+          "pValue": 1,
+          "test": "paired_permutation",
+          "qValue": 1,
+          "significant": false
+        },
+        "trigger": {
+          "triggerTrials": 30,
+          "nonTriggerTrials": 9,
+          "loaded": 0,
+          "loadedOnTrigger": 0,
+          "loadedOnNonTrigger": 0,
+          "recall": 0,
+          "precision": null
+        }
+      },
+      "items": [
+        {
+          "id": "web-retry-limit",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "web-release-date",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "web-compare-limits",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "web-injection-port",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "web-dead-page",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "web-maintainer",
+          "kind": "trigger",
+          "skill": {
+            "pass": 0,
+            "trials": 3,
+            "firstFailure": "missing \"Ines Okafor\"",
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 0,
+            "trials": 3,
+            "firstFailure": "missing \"Ines Okafor\"",
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "web-deep-fact",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "web-cite-url",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 2,
+            "trials": 3,
+            "firstFailure": "missing \"MPL-2.0\"; no URL containing \"/docs/plover/licence\"",
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "web-two-hop",
+          "kind": "trigger",
+          "skill": {
+            "pass": 0,
+            "trials": 3,
+            "firstFailure": "missing \"6.3.0\"; missing \"--legacy\"",
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 3,
+            "firstFailure": "missing \"6.3.0\"; missing \"--legacy\"",
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "web-official-over-blog",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "web-none-arithmetic",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "web-none-poem",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "web-none-translate",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        }
+      ]
+    }
+  ],
+  "verdict": "rewrite"
+}

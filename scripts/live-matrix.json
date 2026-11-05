@@ -855,7 +855,7 @@
           "wired": true
         }
       ],
-      "scope": "Manual-only paired skill evaluations (plan 215 Task 11): web-research, coding-workflow, browser-automation and delegating-work, each with the skill versus the same agent with it disabled, 13 items x 3 trials x 2 arms, on Hyper, OpenCode Go and the free models of OpenRouter, Kilo and Command Code (owner decision 2026-11-05). Web items run against a loopback fixture, never the live web; the browser runs a local Chromium; coding runs in scratch workspaces.",
+      "scope": "Manual-only paired skill evaluations (plan 215 Task 11): web-research, coding-workflow, browser-automation and delegating-work, each with the skill versus the same agent with it disabled, 15 items x 3 trials x 2 arms, on Hyper, OpenCode Go and the free models of OpenRouter, Kilo and Command Code (owner decision 2026-11-05). Web items run against a loopback fixture, never the live web; the browser runs a local Chromium; coding runs in scratch workspaces.",
       "cost": "Free models cost nothing; Hyper and OpenCode Go are estimated from a five-item dry run (bun scripts/skill-evals/run.mjs --dry-run --providers ...) and approved by the owner. The criteria are locked (criteria.lock.json) and committed first; a live run refuses to start otherwise. Router aliases openrouter/free and openrouter/auto are refused.",
       "notes": "Results pin under docs/_evidence/skill-evals/211/. The offline mode (bun scripts/skill-evals/run.mjs --offline) uses the scripted provider, needs no key and runs in CI. Never scheduled.",
       "optional": [

@@ -198,7 +198,7 @@ export async function buildAgent({ skill, arm, mode, item, provider, criteria, m
     packages: [...providerPackages, ...env.packages],
     tools: { add: env.tools },
     skills: { dirs: env.skillDirs },
-    limits: criteria.limits,
+    limits: { ...criteria.limits, ...(criteria.skills.find((entry) => entry.name === skill)?.limits ?? {}) },
     ownership: { tenantId: "skill-eval" },
     principal: { kind: "user", id: "skill-eval" },
     ...(arm === "no-skill" ? { disable: { skills: [skill] } } : {}),
@@ -234,7 +234,7 @@ async function runArm({ skill, arm, mode, provider, criteria, module, dataset, o
         if (!entry) return undefined;
         const snapshot = await entry.env.snapshot(result, timeline);
         await cleanup(item.id);
-        return { ...snapshot, __run: { status: result?.status, limited: result?.limit !== undefined, error: result?.error?.message?.slice(0, 200) } };
+        return { ...snapshot, __run: { status: result?.status, limited: result?.limit !== undefined || result?.stopReason === "turn_limit", stopReason: result?.stopReason, error: result?.error?.message?.slice(0, 200) } };
       },
       trials: options.trials ?? (mode === "dryRun" ? 1 : mode === "offline" ? 1 : criteria.trials),
       seed: criteria.seed,
@@ -279,12 +279,29 @@ function costOf(report) {
   };
 }
 
-function armSummary(report) {
+/** Scored task_success records of one report, with the metadata the scorer attached. */
+const taskRecords = (report) => report.evaluations.filter((record) => record.scorerId === "task_success" && record.status === "scored");
+
+/** How many scored runs ended on a run limit, and (skill arm) task success split by whether the skill was loaded. */
+function limitAndLoadStats(report, arm) {
+  const records = taskRecords(report);
+  const stats = { limitedRuns: records.filter((record) => record.metadata?.limited).length, scoredRuns: records.length };
+  if (arm === "skill") {
+    const pass = (list) => list.filter((record) => record.score === 1).length;
+    const loaded = records.filter((record) => record.metadata?.loaded === true);
+    const unloaded = records.filter((record) => record.metadata?.loaded !== true);
+    stats.byLoading = { loaded: { runs: loaded.length, passed: pass(loaded) }, notLoaded: { runs: unloaded.length, passed: pass(unloaded) } };
+  }
+  return stats;
+}
+
+function armSummary(report, arm) {
   const stats = report.aggregate.scorers.task_success;
   return {
     status: report.status,
     taskSuccess: stats ? { mean: stats.mean, ci95: stats.ci95, items: stats.items, records: stats.records } : null,
     failedCount: report.aggregate.failedCount,
+    ...limitAndLoadStats(report, arm),
     toolMisuse: toolMisuseTotal(report),
     ...costOf(report),
   };
@@ -351,7 +368,7 @@ export function evidenceFor({ spec, dataset, results, round, mode, suite, starte
   const providers = results.map(({ provider, reports, decision }) => ({
     provider: provider.id,
     model: mode === "offline" ? "oracle" : provider.model,
-    arms: { skill: armSummary(reports.skill), "no-skill": armSummary(reports["no-skill"]) },
+    arms: { skill: armSummary(reports.skill, "skill"), "no-skill": armSummary(reports["no-skill"], "no-skill") },
     decision: {
       verdict: decision.verdict,
       roundVerdict: applyRound(decision, round),
@@ -407,6 +424,8 @@ export function evidenceMarkdown(evidence) {
     }
     lines.push("");
     if (c) lines.push(`Paired difference (skill − no-skill) on task_success: ${num(c.difference)}, 95% CI [${num(c.ci95?.low)}, ${num(c.ci95?.high)}], q = ${num(c.qValue)}, ${c.significant ? "significant" : "not significant"}.`, "");
+    lines.push(`Runs that ended on a run limit (turns, tool calls or time): skill ${a.limitedRuns}/${a.scoredRuns}, no-skill ${b.limitedRuns}/${b.scoredRuns}.`, "");
+    if (a.byLoading) lines.push(`Skill arm task success by loading: loaded ${a.byLoading.loaded.passed}/${a.byLoading.loaded.runs}, not loaded ${a.byLoading.notLoaded.passed}/${a.byLoading.notLoaded.runs}.`, "");
     lines.push(`Skill loading: recall ${pct(entry.decision.trigger.recall)} (${entry.decision.trigger.loadedOnTrigger}/${entry.decision.trigger.triggerTrials} trigger trials), precision ${pct(entry.decision.trigger.precision)}, loaded on ${entry.decision.trigger.loadedOnNonTrigger}/${entry.decision.trigger.nonTriggerTrials} non-trigger trials.`, "");
     if (entry.fullRunEstimate) {
       lines.push("Full-run estimate (items x trials x arm, scaled from this dry run):", "", "| Arm | Runs | Input tokens | Uncached input | Output tokens | Cost |", "| --- | --- | --- | --- | --- | --- |");
