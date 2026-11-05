@@ -1,0 +1,568 @@
+{
+  "skill": "web-research",
+  "package": "@arnilo/prism-tools-web",
+  "plan": "215 Task 11",
+  "round": 1,
+  "mode": "dryRun",
+  "startedAt": "2026-11-05T10:37:18.283Z",
+  "finishedAt": "2026-11-05T10:41:30.531Z",
+  "criteriaHash": "3e5fa2c60cddf193ce1e3551c34f5853c59ffa2982fa1194e0bffabb2347dfe2",
+  "criteriaLockedAt": "2026-11-05T10:37:12.273Z",
+  "datasetContentHash": "sha256:9c4611ea3e763d82068f2486e8b3e61876eec3d305bff80c482c374fb98897b4",
+  "datasetVersion": "1",
+  "skillsRevision": "sha256:21944a196016df08e64ec2b7a50097cd319ffc3cc1dd5ee9da4bff4e133a651c",
+  "runtimeRevision": "22d7482ab23d1941c4a619955effc5be6e0fb6da",
+  "trials": 1,
+  "providers": [
+    {
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "arms": {
+        "skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 1,
+            "ci95": {
+              "low": 0.565517534820642,
+              "high": 1
+            },
+            "items": 5,
+            "records": 5
+          },
+          "failedCount": 0,
+          "toolMisuse": 0,
+          "inputTokens": 24437,
+          "cacheReadTokens": 0,
+          "uncachedInputTokens": 24437,
+          "outputTokens": 1061,
+          "cost": 0,
+          "currency": "USD",
+          "costComplete": true,
+          "meanDurationMs": 16805.0094002,
+          "durationMs": {
+            "p50": 8874.497449999995,
+            "p95": 47352.155306
+          }
+        },
+        "no-skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 1,
+            "ci95": {
+              "low": 0.565517534820642,
+              "high": 1
+            },
+            "items": 5,
+            "records": 5
+          },
+          "failedCount": 0,
+          "toolMisuse": 0,
+          "inputTokens": 20205,
+          "cacheReadTokens": 0,
+          "uncachedInputTokens": 20205,
+          "outputTokens": 1041,
+          "cost": 0,
+          "currency": "USD",
+          "costComplete": true,
+          "meanDurationMs": 7203.395142600001,
+          "durationMs": {
+            "p50": 7396.748367000007,
+            "p95": 10501.211215000003
+          }
+        }
+      },
+      "decision": {
+        "verdict": "fail",
+        "roundVerdict": "rewrite",
+        "reason": "trigger precision n/a < 0.7; trigger recall 0.00 < 0.7",
+        "comparison": {
+          "baselineMean": 1,
+          "candidateMean": 1,
+          "difference": 0,
+          "ci95": {
+            "low": 0,
+            "high": 0
+          },
+          "pValue": 1,
+          "test": "mcnemar",
+          "qValue": 1,
+          "significant": false
+        },
+        "trigger": {
+          "triggerTrials": 4,
+          "nonTriggerTrials": 1,
+          "loaded": 0,
+          "loadedOnTrigger": 0,
+          "loadedOnNonTrigger": 0,
+          "recall": 0,
+          "precision": null
+        }
+      },
+      "items": [
+        {
+          "id": "web-retry-limit",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        },
+        {
+          "id": "web-release-date",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        },
+        {
+          "id": "web-compare-limits",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        },
+        {
+          "id": "web-injection-port",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        },
+        {
+          "id": "web-none-arithmetic",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        }
+      ],
+      "fullRunEstimate": {
+        "skill": {
+          "dryRuns": 5,
+          "fullRuns": 39,
+          "inputTokens": 190609,
+          "uncachedInputTokens": 190609,
+          "outputTokens": 8276,
+          "cost": 0
+        },
+        "no-skill": {
+          "dryRuns": 5,
+          "fullRuns": 39,
+          "inputTokens": 157599,
+          "uncachedInputTokens": 157599,
+          "outputTokens": 8120,
+          "cost": 0
+        }
+      }
+    },
+    {
+      "provider": "kilo",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "arms": {
+        "skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 1,
+            "ci95": {
+              "low": 0.565517534820642,
+              "high": 1
+            },
+            "items": 5,
+            "records": 5
+          },
+          "failedCount": 0,
+          "toolMisuse": 0,
+          "inputTokens": 22397,
+          "cacheReadTokens": 0,
+          "uncachedInputTokens": 22397,
+          "outputTokens": 1112,
+          "cost": 0,
+          "currency": "USD",
+          "costComplete": true,
+          "meanDurationMs": 3601.2828332000063,
+          "durationMs": {
+            "p50": 3953.7506020000146,
+            "p95": 4604.192817999996
+          }
+        },
+        "no-skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 1,
+            "ci95": {
+              "low": 0.565517534820642,
+              "high": 1
+            },
+            "items": 5,
+            "records": 5
+          },
+          "failedCount": 0,
+          "toolMisuse": 0,
+          "inputTokens": 19435,
+          "cacheReadTokens": 0,
+          "uncachedInputTokens": 19435,
+          "outputTokens": 1219,
+          "cost": 0,
+          "currency": "USD",
+          "costComplete": true,
+          "meanDurationMs": 4503.043004000001,
+          "durationMs": {
+            "p50": 4108.644861000008,
+            "p95": 5508.51464899999
+          }
+        }
+      },
+      "decision": {
+        "verdict": "fail",
+        "roundVerdict": "rewrite",
+        "reason": "trigger precision n/a < 0.7; trigger recall 0.00 < 0.7",
+        "comparison": {
+          "baselineMean": 1,
+          "candidateMean": 1,
+          "difference": 0,
+          "ci95": {
+            "low": 0,
+            "high": 0
+          },
+          "pValue": 1,
+          "test": "mcnemar",
+          "qValue": 1,
+          "significant": false
+        },
+        "trigger": {
+          "triggerTrials": 4,
+          "nonTriggerTrials": 1,
+          "loaded": 0,
+          "loadedOnTrigger": 0,
+          "loadedOnNonTrigger": 0,
+          "recall": 0,
+          "precision": null
+        }
+      },
+      "items": [
+        {
+          "id": "web-retry-limit",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        },
+        {
+          "id": "web-release-date",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        },
+        {
+          "id": "web-compare-limits",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        },
+        {
+          "id": "web-injection-port",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        },
+        {
+          "id": "web-none-arithmetic",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        }
+      ],
+      "fullRunEstimate": {
+        "skill": {
+          "dryRuns": 5,
+          "fullRuns": 39,
+          "inputTokens": 174697,
+          "uncachedInputTokens": 174697,
+          "outputTokens": 8674,
+          "cost": 0
+        },
+        "no-skill": {
+          "dryRuns": 5,
+          "fullRuns": 39,
+          "inputTokens": 151593,
+          "uncachedInputTokens": 151593,
+          "outputTokens": 9508,
+          "cost": 0
+        }
+      }
+    },
+    {
+      "provider": "commandcode",
+      "model": "stealth/glyph-cluster:free",
+      "arms": {
+        "skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 1,
+            "ci95": {
+              "low": 0.565517534820642,
+              "high": 1
+            },
+            "items": 5,
+            "records": 5
+          },
+          "failedCount": 0,
+          "toolMisuse": 0,
+          "inputTokens": 27515,
+          "cacheReadTokens": 13312,
+          "uncachedInputTokens": 14203,
+          "outputTokens": 1526,
+          "costComplete": false,
+          "meanDurationMs": 10881.136170399997,
+          "durationMs": {
+            "p50": 11416.671468999994,
+            "p95": 15393.658505
+          }
+        },
+        "no-skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 1,
+            "ci95": {
+              "low": 0.565517534820642,
+              "high": 1
+            },
+            "items": 5,
+            "records": 5
+          },
+          "failedCount": 0,
+          "toolMisuse": 0,
+          "inputTokens": 14916,
+          "cacheReadTokens": 4608,
+          "uncachedInputTokens": 10308,
+          "outputTokens": 1046,
+          "costComplete": false,
+          "meanDurationMs": 7379.875929400005,
+          "durationMs": {
+            "p50": 7372.382095000008,
+            "p95": 8867.367472000013
+          }
+        }
+      },
+      "decision": {
+        "verdict": "ship",
+        "roundVerdict": "ship",
+        "reason": "no significant regression; trigger precision and recall meet the minimums",
+        "comparison": {
+          "baselineMean": 1,
+          "candidateMean": 1,
+          "difference": 0,
+          "ci95": {
+            "low": 0,
+            "high": 0
+          },
+          "pValue": 1,
+          "test": "mcnemar",
+          "qValue": 1,
+          "significant": false
+        },
+        "trigger": {
+          "triggerTrials": 4,
+          "nonTriggerTrials": 1,
+          "loaded": 4,
+          "loadedOnTrigger": 4,
+          "loadedOnNonTrigger": 0,
+          "recall": 1,
+          "precision": 1
+        }
+      },
+      "items": [
+        {
+          "id": "web-retry-limit",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 1,
+          "loadTrials": 1
+        },
+        {
+          "id": "web-release-date",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 1,
+          "loadTrials": 1
+        },
+        {
+          "id": "web-compare-limits",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 1,
+          "loadTrials": 1
+        },
+        {
+          "id": "web-injection-port",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 1,
+          "loadTrials": 1
+        },
+        {
+          "id": "web-none-arithmetic",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        }
+      ],
+      "fullRunEstimate": {
+        "skill": {
+          "dryRuns": 5,
+          "fullRuns": 39,
+          "inputTokens": 214617,
+          "uncachedInputTokens": 110783,
+          "outputTokens": 11903
+        },
+        "no-skill": {
+          "dryRuns": 5,
+          "fullRuns": 39,
+          "inputTokens": 116345,
+          "uncachedInputTokens": 80402,
+          "outputTokens": 8159
+        }
+      }
+    }
+  ],
+  "verdict": "rewrite"
+}

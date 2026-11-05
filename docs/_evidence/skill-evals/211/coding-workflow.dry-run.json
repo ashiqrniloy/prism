@@ -1,0 +1,537 @@
+{
+  "skill": "coding-workflow",
+  "package": "@arnilo/prism-tools-coding",
+  "plan": "215 Task 11",
+  "round": 1,
+  "mode": "dryRun",
+  "startedAt": "2026-11-05T10:41:30.536Z",
+  "finishedAt": "2026-11-05T10:49:14.637Z",
+  "criteriaHash": "3e5fa2c60cddf193ce1e3551c34f5853c59ffa2982fa1194e0bffabb2347dfe2",
+  "criteriaLockedAt": "2026-11-05T10:37:12.273Z",
+  "datasetContentHash": "sha256:c86065f3eb2db40021f941fbd5e236a484450b5a581e6aa34e7e096c2717b817",
+  "datasetVersion": "1",
+  "skillsRevision": "sha256:2bbb12e469eb35683da8257d8532dd18cbaf450becf5c55091a18c78db3eedca",
+  "runtimeRevision": "22d7482ab23d1941c4a619955effc5be6e0fb6da",
+  "trials": 1,
+  "providers": [
+    {
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "arms": {
+        "skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 1,
+            "ci95": {
+              "low": 0.43850296784794796,
+              "high": 1
+            },
+            "items": 3,
+            "records": 3
+          },
+          "failedCount": 2,
+          "toolMisuse": 2,
+          "inputTokens": 124536,
+          "cacheReadTokens": 100832,
+          "uncachedInputTokens": 23704,
+          "outputTokens": 2662,
+          "costComplete": false,
+          "meanDurationMs": 28170.880535400018,
+          "durationMs": {
+            "p50": 33072.39247099997,
+            "p95": 45262.59394000005
+          }
+        },
+        "no-skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 1,
+            "ci95": {
+              "low": 0.5101091631424628,
+              "high": 1
+            },
+            "items": 4,
+            "records": 4
+          },
+          "failedCount": 1,
+          "toolMisuse": 0,
+          "inputTokens": 104991,
+          "cacheReadTokens": 74528,
+          "uncachedInputTokens": 30463,
+          "outputTokens": 2411,
+          "costComplete": false,
+          "meanDurationMs": 16145.8265134,
+          "durationMs": {
+            "p50": 15180.928093000024,
+            "p95": 30027.90410699998
+          }
+        }
+      },
+      "decision": {
+        "verdict": "inconclusive",
+        "roundVerdict": "inconclusive",
+        "reason": "comparison failed: Missing scorer task_success on paired item code-add-slugify",
+        "trigger": {
+          "triggerTrials": 4,
+          "nonTriggerTrials": 1,
+          "loaded": 0,
+          "loadedOnTrigger": 0,
+          "loadedOnNonTrigger": 0,
+          "recall": 0,
+          "precision": null
+        }
+      },
+      "items": [
+        {
+          "id": "code-off-by-one",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        },
+        {
+          "id": "code-add-slugify",
+          "kind": "trigger",
+          "skill": {
+            "pass": 0,
+            "trials": 1,
+            "unscored": 1,
+            "firstError": "run failed: Run limit exceeded: maxInputTokens"
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        },
+        {
+          "id": "code-rename-across-files",
+          "kind": "trigger",
+          "skill": {
+            "pass": 0,
+            "trials": 1,
+            "unscored": 1,
+            "firstError": "run failed: Run limit exceeded: maxInputTokens"
+          },
+          "noSkill": {
+            "pass": 0,
+            "trials": 1,
+            "unscored": 1,
+            "firstError": "run failed: Run limit exceeded: maxInputTokens"
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        },
+        {
+          "id": "code-missing-price",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        },
+        {
+          "id": "code-none-capital",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        }
+      ],
+      "fullRunEstimate": {
+        "skill": {
+          "dryRuns": 5,
+          "fullRuns": 39,
+          "inputTokens": 971381,
+          "uncachedInputTokens": 184891,
+          "outputTokens": 20764
+        },
+        "no-skill": {
+          "dryRuns": 5,
+          "fullRuns": 39,
+          "inputTokens": 818930,
+          "uncachedInputTokens": 237611,
+          "outputTokens": 18806
+        }
+      }
+    },
+    {
+      "provider": "kilo",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "arms": {
+        "skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 1,
+            "ci95": {
+              "low": 0.565517534820642,
+              "high": 1
+            },
+            "items": 5,
+            "records": 5
+          },
+          "failedCount": 0,
+          "toolMisuse": 1,
+          "inputTokens": 98899,
+          "cacheReadTokens": 86720,
+          "uncachedInputTokens": 12179,
+          "outputTokens": 2858,
+          "cost": 0,
+          "currency": "USD",
+          "costComplete": true,
+          "meanDurationMs": 8641.248262000014,
+          "durationMs": {
+            "p50": 9925.784554000013,
+            "p95": 15407.473453000013
+          }
+        },
+        "no-skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 1,
+            "ci95": {
+              "low": 0.5101091631424628,
+              "high": 1
+            },
+            "items": 4,
+            "records": 4
+          },
+          "failedCount": 1,
+          "toolMisuse": 1,
+          "inputTokens": 106943,
+          "cacheReadTokens": 78048,
+          "uncachedInputTokens": 28895,
+          "outputTokens": 3012,
+          "costComplete": false,
+          "meanDurationMs": 7532.469758599973,
+          "durationMs": {
+            "p50": 8267.210980999982,
+            "p95": 14040.919875000021
+          }
+        }
+      },
+      "decision": {
+        "verdict": "inconclusive",
+        "roundVerdict": "inconclusive",
+        "reason": "comparison failed: Missing scorer task_success on paired item code-rename-across-files",
+        "trigger": {
+          "triggerTrials": 4,
+          "nonTriggerTrials": 1,
+          "loaded": 0,
+          "loadedOnTrigger": 0,
+          "loadedOnNonTrigger": 0,
+          "recall": 0,
+          "precision": null
+        }
+      },
+      "items": [
+        {
+          "id": "code-off-by-one",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        },
+        {
+          "id": "code-add-slugify",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        },
+        {
+          "id": "code-rename-across-files",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 0,
+            "trials": 1,
+            "unscored": 1,
+            "firstError": "run failed: Run limit exceeded: maxInputTokens"
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        },
+        {
+          "id": "code-missing-price",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        },
+        {
+          "id": "code-none-capital",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        }
+      ],
+      "fullRunEstimate": {
+        "skill": {
+          "dryRuns": 5,
+          "fullRuns": 39,
+          "inputTokens": 771412,
+          "uncachedInputTokens": 94996,
+          "outputTokens": 22292,
+          "cost": 0
+        },
+        "no-skill": {
+          "dryRuns": 5,
+          "fullRuns": 39,
+          "inputTokens": 834155,
+          "uncachedInputTokens": 225381,
+          "outputTokens": 23494
+        }
+      }
+    },
+    {
+      "provider": "commandcode",
+      "model": "stealth/glyph-cluster:free",
+      "arms": {
+        "skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 1,
+            "ci95": {
+              "low": 0.565517534820642,
+              "high": 1
+            },
+            "items": 5,
+            "records": 5
+          },
+          "failedCount": 0,
+          "toolMisuse": 0,
+          "inputTokens": 77956,
+          "cacheReadTokens": 57344,
+          "uncachedInputTokens": 20612,
+          "outputTokens": 2978,
+          "costComplete": false,
+          "meanDurationMs": 15815.82350639999,
+          "durationMs": {
+            "p50": 16454.95622199995,
+            "p95": 29631.569406999974
+          }
+        },
+        "no-skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 1,
+            "ci95": {
+              "low": 0.565517534820642,
+              "high": 1
+            },
+            "items": 5,
+            "records": 5
+          },
+          "failedCount": 0,
+          "toolMisuse": 0,
+          "inputTokens": 71749,
+          "cacheReadTokens": 48206,
+          "uncachedInputTokens": 23543,
+          "outputTokens": 3077,
+          "costComplete": false,
+          "meanDurationMs": 15988.33408700002,
+          "durationMs": {
+            "p50": 16215.775830999948,
+            "p95": 28942.294608999975
+          }
+        }
+      },
+      "decision": {
+        "verdict": "ship",
+        "roundVerdict": "ship",
+        "reason": "no significant regression; trigger precision and recall meet the minimums",
+        "comparison": {
+          "baselineMean": 1,
+          "candidateMean": 1,
+          "difference": 0,
+          "ci95": {
+            "low": 0,
+            "high": 0
+          },
+          "pValue": 1,
+          "test": "mcnemar",
+          "qValue": 1,
+          "significant": false
+        },
+        "trigger": {
+          "triggerTrials": 4,
+          "nonTriggerTrials": 1,
+          "loaded": 3,
+          "loadedOnTrigger": 3,
+          "loadedOnNonTrigger": 0,
+          "recall": 0.75,
+          "precision": 1
+        }
+      },
+      "items": [
+        {
+          "id": "code-off-by-one",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        },
+        {
+          "id": "code-add-slugify",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 1,
+          "loadTrials": 1
+        },
+        {
+          "id": "code-rename-across-files",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 1,
+          "loadTrials": 1
+        },
+        {
+          "id": "code-missing-price",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 1,
+          "loadTrials": 1
+        },
+        {
+          "id": "code-none-capital",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        }
+      ],
+      "fullRunEstimate": {
+        "skill": {
+          "dryRuns": 5,
+          "fullRuns": 39,
+          "inputTokens": 608057,
+          "uncachedInputTokens": 160774,
+          "outputTokens": 23228
+        },
+        "no-skill": {
+          "dryRuns": 5,
+          "fullRuns": 39,
+          "inputTokens": 559642,
+          "uncachedInputTokens": 183635,
+          "outputTokens": 24001
+        }
+      }
+    }
+  ],
+  "verdict": "inconclusive"
+}

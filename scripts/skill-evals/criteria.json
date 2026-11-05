@@ -1,0 +1,124 @@
+{
+  "$comment": "Pre-registered decision rules for the paired skill evaluations (plan 215 Task 11). This file is committed and locked (criteria.lock.json) before any paid run. Changing it after a lock exists invalidates the lock, and a live run refuses to start.",
+  "version": 1,
+  "plan": "215 Task 11",
+  "skills": [
+    {
+      "name": "web-research",
+      "package": "@arnilo/prism-tools-web",
+      "dataset": "datasets/web-research.ts",
+      "skillDir": "packages/tools/web/skills/web-research"
+    },
+    {
+      "name": "coding-workflow",
+      "package": "@arnilo/prism-tools-coding",
+      "dataset": "datasets/coding-workflow.ts",
+      "skillDir": "packages/tools/coding/skills/coding-workflow"
+    },
+    {
+      "name": "browser-automation",
+      "package": "@arnilo/prism-tools-browser",
+      "dataset": "datasets/browser-automation.ts",
+      "skillDir": "packages/tools/browser/skills/browser-automation"
+    },
+    {
+      "name": "delegating-work",
+      "package": "@arnilo/prism-delegate",
+      "dataset": "datasets/delegating-work.ts",
+      "skillDir": "packages/integrations/delegate/skills/delegating-work"
+    }
+  ],
+  "dataset": {
+    "triggerItems": {
+      "min": 8,
+      "max": 12
+    },
+    "nonTriggerItems": {
+      "min": 3,
+      "max": 4
+    }
+  },
+  "arms": {
+    "skill": "the skill is registered and listed in the catalog",
+    "no-skill": "identical package set and config; the only difference is disable.skills: [<skill>]"
+  },
+  "trials": 3,
+  "seed": 211,
+  "concurrency": 1,
+  "limits": {
+    "maxTurns": 24,
+    "maxWallTimeMs": 240000
+  },
+  "providers": [
+    {
+      "id": "hyper",
+      "modelEnv": "PRISM_LIVE_SKILL_EVAL_HYPER_MODEL",
+      "defaultModel": "deepseek-v4-pro-0813"
+    },
+    {
+      "id": "opencode-go",
+      "modelEnv": "PRISM_LIVE_SKILL_EVAL_OPENCODE_MODEL",
+      "defaultModel": "mimo-v2.5"
+    },
+    {
+      "id": "openrouter",
+      "modelEnv": "PRISM_LIVE_SKILL_EVAL_OPENROUTER_MODEL",
+      "defaultModel": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "id": "kilo",
+      "modelEnv": "PRISM_LIVE_SKILL_EVAL_KILO_MODEL",
+      "defaultModel": "nvidia/nemotron-3.5-super-vl:free"
+    },
+    {
+      "id": "commandcode",
+      "modelEnv": "PRISM_LIVE_SKILL_EVAL_COMMANDCODE_MODEL",
+      "defaultModel": "Qwen/Qwen3.7-Flash",
+      "reserveModels": [
+        "meta/muse-spark-1.2-contributor",
+        "meta/muse-spark-1.3-contributor"
+      ]
+    }
+  ],
+  "forbiddenProviders": [
+    "openrouter/free",
+    "openrouter/auto"
+  ],
+  "scorers": {
+    "task_success": "state grading of the final workspace/server/answer snapshot against the item's expected grade (binary, 0 or 1). A calibrated rubric judge is not used: every item here has a checkable end state. A run that fails on a provider or harness error (rate limit, 4xx/5xx, auth) is an unscored record, so the comparison is inconclusive and the run is repeated; a run that ends on a run limit (maxToolCalls, maxInputTokens, maxTurns) is the agent failing and scores 0.",
+    "skill_triggered": "skill arm only. 1 when load_skill was called with the skill's name on a trigger item, or was not called on a non-trigger item; read from the execution timeline",
+    "tool_misuse": "both arms. Count of tool steps with status failed or blocked in the timeline; score is 1 / (1 + count), the count is recorded in the record metadata"
+  },
+  "shipRule": {
+    "comparedScorer": "task_success",
+    "regression": {
+      "assertion": "assertEvaluationThreshold maximumRegression",
+      "delta": 0,
+      "alpha": 0.05,
+      "baseline": "no-skill",
+      "candidate": "skill"
+    },
+    "minTriggerPrecision": 0.7,
+    "minTriggerRecall": 0.7,
+    "pooling": "Each provider is run and decided on its own. A skill ships only when it passes on every provider that ran; a provider that failed to run (rate limit, empty output) is inconclusive and is rerun, never counted as a pass.",
+    "verdicts": {
+      "ship": "no significant regression on task_success and trigger precision and recall each >= minimum",
+      "rewrite": "any other result in round 1: rewrite the skill once, re-measure on fresh trials (round 2)",
+      "remove": "the round-2 result also fails the ship rule: delete the skill",
+      "inconclusive": "the comparison could not be computed (unpaired or failed trials): rerun, never ship"
+    }
+  },
+  "reporting": [
+    "task_success mean per arm",
+    "paired difference with ci95 and qValue",
+    "trigger precision and recall",
+    "tool_misuse count per arm",
+    "input/output/cache tokens, cost, latency p50/p95 per arm"
+  ],
+  "costGate": {
+    "dryRunItems": 5,
+    "ownerApprovalRequired": true,
+    "maxInputTokensPerProviderRun": 60000000
+  },
+  "providersNote": "Owner decision 2026-11-05 (later, same day): the full scored run uses Qwen/Qwen3.7-Flash on Command Code as much as possible; the reserve models meta/muse-spark-1.2-contributor and meta/muse-spark-1.3-contributor run only when Qwen leaves a skill without a decidable verdict. Earlier decision, kept as the allowed set: scored runs use Hyper and OpenCode Go and also the free models on OpenRouter (a specific :free model id), Kilo and Command Code. This supersedes the 2026-10-24 rule for this task only. Router aliases (openrouter/free, openrouter/auto) stay refused because they pick a model per request, which breaks a paired comparison."
+}

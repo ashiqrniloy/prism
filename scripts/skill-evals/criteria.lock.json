@@ -1,0 +1,17 @@
+{
+  "criteriaHash": "93e773a3c5cc678b7542b38e70aaebf2baaa135b15f7cbf42a2f2cf7ee4d6ca8",
+  "datasets": {
+    "web-research": "sha256:54fc7ef8bc79d4b9693c72446ffc022b7b00b70fee5c70ed62034bd21eb956e3",
+    "coding-workflow": "sha256:c019b118e58c0e787d6355b64958ae4cc028f28397d818165a361fd17b6c29ab",
+    "browser-automation": "sha256:5a16f6d749ea0c6efcbb7be3838e0eded06ccb3b538ba34369605da61988ba49",
+    "delegating-work": "sha256:f2f9c8349450784652b5ea91d2123af3345d66f0546013186255e4d31f4cbba3"
+  },
+  "skills": {
+    "web-research": "sha256:21944a196016df08e64ec2b7a50097cd319ffc3cc1dd5ee9da4bff4e133a651c",
+    "coding-workflow": "sha256:2bbb12e469eb35683da8257d8532dd18cbaf450becf5c55091a18c78db3eedca",
+    "browser-automation": "sha256:895319a8e28b1d66a4031f6809144c1e382826d23076c9aea0f7decaa7c6f80a",
+    "delegating-work": "sha256:b5eb943868674e3e7894c6a05fcf2bcf00b91c5ed5b2de62950810c94cc42c8b"
+  },
+  "registeredAt": "2026-11-05T12:21:40.016Z",
+  "gitHead": "22d7482ab23d1941c4a619955effc5be6e0fb6da"
+}

@@ -1,0 +1,543 @@
+{
+  "skill": "delegating-work",
+  "package": "@arnilo/prism-delegate",
+  "plan": "215 Task 11",
+  "round": 1,
+  "mode": "dryRun",
+  "startedAt": "2026-11-05T10:57:39.592Z",
+  "finishedAt": "2026-11-05T11:01:03.813Z",
+  "criteriaHash": "3e5fa2c60cddf193ce1e3551c34f5853c59ffa2982fa1194e0bffabb2347dfe2",
+  "criteriaLockedAt": "2026-11-05T10:37:12.273Z",
+  "datasetContentHash": "sha256:1d9757b8a908832ab42c851dd17b1e09e9f5c0e3b29c6aebfb65595f4cc4bddf",
+  "datasetVersion": "1",
+  "skillsRevision": "sha256:b5eb943868674e3e7894c6a05fcf2bcf00b91c5ed5b2de62950810c94cc42c8b",
+  "runtimeRevision": "22d7482ab23d1941c4a619955effc5be6e0fb6da",
+  "trials": 1,
+  "providers": [
+    {
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "arms": {
+        "skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 1,
+            "ci95": {
+              "low": 0.565517534820642,
+              "high": 1
+            },
+            "items": 5,
+            "records": 5
+          },
+          "failedCount": 0,
+          "toolMisuse": 0,
+          "inputTokens": 13224,
+          "cacheReadTokens": 0,
+          "uncachedInputTokens": 13224,
+          "outputTokens": 1063,
+          "cost": 0,
+          "currency": "USD",
+          "costComplete": true,
+          "meanDurationMs": 7936.999653400015,
+          "durationMs": {
+            "p50": 9881.626974999905,
+            "p95": 10799.37413599994
+          }
+        },
+        "no-skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 1,
+            "ci95": {
+              "low": 0.565517534820642,
+              "high": 1
+            },
+            "items": 5,
+            "records": 5
+          },
+          "failedCount": 0,
+          "toolMisuse": 0,
+          "inputTokens": 9026,
+          "cacheReadTokens": 0,
+          "uncachedInputTokens": 9026,
+          "outputTokens": 1184,
+          "cost": 0,
+          "currency": "USD",
+          "costComplete": true,
+          "meanDurationMs": 16336.061417800049,
+          "durationMs": {
+            "p50": 12837.919045000104,
+            "p95": 36299.50749900006
+          }
+        }
+      },
+      "decision": {
+        "verdict": "fail",
+        "roundVerdict": "rewrite",
+        "reason": "trigger recall 0.25 < 0.7",
+        "comparison": {
+          "baselineMean": 1,
+          "candidateMean": 1,
+          "difference": 0,
+          "ci95": {
+            "low": 0,
+            "high": 0
+          },
+          "pValue": 1,
+          "test": "mcnemar",
+          "qValue": 1,
+          "significant": false
+        },
+        "trigger": {
+          "triggerTrials": 4,
+          "nonTriggerTrials": 1,
+          "loaded": 1,
+          "loadedOnTrigger": 1,
+          "loadedOnNonTrigger": 0,
+          "recall": 0.25,
+          "precision": 1
+        }
+      },
+      "items": [
+        {
+          "id": "delegate-count-errors",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        },
+        {
+          "id": "delegate-sum-invoice",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        },
+        {
+          "id": "delegate-extract-emails",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        },
+        {
+          "id": "delegate-diff-config",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 1,
+          "loadTrials": 1
+        },
+        {
+          "id": "delegate-none-capital",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        }
+      ],
+      "fullRunEstimate": {
+        "skill": {
+          "dryRuns": 5,
+          "fullRuns": 39,
+          "inputTokens": 103147,
+          "uncachedInputTokens": 103147,
+          "outputTokens": 8291,
+          "cost": 0
+        },
+        "no-skill": {
+          "dryRuns": 5,
+          "fullRuns": 39,
+          "inputTokens": 70403,
+          "uncachedInputTokens": 70403,
+          "outputTokens": 9235,
+          "cost": 0
+        }
+      }
+    },
+    {
+      "provider": "kilo",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "arms": {
+        "skill": {
+          "status": "succeeded",
+          "taskSuccess": null,
+          "failedCount": 5,
+          "toolMisuse": 0,
+          "inputTokens": 2659,
+          "cacheReadTokens": 0,
+          "uncachedInputTokens": 2659,
+          "outputTokens": 0,
+          "costComplete": false,
+          "meanDurationMs": 340.91590300006794,
+          "durationMs": {
+            "p50": 262.33080300013535,
+            "p95": 517.3876750001218
+          }
+        },
+        "no-skill": {
+          "status": "succeeded",
+          "taskSuccess": null,
+          "failedCount": 5,
+          "toolMisuse": 0,
+          "inputTokens": 1999,
+          "cacheReadTokens": 0,
+          "uncachedInputTokens": 1999,
+          "outputTokens": 0,
+          "costComplete": false,
+          "meanDurationMs": 272.687890400039,
+          "durationMs": {
+            "p50": 253.8774380001705,
+            "p95": 388.66531899990514
+          }
+        }
+      },
+      "decision": {
+        "verdict": "inconclusive",
+        "roundVerdict": "inconclusive",
+        "reason": "comparison failed: Missing scorer task_success on paired item delegate-count-errors",
+        "trigger": {
+          "triggerTrials": 4,
+          "nonTriggerTrials": 1,
+          "loaded": 0,
+          "loadedOnTrigger": 0,
+          "loadedOnNonTrigger": 0,
+          "recall": 0,
+          "precision": null
+        }
+      },
+      "items": [
+        {
+          "id": "delegate-count-errors",
+          "kind": "trigger",
+          "skill": {
+            "pass": 0,
+            "trials": 1,
+            "unscored": 1,
+            "firstError": "run failed: Kilo request failed: 429 Kilo's free models are limited to 200 requests per hour. {\"error\":\"Rate limit exceeded\",\"error_type\":\"rate_limit_exceeded\","
+          },
+          "noSkill": {
+            "pass": 0,
+            "trials": 1,
+            "unscored": 1,
+            "firstError": "run failed: Kilo request failed: 429 Kilo's free models are limited to 200 requests per hour. {\"error\":\"Rate limit exceeded\",\"error_type\":\"rate_limit_exceeded\","
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        },
+        {
+          "id": "delegate-sum-invoice",
+          "kind": "trigger",
+          "skill": {
+            "pass": 0,
+            "trials": 1,
+            "unscored": 1,
+            "firstError": "run failed: Kilo request failed: 429 Kilo's free models are limited to 200 requests per hour. {\"error\":\"Rate limit exceeded\",\"error_type\":\"rate_limit_exceeded\","
+          },
+          "noSkill": {
+            "pass": 0,
+            "trials": 1,
+            "unscored": 1,
+            "firstError": "run failed: Kilo request failed: 429 Kilo's free models are limited to 200 requests per hour. {\"error\":\"Rate limit exceeded\",\"error_type\":\"rate_limit_exceeded\","
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        },
+        {
+          "id": "delegate-extract-emails",
+          "kind": "trigger",
+          "skill": {
+            "pass": 0,
+            "trials": 1,
+            "unscored": 1,
+            "firstError": "run failed: Kilo request failed: 429 Kilo's free models are limited to 200 requests per hour. {\"error\":\"Rate limit exceeded\",\"error_type\":\"rate_limit_exceeded\","
+          },
+          "noSkill": {
+            "pass": 0,
+            "trials": 1,
+            "unscored": 1,
+            "firstError": "run failed: Kilo request failed: 429 Kilo's free models are limited to 200 requests per hour. {\"error\":\"Rate limit exceeded\",\"error_type\":\"rate_limit_exceeded\","
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        },
+        {
+          "id": "delegate-diff-config",
+          "kind": "trigger",
+          "skill": {
+            "pass": 0,
+            "trials": 1,
+            "unscored": 1,
+            "firstError": "run failed: Kilo request failed: 429 Kilo's free models are limited to 200 requests per hour. {\"error\":\"Rate limit exceeded\",\"error_type\":\"rate_limit_exceeded\","
+          },
+          "noSkill": {
+            "pass": 0,
+            "trials": 1,
+            "unscored": 1,
+            "firstError": "run failed: Kilo request failed: 429 Kilo's free models are limited to 200 requests per hour. {\"error\":\"Rate limit exceeded\",\"error_type\":\"rate_limit_exceeded\","
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        },
+        {
+          "id": "delegate-none-capital",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 0,
+            "trials": 1,
+            "unscored": 1,
+            "firstError": "run failed: Kilo request failed: 429 Kilo's free models are limited to 200 requests per hour. {\"error\":\"Rate limit exceeded\",\"error_type\":\"rate_limit_exceeded\","
+          },
+          "noSkill": {
+            "pass": 0,
+            "trials": 1,
+            "unscored": 1,
+            "firstError": "run failed: Kilo request failed: 429 Kilo's free models are limited to 200 requests per hour. {\"error\":\"Rate limit exceeded\",\"error_type\":\"rate_limit_exceeded\","
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        }
+      ],
+      "fullRunEstimate": {
+        "skill": {
+          "dryRuns": 5,
+          "fullRuns": 39,
+          "inputTokens": 20740,
+          "uncachedInputTokens": 20740,
+          "outputTokens": 0
+        },
+        "no-skill": {
+          "dryRuns": 5,
+          "fullRuns": 39,
+          "inputTokens": 15592,
+          "uncachedInputTokens": 15592,
+          "outputTokens": 0
+        }
+      }
+    },
+    {
+      "provider": "commandcode",
+      "model": "stealth/glyph-cluster:free",
+      "arms": {
+        "skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 1,
+            "ci95": {
+              "low": 0.565517534820642,
+              "high": 1
+            },
+            "items": 5,
+            "records": 5
+          },
+          "failedCount": 0,
+          "toolMisuse": 0,
+          "inputTokens": 15237,
+          "cacheReadTokens": 7680,
+          "uncachedInputTokens": 7557,
+          "outputTokens": 1305,
+          "costComplete": false,
+          "meanDurationMs": 10276.705256000021,
+          "durationMs": {
+            "p50": 12168.011228000047,
+            "p95": 14212.003292000154
+          }
+        },
+        "no-skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 1,
+            "ci95": {
+              "low": 0.565517534820642,
+              "high": 1
+            },
+            "items": 5,
+            "records": 5
+          },
+          "failedCount": 0,
+          "toolMisuse": 0,
+          "inputTokens": 5612,
+          "cacheReadTokens": 2048,
+          "uncachedInputTokens": 3564,
+          "outputTokens": 770,
+          "costComplete": false,
+          "meanDurationMs": 5666.1884275999855,
+          "durationMs": {
+            "p50": 6575.109272999922,
+            "p95": 7258.697257000022
+          }
+        }
+      },
+      "decision": {
+        "verdict": "ship",
+        "roundVerdict": "ship",
+        "reason": "no significant regression; trigger precision and recall meet the minimums",
+        "comparison": {
+          "baselineMean": 1,
+          "candidateMean": 1,
+          "difference": 0,
+          "ci95": {
+            "low": 0,
+            "high": 0
+          },
+          "pValue": 1,
+          "test": "mcnemar",
+          "qValue": 1,
+          "significant": false
+        },
+        "trigger": {
+          "triggerTrials": 4,
+          "nonTriggerTrials": 1,
+          "loaded": 4,
+          "loadedOnTrigger": 4,
+          "loadedOnNonTrigger": 0,
+          "recall": 1,
+          "precision": 1
+        }
+      },
+      "items": [
+        {
+          "id": "delegate-count-errors",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 1,
+          "loadTrials": 1
+        },
+        {
+          "id": "delegate-sum-invoice",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 1,
+          "loadTrials": 1
+        },
+        {
+          "id": "delegate-extract-emails",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 1,
+          "loadTrials": 1
+        },
+        {
+          "id": "delegate-diff-config",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 1,
+          "loadTrials": 1
+        },
+        {
+          "id": "delegate-none-capital",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 1,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 1
+        }
+      ],
+      "fullRunEstimate": {
+        "skill": {
+          "dryRuns": 5,
+          "fullRuns": 39,
+          "inputTokens": 118849,
+          "uncachedInputTokens": 58945,
+          "outputTokens": 10179
+        },
+        "no-skill": {
+          "dryRuns": 5,
+          "fullRuns": 39,
+          "inputTokens": 43774,
+          "uncachedInputTokens": 27799,
+          "outputTokens": 6006
+        }
+      }
+    }
+  ],
+  "verdict": "inconclusive"
+}
