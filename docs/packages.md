@@ -229,6 +229,43 @@ packages again, so a `PackageInstance` is reusable across agents and a config cl
   `credentials.store`/`delete` write through the same slot for a package that declares
   `credentials:write` — the OAuth refresh-token path — and a written value joins the set the same way.
 
+### Writing a package skill
+
+A package ships a skill when the job spans several tool calls, or needs a judgment that one tool description
+cannot hold. A single-call tool whose description already says when and how needs no skill. A description is sent
+on every request and a skill body only when it is loaded, so put "what this tool does" in the description and "how
+to do the job" in the skill. Every skill body is a hypothesis: keep it thin, and ship it only if a paired
+evaluation shows it helps.
+
+Register a skill directory in `setup` and list it in `package.json` `files`:
+
+```ts
+prism.skills.addDir(fileURLToPath(new URL("../skills", import.meta.url)));
+```
+
+- **Name.** The package domain first, then the job: `web-research`, `coding-workflow`. Lowercase letters, digits and
+  hyphens, at most 64, and equal to the directory name (the [Agent Skills](https://agentskills.io/specification)
+  rule; the kernel parser accepts more, the gate does not). No two packages ship the same name.
+- **Description.** When to use it, then what it covers, in at most 300 bytes. It is the skill's one catalog line.
+- **Body.** A short procedure, the decision points, how to recover from a failure, and when to stop, in at most
+  8 KiB. Put detail in `references/<topic>.md` beside `SKILL.md`.
+- **`requiresTools`.** `metadata.prism-requires-tools: web_fetch web_search`, a space-separated list. A request
+  whose tool list lacks any of them hides the skill instead of failing the run (see
+  [Tools](tools.md#skills-that-need-tools)). Name only tools that are always present, and only ones this package or
+  a package it declares in `requires.packages` registers.
+- **Optional tools.** A tool outside `requiresTools` may be backticked only under a heading of the form
+  ``If `web_extract` is available``, so the section is inert text when the tool is off.
+- **Never.** A secret or an `env:` / `keyring:` ref, a URL to a private system, or a host product opinion.
+
+`scripts/package-skills-conformance.mjs` enforces this on the real packages (it runs in `release:gate`). It builds
+each package that ships skills on a mock-provider agent under its fullest test config, and fails a skill that does
+not parse, is over a cap, requires an unregistered tool, names a retired tool (`scripts/retired-tool-names.json`) or
+an unregistered one, uses an optional tool outside its heading, is missing from `files`, repeats another package's
+name, or holds a secret-shaped string. It also fails when the reference host's fullest agent lists more than 16
+catalog entries or 3,072 bytes. A package that ships skills and has no fixture in the script fails too. The Hermes
+office skills that `tools-work` vendors are the one recorded size exception: their bytes stay pinned to
+`vendor-lock.json`, and the package declares their `requiresTools` in code.
+
 ### `disable`
 
 `createAgent({ disable: { tools, hooks, commands, skills } })` removes contributions by id after every

@@ -1,5 +1,9 @@
 # @arnilo/prism-memory-rag
 
+> **Experimental in 0.13.0.** Install with `bun add @arnilo/prism-memory-rag@experimental`. Outside the stability promise of the stable
+> packages: its API, config, preset contents and defaults may change or be removed in any release until it graduates.
+> Graduation is the memory track's final step, which sets the first stable version.
+
 Retrieval-augmented generation for Prism agents: index local files or URLs, query them with the
 `rag_search` tool, optionally inject the result as one `context.build` block, and provide the
 `embeddings` service the other memory packages consume.
@@ -12,7 +16,7 @@ fetches a URL itself.
 ## Install
 
 ```bash
-bun add @arnilo/prism-memory-rag @arnilo/prism
+bun add @arnilo/prism-memory-rag@experimental @arnilo/prism
 ```
 
 An embedding model comes from a host-registered provider (registered via

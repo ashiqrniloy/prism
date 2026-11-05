@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Plan 215 Task 7: the vendored office skills register through `loadWorkSkills()` with `requiresTools: ["work_exec"]` instead of a bare `prism.skills.addDir`, so they are hidden on a request that does not advertise `work_exec`. The vendored `SKILL.md` bytes are untouched. `WORK_SKILL_TOOLS` (the `office_*` names, a `toolNames` declaration nothing used and that would have failed a narrowed run) is replaced by `WORK_SKILL_REQUIRES_TOOLS`, with no alias.
+
 ### Added
 
 - Plan 155 Task 5: `@arnilo/prism-tools-work` — the work family as one package with a `definePackage` root entry. `setup` registers the `office_*` document group (read/write effects), `work_exec` inside the host-injected `work.sandbox` service (`execute`), and the `m365_*` / `gws_*` connector tools (`network`, plus `external` for drafts/writes) when a ref-only credential resolves. The bounded document reader is provided as the `work.reader` service and the vendored Hermes productivity skills are added from `vendor/`. A missing optional parser, an unresolved connector credential, or a missing sandbox writes a `warn` status note and registers less; the worker pool closes in `onDispose`.

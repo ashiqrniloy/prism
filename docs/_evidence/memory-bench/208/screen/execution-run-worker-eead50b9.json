@@ -1,0 +1,115 @@
+{
+  "kind": "208-development-screen-run",
+  "journal": {
+    "campaignId": "campaign-4332cfd4bc1b",
+    "status": "finished",
+    "ceiling": 1300000000,
+    "spend": 2279756,
+    "attempts": [
+      {
+        "attemptId": "208-screen.small.P.locomo@1",
+        "jobId": "208-screen.small.P.locomo",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 59457
+      },
+      {
+        "attemptId": "208-screen.small.P+O.locomo@1",
+        "jobId": "208-screen.small.P+O.locomo",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 69160
+      },
+      {
+        "attemptId": "208-screen.small.P.beam-100k@1",
+        "jobId": "208-screen.small.P.beam-100k",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 155019
+      },
+      {
+        "attemptId": "208-screen.small.P+O.beam-100k@1",
+        "jobId": "208-screen.small.P+O.beam-100k",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 1806009
+      },
+      {
+        "attemptId": "208-screen.small.P.memoryagentbench-cr@1",
+        "jobId": "208-screen.small.P.memoryagentbench-cr",
+        "status": "failed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 0
+      },
+      {
+        "attemptId": "208-screen.small.P+O.memoryagentbench-cr@1",
+        "jobId": "208-screen.small.P+O.memoryagentbench-cr",
+        "status": "failed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 190111
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "208-screen.small.P.locomo",
+      "attemptId": "208-screen.small.P.locomo@1",
+      "answersDir": ".cache/memory-bench/208/small/P/answers",
+      "status": "partial",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 59457
+    },
+    {
+      "id": "208-screen.small.P+O.locomo",
+      "attemptId": "208-screen.small.P+O.locomo@1",
+      "answersDir": ".cache/memory-bench/208/small/P+O/answers",
+      "status": "partial",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 69160
+    },
+    {
+      "id": "208-screen.small.P.beam-100k",
+      "attemptId": "208-screen.small.P.beam-100k@1",
+      "answersDir": ".cache/memory-bench/208/small/P/answers",
+      "status": "partial",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 155019
+    },
+    {
+      "id": "208-screen.small.P+O.beam-100k",
+      "attemptId": "208-screen.small.P+O.beam-100k@1",
+      "answersDir": ".cache/memory-bench/208/small/P+O/answers",
+      "status": "partial",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 1806009
+    },
+    {
+      "id": "208-screen.small.P.memoryagentbench-cr",
+      "attemptId": "208-screen.small.P.memoryagentbench-cr@1",
+      "answersDir": ".cache/memory-bench/208/small/P/answers",
+      "status": "failed",
+      "cause": "MemoryBenchAnswerError:400",
+      "usageComplete": true,
+      "charged": 0
+    },
+    {
+      "id": "208-screen.small.P+O.memoryagentbench-cr",
+      "attemptId": "208-screen.small.P+O.memoryagentbench-cr@1",
+      "answersDir": ".cache/memory-bench/208/small/P+O/answers",
+      "status": "running",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 190111
+    }
+  ]
+}

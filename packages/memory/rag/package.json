@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-memory-rag",
-  "version": "0.13.0",
+  "version": "0.13.0-experimental.0",
   "description": "Retrieval-augmented generation for Prism agents: indexed sources, a rag_search tool, an opt-in context block, and the embeddings service.",
   "type": "module",
   "exports": {
@@ -31,7 +31,7 @@
     }
   },
   "dependencies": {
-    "@arnilo/prism-memory-core": "^0.13.0"
+    "@arnilo/prism-memory-core": "0.13.0-experimental.0"
   },
   "devDependencies": {
     "@arnilo/prism-workflows": "file:../../integrations/workflows",

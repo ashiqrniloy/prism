@@ -1,0 +1,153 @@
+{
+  "generatedAt": "2026-11-04T15:17:45.308Z",
+  "kind": "208-ontology-manifest",
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "threeTierCriteriaHash": "3d5a5c10fddda0931d00003aad8f2fccf5bdef2a829fa0b09bfac004b2bd263f",
+  "productHash": "5c7505064c802d15bb897d4c806dfa6fd17023c92ac937640cc8d2dbb493c5d0",
+  "ontologyPrefixProbe": {
+    "path": "docs/_evidence/memory-bench/207/prefix-probe.json",
+    "sha256": "47158c69e5acc1312b8758111b8d40d426bc669e8dd6f949e553adc3e9fe5cc1",
+    "fabricProductHash": "9780be7295970279b18dfc4d8e782fdbd13b3b4eccefa566d29a5161cd270e1b"
+  },
+  "schemaVersion": 1,
+  "plan": 208,
+  "task": 5,
+  "gateId": "O-1",
+  "partition": "dev",
+  "status": "approved",
+  "executable": true,
+  "provider": "kilo",
+  "model": "free-panel",
+  "ceiling": 1300000000,
+  "journalPath": ".cache/memory-bench/208/journal-worker-9f6f2af2.json",
+  "summaryPath": "docs/_evidence/memory-bench/208/screen/execution-run-worker-9f6f2af2.json",
+  "models": {
+    "answers": [
+      "kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "commandcode/Qwen/Qwen3.7-Flash",
+      "opencode-go/beam-free",
+      "commandcode/meta/muse-spark-1.2-contributor"
+    ],
+    "judges": [
+      "commandcode/stealth/glyph-cluster:free",
+      "commandcode/stealth/crouton-alpha"
+    ],
+    "curator": "agent-own (ontologyModel unset: each answer model curates its own concepts)",
+    "families": {
+      "answers": [
+        "nvidia",
+        "qwen",
+        "reflection",
+        "meta"
+      ],
+      "judges": [
+        "stealth (glyph-cluster)",
+        "stealth (crouton-alpha)"
+      ]
+    },
+    "judgesDoNotAnswer": true,
+    "crossProviderClaim": false
+  },
+  "billing": {
+    "mode": "free-plus-named-paid",
+    "provider": "kilo",
+    "freeProductsOnly": false,
+    "paidFallbacks": [],
+    "paidAnswers": [
+      "commandcode/Qwen/Qwen3.7-Flash",
+      "commandcode/meta/muse-spark-1.2-contributor"
+    ]
+  },
+  "arms": [
+    "P",
+    "P+O",
+    "P+O.series-default",
+    "P+O.series-readtime"
+  ],
+  "warmup": 2,
+  "cohort": {
+    "memoryagentbench-cr": {
+      "partition": "dev",
+      "partitionIdsHash": "b96dba43ea61072d4bb290df35f82a56800cb7052cd2b3347a45307f01c4b842"
+    },
+    "beam-100k": {
+      "partition": "dev",
+      "partitionIdsHash": "8ead1f2d43bb523d25a0d7bea18e602b00122b2870e04ca0d7162928ac1d3567"
+    },
+    "locomo": {
+      "partition": "dev",
+      "partitionIdsHash": "f8462784b7acf89a4b82a40d68369c2abf35f3e69d69e39b4b2b118b4c714dbf"
+    }
+  },
+  "comparisons": {
+    "benefit": "P+O against P, paired per question, per answer model (O1, O2, O5, O7)",
+    "triggerPolicy": "P+O.series-readtime against P+O.series-default, same warm-up and scored sets (large model)",
+    "claimSupport": "ontology-audit.mjs over the claim bundles of every P+O arm (O3)",
+    "safety": "safety/run.mjs --ontology plus the evasive-lure residual judged by the panel (O4)"
+  },
+  "notScreened": [
+    {
+      "criteria": [
+        "O6"
+      ],
+      "reason": "the coding arms need plan 202 Task 11's coding preset and sandbox workspaces; neither exists on a free route. Enters plan 210's ledger."
+    },
+    {
+      "criteria": [
+        "O8"
+      ],
+      "reason": "waits for plan 209 Task 6"
+    },
+    {
+      "criteria": [
+        "O1 providers"
+      ],
+      "reason": "each answer model is served by one gateway (large: Kilo free; small: Command Code, paid Qwen 3.7 Flash; third: OpenCode Go Beam Free), never by a second provider for the same model, so O1 stays advisory"
+    }
+  ],
+  "claimsDir": ".cache/memory-bench/208/ontology-claims",
+  "concurrency": {
+    "concurrency": 1
+  },
+  "results": [],
+  "jobs": [
+    {
+      "id": "208-screen.muse.P+O.series-default.beam-100k",
+      "family": "208-screen.muse.P+O.series-default",
+      "role": "P+O.series-default",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "arm": "P+O.series-default",
+      "config": "fabric-x-tools",
+      "provider": "commandcode",
+      "model": "meta/muse-spark-1.2-contributor",
+      "judges": "commandcode/stealth/glyph-cluster:free,commandcode/stealth/crouton-alpha",
+      "judgeText": true,
+      "judgeProtocol": "plain-text-v1",
+      "labelInjections": "off",
+      "maxInputTokens": 25000000,
+      "maxOutputTokens": 8192,
+      "maxAttempts": 2,
+      "concurrency": 1,
+      "wallTimeCapHours": 32,
+      "freeOnly": false,
+      "freeProductOnly": false,
+      "boundedWire": true,
+      "finalTurnAnswer": true,
+      "answersDir": ".cache/memory-bench/208/muse/P+O.series-default/answers",
+      "judgeCacheDir": ".cache/memory-bench/208/muse/P+O.series-default/judge",
+      "ontology": true,
+      "ontologyArm": "P+O.series-default.muse",
+      "ontologyClaimsDir": ".cache/memory-bench/208/ontology-claims",
+      "warmup": 2
+    }
+  ],
+  "manifestHash": "d99993ef8a865574b849a5a5125efb55006f30b855d2330ba054834d805a4de3",
+  "worker": "9f6f2af2",
+  "executionManifestPath": "docs/_evidence/memory-bench/208/screen/execution-manifest-worker-9f6f2af2.json",
+  "gate": {
+    "path": "docs/_evidence/memory-bench/208/gates/owner-gate-1.json",
+    "manifestHash": "d99993ef8a865574b849a5a5125efb55006f30b855d2330ba054834d805a4de3",
+    "approvedAt": "2026-11-03"
+  }
+}

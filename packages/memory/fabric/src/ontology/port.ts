@@ -8,6 +8,7 @@ import type { JsonObject } from "@arnilo/prism";
 import { type Memory, MemoryScopeError, MemoryValidationError, type MemoryVectorRecord, type VectorStore } from "@arnilo/prism-memory-core";
 import { createMemoryId } from "@arnilo/prism-memory-observational";
 import { memoryRetractionVersion, noteMemoryWrite } from "../directory.js";
+import { exchangeKeywords } from "../exchanges.js";
 import { scanScopedMemoryContent } from "../scoped/trust.js";
 import {
   CONCEPT_RELATIONS,
@@ -83,7 +84,10 @@ export interface OntologyNoteView {
   readonly key?: string;
   readonly tRef?: string;
   readonly status?: string;
-  /** Enrichment keywords the write path stored (generic category words), for clustering unbound notes. */
+  /**
+   * Enrichment keywords for clustering unbound notes: the stored ones, or for an evidence note stored without any, the
+   * archive path's deterministic `exchangeKeywords` of its text.
+   */
   readonly keywords?: readonly string[];
   /** Typed links the note carries (ids and relation only). A concept's links point at other concepts. */
   readonly links?: readonly { readonly id: string; readonly relation?: string }[];
@@ -322,6 +326,19 @@ export function createFabricOntology(deps: {
 
   const cap = (text: string, limit: number): string => (text.length > limit ? text.slice(0, limit) : text);
 
+  /**
+   * The keywords the curator clusters unbound notes by. A note written without any (a `remember` call, an import) gets
+   * the archive path's deterministic `exchangeKeywords`, so it can still reach the accumulation trigger. Derived for the
+   * view only: the stored note, recall's keyword weight and the directory are unchanged. Concepts and file notes keep
+   * what they stored.
+   */
+  const keywordsOf = (kind: string, stored: readonly string[] | undefined, text: string): { readonly keywords?: readonly string[] } => {
+    if (stored !== undefined && stored.length > 0) return { keywords: stored };
+    if (kind === "concept" || kind === "file") return {};
+    const derived = exchangeKeywords(text);
+    return derived.length === 0 ? {} : { keywords: derived };
+  };
+
   const view = (state: ScopeState, record: MemoryVectorRecord): OntologyNoteView | undefined => {
     const note = parseMemoryNoteMetadata(record.metadata);
     if (note === undefined) return undefined;
@@ -336,7 +353,7 @@ export function createFabricOntology(deps: {
       ...(note.key === undefined ? {} : { key: note.key }),
       ...(note.tRef === undefined ? {} : { tRef: note.tRef }),
       ...(status === undefined ? {} : { status }),
-      ...(note.keywords === undefined || note.keywords.length === 0 ? {} : { keywords: note.keywords }),
+      ...keywordsOf(note.kind, note.keywords, record.text),
       ...(note.links === undefined || note.links.length === 0
         ? {}
         : { links: note.links.map((link) => ({ id: link.id, ...(link.relation === undefined ? {} : { relation: link.relation }) })) }),

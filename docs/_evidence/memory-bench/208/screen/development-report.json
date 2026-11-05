@@ -1,0 +1,267 @@
+{
+  "schemaVersion": 1,
+  "kind": "208-development-report",
+  "plan": 208,
+  "task": 5,
+  "partition": "dev",
+  "advisory": "development numbers are never the verdict; the held-out read is plan 210 Task 9",
+  "threeTierCriteriaHash": "3d5a5c10fddda0931d00003aad8f2fccf5bdef2a829fa0b09bfac004b2bd263f",
+  "jobsRead": 6,
+  "rows": {
+    "O1": {
+      "criterion": "O1",
+      "name": "benefit",
+      "models": [
+        {
+          "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+          "n": 0,
+          "diffPoints": null,
+          "ciLowPoints": null,
+          "pass": false
+        },
+        {
+          "model": "Qwen/Qwen3.7-Flash",
+          "n": 0,
+          "diffPoints": null,
+          "ciLowPoints": null,
+          "pass": false
+        },
+        {
+          "model": "beam-free",
+          "n": 0,
+          "diffPoints": null,
+          "ciLowPoints": null,
+          "pass": false
+        }
+      ],
+      "modelsPassing": 0,
+      "providersPassing": 0,
+      "needs": {
+        "models": 2,
+        "providers": 2
+      },
+      "pass": null
+    },
+    "O2": {
+      "criterion": "O2",
+      "name": "no harm",
+      "models": [
+        {
+          "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+          "pooledOther": {
+            "n": 0,
+            "diffPoints": null,
+            "ciLowPoints": null,
+            "pass": null
+          },
+          "abilities": [],
+          "abilitiesBelowFloor": []
+        },
+        {
+          "model": "Qwen/Qwen3.7-Flash",
+          "pooledOther": {
+            "n": 0,
+            "diffPoints": null,
+            "ciLowPoints": null,
+            "pass": null
+          },
+          "abilities": [],
+          "abilitiesBelowFloor": []
+        },
+        {
+          "model": "beam-free",
+          "pooledOther": {
+            "n": 0,
+            "diffPoints": null,
+            "ciLowPoints": null,
+            "pass": null
+          },
+          "abilities": [],
+          "abilitiesBelowFloor": []
+        }
+      ],
+      "pass": null
+    },
+    "O3": {
+      "criterion": "O3",
+      "name": "claim support",
+      "arms": [],
+      "humanLabelSource": "assistant (owner-delegated 2026-11-03)",
+      "humanLabelDeviation": "panel-versus-assistant agreement, not panel-versus-human; plan 210 repeats O3 with a person",
+      "pass": null,
+      "status": "not-run"
+    },
+    "O4": {
+      "criterion": "O4",
+      "name": "safety",
+      "pass": true,
+      "status": true,
+      "probes": {
+        "forgetCascade": true,
+        "crossScope": true,
+        "poisoning": true,
+        "teamTrust": true,
+        "humanEdit": true
+      },
+      "counts": {
+        "forgottenContentLeaks": 0,
+        "crossScopeExposures": 0,
+        "deliveredPoisonClaims": 0
+      },
+      "plan202Gate": false,
+      "evasiveResidual": null,
+      "evasiveResidualPanelVerdict": "pending: judged by the claim-audit panel at the first live audit run"
+    },
+    "O5": {
+      "criterion": "O5",
+      "name": "cost",
+      "models": [
+        {
+          "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+          "curatorCallsPer1kExchanges": null,
+          "curatorInputTokensPer1kExchanges": null,
+          "curatorOutputTokensPer1kExchanges": null,
+          "answerInputTokensPerQuestion": {
+            "base": null,
+            "withOntology": null,
+            "ratio": null
+          },
+          "answerRatioPass": null,
+          "pricing": "free route: tokens reported, USD 0; cold/warm cost applies on a priced route (plan 210)"
+        },
+        {
+          "model": "Qwen/Qwen3.7-Flash",
+          "curatorCallsPer1kExchanges": null,
+          "curatorInputTokensPer1kExchanges": null,
+          "curatorOutputTokensPer1kExchanges": null,
+          "answerInputTokensPerQuestion": {
+            "base": null,
+            "withOntology": null,
+            "ratio": null
+          },
+          "answerRatioPass": null,
+          "pricing": "free route: tokens reported, USD 0; cold/warm cost applies on a priced route (plan 210)"
+        },
+        {
+          "model": "beam-free",
+          "curatorCallsPer1kExchanges": null,
+          "curatorInputTokensPer1kExchanges": null,
+          "curatorOutputTokensPer1kExchanges": null,
+          "answerInputTokensPerQuestion": {
+            "base": null,
+            "withOntology": null,
+            "ratio": null
+          },
+          "answerRatioPass": null,
+          "pricing": "free route: tokens reported, USD 0; cold/warm cost applies on a priced route (plan 210)"
+        }
+      ],
+      "pass": null
+    },
+    "O6": {
+      "criterion": "O6",
+      "pass": null,
+      "status": "not-screened: no coding preset or sandbox on a free route; ledger candidate for plan 210"
+    },
+    "O7": {
+      "criterion": "O7",
+      "name": "small model",
+      "model": "Qwen/Qwen3.7-Flash",
+      "abilitiesBelow": [],
+      "pass": null
+    },
+    "O8": {
+      "criterion": "O8",
+      "pass": null,
+      "status": "waits for plan 209 Task 6"
+    }
+  },
+  "triggerPolicy": {
+    "comparison": "read-time only (co-read + repair) minus the three default policies",
+    "model": "meta/muse-spark-1.2-contributor",
+    "n": 20,
+    "diffPoints": 0,
+    "ciLowPoints": -15,
+    "nonInferiorityPoints": 2,
+    "nonInferior": false,
+    "cost": {
+      "default": {
+        "callsPer1kExchanges": 206.55608214849923,
+        "inputTokensPer1kExchanges": 2469104.6603475516
+      },
+      "readTime": {
+        "callsPer1kExchanges": 0.07344840249724569,
+        "inputTokensPer1kExchanges": 500.7712082262211
+      }
+    },
+    "claimSupport": {
+      "default": null,
+      "readTime": null
+    },
+    "mayAdoptReadTimeOnly": false,
+    "loserForPlan210": "read-time only"
+  },
+  "conceptStages": {
+    "208-screen.muse.P+O.series-readtime.memoryagentbench-cr": {
+      "concept": 0,
+      "note": 7,
+      "none": 0
+    },
+    "208-screen.muse.P+O.series-readtime.beam-100k": {
+      "concept": 0,
+      "note": 6,
+      "none": 3
+    },
+    "208-screen.muse.P+O.series-default.memoryagentbench-cr": {
+      "concept": 0,
+      "note": 7,
+      "none": 0
+    },
+    "208-screen.muse.P+O.series-readtime.locomo": {
+      "concept": 0,
+      "note": 31,
+      "none": 11
+    },
+    "208-screen.muse.P+O.series-default.locomo": {
+      "concept": 2,
+      "note": 1,
+      "none": 1
+    },
+    "208-screen.muse.P+O.series-default.beam-100k": {
+      "concept": 1,
+      "note": 6,
+      "none": 2
+    }
+  },
+  "ledger": [
+    {
+      "feature": "the tier as a whole",
+      "reason": "O3 not-run"
+    },
+    {
+      "feature": "read-time only trigger policy",
+      "reason": "inferior to the three default policies"
+    },
+    {
+      "feature": "concept prior",
+      "reason": "no ablation arm in the development screen"
+    },
+    {
+      "feature": "passive pointer",
+      "reason": "no ablation arm in the development screen"
+    },
+    {
+      "feature": "concept sharing",
+      "reason": "not exercised by the development screen"
+    },
+    {
+      "feature": "extractor-assisted binding",
+      "reason": "not exercised by the development screen"
+    },
+    {
+      "feature": "coding+O (O6)",
+      "reason": "not screened: no coding preset or sandbox on a free route"
+    }
+  ],
+  "noText": true
+}

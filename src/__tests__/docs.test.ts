@@ -605,7 +605,11 @@ describe("docs", () => {
       // and is asserted by the packaging suite. (`@arnilo/prism-providers` itself is not in
       // this list: the phase54 table names it in a numbered row, not the first-cell form the
       // derivation matches — `no_workspace_imports_prism_providers` guards it instead.)
-      assert.equal(retired.length, 49, `phase54 evidence must enumerate 49 still-retired 0.3 names after OpenRouter restoration, got ${retired.length}`);
+      assert.equal(
+        retired.length,
+        49,
+        `phase54 evidence must enumerate 49 still-retired 0.3 names after OpenRouter restoration, got ${retired.length}`,
+      );
       const exemptPages = new Set(["docs/migration.md"]); // per-era records live under docs/history/ (skipped above)
       // Lines tied to dated records (release decisions, plan/phase cites, version-pinned tags) or to
       // an explicit `formerly` alias stay exempt: the alias records where a package moved from, it
@@ -1208,6 +1212,9 @@ describe("docs", () => {
       versions: Record<string, string>;
       counts: { publishable: number; provider: number };
     };
+    const experimental = new Set(
+      (JSON.parse(readFileSync("scripts/independent-packages.json", "utf8")) as { experimental?: string[] }).experimental ?? [],
+    );
     const readme = readFileSync("README.md", "utf8");
     const release = readFileSync("docs/release.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
@@ -1229,7 +1236,13 @@ describe("docs", () => {
           .trim()
           .split(/\s+/)
           .filter((part) => part.startsWith("@arnilo/"))) {
-          assert.ok(Object.hasOwn(truth.versions, spec), `${page}: install package, not subpath: ${spec}`);
+          // Plan 215 Task 2: `@experimental` is the dist-tag of the experimental line, valid for exactly that set.
+          const [name, tag] = spec.split(/(?<=\/\S+)@/) as [string, string | undefined];
+          assert.ok(Object.hasOwn(truth.versions, name), `${page}: install package, not subpath: ${spec}`);
+          if (tag !== undefined) {
+            assert.equal(tag, "experimental", `${page}: only the experimental dist-tag may follow a package name: ${spec}`);
+            assert.ok(experimental.has(name), `${page}: ${name} is not on the experimental line: ${spec}`);
+          }
         }
       }
     }
@@ -1294,10 +1307,7 @@ describe("docs", () => {
     assert.doesNotMatch(rootExports, /\bcreateMiddlewareRegistry\b/, "the middleware registry must stay retired");
   });
   it("first_party_providers_do_not_implement_deprecated_provider_timeout_retry_knobs", () => {
-    for (const dir of [
-      "providers/hyper/src",
-      "providers/opencode-go/src",
-    ]) {
+    for (const dir of ["providers/hyper/src", "providers/opencode-go/src"]) {
       const combined = tsFiles(`packages/${dir}`)
         .map((file) => readFileSync(file, "utf8"))
         .join("\n");
@@ -2094,5 +2104,83 @@ describe("docs", () => {
       if (!href || /^(?:https?:|mailto:)/.test(href)) continue;
       assert.ok(existsSync(normalize(href)), `broken local link ${href}`);
     }
+  });
+});
+
+// Plan 215 Task 4: the experimental line is documented once (the template in docs/release.md) and every README
+// in the set carries it. The set is `experimental` in scripts/independent-packages.json.
+describe("plan 215 Task 4: experimental status in the docs", () => {
+  const experimental =
+    (JSON.parse(readFileSync("scripts/independent-packages.json", "utf8")) as { experimental?: string[] }).experimental ?? [];
+  const flat = (text: string) => text.replace(/^>\s?/gm, "").replace(/\s+/g, " ").trim();
+  const manifestDir = (name: string) => {
+    const dirs: string[] = [];
+    const walk = (dir: string) => {
+      for (const ent of readdirSync(dir, { withFileTypes: true })) {
+        if (!ent.isDirectory() || ent.name === "node_modules") continue;
+        const full = join(dir, ent.name);
+        if (existsSync(join(full, "package.json"))) dirs.push(full);
+        else walk(full);
+      }
+    };
+    walk("packages");
+    const found = dirs.find((dir) => (JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { name: string }).name === name);
+    assert.ok(found, `no workspace package named ${name}`);
+    return found;
+  };
+  const template = () => {
+    const release = readFileSync("docs/release.md", "utf8");
+    const block = /### Notice template[\s\S]*?```markdown\n([\s\S]*?)```/.exec(release)?.[1];
+    assert.ok(block, "docs/release.md must hold the experimental notice template");
+    assert.ok(flat(block).startsWith("**Experimental in 0.13.0.**"));
+    return flat(block);
+  };
+  /** The first paragraph after the README's title. */
+  const noticeOf = (readme: string) => {
+    const body = readme.split("\n").slice(1).join("\n").trimStart();
+    return flat(body.split(/\n\s*\n/)[0] ?? "");
+  };
+
+  it("experimental_packages_carry_notice", () => {
+    assert.ok(experimental.length > 0);
+    const expected = template();
+    const index = readFileSync("docs/index.md", "utf8");
+    for (const name of experimental) {
+      const dir = manifestDir(name);
+      const readme = readFileSync(join(dir, "README.md"), "utf8");
+      assert.ok(readme.startsWith(`# ${name}\n`), `${dir}/README.md must open with its title`);
+      assert.equal(
+        noticeOf(readme),
+        expected.replaceAll("<name>", name),
+        `${dir}/README.md must carry the experimental notice from docs/release.md right after its title`,
+      );
+      const entry = index.split("\n").find((line) => line.startsWith(`- [\`${name}\`](`));
+      assert.ok(entry, `docs/index.md must list ${name}`);
+      assert.ok(entry.includes("(experimental):"), `docs/index.md must mark ${name} "(experimental)"`);
+    }
+  });
+
+  it("stable_packages_carry_no_experimental_notice", () => {
+    const set = new Set(experimental);
+    const index = readFileSync("docs/index.md", "utf8");
+    const walk = (dir: string) => {
+      for (const ent of readdirSync(dir, { withFileTypes: true })) {
+        if (!ent.isDirectory() || ent.name === "node_modules") continue;
+        const full = join(dir, ent.name);
+        if (!existsSync(join(full, "package.json"))) {
+          walk(full);
+          continue;
+        }
+        const name = (JSON.parse(readFileSync(join(full, "package.json"), "utf8")) as { name: string }).name;
+        if (set.has(name) || !existsSync(join(full, "README.md"))) continue;
+        assert.ok(
+          !readFileSync(join(full, "README.md"), "utf8").includes("**Experimental in 0.13.0.**"),
+          `${full}/README.md carries the experimental notice but ${name} is not on the experimental line`,
+        );
+        const entry = index.split("\n").find((line) => line.startsWith(`- [\`${name}\`](`));
+        assert.ok(!entry?.includes("(experimental)"), `docs/index.md marks stable package ${name} experimental`);
+      }
+    };
+    walk("packages");
   });
 });

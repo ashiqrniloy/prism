@@ -81,19 +81,28 @@ const round = (value) => Math.round(value * 1e6) / 1e6;
 /** The fact extractor's stable cache key base (`consolidation/extract.ts`); the wire proxy logs it per exchange. */
 export const EXTRACT_CACHE_KEY = "prism-fabric-extract";
 
-/** Plan 202 Task 4.15: product exchanges made by the write-side extractor are accounted apart from answers. */
+/** The ontology curator's stable cache key (`packages/memory/wiki/src/consolidate/prompt.ts`); the wire proxy logs it per exchange. */
+export const ONTOLOGY_CACHE_KEY = "prism-wiki-consolidate";
+
+/**
+ * Plan 202 Task 4.15 and plan 208 Task 3: product exchanges made by a background worker are accounted apart from
+ * answers. The write-side extractor is `product-extract`; the ontology curator's concept pass is `product-ontology`.
+ */
 export function usageRole(row) {
   const role = row.role ?? "unknown";
   const key = row.cacheKey;
-  return role === "product" && typeof key === "string" && (key === EXTRACT_CACHE_KEY || key.startsWith(`${EXTRACT_CACHE_KEY}:`))
-    ? "product-extract"
-    : role;
+  if (role !== "product" || typeof key !== "string") return role;
+  if (key === EXTRACT_CACHE_KEY || key.startsWith(`${EXTRACT_CACHE_KEY}:`)) return "product-extract";
+  if (key === ONTOLOGY_CACHE_KEY || key.startsWith(`${ONTOLOGY_CACHE_KEY}:`)) return "product-ontology";
+  return role;
 }
 
 /** Price each isolated model route before summing; evaluation may use different rates. */
 export function roleUsage(rows, prior) {
   const result = {};
-  for (const role of ["product", "product-extract", "evaluation", "unknown"]) {
+  // The ontology role appears only on an ontology arm, so every other arm's report keeps its shape.
+  const ontology = rows.some((row) => usageRole(row) === "product-ontology") || prior?.["product-ontology"] !== undefined;
+  for (const role of ["product", "product-extract", ...(ontology ? ["product-ontology"] : []), "evaluation", "unknown"]) {
     const selected = rows.filter((row) => usageRole(row) === role);
     const previous = prior?.[role];
     const usage = sumUsage([...selected, ...(previous ? [previous] : [])]);

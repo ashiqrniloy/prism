@@ -47,8 +47,11 @@ test("coding_worker_compacts_with_coding_profile_and_trigger", async () => {
       assert.equal(compaction.profile, "coding");
       assert.deepEqual(compaction.trigger, { type: "threshold_tokens", tokens: 96_000 });
 
-      const observational = packageConfig(agent, "@arnilo/prism-memory-observational");
-      assert.deepEqual(observational.context, { recentMessages: 8, compactAt: { ratio: 0.6, maxTokens: 96_000 } });
+      assert.equal(
+        agent.inspect().packages.some((entry) => entry.name === "@arnilo/prism-memory-observational"),
+        false,
+        "the observational memory is part of the experimental memory opt-in, not the default path",
+      );
 
       const engineering = packageConfig(agent, "@arnilo/prism-context-engineering");
       assert.deepEqual(engineering.fold, { minAgeTurns: 2, minBytes: 2_048, keepLast: 3, clearAtLeastTokens: 9_600 });
@@ -60,6 +63,28 @@ test("coding_worker_compacts_with_coding_profile_and_trigger", async () => {
       );
     } finally {
       await agent.dispose();
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("memory_opt_in_budgets_the_observational_memory", async () => {
+  const root = mkdtempSync(join(tmpdir(), "prism-agent-om-budget-"));
+  mkdirSync(join(root, "workspace"));
+  try {
+    for (const create of [createCodingWorker, createResearchWorker]) {
+      const agent = await create(
+        { ...config(root, BUDGET_MODEL, BUDGET_MODEL), memory: "conversational" },
+        { packages: packages("opencode-go") },
+      );
+      try {
+        const observational = packageConfig(agent, "@arnilo/prism-memory-observational");
+        assert.deepEqual(observational.context, { recentMessages: 8, compactAt: { ratio: 0.6, maxTokens: 96_000 } });
+        assert.deepEqual(packageConfig(agent, "@arnilo/prism-memory-compaction").trigger, { type: "threshold_tokens", tokens: 96_000 });
+      } finally {
+        await agent.dispose();
+      }
     }
   } finally {
     rmSync(root, { recursive: true, force: true });
@@ -96,10 +121,6 @@ test("unlisted_model_uses_ratio_and_notes_once", async () => {
     const agent = await createCodingWorker(config(root), { packages: packages("mock") });
     try {
       assert.deepEqual(packageConfig(agent, "@arnilo/prism-memory-compaction").trigger, { type: "input_ratio", ratio: 0.6 });
-      assert.deepEqual(packageConfig(agent, "@arnilo/prism-memory-observational").context, {
-        recentMessages: 8,
-        compactAt: { ratio: 0.6 },
-      });
       assert.deepEqual(packageConfig(agent, "@arnilo/prism-context-engineering").fold, {
         minAgeTurns: 2,
         minBytes: 2_048,

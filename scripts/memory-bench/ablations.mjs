@@ -39,6 +39,14 @@ const paths = new Set([
   "fabric.lifecycle.widen.minProjects",
   "fabric.lifecycle.widen.minSiblings",
   "fabric.lifecycle.widen.contradictionsToSupersede",
+  // Plan 208 Task 3: the ontology arm's tuning, so Task 5 compares trigger policies without a code change.
+  "wiki.consolidate.triggers",
+  "wiki.consolidate.minNotes",
+  "wiki.consolidate.minCoReads",
+  "wiki.consolidate.minIntervalTurns",
+  "wiki.consolidate.maxSubjectsPerPass",
+  "wiki.consolidate.maxClaimsPerConcept",
+  "wiki.consolidate.model",
   ...["explicit", "correction", "outcome", "recurrence", "generality", "ephemerality", "derivability", "duplicate"].map(
     (k) => `fabric.promote.weights.${k}`,
   ),
@@ -125,7 +133,12 @@ export function memoryConfigs(options, { lifecycle = false, policy = {} } = {}) 
   if (fabric && options.suite === "memoryagentbench-cr" && fabric.inject !== false) {
     fabric.inject = { ...(fabric.inject ?? presetFields(fabric.preset)?.inject), kinds: ["fact"] };
   }
-  const configs = { om: observational, fabric };
+  // Plan 208 Task 3: `--ontology` installs `@arnilo/prism-memory-wiki` next to the fabric. The key exists only on
+  // an ontology arm, so every other arm's resolved config (and its protocol hash) is unchanged.
+  if (options.ontology && !fabric) throw new Error("MemoryBenchArguments: --ontology needs a fabric arm");
+  // The offline fixture holds a handful of notes, so its accumulation threshold is two, the smallest cluster the curator accepts (the OM arm does the same with messageTokens).
+  const wiki = options.ontology ? { consolidate: options.offline ? { minNotes: 2 } : {} } : null;
+  const configs = { om: observational, fabric, ...(wiki ? { wiki } : {}) };
   const seen = new Set();
   if (options.ablate !== undefined && !Array.isArray(options.ablate)) throw new Error("MemoryBenchAblation: expected array");
   const historical = historicalVariants(options.ablate);
@@ -189,13 +202,15 @@ export function memoryConfigs(options, { lifecycle = false, policy = {} } = {}) 
     if (!validateJsonSchema(memoryFabricConfigSchema, fabric).ok) throw new Error("MemoryBenchAblation: invalid fabric settings");
     resolveMemoryFabricConfig(fabric);
   }
-  return { observational, fabric };
+  return { observational, fabric, ...(wiki ? { wiki } : {}) };
 }
 
 export function resolvedMemoryConfigs(configs) {
   const resolved = {
     observational: configs.observational ? resolveMemoryObservationalConfig(configs.observational) : null,
     fabric: configs.fabric ? resolveMemoryFabricConfig(configs.fabric) : null,
+    // Explicit settings only: the package's defaults move its product hash, which every ontology manifest pins.
+    ...(configs.wiki ? { wiki: structuredClone(configs.wiki) } : {}),
   };
   // Host filesystem identity is unnecessary in public measurement artifacts.
   if (resolved.fabric?.scopes.project) {

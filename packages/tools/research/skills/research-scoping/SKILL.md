@@ -1,6 +1,6 @@
 ---
 name: research-scoping
-description: Turn a research question into a bounded question, inclusion rules, and the sources worth fetching. Use before any fetch.
+description: Use before any fetch. Turns a research question into a bounded question, inclusion rules, and the sources worth fetching.
 ---
 
 # Research scoping

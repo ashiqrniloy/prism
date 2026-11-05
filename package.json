@@ -69,7 +69,7 @@
     "release:publish": "bun scripts/release.mjs publish",
     "release:evidence": "bun scripts/release-skip-manifest.mjs",
     "sdk:ready": "bun run typecheck && bun run lint && bun run format:check && bun run test && bun run test:coverage && bun run pack:dry-run && bun run release:gate",
-    "release:gate": "bun scripts/release-skip-manifest.mjs && bun scripts/check-client-neutrality.mjs && bun run --filter @arnilo/prism-agent test && bun run --filter @arnilo/prism-driver-process test && bun examples/adapters/conformance.ts && bun test --timeout=0 src/__tests__/driver-kit-vendor-neutral.test.ts src/__tests__/kernel-constraints.test.ts && bun test --timeout=0 scripts/install-idempotence.test.mjs && bun scripts/release.mjs gate",
+    "release:gate": "bun scripts/release-skip-manifest.mjs && bun scripts/check-client-neutrality.mjs && bun run --filter @arnilo/prism-agent test && bun run --filter @arnilo/prism-driver-process test && bun examples/adapters/conformance.ts && bun test --timeout=0 src/__tests__/driver-kit-vendor-neutral.test.ts src/__tests__/kernel-constraints.test.ts && bun scripts/package-skills-conformance.mjs && bun test --timeout=0 scripts/install-idempotence.test.mjs && bun scripts/release.mjs gate",
     "security:threat-suites": "bun test --timeout=0 scripts/phase8-conformance.test.mjs scripts/phase9-conformance.test.mjs scripts/phase11-conformance.test.mjs scripts/phase20-security.test.mjs scripts/phase21-security.test.mjs scripts/phase22-security.test.mjs scripts/phase23-security.test.mjs scripts/phase38-codeql-regression.test.mjs src/__tests__/pinned-fetch.test.ts"
   },
   "devDependencies": {

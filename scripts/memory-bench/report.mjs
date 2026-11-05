@@ -4,6 +4,7 @@ import { dirname } from "node:path";
 import { passAtK } from "@arnilo/prism-evals";
 import { judgeAgreement } from "./judge.mjs";
 import { METRIC_DEFINITIONS, METRIC_VERSION, metricDefinition } from "./metrics.mjs";
+import { summarizeOntology } from "./ontology-arm.mjs";
 import { compare, holm } from "./stats.mjs";
 import { costReport } from "./usage.mjs";
 
@@ -118,6 +119,7 @@ export function summarize(report) {
     report.cost.scope = "campaign: product plus evaluation plus unknown historical usage";
     report.cost.product = report.roleUsage.product;
     if (report.roleUsage["product-extract"]?.exchanges > 0) report.cost.productExtract = report.roleUsage["product-extract"];
+    if (report.roleUsage["product-ontology"]?.exchanges > 0) report.cost.productOntology = report.roleUsage["product-ontology"];
     report.cost.evaluation = report.roleUsage.evaluation;
     report.cost.cachedPrefixSimulation = null;
     report.cost.simulationAssumption =
@@ -191,6 +193,8 @@ export function summarize(report) {
   report.fineEvidencePrecision = metricMean("fineEvidencePrecision");
   report.legacyRetrievalRecallAtK = metricMean("retrievalRecallAtK");
   report.retrievalRecallAtK = report.answerSessionHitAtK ?? report.legacyRetrievalRecallAtK;
+  const ontologySummary = summarizeOntology(report.results);
+  if (ontologySummary) report.ontologySummary = ontologySummary;
   const staged = report.results.filter((row) => typeof row.stage === "string");
   if (staged.length) {
     report.stages = {};
@@ -209,6 +213,7 @@ export function describeTiming(timing) {
   return `Timing: arm ${timing.wallMs ?? "n/a"} ms at concurrency ${timing.concurrency?.active ?? "n/a"} (initial ${timing.concurrency?.initial ?? "n/a"}); end-to-end questions p50 ${questions?.p50 ?? "n/a"} ms / p95 ${questions?.p95 ?? "n/a"} ms; ${[
     "ingestion",
     "restore",
+    ...(timing.phases?.ontologySettle ? ["ontologySettle"] : []),
     "answer",
     "evaluation",
   ]
@@ -260,6 +265,16 @@ export async function writeReport(report, path) {
       ...(report.roleUsage?.["product-extract"]?.exchanges > 0
         ? [
             `Extractor (product-extract): ${report.roleUsage["product-extract"].exchanges} exchanges; input ${report.roleUsage["product-extract"].inputTokens}, cache read ${report.roleUsage["product-extract"].cacheReadTokens}, cache write ${report.roleUsage["product-extract"].cacheWriteTokens}; measured USD ${report.roleUsage["product-extract"].measured ?? "unknown"}.`,
+          ]
+        : []),
+      ...(report.ontologySummary
+        ? [
+            `Ontology (${report.ontology?.arm ?? "ontology"}): ${report.ontologySummary.histories} histories; ${report.ontologySummary.concepts} concepts, ${report.ontologySummary.claims} claims (${report.ontologySummary.claimsPerConcept?.toFixed(2) ?? "n/a"} per concept); bound-note share ${report.ontologySummary.boundNoteShare?.toFixed(3) ?? "n/a"}; ${report.ontologySummary.passes} passes, ${report.ontologySummary.modelCalls} model calls, ${report.ontologySummary.repairs} repairs; rejected trust/secret/invalid ${report.ontologySummary.rejected.trust}/${report.ontologySummary.rejected.secret}/${report.ontologySummary.rejected.invalid}; settle p50/p95/max ${report.ontologySummary.settle.p50Ms ?? "n/a"}/${report.ontologySummary.settle.p95Ms ?? "n/a"}/${report.ontologySummary.settle.maxMs ?? "n/a"} ms (not in answer latency), ${report.ontologySummary.settle.timeouts} timeouts; concept stage ${JSON.stringify(report.ontologySummary.conceptStages.all)}.`,
+          ]
+        : []),
+      ...(report.roleUsage?.["product-ontology"]?.exchanges > 0
+        ? [
+            `Curator (product-ontology): ${report.roleUsage["product-ontology"].exchanges} exchanges; input ${report.roleUsage["product-ontology"].inputTokens}, output ${report.roleUsage["product-ontology"].outputTokens}, cache read ${report.roleUsage["product-ontology"].cacheReadTokens}, cache write ${report.roleUsage["product-ontology"].cacheWriteTokens}; measured USD ${report.roleUsage["product-ontology"].measured ?? "unknown"}.`,
           ]
         : []),
       "",

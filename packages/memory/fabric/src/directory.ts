@@ -2,7 +2,7 @@ import { opendir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { resolveRedactor, type SecretRedactor } from "@arnilo/prism";
 import type { Memory, MemoryTagCount } from "@arnilo/prism-memory-core";
-import { MemoryScopeError, MemoryValidationError, redactJson } from "@arnilo/prism-memory-core";
+import { lexicalTerms, MemoryScopeError, MemoryValidationError, redactJson } from "@arnilo/prism-memory-core";
 import { readFabricBlock } from "./blocks.js";
 import type { FabricFileJail } from "./files.js";
 import type { SubjectListing } from "./ontology/index.js";
@@ -21,15 +21,21 @@ export interface MemoryFabricDirectoryConfig {
   readonly maxFiles?: number;
   /** Ceiling on the rendered block. Default 200, at most {@link HARD_DIRECTORY_TOKENS}. */
   readonly maxTokens?: number;
+  /**
+   * Drop topics made only of stop words ("i", "it", "we") from the topic list, so the block names content words.
+   * Default `false` (the list is unchanged). Plan 210 Task 3.1 variant, measured once before it can ship.
+   */
+  readonly stopWords?: boolean;
 }
 
 export interface ResolvedFabricDirectoryOptions {
   readonly maxTopics: number;
   readonly maxFiles: number;
   readonly maxTokens: number;
+  readonly stopWords: boolean;
 }
 
-export const DEFAULT_DIRECTORY_OPTIONS: ResolvedFabricDirectoryOptions = Object.freeze({ maxTopics: 8, maxFiles: 10, maxTokens: 200 });
+export const DEFAULT_DIRECTORY_OPTIONS: ResolvedFabricDirectoryOptions = Object.freeze({ maxTopics: 8, maxFiles: 10, maxTokens: 200, stopWords: false });
 export const HARD_DIRECTORY_TOPICS = 50;
 export const HARD_DIRECTORY_FILES = 100;
 export const HARD_DIRECTORY_TOKENS = 500;
@@ -48,17 +54,19 @@ export function resolveFabricDirectoryOptions(
 ): false | ResolvedFabricDirectoryOptions {
   if (input === false || (input === undefined && !defaultOn)) return false;
   const config = input === true || input === undefined ? {} : input;
-  const pick = (key: keyof ResolvedFabricDirectoryOptions, hard: number): number => {
+  const pick = (key: "maxTopics" | "maxFiles" | "maxTokens", hard: number): number => {
     const value = config[key] ?? DEFAULT_DIRECTORY_OPTIONS[key];
     if (!Number.isInteger(value) || value < 1 || value > hard) {
       throw new MemoryValidationError(`directory.${key} must be an integer in [1,${hard}]`);
     }
     return value;
   };
+  if (config.stopWords !== undefined && typeof config.stopWords !== "boolean") throw new MemoryValidationError("directory.stopWords must be a boolean");
   return {
     maxTopics: pick("maxTopics", HARD_DIRECTORY_TOPICS),
     maxFiles: pick("maxFiles", HARD_DIRECTORY_FILES),
     maxTokens: pick("maxTokens", HARD_DIRECTORY_TOKENS),
+    stopWords: config.stopWords ?? DEFAULT_DIRECTORY_OPTIONS.stopWords,
   };
 }
 
@@ -131,6 +139,8 @@ export interface CreateFabricDirectoryOptions {
   readonly exclude?: (relativePath: string) => boolean;
   readonly redactor?: SecretRedactor;
   readonly secrets?: readonly (string | undefined)[];
+  /** Drop topics made only of stop words from the topic list (the `directory.stopWords` field). */
+  readonly stopWords?: boolean;
   /** The scope's subjects, most used first; the ontology tier supplies it, and without it no line is written. */
   readonly concepts?: (level: string, signal: AbortSignal | undefined) => Promise<readonly SubjectListing[]>;
 }
@@ -196,7 +206,9 @@ export function createFabricDirectory(options: CreateFabricDirectoryOptions): Fa
           return {
             level,
             counts: Object.fromEntries(DIRECTORY_NOTE_KINDS.flatMap((kind) => (counts[kind] ? [[kind, counts[kind]]] : []))),
-            topics: topics.map((topic) => ({ tag: redact(topic.tag), count: topic.count })),
+            topics: topics
+              .filter((topic) => options.stopWords !== true || lexicalTerms(topic.tag).size > 0)
+              .map((topic) => ({ tag: redact(topic.tag), count: topic.count })),
             ...(concepts.length === 0
               ? {}
               : {

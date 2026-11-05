@@ -1,7 +1,7 @@
 import { afterAll as after, describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { mkdtempSync } from "node:fs";
-import { readFile, rm } from "node:fs/promises";
+import { readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createWikiIngestTool } from "../tools/ingest.js";
@@ -34,6 +34,28 @@ describe("wiki_ingest tool", () => {
     await assert.rejects(async () => {
       await tool.execute({}, { sessionId: "s1", runId: "r1", toolCallId: "c21" });
     }, /requires exactly one of text, path, or url/);
+  });
+
+  it("wiki_ingest_tool_rejects_two_or_three_sources_before_staging", async () => {
+    const dir = mkdtempSync(join(TEST_DIR, "staging-"));
+    const tool = createWikiIngestTool({ workspaceRoot: dir, port: sourcePort(dir) });
+    const twoAndThree: Record<string, string>[] = [
+      { text: "a", url: "https://example.com/x" },
+      { text: "a", path: "a.txt", url: "https://example.com/x" },
+    ];
+    for (const args of twoAndThree)
+      await assert.rejects(async () => {
+        await tool.execute(args, { sessionId: "s1", runId: "r1", toolCallId: "c22" });
+      }, /requires exactly one of text, path, or url/);
+    assert.deepEqual(await readdir(dir), [], "nothing is staged when the source rule fails");
+  });
+
+  it("wiki_ingest_tool_schema_has_no_top_level_combinator", () => {
+    // Strict OpenAI-style gateways (OpenCode Go) refuse a root oneOf/anyOf/allOf with 400 invalid_function_parameters.
+    const tool = createWikiIngestTool({ workspaceRoot: TEST_DIR, port: sourcePort(TEST_DIR) });
+    const parameters = tool.parameters as Record<string, unknown>;
+    for (const key of ["oneOf", "anyOf", "allOf", "not", "enum"]) assert.equal(key in parameters, false, `root ${key}`);
+    assert.equal(parameters.type, "object");
   });
 
   it("wiki_ingest_tool_embeds_small_image_and_pointers_for_huge", async () => {

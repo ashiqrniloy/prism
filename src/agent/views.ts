@@ -31,7 +31,12 @@ export function skillInfos(agent: Agent): readonly SkillInfo[] {
   const owners = new Map((tryAgentRuntime(agent)?.packages.skillEntries() ?? []).map((entry) => [entry.skill.name, entry.owner]));
   return Object.freeze(
     agentSkillSource(agent).map((skill) =>
-      frozen({ name: skill.name, description: skill.description ?? "", package: owners.get(skill.name) ?? HOST }),
+      frozen({
+        name: skill.name,
+        description: skill.description ?? "",
+        ...(skill.requiresTools ? { requiresTools: Object.freeze([...skill.requiresTools]) } : {}),
+        package: owners.get(skill.name) ?? HOST,
+      }),
     ),
   );
 }

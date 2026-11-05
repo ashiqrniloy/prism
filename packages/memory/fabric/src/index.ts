@@ -343,6 +343,9 @@ const definition = definePackage<MemoryFabricConfig>({
     }
     const fabric = createMemoryFabric({
       ...fabricOptions,
+      supersessionHint: config.recall.supersessionHint,
+      queryExpansion: config.recall.expansion,
+      gather: config.recall.gather,
       vectorStore,
       ...(team === undefined ? {} : { readOnlyScopes: [{ level: "team" as const, memory: team.memory }] }),
     });
@@ -431,6 +434,7 @@ const definition = definePackage<MemoryFabricConfig>({
           source: createFabricDirectory({
             memory,
             memories,
+            stopWords: config.directory.stopWords,
             ...(ontology === undefined
               ? {}
               : { concepts: (level, signal) => ontology.subjects.listing(level as FabricScopeLevel, signal) }),
@@ -572,6 +576,8 @@ const definition = definePackage<MemoryFabricConfig>({
     // `memory.recall` additionally needs the embeddings service, which may arrive after this package.
     const tracker = createFabricCitationTracker();
     const tools = createMemoryFabricTools({
+      supersessionHint: config.recall.supersessionHint,
+      gather: config.recall.gather,
       memory,
       remember: fabric.remember,
       recall,

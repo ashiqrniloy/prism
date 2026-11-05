@@ -68,9 +68,15 @@ function exchangeUserLine(content: string): string {
 }
 
 /** One pointer card: id, event date, the user's first 120 characters, and matched query terms. */
-function injectionPointer(hit: MemoryNoteHit, queryTerms: ReadonlySet<string>): string {
-  const body = exchangeUserLine(hit.content).replace(/\s+/gu, " ").trim();
-  const text = body.length > POINTER_MAX_CHARS ? `${body.slice(0, POINTER_MAX_CHARS - 1)}…` : body;
+function injectionPointer(hit: MemoryNoteHit, queryTerms: ReadonlySet<string>, cardExcerpt: "head" | "query" = "head"): string {
+  // `query` (plan 210 Task 3.1): the same width centred on the query terms across both halves of the exchange.
+  const body = (cardExcerpt === "query" ? hit.content : exchangeUserLine(hit.content)).replace(/\s+/gu, " ").trim();
+  const text =
+    cardExcerpt === "query"
+      ? queryExcerpt(body, queryTerms, POINTER_MAX_CHARS)
+      : body.length > POINTER_MAX_CHARS
+        ? `${body.slice(0, POINTER_MAX_CHARS - 1)}…`
+        : body;
   const date = (hit.dates?.[0]?.resolved ?? hit.tRef ?? hit.ingestedAt).slice(0, 10);
   const contentTerms = lexicalTerms(text);
   const matched = [...queryTerms].filter((term) => contentTerms.has(term)).slice(0, 4);
@@ -99,6 +105,7 @@ export function fitInjection(
   eligibleCount = 0,
   minScore = DEFAULT_INJECT_MIN_SCORE,
   fullTextScore = DEFAULT_INJECT_FULL_TEXT_SCORE,
+  cardExcerpt: "head" | "query" = "head",
 ): { hits: MemoryNoteHit[]; lines: string[]; tokens: number } {
   const budgetChars = budgetTokens * 4;
   const chosen: { hit: MemoryNoteHit; line: string; rank: number }[] = [];
@@ -113,7 +120,7 @@ export function fitInjection(
     const confidence = hitConfidence(hit);
     if (confidence < minScore) continue;
     if (confidence < fullTextScore) {
-      const line = injectionPointer(hit, queryTerms);
+      const line = injectionPointer(hit, queryTerms, cardExcerpt);
       if (chars + 1 + line.length <= budgetChars) {
         chosen.push({ hit, line, rank });
         chars += 1 + line.length;

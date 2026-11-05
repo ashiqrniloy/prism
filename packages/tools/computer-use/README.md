@@ -59,7 +59,7 @@ Registers the known upstream tools, each declaring `effects: ["external"]`:
 | mutators (`activate_window`, `move_window`, `resize_window`, `scroll`, `click`, `drag`, `press_key`, `type_text`, `perform_action`, `set_value`) | `["external"]` | admitted device plus `approved`; serialized through one mutex |
 | `setup_accessibility`, `setup_window_targeting` | `["external"]` | host-only; registered only with `includeSetupTools: true` |
 
-Also registers the bundled `computer-use-linux` skill (`skills/computer-use-linux/SKILL.md`).
+Also registers the bundled `computer-use-linux` skill (`skills/computer-use-linux/SKILL.md`). It declares `requiresTools` for the sixteen always-present tools, so a request that narrows the tool list hides it, and its description opens with when to use it. The host-only setup tools are not named in its body.
 
 ## Capabilities
 

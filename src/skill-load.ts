@@ -1,9 +1,10 @@
 import { estimateTextBytes } from "./models/estimate.js";
 import type { JsonObject, Skill, SkillRegistry, ToolDefinition, ToolExecutionContext, ToolResult } from "./contracts.js";
-import { HARD_MAX_SKILL_INSTRUCTION_BYTES, type LoadedSkillSet } from "./skill-disclosure.js";
+import { HARD_MAX_SKILL_INSTRUCTION_BYTES, missingSkillTools, type LoadedSkillSet } from "./skill-disclosure.js";
 
 export const DEFAULT_LOAD_SKILL_TOOL_NAME = "load_skill" as const;
 export const SKILL_LOAD_ERROR_CODE = "skill_load_failed" as const;
+export const SKILL_UNAVAILABLE_ERROR_CODE = "skill_unavailable" as const;
 /** HARD_MAX_SKILL_INSTRUCTION_BYTES (262_144) + a 1_024-byte header allowance. */
 export const MAX_LOAD_SKILL_RESULT_BYTES = 263_168;
 /** Failure text keeps the pre-body bound so an error never fills the context. */
@@ -106,12 +107,26 @@ export function isSkillLoadError(error: unknown): error is SkillLoadError {
   return error instanceof Error && (error as { code?: unknown }).code === SKILL_LOAD_ERROR_CODE;
 }
 
+/** A registered skill whose `requiresTools` this turn does not advertise; the run continues. */
+export class SkillUnavailableError extends SkillLoadError {
+  readonly unavailableCode = SKILL_UNAVAILABLE_ERROR_CODE;
+  constructor(
+    readonly skill: string,
+    readonly missing: readonly string[],
+  ) {
+    super(`Skill ${skill} is unavailable: its required tools are not active (${missing.join(", ")})`);
+    this.name = "SkillUnavailableError";
+  }
+}
+
 export interface ResolveSkillLoadOptions {
   readonly registry: SkillRegistry;
   readonly name: string;
   readonly tools?: readonly ToolDefinition[];
   readonly loaded?: LoadedSkillSet;
   readonly activeSkillNames?: readonly string[];
+  /** The tool names this turn advertises; a skill's `requiresTools` must all be in it. Omitted: not checked. */
+  readonly advertisedToolNames?: readonly string[];
   /** The tool answers an already-loaded skill as a normal result; direct callers keep the failure. */
   readonly allowLoaded?: boolean;
 }
@@ -134,6 +149,9 @@ export function resolveSkillLoad(options: ResolveSkillLoadOptions): Skill {
   const toolNames = new Set((options.tools ?? []).map((tool) => tool.name));
   const missingTool = skill.toolNames?.find((toolName) => !toolNames.has(toolName));
   if (missingTool) throw new SkillLoadError(`Skill ${skill.name} requires inactive tool: ${missingTool}`);
+
+  const missingRequired = missingSkillTools(skill, options.advertisedToolNames && new Set(options.advertisedToolNames));
+  if (missingRequired.length > 0) throw new SkillUnavailableError(skill.name, missingRequired);
 
   if (!skill.instructions?.trim()) throw new SkillLoadError(`Skill ${skill.name} has no instructions to load`);
 
@@ -158,6 +176,8 @@ interface SkillLoadToolMetadata {
   readonly loadedSkills?: LoadedSkillSet;
   readonly activeTools?: readonly ToolDefinition[];
   readonly activeSkillNames?: readonly string[];
+  /** Names the current turn advertises (after `when`, `tools.only` and per-turn clamps). */
+  readonly advertisedToolNames?: readonly string[];
 }
 
 function skillLoadMetadata(context: ToolExecutionContext): SkillLoadToolMetadata | undefined {
@@ -221,6 +241,7 @@ export function createLoadSkillTool(options: CreateLoadSkillToolOptions): ToolDe
           tools: metadata?.activeTools ?? options.tools,
           loaded,
           activeSkillNames: metadata?.activeSkillNames,
+          advertisedToolNames: metadata?.advertisedToolNames ?? (metadata?.activeTools ?? options.tools)?.map((tool) => tool.name),
           allowLoaded: true,
         });
         const alreadyLoaded = loaded.has(skill.name);
@@ -251,6 +272,16 @@ export function createLoadSkillTool(options: CreateLoadSkillToolOptions): ToolDe
         };
       } catch (error) {
         const message = error instanceof Error ? error.message : "Skill load failed";
+        if (error instanceof SkillUnavailableError) {
+          const text = capLoadSkillText(message, MAX_LOAD_SKILL_ERROR_BYTES);
+          return {
+            toolCallId: context.toolCallId,
+            name: toolName,
+            value: { ok: false, reason: SKILL_UNAVAILABLE_ERROR_CODE, text, missing: error.missing },
+            content: [{ type: "text", text }],
+            error: { name: error.name, code: SKILL_UNAVAILABLE_ERROR_CODE, message: text },
+          };
+        }
         return fail("skill_load_failed", message);
       }
     },

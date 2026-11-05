@@ -1,5 +1,9 @@
 # @arnilo/prism-memory-fabric
 
+> **Experimental in 0.13.0.** Install with `bun add @arnilo/prism-memory-fabric@experimental`. Outside the stability promise of the stable
+> packages: its API, config, preset contents and defaults may change or be removed in any release until it graduates.
+> Graduation is the memory track's final step, which sets the first stable version.
+
 **Tier 1 of Prism's three-tier memory, and the only store of record.** Typed notes and verbatim exchanges live here;
 [`@arnilo/prism-memory-observational`](../observational/README.md) (T0) observes the session and feeds this store's
 candidate notes, and [`@arnilo/prism-memory-wiki`](../wiki/README.md) (T2, opt-in) consolidates them into cited
@@ -14,7 +18,7 @@ per-session enablement. It is the native-package successor to the 0.12
 Install explicitly. This package is not included in profile bundles until a size/use review.
 
 ```bash
-bun add @arnilo/prism-memory-fabric
+bun add @arnilo/prism-memory-fabric@experimental
 ```
 
 ## Usage
@@ -338,8 +342,8 @@ memoryFabric({
   enabled: true, // default
   retrieval: "lexical", // default; "hybrid" adds the embeddings leg
   semantic: true, // default; whether indexed notes are available
-  inject: false, // default; opt in with { query: "task" } → minSimilarity 0.2, minScore 0.2, fullTextScore 0.35, topK 12, budgetTokens 4000
-  directory: true, // default when semantic or tools.root is set; or { maxTopics: 8, maxFiles: 10, maxTokens: 200 }
+  inject: false, // default; opt in with { query: "task" } → minSimilarity 0.2, minScore 0.2, fullTextScore 0.35, cardExcerpt "head", topK 12, budgetTokens 4000
+  directory: true, // default when semantic or tools.root is set; or { maxTopics: 8, maxFiles: 10, maxTokens: 200, stopWords: false }
   core: true, // default; or { maxTokens: 600, scopes: ["user", "project"], kinds: ["fact", "preference", "procedure", "decision"] }
   cues: true, // default; or { budgetTokens: 300, maxPerTurn: 2 }
   team: false, // default; or { dir: ".prism/memory", write: "ask" } — the checked-in team store
@@ -912,6 +916,11 @@ paths relative to the root. With the markdown store the walk lists the store's o
 are redacted. The index sums every active scope and keeps each scope's counts on its own line; a
 share grant widens recall, not the index.
 
+`directory.stopWords: true` (default `false`, a tuning field) drops topics made only of stop words
+(`i`, `it`, `we`), so the topic line names content words; a phrase with a content word stays. It does
+no extra work beyond one term check per topic and changes nothing when unset. It is an opt-in variant
+of plan 210 Task 3.1 and is measured once before it can ship.
+
 When a scope has concepts (see [Ontology tier](#ontology-tier)) the block gains one line for it, after the counts and
 topics: `project concepts: 12; subjects: payments, deploy-pipeline, auth (+9)`. It names the most used subjects first
 (recorded uses, then the notes a concept cites, then name), at most eight, and counts the rest. It shares the
@@ -1450,7 +1459,7 @@ must be an active evidence note readable in the same scope (`MemoryScopeError` o
 
 With `semantic` on, `memory.recall` also searches `concept` notes (the kind enum names it); the tool never writes or
 edits one. These six names and their effects are **stable at API level 1**: a host may reference them in approval and policy
-rules. Their descriptions may change in a minor version; the names and effects do not (see `## Compatibility`).
+rules. Their descriptions may change in a minor version; the names and effects do not (see `## Compatibility`, the contract from graduation).
 
 `memory.read` accepts exactly one of `path`, `id`, `ids` (1–8), `around`, or `session`. A note read returns each note in
 full with its header — id, scope, kind, date, and the note's path — through the same scope, consent,
@@ -1484,6 +1493,31 @@ the provisional Dice floor (value-like numbers are ignored). An explicit `supers
 joins a group. Every earlier member carries `superseded by <id> on <date>?`; the question mark is
 the point: this is a hint, not a deletion or an invalidation, and the older note stays readable.
 Passive delivery shows the same marker. Ordering is stable and costs no model call.
+
+`recall: { supersessionHint: "keyed-only" }` (default `"all"`, a tuning field; plan 210 Task 3.1) limits the
+marker to members joined by a key or an explicit `supersedes` edge. Exchanges that only share subject
+terms keep the grouping and the order but lose the label, because a later conversation turn does not
+replace an earlier one the way a keyed update does. Measured on 60 LoCoMo questions the label moved
+the score by one question (38 to 39), inside noise, so the field stays opt-in until the audit measures
+it; unset, recall is byte-identical. It costs nothing per call.
+
+`recall: { expansion: true }` (default `false`, a tuning field; plan 210 Task 3.1) expands the lexical
+query with the informal and formal forms of its words from a small fixed English table in
+`lexical-expansion.ts` (`girlfriend`/`gf`, `mother`/`mom`, `photo`/`pic`, `university`/`uni`, and a few
+dozen more), so a question that says "girlfriend" reaches a note that says "gf". It makes no model or
+embedding call; the original query is kept whole and only missing alternates are appended. Because
+alternates add query terms, the relevance floor is scaled by the share of terms that were the caller's
+own, so the same threshold still means "how much of the question". A query with no table term is
+unchanged, and so is recall when the field is unset.
+
+`recall: { gather: true }` (default `false`, a tuning field; plan 210 Task 3.1) adds a boolean `gather` to
+the `memory.recall` tool for list and multi-hop questions ("the names of his dogs", "every place he has
+been"). A call with `gather: true` returns the whole matching history in one call, up to the 32-hit
+recall window, oldest first, with a snippet budget of 3,000 tokens instead of 1,200; an explicit `topK`,
+`order` or `budget` still wins. It is the same tool, scope, eligibility and trust path as a normal
+recall (a forgotten, archived-away, other-scope or quarantined note is still excluded). Cost: a gather
+call can render up to 3,000 tokens of snippet lines instead of 1,200, and only when the agent asks for
+it. With the field unset the tool schema has no `gather` property and results are byte-identical.
 
 The opt-in `state: {}` config adds one model call over the grouped, budget-selected hits and returns
 a short current-state table (`subject | current value | [id]`) in the `memory.recall` output and
@@ -1580,6 +1614,12 @@ the full exchange. A hit at or above `fullTextScore` renders as before, whole or
 cards never show the assistant reply and are always shorter than the note text; neither floor is a
 model call, and both are tuning-tier fields under `inject`. The 0.2/0.35 starting values remain to be
 calibrated on the Task 8 development screen (plan 202, then Plan 210).
+
+`inject: { cardExcerpt: "query" }` (default `"head"`, a tuning field; plan 210 Task 3.1) keeps the card's
+120-character width but centres it on the matched query terms across **both** halves of the exchange,
+so a detail past the head of the message, or in the assistant's reply, can be seen without reading the
+note. Unset, the card is byte-identical. It adds no model call and no tokens beyond the same width;
+the matched-terms tail is unchanged.
 
 **Weak tool-callers get text after two cued turns.** Adaptive delivery is on for the package and
 needs no config. It counts user turns that ask for a selection, list, count, comparison, or time
@@ -1724,7 +1764,10 @@ checks seeded note ids; it is a synthetic recall smoke check, not a public datas
 benchmark. The pinned, opt-in memory benchmark lives in
 [`scripts/memory-bench`](../../../scripts/memory-bench/README.md).
 
-## Compatibility
+## Compatibility (the contract from graduation)
+
+> This is the contract the package will keep once it graduates from the experimental line. Until then it is a statement of
+> intent, not a promise.
 
 At API level 1 a host can rely on the names, signatures, config fields, tool names, command names, note files and
 preset contracts written here for the whole `0.13.x` line and every later minor version (the same promise plan 185
@@ -1779,6 +1822,7 @@ version). `packages/memory/fabric/src/__tests__/stability.test.ts` checks this t
 | `inject.minSimilarity` | tuning |
 | `inject.minScore` | tuning |
 | `inject.fullTextScore` | tuning |
+| `inject.cardExcerpt` | tuning |
 | `inject.topK` | tuning |
 | `inject.budgetTokens` | tuning |
 | `inject.query` | contract |
@@ -1788,6 +1832,11 @@ version). `packages/memory/fabric/src/__tests__/stability.test.ts` checks this t
 | `directory.maxTopics` | tuning |
 | `directory.maxFiles` | tuning |
 | `directory.maxTokens` | tuning |
+| `directory.stopWords` | tuning |
+| `recall` | contract |
+| `recall.supersessionHint` | tuning |
+| `recall.expansion` | tuning |
+| `recall.gather` | tuning |
 | `core` | contract |
 | `core.maxTokens` | tuning |
 | `core.scopes` | contract |

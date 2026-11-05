@@ -91,11 +91,11 @@ Pass it to `createAgent({ packages: [...] })` next to the others. [docs/packages
 | `@arnilo/prism-mcp` | 0.13.0 | capability — MCP client package: connects allowed servers, bridges their tools, and exposes mcp:status/reconnect/close |
 | `@arnilo/prism-mcp-server` | 0.13.0 | library — host library serving Prism tools, resources, and prompts over MCP (stdio and Streamable HTTP transports) |
 | `@arnilo/prism-memory-compaction` | 0.13.0 | capability |
-| `@arnilo/prism-memory-core` | 0.13.0 | library — shared memory contracts, vector stores, lineage, propagation, and scoring; no slot and no capability |
-| `@arnilo/prism-memory-fabric` | 0.13.0 | capability — T1 of the three-tier memory, the store of record: working, semantic, and scoped notes with the memory.* tools, a context block, and per-session state |
-| `@arnilo/prism-memory-observational` | 0.13.0 | capability — T0 of the three-tier memory: observes the session, keeps a source-backed ledger, and compacts from it |
-| `@arnilo/prism-memory-rag` | 0.13.0 | capability — indexed retrieval with a rag_search tool, an opt-in context block, and the embeddings service |
-| `@arnilo/prism-memory-wiki` | 0.13.0 | capability — T2 of the three-tier memory, opt-in and unmeasured: concept notes over the fabric, consolidated from cited evidence |
+| `@arnilo/prism-memory-core` | 0.13.0-experimental.0 | library — shared memory contracts, vector stores, lineage, propagation, and scoring; no slot and no capability |
+| `@arnilo/prism-memory-fabric` | 0.13.0-experimental.0 | capability — T1 of the three-tier memory, the store of record: working, semantic, and scoped notes with the memory.* tools, a context block, and per-session state |
+| `@arnilo/prism-memory-observational` | 0.13.0-experimental.0 | capability — T0 of the three-tier memory: observes the session, keeps a source-backed ledger, and compacts from it |
+| `@arnilo/prism-memory-rag` | 0.13.0-experimental.0 | capability — indexed retrieval with a rag_search tool, an opt-in context block, and the embeddings service |
+| `@arnilo/prism-memory-wiki` | 0.13.0-experimental.0 | capability — T2 of the three-tier memory, opt-in and unmeasured: concept notes over the fabric, consolidated from cited evidence |
 | `@arnilo/prism-model-router` | 0.13.0 | capability — policy around hook routing turns across candidates with budget, circuit, and rate-limit controls |
 | `@arnilo/prism-observability` | 0.13.0 | capability — OpenTelemetry spans and metrics over the agent event catalog as observe handlers; exports nothing itself |
 | `@arnilo/prism-remote` | 0.13.0 | library — host library serving a Prism agent to remote clients and connecting to remote agents over prism.remote/1 |
@@ -112,6 +112,8 @@ Pass it to `createAgent({ packages: [...] })` next to the others. [docs/packages
 | `@arnilo/prism-tools-work` | 0.13.0 | capability — /connectors, /documents, /sheets, /diagrams, /document-extraction, /document-reader, /sandbox, /skills, /tools subpaths |
 | `@arnilo/prism-workflows` | 0.13.0 | library — typed graph workflows (DAG and cyclic) that orchestrate any set of agents from outside their sessions: checkpoints, suspend/resume, replay, graph export, and the `checkpoints`/`leases` service contracts |
 <!-- generated:package-truth:inventory end -->
+
+**Experimental memory.** `@arnilo/prism-memory-{core, observational, fabric, wiki, rag}` ship as `0.13.0-experimental.N` on the `experimental` dist-tag (`bun add @arnilo/prism-memory-fabric@experimental`), outside the stability promise of the stable packages, and no stable package or default agent depends on them. `@arnilo/prism-memory-compaction` is stable.
 
 ## Scripts
 

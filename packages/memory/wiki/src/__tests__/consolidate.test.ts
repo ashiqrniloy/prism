@@ -214,6 +214,17 @@ describe("concept pass: triggers", () => {
     assert.equal(plan.find((item) => item.kind === "cluster")?.noteIds.length, 3);
   });
 
+  it("notes_remembered_without_keywords_still_form_an_unbound_cluster", async () => {
+    const env = setup();
+    const base = { minNotes: 3, minCoReads: 2, declined: new Set<string>() };
+    // No keywords passed: the fabric derives the archive path's keywords, so a shared entity clusters them.
+    for (const text of ["Harare is the capital of France.", "Harare hosts the summit.", "The flight lands in Harare."])
+      await env.note(text);
+    const plan = await planScope(env.port, "project", { ...base, triggers: ["accumulation"] });
+    const cluster = plan.find((item) => item.kind === "cluster");
+    assert.equal(cluster?.noteIds.length, 3);
+  });
+
   it("trigger_policy_config_never_drops_repair", async () => {
     assert.deepEqual(resolveTriggers(undefined), WIKI_TRIGGERS);
     assert.deepEqual(resolveTriggers([]), ["repair"]);

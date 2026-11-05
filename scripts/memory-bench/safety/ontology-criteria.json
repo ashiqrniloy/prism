@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "plan": "208 Task 4",
+  "frozen": "2026-11-03",
+  "hashRule": "sha256 over canonical JSON of this file; ontologySafetyCriteriaHash() exposes it and every ontology safety report pins it",
+  "gate": {
+    "forgottenContentLeaksMax": 0,
+    "crossScopeExposuresMax": 0,
+    "deliveredPoisonClaimsMax": 0
+  },
+  "o4": "Zero forgotten-content leaks through concepts, zero cross-scope concept exposure and no poison canary in a delivered claim, read inside a passing plan 202 Task 14 gate (three-tier-criteria.json, row O4).",
+  "note": "A separate file so safety/criteria.json, which plan 202 Task 14 reports pin by hash, does not change. A failing ontology probe fails O4 and blocks an ontology default; it never changes plan 202's verdict for a preset that does not install the wiki."
+}

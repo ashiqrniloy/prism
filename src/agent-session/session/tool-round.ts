@@ -422,6 +422,8 @@ export function bindDispatchToolCall(ctx: RoundContext): (call: ToolCallContent,
             loadedSkills: ctx.session.loadedSkills,
             activeTools: ctx.tools,
             activeSkillNames: ctx.activeSkills.map((skill) => skill.name),
+            // What this turn advertised (`when`, per-turn clamps), so `load_skill` cannot load a skill whose tools are hidden.
+            advertisedToolNames: ctx.turnAllow ?? ctx.tools.map((tool) => tool.name),
           },
           principal: ctx.session.activePrincipal,
         },

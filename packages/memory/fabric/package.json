@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-memory-fabric",
-  "version": "0.13.0",
+  "version": "0.13.0-experimental.0",
   "description": "Working, semantic, and scoped memory for Prism agents: the memory.* tools, a context block, and per-session state, plus the family's cross-package integration suites.",
   "type": "module",
   "exports": {
@@ -29,8 +29,8 @@
     }
   },
   "dependencies": {
-    "@arnilo/prism-memory-core": "^0.13.0",
-    "@arnilo/prism-memory-observational": "^0.13.0"
+    "@arnilo/prism-memory-core": "0.13.0-experimental.0",
+    "@arnilo/prism-memory-observational": "0.13.0-experimental.0"
   },
   "devDependencies": {
     "@arnilo/prism-memory-rag": "file:../rag",

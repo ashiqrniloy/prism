@@ -158,6 +158,26 @@ the current run; skills from earlier runs leave the loaded set and appear in one
 those names again returns its full body. Eager disclosure still renders every body each turn and
 does not register `load_skill`.
 
+### Skills that need tools
+
+A skill can declare `requiresTools` (frontmatter `metadata.prism-requires-tools: web_search web_fetch`,
+space-separated). The kernel lists, renders, re-attaches and loads it only on a request whose
+advertised tools include every name. That is the tool list the provider receives, so a tool removed by
+`disable.tools`, narrowed away by `RunOptions.tools.only` or a per-turn clamp, or hidden by a package
+tool's `when` predicate (a predicate that throws counts as hidden) takes its skills with it, for that
+turn only. A hidden skill takes no catalog slot and is not counted in `(N more skills are installed but
+not listed.)`. `requiresTools` grants no tool.
+
+`load_skill` on a registered skill whose tools are missing returns a tool error with code
+`skill_unavailable` that names them, and the run continues. After compaction, a loaded skill that is
+unavailable is not re-attached; it is named in the "Previously loaded skills" line and stays loaded, so
+its body returns once the tools do.
+
+It differs from `Skill.toolNames`, which fails the run (`Skill X requires inactive tool: Y`) when a
+tool is not active. `requiresTools` is all-of; "either of two tools" is not expressible.
+`agent.skills`, `inspect().skills` and `PackageAPI.skills.list()` list every registered skill with its
+`requiresTools`, so a host can see why one is not offered.
+
 ## Extension and configuration notes
 
 - Kernel tools are annotated: `load_skill` and `search_tools` are `["read"]`.

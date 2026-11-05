@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-03T05:19:00.256Z",
+  "generatedAt": "2026-11-04T18:48:08.308Z",
   "root": {
     "name": "@arnilo/prism",
     "version": "0.13.0"
@@ -25,11 +25,11 @@
     "@arnilo/prism-workflows": "0.13.0",
     "@arnilo/prism-advisor": "0.13.0",
     "@arnilo/prism-memory-compaction": "0.13.0",
-    "@arnilo/prism-memory-observational": "0.13.0",
-    "@arnilo/prism-memory-core": "0.13.0",
-    "@arnilo/prism-memory-rag": "0.13.0",
-    "@arnilo/prism-memory-fabric": "0.13.0",
-    "@arnilo/prism-memory-wiki": "0.13.0",
+    "@arnilo/prism-memory-observational": "0.13.0-experimental.0",
+    "@arnilo/prism-memory-core": "0.13.0-experimental.0",
+    "@arnilo/prism-memory-rag": "0.13.0-experimental.0",
+    "@arnilo/prism-memory-fabric": "0.13.0-experimental.0",
+    "@arnilo/prism-memory-wiki": "0.13.0-experimental.0",
     "@arnilo/prism-approval": "0.13.0",
     "@arnilo/prism-guardrail-packs": "0.13.0",
     "@arnilo/prism-governance": "0.13.0",

@@ -30,7 +30,8 @@
       "directory": {
         "maxTopics": 8,
         "maxFiles": 10,
-        "maxTokens": 200
+        "maxTokens": 200,
+        "stopWords": false
       },
       "core": {
         "maxTokens": 600,
@@ -112,6 +113,11 @@
         "bindThreshold": 2,
         "conceptPrior": 0.1,
         "maxClaimsRendered": 8
+      },
+      "recall": {
+        "supersessionHint": "all",
+        "expansion": false,
+        "gather": false
       },
       "promote": {
         "enabled": false,

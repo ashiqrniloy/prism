@@ -55,6 +55,7 @@ function isRecord(path: string): boolean {
     /^scripts\/phase\d+/.test(path) || // frozen phase freeze records and tests
     path === "scripts/budgets.json" || // historical rationale prose
     path === "scripts/deprecations-0.13.json" ||
+    path === "scripts/retired-tool-names.json" || // the retired tool-name inventory (plan 215 Task 7)
     path === "scripts/unused-report.json" ||
     path === "scripts/unused-sweep-report.txt" ||
     /^scripts\/compat-baseline\/arnilo__prism(-memory|-wiki)?\.txt$/.test(path) || // the 0.12 family baselines

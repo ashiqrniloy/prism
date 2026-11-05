@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-memory-observational",
-  "version": "0.13.0",
+  "version": "0.13.0-experimental.0",
   "description": "Observational memory for Prism: a package that observes the session in the background, keeps a source-backed ledger, recalls evidence by id, and compacts from memory instead of the raw transcript.",
   "type": "module",
   "exports": {

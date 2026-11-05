@@ -1,6 +1,6 @@
 ---
 name: research-synthesis
-description: Group kept sources into claims. Use after triage, before the report.
+description: Use after triage and before the report. Groups the kept sources into claims, each tied to ledger ids.
 ---
 
 # Research synthesis

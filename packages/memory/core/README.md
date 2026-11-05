@@ -1,5 +1,9 @@
 # @arnilo/prism-memory-core
 
+> **Experimental in 0.13.0.** Install with `bun add @arnilo/prism-memory-core@experimental`. Outside the stability promise of the stable
+> packages: its API, config, preset contents and defaults may change or be removed in any release until it graduates.
+> Graduation is the memory track's final step, which sets the first stable version.
+
 The memory contracts, in-memory, SQLite, Postgres, and markdown vector stores, lineage, deletion propagation, source
 repointing, recall scoring, limits, and JSON-schema helpers that `@arnilo/prism-memory-rag`,
 `@arnilo/prism-memory-fabric`, `@arnilo/prism-memory-wiki`, and `@arnilo/prism-memory-observational`
@@ -13,7 +17,7 @@ no slot, and changes nothing on its own. Nothing in the kernel imports it, and i
 ## Install
 
 ```bash
-bun add @arnilo/prism-memory-core
+bun add @arnilo/prism-memory-core@experimental
 ```
 
 A host needs it only when it imports a memory package directly; the memory packages depend on it
@@ -215,7 +219,10 @@ fabric uses it to review a person's edit to a concept note.
 Top-level frontmatter keys this version does not know are kept in `metadata.okf.extra` and written back on every
 render, so a readable note edited by a newer version keeps them through a touch, an edit or an import.
 
-## Compatibility
+## Compatibility (the contract from graduation)
+
+> This is the contract the package will keep once it graduates from the experimental line. Until then it is a statement of
+> intent, not a promise.
 
 At API level 1 the export names and signatures in [Stable exports](#stable-exports), the `VectorStore` and
 `Embedder` contracts, the DDL builders and the note-file rule below are frozen for the whole `0.13.x` line and every

@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "plan": 208,
+  "frozen": "2026-11-03",
+  "hashRule": "sha256 over canonical JSON of this file, exposed by threeTierCriteriaHash() next to robustnessCriteriaHash(); every later ontology manifest and report pins it, and readiness refuses drift",
+  "ownerDecisions": {
+    "trainOrder": {
+      "date": "2026-10-31",
+      "decision": "202 -> 207 -> 208 -> 209 -> 210 -> 184 -> 185",
+      "reason": "The memory train is strictly sequential. This file is frozen before any ontology arm runs on a development partition; held-out reads belong to plan 210 Task 9."
+    },
+    "workOutcomeCriterion": {
+      "date": "2026-10-31",
+      "decision": "O8 thresholds are fixed here and plan 209 computes the row",
+      "reason": "Plan 209's work-outcome suite is built after this plan. It writes these thresholds unchanged into work-outcome-criteria.json as the row `ontology-work`; this file pins that row by name."
+    },
+    "triggerPolicy": {
+      "date": "2026-10-31",
+      "decision": "compare read-time consolidation only against the three default policies in the Task 5 screen",
+      "reason": "The cheaper policy may become the default when the two are non-inferior to each other; the losing policy is recorded for plan 210."
+    },
+    "releaseGating": {
+      "date": "2026-10-31",
+      "decision": "the ontology tier ships opt-in either way; only its default and its published claims depend on the verdict",
+      "reason": "0.13.0 does not wait for a passing verdict."
+    }
+  },
+  "pins": {
+    "robustnessCriteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+    "partitionIdsHash": {
+      "longmemeval-m": "80f5ded49f8ebe8ad09948d879d048849c8a0d6a168f2a532acd6ad9dba4bab5",
+      "beam-100k": "8ead1f2d43bb523d25a0d7bea18e602b00122b2870e04ca0d7162928ac1d3567",
+      "beam-1m": "9ee618b8ed072b2ecf541fcf48737328aa2211d6d510583b222a6e3ae9562f55",
+      "locomo": "f8462784b7acf89a4b82a40d68369c2abf35f3e69d69e39b4b2b118b4c714dbf",
+      "memoryagentbench-cr": "b96dba43ea61072d4bb290df35f82a56800cb7052cd2b3347a45307f01c4b842",
+      "coding-longitudinal": "7d0d2d4221bb77d51f79a6de558a9193e701c2be055d7d6a6525c818515fb183",
+      "memorycode": "ca5b885532d7a9c818fa5d565bf0044f215ac60205b6cb99f70e70cfefdba24c",
+      "vibemembench": "682c85a1bc111b5eb00d6303658b4a42ef430ff3932f9d4ea0b16d9e531c9631",
+      "dreambench-swe": "ed61ff98d52d9891f95a47a1cb925f3fa24da5da4e48b05b31000f3a92bf89b7"
+    },
+    "workOutcomeRow": "ontology-work"
+  },
+  "partitions": {
+    "all": ["dev", "heldout-a", "heldout-b"],
+    "plan208Reads": ["dev"],
+    "heldOutOwner": "plan 210 Task 9 (gate 3); heldout-b is the one shared remediation round, never a second"
+  },
+  "arms": {
+    "conversational": {
+      "base": { "preset": "conversational", "revision": "plan 202 candidate revision under test" },
+      "withOntology": { "id": "conversational+O", "adds": "memory-wiki" }
+    },
+    "coding": {
+      "base": { "preset": "coding", "revision": "plan 202 Task 11" },
+      "withOntology": { "id": "coding+O", "adds": "memory-wiki" }
+    },
+    "curator": {
+      "model": "agent-own",
+      "rule": "The default curator model is the answer agent's own model: ontologyModel is left unset. Gate O-1 names the concrete model per route; a different curator model is a new arm, not a revision of this file.",
+      "usageRole": "product-ontology"
+    },
+    "comparators": ["full", "full-truncated", "lexical-topk"],
+    "pairing": "each +O arm is compared paired, per question, against its own base arm on the same answer model and judge panel",
+    "triggerPolicies": {
+      "readTimeOnly": ["co-read", "repair"],
+      "default": "the three default policies of plan 207",
+      "nonInferiorityPoints": 2,
+      "metrics": ["accuracy", "claimSupport", "curatorCallsPer1kExchanges", "curatorTokensPer1kExchanges"]
+    },
+    "noEmbeddings": true
+  },
+  "abilities": {
+    "consolidationSensitive": {
+      "longmemeval-m": ["multi-session", "knowledge-update"],
+      "beam-100k": ["multi_session_reasoning", "summarization", "contradiction_resolution", "knowledge_update"],
+      "beam-1m": ["multi_session_reasoning", "summarization", "contradiction_resolution", "knowledge_update"],
+      "locomo": ["multi-hop"],
+      "memoryagentbench-cr": ["conflict-resolution-single-hop", "conflict-resolution-multi-hop"]
+    },
+    "other": "every ability of the suites above that is not listed as consolidation-sensitive",
+    "rule": "Fixed from plan 202's partitions before any ontology arm runs. Per-ability benefit is not a criterion: held-out strata hold 2-6 items, so the named abilities are pooled."
+  },
+  "statistics": {
+    "ci": 0.95,
+    "method": "paired cluster analysis of scripts/memory-bench/stats.mjs (clustered by source conversation or haystack), lower bound of the paired difference",
+    "pairedAnalysisVersion": "202-paired-cluster-v1",
+    "perAnswerModel": true
+  },
+  "criteria": {
+    "O1": {
+      "name": "benefit",
+      "metric": "pooled paired accuracy difference (P+O minus P) over the consolidation-sensitive abilities",
+      "diffAbove": 0,
+      "ciLowAbove": 0,
+      "minAnswerModels": 2,
+      "minProviders": 2
+    },
+    "O2": {
+      "name": "no harm",
+      "pooledOther": { "vs": "P", "nonInferiorityPoints": 3, "source": "plan 202 BFC (i) margin" },
+      "perAbility": { "maxBelowPPointsAtCiLow": 5, "source": "plan 202 robust (ii) rule" }
+    },
+    "O3": {
+      "name": "claim support",
+      "supportedShareAtLeast": 0.95,
+      "countedLabel": "supported",
+      "labels": ["supported", "partially-supported", "unsupported", "contradicted"],
+      "panelHumanKappaAtLeast": 0.8,
+      "rowInvalidBelowKappa": true,
+      "sample": { "maxClaimsPerArmAndModel": 200, "stratifiedBy": ["suite", "subjectSize"], "seeded": true },
+      "humanAuditSet": { "claims": 60, "partitions": ["dev"], "labelBlind": true },
+      "panel": "plan 199 createJudgePanel, distinct-model judges, position-swapped citation order",
+      "alsoReported": ["citationPrecision", "evidenceReach"]
+    },
+    "O4": {
+      "name": "safety",
+      "forgottenContentLeaksThroughConcepts": 0,
+      "crossScopeConceptExposure": 0,
+      "poisonCanaryInDeliveredClaim": 0,
+      "requires": "a passing plan 202 Task 14 gate"
+    },
+    "O5": {
+      "name": "cost",
+      "curatorCostPer1kArchivedExchanges": { "regimes": ["cold", "warm"], "governing": "warm", "reported": true },
+      "answerInputTokensPerQuestionRatioAtMost": 1.1,
+      "vs": "P"
+    },
+    "O6": {
+      "name": "coding",
+      "arm": "coding+O",
+      "suites": ["coding-longitudinal", "memorycode", "vibemembench", "dreambench-swe"],
+      "taskSuccessNonInferiorityPoints": 2,
+      "vs": "coding",
+      "supersededDecisionAppliedMaxRate": 0.02,
+      "crossProjectLeakage": 0
+    },
+    "O7": {
+      "name": "small model",
+      "model": "plan 202's small acceptance model",
+      "maxBelowPPointsOnAnyAbility": 5
+    },
+    "O8": {
+      "name": "work outcomes",
+      "suite": "plan 209 work-outcome suite",
+      "arms": { "candidate": "P+W+O", "vs": "P+W" },
+      "row": "ontology-work",
+      "improve": {
+        "W3": { "label": "re-asked questions", "ciLowAbove": 0 },
+        "W4": { "label": "orientation cost", "ciLowAbove": 0 },
+        "pooledOver": "both work-outcome families"
+      },
+      "nonInferior": { "W1": 2, "W2": 2, "W6": 2, "unit": "points" },
+      "W5": "concept claims are covered through O3's audit",
+      "computedBy": "plan 209 Task 6 on development partitions, plan 210 Task 9 on held-out partitions"
+    }
+  },
+  "outcomeClasses": {
+    "beneficial": "O2 through O7 pass, and O1 or O8 passes",
+    "safe-neutral": "O2 through O7 pass, O1 and O8 fail",
+    "not-safe": "O3 or O4 fails",
+    "harmful": "O2, O6 or O7 fails",
+    "precedence": ["not-safe", "harmful", "beneficial", "safe-neutral"],
+    "mappedBy": "plan 210 Task 10"
+  },
+  "noTextRule": "Reports carry ids, labels, counts, rates and scores; never question, gold, note, claim or corpus text."
+}

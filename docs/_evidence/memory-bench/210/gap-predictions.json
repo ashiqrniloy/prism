@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "plan": 210,
+  "task": "3.1",
+  "note": "Predictions are scored by Task 5; no variant is on by default before Task 6.",
+  "predictions": [
+    {
+      "feature": "directory.stopWords",
+      "verdict": "measure-elsewhere",
+      "change": "topic list drops stop-word-only topics",
+      "metric": "injected tokens in the directory block",
+      "suite": "locomo/dev",
+      "predicted": "no accuracy change; fewer wasted tokens (hygiene, cost-justified only)"
+    },
+    {
+      "feature": "recall.supersessionHint",
+      "verdict": "fix-and-measure",
+      "change": "keyed-only",
+      "metric": "correct answers",
+      "suite": "locomo/dev",
+      "predicted": "within +-1 of 60 (measured +1 of 60 when the label was stripped); ledger verdict decides"
+    },
+    {
+      "feature": "inject.cardExcerpt",
+      "verdict": "fix-and-measure",
+      "change": "query",
+      "metric": "correct answers",
+      "suite": "locomo/dev",
+      "predicted": ">= +1 of 60, with the injected token change per question reported"
+    },
+    {
+      "feature": "recall.expansion",
+      "verdict": "fix-and-measure",
+      "change": "expansion table on",
+      "metric": "never-candidate wrong answers",
+      "suite": "locomo/dev",
+      "predicted": "4 -> <= 2 of 60, no loss on memoryagentbench-cr or beam-100k"
+    },
+    {
+      "feature": "recall.gather",
+      "verdict": "fix-and-measure",
+      "change": "gather on, agent may call it",
+      "metric": "multi-hop correct answers",
+      "suite": "locomo/dev",
+      "predicted": "3 -> >= 5 of 12; beam-100k event_ordering and summarization evidence rounds recalled up by >= 1 per question"
+    },
+    {
+      "feature": "early-give-up",
+      "verdict": "measure-elsewhere",
+      "change": "none proposed",
+      "metric": "answers that say the information is missing while the gold evidence was shown",
+      "suite": "locomo/dev + beam-100k/dev",
+      "predicted": "counted in docs/_evidence/memory-bench/208/accuracy-investigation-2026-11-04.json; a fix is proposed in Task 3 only if a product cause shows"
+    }
+  ]
+}

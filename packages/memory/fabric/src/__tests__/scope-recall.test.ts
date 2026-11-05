@@ -203,7 +203,7 @@ describe("fabric union recall (plan 188.2 Task 4)", () => {
     await fabric.remember({ kind: "preference", content: "Prefer weekly deploys", scope: "user", keywords: ["cadence"] });
 
     const directory = createFabricDirectory({ memory: project, memories: bindings });
-    const rendered = renderFabricDirectory(await directory.snapshot(), { maxTopics: 8, maxFiles: 10, maxTokens: 200 });
+    const rendered = renderFabricDirectory(await directory.snapshot(), { maxTopics: 8, maxFiles: 10, maxTokens: 200, stopWords: false });
     assert.ok(rendered);
     assert.match(rendered.content, /^project: 1 fact; topics: deploy \(1\)/m);
     assert.match(rendered.content, /^user: 1 preference; topics: cadence \(1\)/m);

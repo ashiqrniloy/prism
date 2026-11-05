@@ -1,5 +1,9 @@
 # @arnilo/prism-memory-wiki
 
+> **Experimental in 0.13.0.** Install with `bun add @arnilo/prism-memory-wiki@experimental`. Outside the stability promise of the stable
+> packages: its API, config, preset contents and defaults may change or be removed in any release until it graduates.
+> Graduation is the memory track's final step, which sets the first stable version.
+
 **Tier 2 of Prism's three-tier memory.** [`@arnilo/prism-memory-observational`](../observational/README.md) (T0) observes the session, [`@arnilo/prism-memory-fabric`](../fabric/README.md) (T1) keeps the notes as the single store of record, and this package consolidates those notes into concepts without storing anything of its own. An agent reads a concept first through `memory.recall` and drills down to the notes it cites. The [example](../../../examples/three-tier-memory.ts) runs all three.
 
 The ontology tier for Prism memory: installing it adds one `concept` note per subject over the fabric's notes, each claim citing the evidence it rests on.
@@ -9,7 +13,7 @@ The ontology tier for Prism memory: installing it adds one `concept` note per su
 ## Install
 
 ```bash
-prism add @arnilo/prism-memory-wiki
+prism add @arnilo/prism-memory-wiki --version 0.13.0-experimental.0
 ```
 
 ```jsonc
@@ -44,7 +48,7 @@ Unknown fields are rejected, so a 0.12 config fails at load. The 0.12 fields are
   - *When it runs.* It is checked when a session opens and every `consolidate.minIntervalTurns` completed turns, inside `session.background("wiki.consolidate")`, under one lease per memory scope. A check with nothing due makes no model call.
   - *What makes work due.* Three policies, per `user` and `project` scope:
     - **co-read** (primary): notes the agent read and used together in at least `minCoReads` answering turns. When they share a subject, that subject is due; when none is bound, they are a new-subject candidate. The memory that was just used is the one updated.
-    - **accumulation**: a bound subject with `minNotes` notes its concept does not cite yet, or `minNotes` unbound notes sharing an enrichment keyword.
+    - **accumulation**: a bound subject with `minNotes` notes its concept does not cite yet, or `minNotes` unbound notes sharing an enrichment keyword. A note stored without keywords (a plain `remember` call) is clustered by the archive path's deterministic keywords of its text, so it is not left out.
     - **repair** (always): a concept whose claims lost or changed a citation.
   - *What one call does.* One model call per due subject or cluster, through the fabric's worker loop, with one tool, `edit_concept`. The input is the concept's claims with ids, its relations and open questions, up to 24 new notes (newest first), and the scope's subject list.
   - *The edits.* `create_subject`, `bind`, `add_claim`, `update_claim`, `retire_claim`, `merge_claims`, `add_relation`, `add_open_question` and `note_contradiction`. There is no operation that rewrites a concept. Every claim and question cites at least one shown note, a claim is at most 280 characters, and `merge_claims` cites exactly the union of the claims it merges.

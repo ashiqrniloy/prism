@@ -7,12 +7,12 @@ export const WORK_SKILL_NAMES = ["docx", "xlsx", "powerpoint", "pdf"] as const;
 export type WorkSkillName = (typeof WORK_SKILL_NAMES)[number];
 export const MAX_SKILL_FILE_BYTES = 64 * 1024;
 
-export const WORK_SKILL_TOOLS = {
-  docx: ["office_parse", "office_generate", "office_patch", "office_import"],
-  xlsx: ["office_parse", "office_generate", "office_patch", "office_import"],
-  powerpoint: ["office_parse", "office_generate", "office_patch", "office_import"],
-  pdf: ["office_parse", "office_import"],
-} as const;
+/**
+ * What the vendored Hermes skills need. They teach `python`, `openpyxl`, `python-docx`, `pypdf` and `soffice`
+ * run through the sandbox, and never name an `office_*` tool, so the one tool they depend on is `work_exec`.
+ * Declared here, in code, so the vendored bytes stay untouched and pinned to `vendor-lock.json`.
+ */
+export const WORK_SKILL_REQUIRES_TOOLS = ["work_exec"] as const;
 
 export interface LoadWorkSkillsOptions {
   readonly vendorRoot?: string;
@@ -20,6 +20,7 @@ export interface LoadWorkSkillsOptions {
 
 const DEFAULT_VENDOR_ROOT = fileURLToPath(new URL("../../vendor/hermes-agent", import.meta.url));
 
+/** The four vendored office skills, each declaring `requiresTools: work_exec`, so a request without the sandbox tool hides them. */
 export function loadWorkSkills(options: LoadWorkSkillsOptions = {}): Skill[] {
   const root = options.vendorRoot ?? DEFAULT_VENDOR_ROOT;
   return WORK_SKILL_NAMES.map((name) => loadOne(root, name));
@@ -38,5 +39,5 @@ function loadOne(root: string, name: WorkSkillName): Skill {
   if (!skill.description || !skill.instructions) {
     throw new Error(`work skill ${name} missing description or instructions`);
   }
-  return { ...skill, toolNames: [...WORK_SKILL_TOOLS[name]] };
+  return { ...skill, requiresTools: [...WORK_SKILL_REQUIRES_TOOLS] };
 }

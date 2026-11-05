@@ -26,7 +26,7 @@ wraps in its envelope (`docs/tools.md`). `work_exec` runs an argv command inside
 
 The bounded document reader is **not** a tool: it is provided as the `work.reader` service so `@arnilo/prism-tools-coding`'s `read` tool can consume it.
 
-The vendored Hermes MIT skills (`docx`, `xlsx`, `powerpoint`, `pdf`) are added from `vendor/hermes-agent/skills/productivity` through `prism.skills.addDir`.
+The vendored Hermes MIT skills (`docx`, `xlsx`, `powerpoint`, `pdf`) are registered by `loadWorkSkills()` from `vendor/hermes-agent/skills/productivity`, each declaring `requiresTools: work_exec` (`WORK_SKILL_REQUIRES_TOOLS`). They teach `python`, `openpyxl`, `python-docx`, `pypdf` and `soffice` run through the sandbox and never name an `office_*` tool, so a request without `work_exec` (no `work.sandbox` service) hides them. The vendored bytes are unchanged and pinned by `vendor-lock.json`; their 9.6-12.5 KB bodies are the one recorded size exception to the package-skill body cap.
 
 ## Config
 

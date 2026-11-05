@@ -42,7 +42,8 @@ export interface InspectedHook {
 export interface AgentInspection {
   readonly packages: readonly InspectedPackage[];
   readonly tools: readonly InspectedContribution[];
-  readonly skills: readonly InspectedContribution[];
+  /** Every registered skill, including one a request hides; `requiresTools` says why it can be hidden. */
+  readonly skills: readonly (InspectedContribution & { readonly requiresTools?: readonly string[] })[];
   readonly commands: readonly InspectedContribution[];
   /** Per hook name, registrations in execution order. Per-session pack hooks are not listed. */
   readonly hooks: Readonly<Record<string, readonly InspectedHook[]>>;
@@ -107,7 +108,11 @@ export function inspectAgent(agent: Agent, sources: InspectSources): AgentInspec
     })),
     // The same merged view as `agent.tools` / `agent.skills`.
     tools: toolInfos(agent).map(({ name, package: owner }) => ({ name, package: owner })),
-    skills: skillInfos(agent).map(({ name, package: owner }) => ({ name, package: owner })),
+    skills: skillInfos(agent).map(({ name, package: owner, requiresTools }) => ({
+      name,
+      package: owner,
+      ...(requiresTools ? { requiresTools } : {}),
+    })),
     commands: packages.commands().map((entry) => ({ name: entry.name, package: entry.package })),
     hooks: hookMap,
     slots: Object.fromEntries(SLOT_NAMES.map((slot) => [slot, slots.ownerOf(slot, assigned[slot] as never)])) as Record<SlotName, string>,

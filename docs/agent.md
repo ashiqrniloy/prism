@@ -56,6 +56,10 @@ later `load_skill` returns their full body again. A run resumed from a checkpoin
 checkpoint's run, so its restored bodies re-attach as current. The cost is one body copy per load,
 plus one re-attach after a compaction for current-run skills only.
 
+A skill with `requiresTools` is offered only on a request whose advertised tools include all of them;
+`load_skill` on one that is not returns a `skill_unavailable` tool error and the run continues. See
+[Skills that need tools](tools.md#skills-that-need-tools).
+
 `RunOptions.tools.only` narrows the tool set for one run; an unknown name fails closed, and a
 durable resume intersects the list with the checkpointed grant (the stored wire field keeps the
 name `toolNames`).

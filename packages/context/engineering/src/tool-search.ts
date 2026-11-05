@@ -95,7 +95,7 @@ function tokenize(text: string): string[] {
 }
 
 /** ponytail: O(n·d) lexical index, rebuilt on registry change by the caller — embedder-backed
- *  scoring via the @arnilo/prism-memory-rag seam if accuracy fixtures fall short (plan 041). */
+ *  scoring through a host-supplied embedder if accuracy fixtures fall short (plan 041). */
 export function createToolSearchIndex(tools: readonly ToolDefinition[], skip?: (tool: ToolDefinition) => boolean): ToolSearchIndex {
   if (tools.length > HARD_MAX_TOOLS_INDEX) {
     throw new ToolDisclosureError(`Tool index exceeds hard cap (${HARD_MAX_TOOLS_INDEX} tools)`);

@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+- **Experimental in 0.13.0 (plan 215 Task 4).** The README opens with the experimental notice: install with `bun add @arnilo/prism-memory-wiki@experimental`, outside the stability promise of the stable packages, and the API, config, preset contents and defaults may change or be removed in any release until the package graduates.
+
+### Fixed
+
+- Notes stored without keywords now form unbound keyword clusters: the fabric port supplies the archive path's deterministic keywords for them (plan 208 Task 5). Before, a plain `remember` note never reached the accumulation trigger.
+
 ### Added
 
 - Source ingest into the ontology (plan 207 Task 8): `wiki_ingest` and `wiki:ingest` stage the original and a UTF-8 extract under `<tools.root>/sources/<utc>-<slug>/` and index the extract as a fabric `file` note in the `project` scope, through the `memory.fabric` port's new `indexSource`. The note carries title and frequent-word keywords, so the fabric binds it to the one subject that fits (marking that concept for the next pass) and an unbound source clusters. An ingested source counts as `consolidate.minNotes` notes toward the accumulation trigger, so one source is due on its own. The result gains `noteId`, `scope`, `indexed`, `subject` and `refused`; claims cite `noteId`, and forgetting the note removes them. The staging rules are unchanged: `path` stays inside `workspaceRoot`, a `url` is SSRF-checked and needs `web.fetch`, the PDF parser, image stubs, the byte caps and the fail-closed format list. New: the tool fails closed without the fabric's `tools.root`, a text that trips the trust scan is staged but not indexed, and a symlinked `sources/` is refused. `ingestWikiSource` takes `stageRoot` (default `workspaceRoot`) in place of `ingestRoot`.
@@ -11,6 +17,7 @@
 
 ### Changed
 
+- `wiki_ingest`'s tool schema no longer has a top-level `oneOf` (plan 208 Task 8). Strict OpenAI-style gateways refuse a root combinator (OpenCode Go answered 400 `invalid_function_parameters`). "Exactly one of `text`, `path` or `url`" is now stated in the tool description and still fails closed in `execute` before anything is staged; inputs, results and errors are unchanged. The `wiki:ingest` command keeps its `oneOf`: command arguments never reach a model and the kernel validates them.
 - **Breaking for a host that read the staged tree** (plan 207 Task 8): sources are staged under `<tools.root>/sources/<id>/`, not `raw/ingest/<id>/`, and `WikiIngestResult` paths are relative to `tools.root`. The tool name and inputs are unchanged; the brief no longer carries filing instructions.
 - The pass protects a person's claims one by one (plan 207 Task 7). A claim marked `human` in the concept file, or with no citation, is read-only to the pass; the rest of that concept stays the curator's to maintain. Before, a concept whose last writer was a person was read-only as a whole, and the protection ended when the pass next wrote it. The fabric refuses an edit to such a claim as well.
 - **Breaking for a host on the 0.12-era surface** (plan 207 Task 5): the package is now the ontology tier of the three-tier memory, built over the fabric. It requires the `memory.fabric` service and fails closed with `missing_service` without it (the fabric provides it only when `semantic` memory is on). Config is `consolidate` and `ingest` plus `workspaceRoot`; unknown fields are rejected.

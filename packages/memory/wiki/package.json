@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-memory-wiki",
-  "version": "0.13.0",
+  "version": "0.13.0-experimental.0",
   "description": "The ontology tier for Prism memory: concept notes over the fabric, consolidated from cited evidence.",
   "type": "module",
   "exports": {
@@ -19,7 +19,7 @@
   },
   "peerDependencies": {
     "@arnilo/prism": ">=0.13.0 <1.0.0",
-    "@arnilo/prism-memory-fabric": "^0.13.0",
+    "@arnilo/prism-memory-fabric": "0.13.0-experimental.0",
     "@arnilo/prism-tools-web": "^0.13.0"
   },
   "peerDependenciesMeta": {
@@ -28,9 +28,9 @@
     }
   },
   "dependencies": {
-    "@arnilo/prism-memory-core": "^0.13.0",
-    "@arnilo/prism-memory-observational": "^0.13.0",
-    "@arnilo/prism-memory-rag": "^0.13.0"
+    "@arnilo/prism-memory-core": "0.13.0-experimental.0",
+    "@arnilo/prism-memory-observational": "0.13.0-experimental.0",
+    "@arnilo/prism-memory-rag": "0.13.0-experimental.0"
   },
   "devDependencies": {
     "@arnilo/prism-memory-fabric": "file:../fabric",

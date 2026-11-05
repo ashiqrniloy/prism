@@ -9,7 +9,7 @@ export function createWikiIngestTool(options: WikiExtensionOptions = {}): ToolDe
   return {
     name: WIKI_INGEST_TOOL_NAME,
     description:
-      "Ingests a text/file/image/PDF/URL source: stages the immutable original and a utf8 extract under the memory root's sources/ folder, indexes the extract as a file note, and queues it for the next concept pass. Returns the note id to cite and an extract preview. URL sources need the web.fetch service.",
+      "Ingests a text/file/image/PDF/URL source (pass exactly one of text, path or url): stages the immutable original and a utf8 extract under the memory root's sources/ folder, indexes the extract as a file note, and queues it for the next concept pass. Returns the note id to cite and an extract preview. URL sources need the web.fetch service.",
     parameters: {
       type: "object",
       properties: {
@@ -31,12 +31,9 @@ export function createWikiIngestTool(options: WikiExtensionOptions = {}): ToolDe
           description: "Display title for the staged source.",
         },
       },
+      // No top-level oneOf/anyOf/allOf: strict OpenAI-style gateways (OpenCode Go) refuse a root combinator with 400
+      // invalid_function_parameters. "Exactly one of text, path, url" is enforced in `execute`, before anything is staged.
       additionalProperties: false,
-      oneOf: [
-        { type: "object", required: ["text"], additionalProperties: true },
-        { type: "object", required: ["path"], additionalProperties: true },
-        { type: "object", required: ["url"], additionalProperties: true },
-      ],
     },
     async execute(args, context) {
       const record = args as Record<string, unknown>;

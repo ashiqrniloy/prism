@@ -1,6 +1,6 @@
 ---
 name: source-triage
-description: Decide which fetched sources belong in the report. Use after ledger lines appear on tool results.
+description: Use after ledger lines appear on tool results. Decides which fetched sources belong in the report.
 ---
 
 # Source triage

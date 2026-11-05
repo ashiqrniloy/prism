@@ -78,6 +78,7 @@ import {
   assertBaselineContinuation,
   assertBaselineReadiness,
   assertCacheStabilityPin,
+  ontologyManifestPins,
   recordBaselineQuota,
   writeReadiness,
 } from "./audit/readiness.mjs";
@@ -167,9 +168,45 @@ export function nextDailyReset(now = new Date()) {
   return at;
 }
 
-/** Attempts that spent no arm budget: a spent quota window or a spent daily cap. */
+/** Attempts that spent no arm budget: a spent quota window, a spent daily cap, or a transient provider fault. */
 export function isBudgetQuotaCause(cause) {
-  return cause === "quota-window" || cause === "quota-daily";
+  return cause === "quota-window" || cause === "quota-daily" || cause === "transient";
+}
+
+/**
+ * A provider or transport fault that says nothing about the arm (plan 208 Task 5, 2026-11-04): an hourly 429, a 5xx,
+ * a dropped socket, a gateway timeout, or a gateway 400 that names its upstream. The campaign waits a cooldown and
+ * re-runs the job from its checkpoint; the attempt does not count against the job's attempt budget.
+ */
+const TRANSIENT_STATUSES = new Set([408, 409, 425, 429, 500, 502, 503, 504, 529]);
+const TRANSIENT_TEXT =
+  /ECONNRESET|ECONNREFUSED|EAI_AGAIN|ETIMEDOUT|EPIPE|ENOTFOUND|socket hang up|fetch failed|connection was closed|timed out|TimeoutError|overloaded|rate.?limit|MemoryBenchWorkerTimeout/i;
+export function transientFailure(report) {
+  if (!report || report.status === "completed" || report.status === "token-ceiling") return false;
+  if (permanentFailure(report) || dailyFreeQuotaFailure(report)) return false;
+  const status = failureHttpStatus(report);
+  const text = failureText(report);
+  // An upstream content filter that fires on some attempts and not others (Command Code's Qwen route, plan 208 Task 5,
+  // 2026-11-04: the same question passed on both reruns) is not a deterministic refusal of the input.
+  if (/DataInspectionFailed|may contain inappropriate content/i.test(text)) return true;
+  if (status !== null && TRANSIENT_STATUSES.has(status)) return true;
+  // A 400 the gateway attributes to the request itself (`invalid_request_error`, a validation message, a failure the
+  // provider classed `permanent`) fails the same way on every re-run, so it is never transient.
+  if (status === 400 && /invalid_request_error|invalid_value|Validation:|"failureClass":"permanent"/i.test(text)) return false;
+  if (status === 400 && /Provider returned error|upstream (request failed|error|validation error)/i.test(text)) return true;
+  return TRANSIENT_TEXT.test(text);
+}
+
+/** Cooldown before the n-th transient re-run of one job (1-based), and how many re-runs a job gets. */
+export const TRANSIENT_COOLDOWN_MS = Object.freeze([300_000, 600_000, 1_200_000, 1_800_000]);
+export function transientCooldownMs(count) {
+  const override = Number(process.env.PRISM_MEMORY_BENCH_TRANSIENT_COOLDOWN_MS);
+  if (Number.isFinite(override) && override >= 0) return override;
+  return TRANSIENT_COOLDOWN_MS[Math.min(Math.max(count, 1), TRANSIENT_COOLDOWN_MS.length) - 1];
+}
+export function transientRetryLimit() {
+  const value = Number(process.env.PRISM_MEMORY_BENCH_TRANSIENT_RETRIES ?? 24);
+  return Number.isSafeInteger(value) && value >= 0 ? value : 24;
 }
 
 /** A 4xx that names an input problem is deterministic: the same arm on the same question will be
@@ -224,6 +261,51 @@ export function incrementalAttemptUsage(report, prior) {
 
 /** Per-mode evidence, journal, manifest and gate rules. 188.8 reuses 188.7's journal machinery. */
 function runSpec(mode) {
+  // Plan 208 Task 5: the ontology development screen. Loaded lazily, since the module builds on this one.
+  if (mode === "screen208") {
+    let built;
+    return {
+      evidence: "docs/_evidence/memory-bench/208/screen",
+      logs: ".cache/memory-bench/208/logs",
+      outputPrefix: process.env.PRISM_MEMORY_BENCH_208_SMOKE
+        ? "smoke-208-task5"
+        : process.env.PRISM_MEMORY_BENCH_208_QUICK === "1"
+          ? "quick-208-task5"
+          : "run-208-task5",
+      summaryPath: process.env.PRISM_MEMORY_BENCH_208_SMOKE
+        ? "docs/_evidence/memory-bench/208/screen/execution-smoke.json"
+        : "docs/_evidence/memory-bench/208/screen/execution-run.json",
+      journalPath: process.env.PRISM_MEMORY_BENCH_208_SMOKE
+        ? ".cache/memory-bench/208/journal-smoke.json"
+        : ".cache/memory-bench/208/journal.json",
+      summaryKind: "208-development-screen-run",
+      timeout: "172800s",
+      maxAttempts: 2,
+      // The gate is verified here, before any evidence file or journal is written.
+      build: async () => {
+        built = await (await import("./ontology-screen.mjs")).buildExecutableScreen208Manifest();
+        return built;
+      },
+      // The Kilo catalog is checked at $0 before the first job; a stale row is refused.
+      preflight: async (manifest) => {
+        const screen = await import("./ontology-screen.mjs");
+        const tier = await screen.preflightScreen208(manifest);
+        await mkdir(manifest.summaryPath ? dirname(manifest.summaryPath) : "docs/_evidence/memory-bench/208/screen", { recursive: true });
+        await writeFile(
+          `docs/_evidence/memory-bench/208/screen/free-panel${manifest.worker ? `-worker-${manifest.worker}` : ""}.json`,
+          `${JSON.stringify(tier, null, 2)}\n`,
+        );
+      },
+      // The executable record: the proposal plus the verified gate binding.
+      write: async () => {
+        await mkdir("docs/_evidence/memory-bench/208/screen", { recursive: true });
+        await writeFile(
+          built.executionManifestPath ?? "docs/_evidence/memory-bench/208/screen/execution-manifest.json",
+          `${JSON.stringify({ generatedAt: new Date().toISOString(), ...built, results: [] }, null, 2)}\n`,
+        );
+      },
+    };
+  }
   if (mode === "baseline202")
     return {
       evidence: `${BASELINE_EVIDENCE}/muse13-screen`,
@@ -451,6 +533,61 @@ export function labelInjectionsArg(job, { acceptance = false } = {}) {
   if (job.labelInjections === "off" && acceptance)
     throw new Error("MemoryBenchArguments: --label-injections off is refused in an acceptance manifest");
   return ["--label-injections", job.labelInjections];
+}
+
+/**
+ * Plan 208 Task 3: the CLI flags an ontology job adds. The job carries `ontology: true` and the arm label
+ * (`conversational+O`); claim bundles go to `<claimsDir>/<arm>/`, which `ontology-audit.mjs --campaign` reads as
+ * `<campaign>/ontology-claims/<arm>`. An ontology arm builds its concepts on the product path, so it can neither seed
+ * from a write-side snapshot nor reuse another arm's answers.
+ */
+export function ontologyJobArgs(job, { claimsDir = ".cache/memory-bench/ontology-claims" } = {}) {
+  if (!job?.ontology) return [];
+  if (job.writeSide || job.reuse)
+    throw new Error("MemoryBenchArguments: an ontology job takes no write-side snapshot or reuse; it ingests on the product path");
+  if (typeof job.ontologyArm !== "string" || !job.ontologyArm)
+    throw new Error("MemoryBenchArguments: an ontology job names its arm (for example conversational+O)");
+  return [
+    "--ontology",
+    "--ontology-arm",
+    job.ontologyArm,
+    "--ontology-claims-dir",
+    resolve(job.ontologyClaimsDir ?? claimsDir),
+    // Series mode (plan 208 Task 5): the unscored warm-up questions per cluster.
+    ...(job.warmup ? ["--warmup", String(job.warmup)] : []),
+    // A slow model's per-model settle bound (plan 208 gate amendment 12); absent keeps the pre-registered default.
+    ...(job.ontologySettleMs ? ["--ontology-settle-ms", String(job.ontologySettleMs)] : []),
+  ];
+}
+
+/**
+ * The `+O` twin of a base job: the same suite, config, models, judges and subset, with the ontology tier installed.
+ * Its answers and judge verdicts live apart from the base arm's, since the pair is compared and must not share them.
+ */
+export function ontologyTwin(job, { arm }) {
+  const { writeSide: _writeSide, reuse: _reuse, ...rest } = job;
+  const root = `.cache/memory-bench/ontology/${arm}`;
+  return {
+    ...rest,
+    id: `${job.id}+O`,
+    family: `${job.family}+O`,
+    ontology: true,
+    ontologyArm: arm,
+    answersDir: `${root}/answers`,
+    judgeCacheDir: `${root}/judge`,
+  };
+}
+
+/**
+ * Plan 208 Task 3: an ontology manifest pins Task 1's criteria hash, the ontology product (fabric plus wiki) and plan
+ * 207's prefix-probe record. `assertOntologyManifestPin` refuses one that does not; Task 5 builds its screen with this.
+ */
+export async function buildOntologyManifest({ jobs, root = ".", ...rest } = {}) {
+  const pins = await ontologyManifestPins({ root });
+  const twins = jobs.filter((job) => job.ontology);
+  if (twins.length === 0) throw new Error("MemoryBenchArguments: an ontology manifest needs at least one ontology job");
+  for (const job of twins) ontologyJobArgs(job);
+  return { kind: "208-ontology-manifest", ...pins, ...rest, jobs };
 }
 
 /** Frozen owner-approved 106M acceptance manifest; dry-run only on --manifest. */
@@ -742,7 +879,9 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
   await mkdir(spec.evidence, { recursive: true });
   const manifest = await spec.build();
   // Plan 202 Task 4.15: no paid campaign runs a product without a passing cache-stability record.
-  await assertCacheStabilityPin(manifest);
+  // The ontology screen runs on the $0 Kilo gateway and is advisory: its cost rows are not the cache-adjusted ones plan
+  // 202 pins. Plan 210 Task 9 pins the cache-stability record again before the paid held-out read.
+  if (mode !== "screen208") await assertCacheStabilityPin(manifest);
   const frozenBaseline = mode === "baseline202" ? structuredClone(manifest) : undefined;
   const jobLimit = Number(process.env.PRISM_MEMORY_BENCH_MAX_JOBS ?? 0);
   if (Number.isSafeInteger(jobLimit) && jobLimit > 0) manifest.jobs = manifest.jobs.slice(0, jobLimit);
@@ -820,6 +959,8 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
       if (job.answersDir) argv.push("--answers-dir", resolve(job.answersDir));
       if (job.judgeCacheDir) argv.push("--judge-cache-dir", resolve(job.judgeCacheDir));
       if (job.judgeText) argv.push("--judge-text");
+      if (job.interleaveAbilities) argv.push("--interleave-abilities");
+      if (job.finalTurnAnswer) argv.push("--final-turn-answer");
       const writeOnly = producers.has(job.id);
       if (profile && !writeOnly) {
         argv.push(
@@ -850,6 +991,7 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
       if (job.ability) argv.push("--ability", job.ability);
       if (job.seed) argv.push("--seed", String(job.seed));
       for (const spec of job.ablate ?? []) argv.push("--ablate", spec);
+      argv.push(...ontologyJobArgs(job));
       if (job.reuse) {
         argv.push("--reuse-from", job.reuse.from);
         if (job.reuse.fallback === "run") argv.push("--reuse-fallback", "run");
@@ -980,19 +1122,23 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
           !dailyQuota &&
           (quotaWindowFailure(report) ||
             (mode === "baseline202" && /429|402|quota|free.models.per.day/i.test(report.failure?.message ?? "")));
+        const transient = mode === "screen208" && !dailyQuota && !quotaWindow && transientFailure(report);
         reconcileAttempt(journal, attempt.attemptId, {
           status: dailyQuota
             ? "quota-daily"
-            : quotaWindow
+            : quotaWindow || transient
               ? "abandoned"
               : permanent
                 ? "failed-permanent"
-                : report.status === "completed" || (mode === "probe1889" && report.status === "partial")
+                : report.status === "completed" ||
+                    (mode === "probe1889" && report.status === "partial") ||
+                    // The quick first read stops at its slice on purpose: a slice answered in full is done.
+                    (mode === "screen208" && process.env.PRISM_MEMORY_BENCH_208_QUICK === "1" && report.status === "partial")
                   ? "completed"
                   : report.status === "token-ceiling"
                     ? "token-ceiling"
                     : "failed",
-          cause: dailyQuota ? "quota-daily" : quotaWindow ? "quota-window" : (permanent ?? undefined),
+          cause: dailyQuota ? "quota-daily" : quotaWindow ? "quota-window" : transient ? "transient" : (permanent ?? undefined),
           ...(mode === "baseline202"
             ? incrementalAttemptUsage(report, resumeReport)
             : {
@@ -1006,8 +1152,8 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
           id: job.id,
           attemptId: attempt.attemptId,
           answersDir: job.answersDir,
-          status: dailyQuota ? "quota-daily" : quotaWindow ? "quota-pause" : permanent ? "unsupported" : report.status,
-          cause: dailyQuota ? "quota-daily" : quotaWindow ? "quota-window" : (permanent ?? report.failure?.message ?? null),
+          status: dailyQuota ? "quota-daily" : quotaWindow ? "quota-pause" : transient ? "transient-retry" : permanent ? "unsupported" : report.status,
+          cause: dailyQuota ? "quota-daily" : quotaWindow ? "quota-window" : transient ? "transient" : (permanent ?? report.failure?.message ?? null),
           usageComplete: report.usageComplete !== false,
           charged: attemptCharge(journal.attempts.at(-1)),
         });
@@ -1047,7 +1193,27 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
         await saveJournal(journalPath, journal);
         console.error(`pause ${attempt.attemptId}: quota window closed; waiting ${Math.round(pauseMs / 60000)} min`);
         await new Promise((resolve) => setTimeout(resolve, pauseMs));
+        // The plan 208 screen re-runs the same job from its checkpoint instead of leaving it for a later campaign.
+        if (mode === "screen208") {
+          journal.status = "active";
+          await saveJournal(journalPath, journal);
+          return runJob(job);
+        }
         return;
+      }
+      if (journal.attempts.at(-1)?.cause === "transient") {
+        const count = journal.attempts.filter((item) => item.jobId === job.id && item.cause === "transient").length;
+        if (count > transientRetryLimit()) {
+          console.error(`give up ${attempt.attemptId}: ${count} transient failures`);
+          pushResult({ id: job.id, attemptId: attempt.attemptId, status: "transient-exhausted" });
+          await saveJournal(journalPath, journal);
+          return;
+        }
+        const waitMs = transientCooldownMs(count);
+        console.error(`retry ${attempt.attemptId}: transient provider fault (${count}); re-running from checkpoint in ${Math.round(waitMs / 60000)} min`);
+        await saveJournal(journalPath, journal);
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+        return runJob(job);
       }
       console.log(`end ${attempt.attemptId}; charged=${attemptCharge(journal.attempts.at(-1))}; remaining=${availableTokens(journal)}`);
       await saveJournal(journalPath, journal);
@@ -1091,27 +1257,49 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
 }
 
 if (import.meta.main) {
-  const mode = process.argv.includes("--baseline-202")
-    ? "baseline202"
-    : process.argv.includes("--task5")
-      ? "task5"
-      : process.argv.includes("--task5-smoke")
-        ? "task5-smoke"
-        : process.argv.includes("--acceptance-188.10-screen-a")
-          ? "screenA18810"
-          : process.argv.includes("--acceptance-188.10")
-            ? "acceptance18810"
-            : process.argv.includes("--acceptance-188.9-probe")
-              ? "probe1889"
-              : process.argv.includes("--acceptance-188.9-screen")
-                ? "screen1889"
-                : process.argv.includes("--acceptance-188.9")
-                  ? "acceptance1889"
-                  : process.argv.includes("--acceptance-188.8")
-                    ? "acceptance1888"
-                    : process.argv.includes("--acceptance")
-                      ? "acceptance"
-                      : "task6";
+  const planArg = process.argv.includes("--plan") ? process.argv[process.argv.indexOf("--plan") + 1] : undefined;
+  const mode =
+    planArg === "208"
+      ? "screen208"
+      : process.argv.includes("--baseline-202")
+        ? "baseline202"
+        : process.argv.includes("--task5")
+          ? "task5"
+          : process.argv.includes("--task5-smoke")
+            ? "task5-smoke"
+            : process.argv.includes("--acceptance-188.10-screen-a")
+              ? "screenA18810"
+              : process.argv.includes("--acceptance-188.10")
+                ? "acceptance18810"
+                : process.argv.includes("--acceptance-188.9-probe")
+                  ? "probe1889"
+                  : process.argv.includes("--acceptance-188.9-screen")
+                    ? "screen1889"
+                    : process.argv.includes("--acceptance-188.9")
+                      ? "acceptance1889"
+                      : process.argv.includes("--acceptance-188.8")
+                        ? "acceptance1888"
+                        : process.argv.includes("--acceptance")
+                          ? "acceptance"
+                          : "task6";
+  if (mode === "screen208") {
+    // Plan 208 reads the development partition only; held-out reads belong to plan 210 Task 9's manifest.
+    const { assertScreen208Partition, writeScreen208Manifest } = await import("./ontology-screen.mjs");
+    const partition = process.argv.includes("--partition") ? process.argv[process.argv.indexOf("--partition") + 1] : undefined;
+    try {
+      assertScreen208Partition(partition);
+    } catch (error) {
+      console.error(`${error.name}: ${error.message}`);
+      process.exit(1);
+    }
+    if (process.argv.includes("--manifest")) {
+      const manifest = await writeScreen208Manifest();
+      console.log(
+        `manifest ${manifest.manifestHash}; ${manifest.jobs.length} jobs; docs/_evidence/memory-bench/208/screen/development-screen-manifest.json`,
+      );
+      process.exit(0);
+    }
+  }
   if (process.argv.includes("--manifest") && process.argv.includes("--plan")) {
     const plan = process.argv[process.argv.indexOf("--plan") + 1];
     if (plan !== "202-baseline") throw new Error(`CampaignPlan: unsupported plan ${plan}`);

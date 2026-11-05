@@ -32,6 +32,7 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
 - **Plan 202 closure handoff (owner, 2026-11-02).** Plan 202 is closed by disposition with unmet targets preserved, not accepted as passing. Its [complete closure ledger](../docs/_evidence/memory-bench/202/closure.md) is mandatory input to Tasks 1–5. This includes Task 17 residual diagnosis/F4, whether or not a facts preset ships. Development diagnosis precedes the freeze and held-out acceptance; this is not permission to restart a historical campaign.
 - **Amended 2026-11-03 (owner decision): hot-path performance fixes land first, as Tasks 0.1–0.3.** A compiled-language (Rust) evaluation on 2026-11-03 rejected a native port. The kernel adds 3–6 ms per run against seconds of model latency, most store CPU is already native (bun:sqlite, JSON, fs), and the measured costs are algorithmic. Two came out of it: the markdown store rewrites three whole files on every write, and the session snapshot re-reads and `structuredClone`s the whole branch on every provider turn. The owner wants both fixed, with a regression gate, before the memory evaluations. They are unrelated to the audit. They are numbered 0.x so every existing "plan 210 Task N" reference (plans 202, 208, 209, the plan index) stays valid. They add no kernel contract, hook, slot or export, so no review task is needed. Both change sources that plan 202's cache-stability pin fingerprints (`src`, `packages/memory/core/src`), so Task 0.3 ends by re-attesting the pin with byte-identical provider requests. Task 1 starts only after that.
 - **Amended 2026-11-04 (owner decision, plan 215): post-0.13.0 memory track.** 0.13.0 no longer waits for this plan. Plan 215 publishes the five memory packages as an experimental prerelease line (`0.13.0-experimental.N`, dist-tag `experimental`) and freezes only the stable surface. This plan runs after plan 209, after 0.13.0 ships. Wherever it says "before plan 184/185", "the freeze", "plan 186" or "plan 187", read: plan 215's cache-parity runner, plan 215's experimental compat classification, and this plan's own graduation (Task 10). Task 11 (memory skills) moved here from plan 211 Task 6.
+- **Amended 2026-11-05 (owner request, from plan 208 Task 5's accuracy investigation): recall-quality remediation, Task 3.1.** Plan 208's screen reported low accuracy, and the investigation (`docs/_evidence/memory-bench/208/accuracy-investigation-2026-11-04.json`, counts only) split it into harness defects (fixed in plan 208), small samples, a benchmark ceiling, and a modest memory gap. The memory gap is real and has named causes. They enter this plan as fixed variants the audit already knows how to handle: built behind opt-in tuning fields in Task 3.1, predicted in Task 3's `gap-predictions.json`, measured once in Task 5 (gate C-1), kept or removed in Task 6. No default changes before Task 6. The number 3.1 keeps every existing "plan 210 Task N" reference valid. **Sequencing exception (owner instruction, 2026-11-05):** Task 3.1 was started before plan 209 Task 6, against this plan's own start rule above, because the screen's evidence made the fixes the cheaper next step. Task 3.2 (panel calibration, from the same screen's O3 early read) is added the same day; both are development-only and change no default.
 - **Audit before acceptance.** Removals happen on development evidence only, before any held-out item is read. The held-out acceptance then measures the product that ships, so no claim has to be re-pointed and no removal needs a second held-out read.
 
 **Scope:** `memory-observational`, `memory-fabric`, `memory-wiki` and the parts of `memory-core` only they use. `memory-rag` (document retrieval, a separate capability the owner keeps outside memory) and `memory-compaction` (measured by plan 194's rot curve) are out of scope; the ledger lists them as excluded with that reason.
@@ -389,6 +390,117 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
       - evidence files.
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+
+- [ ] Task 3.1: Recall-quality remediation and the ceiling instruments (added 2026-11-05, owner; evidence from plan 208 Task 5)
+  - Progress (2026-11-05): **all five variants and both instruments are built and tested; the task stays open for the three items below.** Instruments: `ceiling.mjs`, `power.mjs` (`ceiling_report_pairs_recall_and_oracle_per_question_and_carries_no_text`, `power_check_matches_the_closed_form_for_a_known_paired_design`); `ceiling.mjs` reproduces the investigation's hand-counted numbers (LoCoMo 38 vs 42, 9 lost to memory, 13 wrong both; BEAM-100K 13 vs 16, 9, 18). Variants, each opt-in and default off, placed where the existing sections already live: `directory.stopWords`; `recall.supersessionHint` (`\"keyed-only\"`); `inject.cardExcerpt` (`\"query\"`; it sits under `inject` beside `fullTextScore`, not under a new `delivery` section); `recall.expansion` (new `lexical-expansion.ts`, a fixed English table, relevance floor scaled by the caller's share of terms, because the store's coverage is matched over query terms and alternates dilute it); `recall.gather` (a `gather` argument on `memory.recall`, present in the schema only when enabled). Tests are in `recall-variants.test.ts` and `directory.test.ts` (fabric suite 660 pass, repo typecheck clean): per-variant behaviour, fail-closed config values, `every_variant_is_byte_identical_when_unset`, and for gather the schema-absent-when-off and forgotten-note-excluded cases. Baseline regenerated with `bun scripts/release.mjs gate --update-baseline`; the only diff is `scripts/compat-baseline/arnilo__prism-memory-fabric.txt`: `+expandLexicalQuery`, `fitInjection` gains `cardExcerpt?`, `groupRecallHits` gains `options?`, all this task's. Predictions are in `docs/_evidence/memory-bench/210/gap-predictions.json`. The early give-up count is in `docs/_evidence/memory-bench/208/accuracy-investigation-2026-11-04.json`: of 22 wrong LoCoMo recall answers, 5 say the information is missing and 3 of those had the gold evidence shown; BEAM-100K 1 and 0. Unrelated finding: `wiki: package_metadata_ships_one_entry_and_no_bin_or_skills` fails because the working tree's `packages/memory/wiki/package.json` peer range for the fabric is `0.13.0-experimental.0` while the test expects `^0.13.0` (plan 215's experimental staging; not this task).
+  - Still open in this task: (a) the quarantined-note case for gather's scope test (the forgotten-note case is covered; a quarantined note shares the same eligibility path but has no test of its own); (b) the live measurement, which is Task 5's (gate C-1) and needs the judges' daily quota, so nothing here is scored yet; (c) the plan 208 cut left the unfixed variants unmeasured on any real model run, so every prediction above is a prediction.
+  - Why this exists (all counts from `docs/_evidence/memory-bench/208/accuracy-investigation-2026-11-04.json`; one model, Muse 1.2 Contributor, full dev partitions, the screen's judges):
+    - LoCoMo (60): recall 38, oracle (gold evidence handed over) 42. Nine questions were lost to memory; thirteen were wrong either way. Of 22 wrong recall answers, 14 had the evidence shown to the model, 4 never had it as a candidate, 4 had it as a candidate but not shown.
+    - BEAM-100K (40): recall 13, oracle 16. Memory costs about 7 points on each suite; the rest is the benchmark's ceiling (BEAM's oracle scores 0/4 on contradiction resolution and instruction following).
+    - Named causes in the nine LoCoMo losses and the BEAM misses: (a) no abbreviation or synonym expansion in lexical recall ("gf" never matches "girlfriend"; two never-candidate misses); (b) no gather-everything operation for list and multi-hop questions ("names of the dogs" missed one name, "areas of the U.S." missed one area; recall surfaced 2-3 of 4-12 gold rounds on BEAM event ordering and summarization); (c) injected pointer cards show the first 120 characters of the user half (`excerpt.ts` `POINTER_MAX_CHARS`), and one answer glossed over a detail the card cut; (d) models give up early ("no information available" with evidence delivered); (e) the long-term-memory topic list counts stop words ("i", "it", "thanks", "wow"); (f) the read-time grouping labels older conversation exchanges "superseded by" a newer similar one (27-43% of injected LoCoMo hits, 4% on BEAM; removing the label moved 38 to 39 of 60, so the effect is within noise).
+    - Ruled out by test, so not planned here: who said the evidence (user role 21/32 right, assistant role 15/23), judge ties (1 of 60), and relative-date resolution (it resolves "next month" correctly; those misses were retrieval).
+  - Acceptance Criteria:
+    - Functional: **Ceiling instruments first.** `scripts/memory-bench/ceiling.mjs` reads the run reports of the recall arm and the oracle arm (one model, one partition, the same flags except `--config`) and writes a counts-only report: totals, per ability, wrong answers by stage (never a candidate, candidate not shown, shown to the model), judge ties, and the paired recall/oracle table. `scripts/memory-bench/power.mjs` takes a paired design (n, discordance) and returns the smallest difference seen with 80% power at the 95% interval. Both are offline-testable on the mock provider; neither prints dataset text. Every later measurement in this plan (Tasks 5, 8, 9) reports its score beside its ceiling.
+    - Functional: **Candidate variants, each an opt-in tuning field in `memory-fabric`, default off, with an offline mechanism probe (Task 2 style, verdicts `works`, `never-fires`, `no-effect`, `wrong-effect`) and a predicted effect in `gap-predictions.json`:**
+      - `recall.expansion`: a deterministic query-side expansion table (common abbreviations and informal forms, English first, no embeddings, no model call; same shape as `dates.ts`). Prediction: LoCoMo never-candidate wrong answers 4 to at most 2 of 60, with no loss on `memoryagentbench-cr` or BEAM.
+      - `recall.gather`: a mode of `memory.recall` (not a new tool) that collects every exchange matching the entity and topic terms across all time, deduplicated and in time order, paged past the seven-hit page. Prediction: LoCoMo multi-hop 3 to at least 5 of 12; BEAM event ordering and summarization evidence recall up by at least one round per question; cost stated per call.
+      - `inject.cardExcerpt`: pointer cards use the existing query-centred excerpt (`queryExcerpt`) over both halves of the exchange instead of the first 120 characters of the user half. Prediction: at least +1 of 60 on LoCoMo, with the extra injected tokens per question reported.
+      - `directory.stopWords`: the topic list drops stop words using the core `STOPWORDS` list. Prediction: no accuracy change; fewer wasted tokens in the long-term-memory block (hygiene, justified by cost only).
+      - `recall.supersessionHint: "keyed-only"`: the "superseded by" label is shown only for hits joined by a key or an explicit `supersedes` edge, not for exchanges joined only by shared subject terms. Prediction: within one question on LoCoMo (measured +1 of 60 when stripped); the verdict is the ledger's to give, and a null result removes the label for similarity-only groups.
+      - **Early give-up** is measured, not fixed: count the answers that say the information is missing while evidence was delivered, per suite, and classify them as model, card or gate causes. A fix is proposed in Task 3's analysis only if a product cause shows.
+    - Functional: **Not in this task, recorded so they are not lost.** Standing instructions for BEAM's instruction and preference following belong to plan 209 (standing rules); this task adds a ledger row linking the two. BEAM's contradiction-resolution behaviour needs the answer prompt to ask for the contradiction to be surfaced, which departs from BEAM's published prompt; that is an owner decision recorded in Task 6, not a product change.
+    - Functional: Every variant is reachable only through its config field; with the fields unset the recall results, injected text and tool schemas are byte-identical to today's (a regression test per variant). No `memory.*` tool name changes.
+    - Performance: `recall.expansion` adds one table lookup per query term; `recall.gather` is bounded by an explicit cap (default the hard top-K cap) and states its per-call cost; `cardExcerpt` raises injected tokens by a stated, measured amount; none runs when its field is unset.
+    - Code Quality: Placement in `memory-fabric` (and the stop-word reuse from `memory-core`); no new package, no kernel contract, no embeddings. Tuning-tier fields follow `config.ts` conventions (JSON Schema with defaults, `tuning` stability tags). No compatibility alias.
+    - Security: expansion and gather never widen scope or bypass trust labels: results keep their `level`, scope and `trust` fields and pass the same eligibility and secret scans; a test proves a gathered hit from another scope or a quarantined note is still excluded.
+  - Approach:
+    - Documentation Reviewed:
+      - `docs/_evidence/memory-bench/208/accuracy-investigation-2026-11-04.json` and plan 208 Task 5's notes ("Second investigation", "What the low scores mean");
+      - `packages/memory/core/src/lexical.ts` (`STOPWORDS`, `stemLexical`, `lexicalTerms`) and `packages/memory/fabric/src/dates.ts` (a deterministic table with no model call, the shape `expansion` copies);
+      - `packages/memory/fabric/src/excerpt.ts` (`POINTER_MAX_CHARS = 120`, `queryExcerpt`, `injectionPointer`, `fitInjection`, `injectionHead`);
+      - `packages/memory/fabric/src/recall.ts` (`groupRecallHits`, `topK`, `order: "time"`) and `tools.ts` (`memory.recall`, `RECALL_PAGE_SIZE`, `HARD_TOP_K_CAP`);
+      - `packages/memory/fabric/src/directory.ts` (`maxTopics`) and `config.ts` (`fullTextScore`, `minScore`, tuning conventions).
+    - Options Considered:
+      - Add embeddings for paraphrase recall. Rejected: memory is not RAG (owner decision 2026-10-24).
+      - Raise the card length globally. Rejected: it changes cost for every host; the query-centred excerpt shows the answer-bearing text for the same budget.
+      - A new `memory.gather` tool. Rejected: a mode of the existing tool keeps the tool surface and the freeze small (plan 185's reduction aim).
+      - Fix everything and change defaults now. Rejected by this plan's rule: a variant is measured once (Task 5) before it ships or is removed (Task 6).
+    - Chosen Approach:
+      - Build the ceiling and power instruments first (they are harness only), then one opt-in variant at a time with its probe and its byte-identical-when-off test, then write the predictions into Task 3's file so Task 5 scores them.
+    - API Notes and Examples:
+      ```json
+      { "feature": "recall.expansion", "verdict": "fix-and-measure", "change": "query expansion table on", "metric": "never-candidate wrong answers", "suite": "locomo/dev", "predicted": "4 -> <= 2 of 60" }
+      ```
+    - Files to Create/Edit:
+      - `scripts/memory-bench/ceiling.mjs`, `scripts/memory-bench/power.mjs` and their tests (new); `scripts/memory-bench/README.md`: usage.
+      - `packages/memory/fabric/src/{lexical-expansion.ts (new), search.ts or recall.ts, tools.ts, excerpt.ts, directory.ts, config.ts}`: the variants and their fields (tentative file split; confirm with `graft callers` on the lexical query path before editing).
+      - `packages/memory/fabric/src/__tests__/*`: probes, regression and scope tests.
+      - `packages/memory/fabric/README.md` and `CHANGELOG.md`: fields, cost per unit, default off.
+      - `docs/_evidence/memory-bench/210/gap-predictions.json`: the predictions above.
+    - References:
+      - plan 208 Task 5 notes; plan 202 Tasks 5-7 (lexical navigation, dates, grouping); plan 209 (standing rules); plan 185 (surface reduction).
+  - Test Cases to Write:
+    - `ceiling_report_pairs_recall_and_oracle_per_question_and_carries_no_text`: fails if a question, gold or answer string reaches the report, or if the paired table drops a row.
+    - `power_check_matches_the_closed_form_for_a_known_paired_design`: fails if the minimum detectable difference drifts from the reference value.
+    - `expansion_matches_informal_forms_and_leaves_unrelated_queries_unchanged`: "gf" reaches a note that says "girlfriend"; a query with no table term is byte-identical; fails if the table fires on a stop word.
+    - `gather_returns_every_matching_exchange_in_time_order_past_the_seven_hit_page_and_respects_scope`: fails if a hit is dropped, duplicated or comes from another scope or a quarantined note.
+    - `card_excerpt_centres_on_query_terms_across_both_halves_and_defaults_to_the_old_card`: fails if the old 120-character card changes with the field unset.
+    - `topic_list_drops_stop_words_and_keeps_content_words`: fails if "i" or "it" stays or a content word is lost.
+    - `supersession_hint_keyed_only_shows_the_label_for_key_and_supersedes_groups_only`: fails if a similarity-only group still carries the label, or a keyed update loses it.
+    - `every_variant_is_byte_identical_when_unset`: recall results, injection text and tool schemas, per variant.
+    - `variant_fields_reject_unknown_values_fail_closed`: config validation names the field.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes, additively: five opt-in `memory-fabric` tuning fields (default off) and one recall mode. Memory packages ship on the experimental line (plan 215), so the compat classification is experimental; regenerate the baseline with `bun scripts/release.mjs gate --update-baseline` and attribute the diff to this task.
+    - Docs pages to create/edit:
+      - `packages/memory/fabric/README.md`: the fields, each with its per-unit cost and the default that avoids it; `CHANGELOG.md` under `## [Unreleased]`; `scripts/memory-bench/README.md`: the two instruments.
+    - `docs/index.md` update: no.
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed <date>): to be written by the executor. The measured effects are Task 5's, not this task's.
+
+- [ ] Task 3.2: Calibrate the claim-support panel on a labelled set from an arm no judge curated (added 2026-11-05, owner; evidence from plan 208 Task 5's O3 early read)
+  - Why this exists:
+    - Plan 208's O3 early read (gate amendment 18, 60 claims per group, paid judges) put supported share at 0.75 on both Nemotron route groups and 0.65 on the Muse default-policy arm, against the 0.95 criterion. The report carries `valid=false, pass=null`: the panel has no human calibration, so the number cannot yet be trusted as a verdict in either direction.
+    - The only labelled set is 60 claims from the small arm (`P+O.small`), labelled by the assistant (88% supported). The harness refuses a judge that curated a bundle it judges, and Qwen and Muse 1.2 curated that arm, so no judge in the panel may score the set. The labels and the panel have never met.
+    - The panel may be stricter than the labeller, or the arms may differ. A panel that rates "partially supported" (14, 12 and 21 of 60 in the three groups) for an added date or inference may be right under O3's definition or too harsh. Without a labelled set on claims the panel *can* judge, the two readings cannot be separated.
+  - Acceptance Criteria:
+    - Functional: **Labelled set.** Build a 60-claim set from the `P+O.large` bundles (curated by Nemotron, which is on no judge panel) with `bun scripts/memory-bench/ontology-audit.mjs --campaign .cache/memory-bench/208 --arm P+O.large --build-human-set <dir>`. Strata are drawn by the existing `selectHumanAuditClaims` (suite and subject size), so the set is not all MemoryAgentBench-CR (24 of 24 supported). Run this **before the 208 bundles are deleted**; the claim text exists only there and in the local scratch, never in a report.
+    - Functional: **Who labels.** Plan 208 gate amendment 1 delegates the first labelling to the assistant, blind: labels are written before any panel verdict on these claims is read, and the label file is hashed and committed to the run record first. The owner may label instead (`review.html` supports it). Plan 210 Task 9 repeats O3 with a person's labels; a set labelled only by the assistant stays `development` evidence and never decides a published claim.
+    - Functional: **Calibration run.** Run `ontology-audit.mjs --labels <labels.json> --judges <two judges from distinct families, neither the curator>` on the same 60 claims. The report gives the supported-versus-not kappa with its interval, the four-label kappa, and the confusion table (human label by panel verdict), counts only. Panel validity needs `panelHumanKappaAtLeast` (0.8) from `three-tier-criteria.json`. Judges: the free pair if their quota allows, otherwise the paid pair from plan 208 amendment 18 (Qwen 3.7 Flash and Muse Spark 1.2 Contributor, Muse 1.3 as the third model); the report names which.
+    - Functional: **Branch on the result, recorded in the ledger.**
+      - kappa at least 0.8: the panel is valid, the 0.65-0.75 figures stand as development evidence for plan 208's arms, and the full-size audit (200 claims per group) runs under gate C-1 on the post-remediation product.
+      - kappa below 0.8: record where they differ (the confusion table by label), decide with the owner whether the rubric text or the labeller is the problem, and relabel or revise the judge instructions once. The audit stays `valid=false` and O3 cannot pass until it clears.
+    - Functional: **Disagreement is a finding, not noise.** If the panel is stricter than the labels specifically on "partially supported" claims, the ledger row for `claim-support` records it as a *rubric* question (is an added date or an inference unsupported?) for the owner to decide in Task 6, not as a curator defect.
+    - Performance: 60 claims by 2 judges is 120 judge calls plus a third-model tie-break where used; plan 208's 60-claim paid audit cost about USD 0.10 in total. State the spend in the run record.
+    - Code Quality: existing `ontology-audit.mjs` flags and `selectHumanAuditClaims`; no new harness code unless the build step refuses the arm name, in which case fix that with a test.
+    - Security: counts and ids only in the evidence (`docs/_evidence/memory-bench/210/audit/`); claim text, notes and labels with text stay in `.cache/scratch`. Keys as refs. Only the development partition is read.
+  - Approach:
+    - Documentation Reviewed:
+      - `scripts/memory-bench/ontology-audit.mjs` (`selectHumanAuditClaims`, `renderClaimReviewPage`, `parseClaimLabels`, the `--build-human-set` and `--labels` flags; the calibration summary near line 307);
+      - plan 208 Task 2 (the audit design and curator-independence rule) and Task 5 notes ("O3 early read with paid judges"); gate amendments 1 and 18 in `docs/_evidence/memory-bench/208/gates/owner-gate-1.json`;
+      - plan 199 (the calibration report this reuses).
+    - Options Considered:
+      - Label claims from the small arm and let a third judge family score them. Rejected: both small-arm curators are already on the panel, and adding a third family still leaves two of the three conflicted.
+      - Skip calibration and run the full-size audit. Rejected: a larger sample tightens the interval around a number that has no validity (`valid=false`).
+      - Treat the panel as the truth and the 0.65-0.75 as the O3 result. Rejected: the criterion requires human calibration.
+      - Fold the labelling into Task 9. Rejected: Task 9 reads held-out data and runs once; the panel's validity must be known on development data before then.
+    - Chosen Approach:
+      - One blind labelling pass on 60 claims from an unconflicted arm, one calibration run, then the branch above. It is the smallest step that makes O3 interpretable.
+    - Files to Create/Edit:
+      - `docs/_evidence/memory-bench/210/audit/claim-calibration.json` (counts, kappa, confusion table; no text);
+      - `docs/_evidence/memory-bench/210/feature-ledger.json`: the `claim-support` row;
+      - `scripts/memory-bench/ontology-audit.mjs` and its test, only if the build step needs a fix.
+    - References:
+      - plan 208 Task 5 notes; plan 199; `three-tier-criteria.json`.
+  - Test Cases to Write:
+    - `calibration_report_carries_ids_and_counts_only`: fails if a claim, note or label text reaches the report.
+    - `live_audit_refuses_a_panel_judge_that_curated_any_bundle_of_the_arm`: fails if a curator-conflicted judge may score the set (`liveJudges` enforces the rule; add the test if `ontology-audit.test.mjs` has none).
+    - Existing `ontology-audit.test.mjs` cases for kappa and `valid=false` without labels still pass.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: no (evidence and harness only).
+    - Docs pages to create/edit: `docs/_evidence/memory-bench/210/README.md` (the calibration record), if that README exists; otherwise none.
+    - `docs/index.md` update: no.
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed <date>): to be written by the executor. Not started: the owner asked for the task to be recorded only.
 
 - [ ] Task 4: Pre-registered decision rules
   - Acceptance Criteria:
@@ -812,6 +924,7 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
   - `timeout 600 bun scripts/memory-bench/prefix-probe.mjs --equivalence --base .cache/memory-bench/202/cache-stability-base --out docs/_evidence/memory-bench/202/cache-stability/equivalence.json`
   - `timeout 900 bun scripts/memory-bench/audit/readiness.mjs --cache-stability`
   - `timeout 900 bun run --cwd packages/stores/sqlite test` and `timeout 900 bun run --cwd packages/stores/jsonl test`
+- Task 3.1 (before Task 4): `timeout 600 bun test --timeout=0 scripts/memory-bench/ceiling.test.mjs scripts/memory-bench/power.test.mjs`; `timeout 900 bun run --cwd packages/memory/fabric test` (each variant's probe, its byte-identical-when-unset test and its scope test); `timeout 1200 bun scripts/release.mjs gate --update-baseline` with the diff attributed to Task 3.1.
 - `timeout 600 bun run build:core`
 - `timeout 1200 bun run typecheck`
 - `timeout 900 bun run --cwd packages/memory/fabric test`

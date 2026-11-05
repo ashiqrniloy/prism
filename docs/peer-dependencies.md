@@ -57,7 +57,7 @@ Test-only dependencies are *not* peers. `playwright-core` appears in `@arnilo/pr
 bun add @arnilo/prism-tools-browser playwright-core@1.63.0
 
 # PostgreSQL session store: pool driver only
-bun add @arnilo/prism-memory-core pg
+bun add @arnilo/prism-memory-core@experimental pg
 
 # Document reader: pick the parser you need (both are independent)
 bun add @arnilo/prism-tools-work pdf-parse mammoth

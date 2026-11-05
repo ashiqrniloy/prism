@@ -264,14 +264,15 @@ exchangeDemotionOrder	export declare function exchangeDemotionOrder(notes: reado
 exchangeKeywords	export declare function exchangeKeywords(text: string): readonly string[]
 exchangeNoteId	export declare function exchangeNoteId(sessionId: string, userEntryId: string, assistantEntryId: string, part: number): string
 exchangePairs	export declare function exchangePairs(entries: readonly SessionEntry[]): readonly ExchangePair[]
+expandLexicalQuery	export declare function expandLexicalQuery(text: string): string
 exportMemoryOkf	export declare function exportMemoryOkf(memory: Memory, options: ExportMemoryOkfOptions): Promise<ExportMemoryOkfResult>
 extractConsolidationNotes	export declare function extractConsolidationNotes(input: ExtractConsolidationNotesInput): Promise<ConsolidationExtraction>
 fabricBlockId	export declare function fabricBlockId(block: string): string
-fitInjection	export declare function fitInjection(hits: Iterable<MemoryNoteHit>, queryTerms: ReadonlySet<string>, budgetTokens: number, topK: number, eligibleCount?: number, minScore?: number, fullTextScore?: number):
+fitInjection	export declare function fitInjection(hits: Iterable<MemoryNoteHit>, queryTerms: ReadonlySet<string>, budgetTokens: number, topK: number, eligibleCount?: number, minScore?: number, fullTextScore?: number, cardExcerpt?: "head" | "query"):
 gateScopedMemoryContent	export declare function gateScopedMemoryContent(text: string): void
 gatherConsolidationCandidates	export declare function gatherConsolidationCandidates(entries: readonly SessionEntry[], options?: GatherConsolidationOptions): readonly ConsolidationCandidate[]
 globMatches	export declare function globMatches(pattern: string, path: string): boolean
-groupRecallHits	export declare function groupRecallHits(hits: readonly MemoryNoteHit[]): MemoryNoteHit[]
+groupRecallHits	export declare function groupRecallHits(hits: readonly MemoryNoteHit[], options?: GroupRecallOptions): MemoryNoteHit[]
 hasNewObservationalMaterial	export declare function hasNewObservationalMaterial(entries: readonly SessionEntry[], cursor: string | undefined): boolean
 hasPartialSelectionCue	export declare function hasPartialSelectionCue(text: string): boolean
 importMemoryOkf	export declare function importMemoryOkf(memory: Memory, options: ImportMemoryOkfOptions): Promise<ImportMemoryOkfResult>

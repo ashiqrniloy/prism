@@ -20,6 +20,7 @@ import {
   prepareCoding,
   summarizeCoding,
 } from "./coding.mjs";
+import { rateLimitDisposition } from "./audit/zero-score.mjs";
 import { BEAM_NORMALIZATION_VERSION, DATASETS, loadDataset, normalizeCodingItem, normalizeDataset, selectQuestions } from "./datasets.mjs";
 import fixture from "./fixtures/synthetic.json" with { type: "json" };
 import { createAdmission, requireAttemptReservation, stableHash } from "./journal.mjs";
@@ -40,22 +41,25 @@ import {
   scoreAnswerCached,
   scoreGradedPanel,
 } from "./judge.mjs";
+import { claimBundle, markClaimBundleCorrect, ONTOLOGY_SETTLE_MS, seriesPartition, writeClaimBundle } from "./ontology-arm.mjs";
 import ratesFile from "./rates.json" with { type: "json" };
 import {
   BENCH_MAX_TURNS,
   BENCH_PROTOCOL_VERSION,
   BENCH_RETRY,
+  retryBudget,
   causeChainText,
+  FACT_INGEST,
   isProductIngest,
   LEGACY_INGEST,
+  suiteAnswerInstruction,
   mockProvider,
   PRODUCT_INGEST,
   replay,
   retryAfterMs,
-  stageFromCounts,
-} from "./replay.mjs";
+  stageFromCounts, FINAL_TURN_ANSWER_VERSION, STRIP_SUPERSESSION_VERSION } from "./replay.mjs";
 import { summarize, writeReport } from "./report.mjs";
-import { robustnessCriteriaHash } from "./robustness.mjs";
+import { robustnessCriteriaHash, threeTierCriteriaHash } from "./robustness.mjs";
 import {
   assertFreeOnlyCost,
   CALL_ID_INLINE_LIMIT,
@@ -139,6 +143,10 @@ export function parseArgs(argv) {
     "reuse-fallback",
     "write-output-tokens",
     "write-thinking",
+    "ontology-claims-dir",
+    "ontology-arm",
+    "warmup",
+    "ontology-settle-ms",
   ]);
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--free-only") {
@@ -157,8 +165,25 @@ export function parseArgs(argv) {
       options.offline = true;
       continue;
     }
+    // Plan 208 Task 3: install the ontology tier (`memory-wiki`) next to the arm's fabric.
+    if (argv[i] === "--ontology") {
+      options.ontology = true;
+      continue;
+    }
     if (argv[i] === "--judge-text") {
       options.judgeText = true;
+      continue;
+    }
+    if (argv[i] === "--interleave-abilities") {
+      options.interleaveAbilities = true;
+      continue;
+    }
+    if (argv[i] === "--strip-supersession-hints") {
+      options.stripSupersessionHints = true;
+      continue;
+    }
+    if (argv[i] === "--final-turn-answer") {
+      options.finalTurnAnswer = true;
       continue;
     }
     const name = argv[i].replace(/^--/, "");
@@ -169,7 +194,7 @@ export function parseArgs(argv) {
     if (key === "ablate") (options.ablate ??= []).push(value);
     else options[key] = value;
   }
-  for (const key of ["maxInputTokens", "maxOutputTokens", "maxQuestions", "seed", "concurrency", "repeats"])
+  for (const key of ["maxInputTokens", "maxOutputTokens", "maxQuestions", "seed", "concurrency", "repeats", "warmup", "ontologySettleMs"])
     if (options[key] !== undefined) {
       options[key] = Number(options[key]);
       if (!Number.isSafeInteger(options[key]) || options[key] < 1)
@@ -208,35 +233,80 @@ export function loadEnv() {
     for (const [name, value] of Object.entries(parseEnvFile(path))) if (process.env[name] === undefined) process.env[name] = value;
   } else if (process.env.PRISM_LIVE_ENV_FILE) throw new Error("MemoryBenchCredentials: explicit live env file missing");
 }
+/**
+ * Free-route patience (plan 208 Task 5, 2026-11-04): a free gateway drops sockets, returns 5xx, and refuses with 429 when
+ * an hourly window fills. Those are retried here at the HTTP edge, before any byte streams, with a backoff that stays
+ * inside one answer turn's wall time; the long wait belongs to the campaign, which re-runs the job from its checkpoint.
+ * A daily-cap 429 is returned at once so the campaign can pause until the cap reopens.
+ */
+export const PATIENT_RETRY = Object.freeze({ delaysMs: [5_000, 15_000, 30_000, 60_000, 120_000], maxRetryAfterMs: 120_000 });
+const PATIENT_STATUSES = new Set([429, 500, 502, 503, 504, 529]);
+const TRANSPORT_ERROR = /ECONNRESET|ECONNREFUSED|EAI_AGAIN|ETIMEDOUT|EPIPE|ENOTFOUND|socket hang up|fetch failed|connection was closed|network/i;
+/** A gateway 400 that names an upstream fault rather than the request (Kilo's "Provider returned error"). */
+const INVALID_REQUEST = /invalid_request_error|invalid_value|Validation:/i;
+const UPSTREAM_400 = /Provider returned error|upstream (request failed|error|validation error)|event: error\ndata: \{\}/i;
+
 export function benchmarkFetch({
   beforeAttempt = async () => {},
   onRetry = () => {},
   onOverload = () => {},
   fetch: transport = fetch,
+  patient = false,
+  sleep = (ms, signal) => delay(ms, undefined, { signal }),
 } = {}) {
   const policy = createDefaultRetryPolicy({ maxAttempts: 3, baseDelayMs: 250, maxDelayMs: 1000 });
   return async (input, init) => {
+    let waits = 0;
+    const patientWait = async (retryAfter) => {
+      if (!patient || waits >= PATIENT_RETRY.delaysMs.length) return false;
+      const base = PATIENT_RETRY.delaysMs[waits];
+      waits += 1;
+      onRetry();
+      await sleep(retryAfter !== undefined && retryAfter <= PATIENT_RETRY.maxRetryAfterMs ? Math.max(base, retryAfter) : base, init?.signal);
+      return true;
+    };
     for (let attempt = 1; ; attempt++) {
       await beforeAttempt(input, init);
-      const response = await transport(input, init);
+      let response;
+      try {
+        response = await transport(input, init);
+      } catch (error) {
+        if (init?.signal?.aborted || !TRANSPORT_ERROR.test(`${error?.message ?? ""} ${error?.code ?? ""}`)) throw error;
+        if (await patientWait()) continue;
+        throw error;
+      }
       let code = response.status;
-      if (code === 400) {
-        let body;
+      let body;
+      if (code === 400 || code === 429) {
         try {
           body = await readBoundedResponseText(response.clone(), { maxResponseBodyBytes: 4096 });
         } catch {
           return response;
         }
-        if (body.replaceAll("\r", "").trim() !== "event: error\ndata: {}") return response;
-        code = 503;
       }
+      if (code === 400) {
+        if (body.replaceAll("\r", "").trim() === "event: error\ndata: {}") code = 503;
+        // A request the gateway rejects as invalid fails the same way again: hand it back at once.
+        else if (patient && UPSTREAM_400.test(body) && !INVALID_REQUEST.test(body)) code = 503;
+        else return response;
+      }
+      // A daily free cap does not reopen within a turn: hand it to the campaign untouched.
+      if (code === 429 && rateLimitDisposition(429, body) === "stop") return response;
       const decision = policy.decide({ attempt, error: { code, message: response.statusText }, signal: init?.signal });
       // 429/overload: back off and let this arm shrink its own in-flight ceiling (never below 1).
       if (code === 429 || code === 503 || code === 529) onOverload();
-      if (!decision.retry) return response;
-      onRetry();
+      if (decision.retry) {
+        onRetry();
+        await response.body?.cancel();
+        await delay(decision.delayMs, undefined, { signal: init?.signal });
+        continue;
+      }
+      if (!PATIENT_STATUSES.has(code)) return response;
+      const header = Number(response.headers.get("retry-after"));
+      const retryAfter = Number.isFinite(header) && header > 0 ? header * 1000 : undefined;
+      if (!patient || waits >= PATIENT_RETRY.delaysMs.length) return response;
       await response.body?.cancel();
-      await delay(decision.delayMs, undefined, { signal: init?.signal });
+      await patientWait(retryAfter);
     }
   };
 }
@@ -249,8 +319,19 @@ export function isFreeBenchmarkModel(model) {
   // The pool's groups are the authorization: a `prism-free/` group the gateway prices at exactly
   // zero. Unknown cost is refused, exactly as for the other paid hosts.
   if (model.provider === "litellm") return model.model.startsWith("prism-free/") && model.cost?.input === 0 && model.cost?.output === 0;
-  return model.provider === "commandcode" && /(?::free|-free)$/.test(model.model);
+  // OpenCode Go's `-free` rows (plan 208 Task 5, owner 2026-11-04): the plan bills Go models, so only the suffix the
+  // catalog prices at exactly zero counts; the screen preflight reads that zero from the live catalog before a run.
+  if (model.provider === "opencode-go") return /-free$/.test(model.model) && (model.cost === undefined || (model.cost.input === 0 && model.cost.output === 0));
+  if (model.provider !== "commandcode") return false;
+  return /(?::free|-free)$/.test(model.model) || COMMAND_CODE_FREE_PREVIEW.has(model.model);
 }
+
+/**
+ * Command Code ids that are free without a `:free` suffix. Each is named here only on the owner's word and the official
+ * price sheet (https://commandcode.ai/docs/resources/pricing-limits): Crouton Alpha is "free while the stealth preview
+ * lasts", 1000 requests a day per account (plan 208 Task 5, checked 2026-11-04). Remove an id when its preview ends.
+ */
+export const COMMAND_CODE_FREE_PREVIEW = new Set(["stealth/crouton-alpha"]);
 export async function liveProviders(refs, temp, fetchOptions) {
   const providers = [],
     proxies = [],
@@ -282,7 +363,7 @@ export async function liveProviders(refs, temp, fetchOptions) {
         secretEnv: [spec.secret, "OPENCODE_API_KEY"],
       });
       proxies.push({ proxy, usageLog, provider: id });
-      providers.push(module[spec.create]({ apiKey: () => key, baseUrl: proxy.url, fetch: benchmarkFetch(fetchOptions) }));
+      providers.push(module[spec.create]({ apiKey: () => key, baseUrl: proxy.url, fetch: benchmarkFetch({ ...fetchOptions, patient: fetchOptions?.patient ?? fetchOptions?.freeOnly === true }) }));
     }
     return { providers, proxies, models };
   } catch (error) {
@@ -460,6 +541,7 @@ export async function askJudge({
   backoffMs = (attempt) => 1000 * attempt,
   timeoutMs = JUDGE_TIMEOUT_MS,
   pace,
+  attempts = BENCH_RETRY.judgeAttempts,
 }) {
   calls.judge++;
   for (let attempt = 1; ; attempt += 1) {
@@ -490,7 +572,7 @@ export async function askJudge({
       if (parse) return parse(result.text);
       return textMode ? judgeTextOutput(result.text, labels) : judgeOutput(result.text, labels);
     } catch (error) {
-      if (attempt >= BENCH_RETRY.judgeAttempts || !isRetryableJudgeFailure(error)) throw error;
+      if (attempt >= attempts || !isRetryableJudgeFailure(error)) throw error;
       await delay(backoffMs(attempt, error));
     } finally {
       await session?.close();
@@ -591,6 +673,20 @@ export async function reuseSource({ report, sourcePath, ids }) {
   };
 }
 
+/** Round-robin over abilities in first-seen order, each ability keeping its own order. */
+export function interleaveByAbility(questions) {
+  const groups = new Map();
+  for (const question of questions) {
+    const key = question.ability ?? "";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(question);
+  }
+  const lists = [...groups.values()];
+  const out = [];
+  for (let index = 0; out.length < questions.length; index += 1) for (const list of lists) if (index < list.length) out.push(list[index]);
+  return out;
+}
+
 export function protocolFingerprint(report) {
   return stableHash({
     suite: report.suite,
@@ -621,6 +717,9 @@ export function protocolFingerprint(report) {
     protocol: report.protocol ?? null,
     sourceRevision: report.sourceRevision,
     ...(report.normalization ? { normalization: report.normalization } : {}),
+    // Plan 208 Task 3: an ontology arm is a different arm, judged by Task 1's criteria. Absent on every other arm,
+    // so no existing protocol hash moves.
+    ...(report.ontology ? { ontology: report.ontology, threeTierCriteriaHash: report.threeTierCriteriaHash } : {}),
   });
 }
 
@@ -643,7 +742,8 @@ export async function runBench(input = {}) {
       maxInputTokens: input.maxInputTokens,
     });
   }
-  const options = { config: "full", subset: "base", maxInputTokens: 15_000_000, ...input };
+  // An ontology arm is the conversational preset's product shape unless it names another product-ingestion arm.
+  const options = { config: input.ontology ? "fabric-x" : "full", subset: "base", maxInputTokens: 15_000_000, ...input };
   const phase = options.phase ?? "all";
   const labelInjectionsEnabled = (options.labelInjections ?? "on") !== "off";
   if (!["answer", "judge", "all", "write"].includes(phase)) throw new Error("MemoryBenchArguments: invalid phase");
@@ -672,6 +772,17 @@ export async function runBench(input = {}) {
   if (options.config === "fabric-hybrid" && !options.embeddings) {
     throw new Error("MemoryBenchArguments: fabric-hybrid requires --embeddings provider/model");
   }
+  if (
+    options.ontologySettleMs !== undefined &&
+    (!options.ontology || !Number.isSafeInteger(options.ontologySettleMs) || options.ontologySettleMs < 1)
+  )
+    throw new Error("MemoryBenchArguments: ontologySettleMs is a positive integer and needs --ontology");
+  if (options.ontology && !isProductIngest(options.config))
+    throw new Error("MemoryBenchArguments: --ontology needs a product-ingestion fabric arm (fabric-x, fabric-xc, -tools)");
+  if (options.warmup !== undefined && !options.ontology)
+    throw new Error("MemoryBenchArguments: --warmup is the ontology series mode and needs --ontology");
+  if (options.ontology && (options.phase === "write" || options.seedSnapshot || options.writeSnapshot))
+    throw new Error("MemoryBenchArguments: --ontology builds its concepts on the product path, so it takes no write-side snapshot");
   if (
     ![
       "base",
@@ -718,6 +829,18 @@ export async function runBench(input = {}) {
     protocolVersion: BENCH_PROTOCOL_VERSION,
     // Plan 202 Task 2: every later manifest/report pins the pre-registered criteria it is judged by.
     criteriaHash: robustnessCriteriaHash(),
+    // Plan 208 Task 3: an ontology arm is judged by Task 1's criteria, pinned here and by the protocol fingerprint.
+    ...(options.ontology
+      ? {
+          threeTierCriteriaHash: threeTierCriteriaHash(),
+          ontology: {
+            arm: options.ontologyArm ?? `${options.config}+O`,
+            settleMs: options.ontologySettleMs ?? ONTOLOGY_SETTLE_MS,
+            // Series mode (plan 208 Task 5): absent unless asked, so no other ontology protocol hash moves.
+            ...(options.warmup ? { warmup: options.warmup } : {}),
+          },
+        }
+      : {}),
     usageSource: options.offline ? "mock" : phase === "write" ? "local" : "wire-proxy",
     phase,
     labelInjections: labelInjectionsEnabled ? "on" : "off",
@@ -741,7 +864,7 @@ export async function runBench(input = {}) {
     ingestion: options.config.includes("fabric")
       ? isProductIngest(options.config)
         ? options.suite === "memoryagentbench-cr"
-          ? "product-source-facts-v1"
+          ? FACT_INGEST
           : PRODUCT_INGEST
         : LEGACY_INGEST
       : "none",
@@ -764,11 +887,18 @@ export async function runBench(input = {}) {
     sourceVariants: await variantProvenance(historicalVariants(options.ablate)),
     sourceRevision: sourceRevision(),
     protocol: {
-      answerAttempts: BENCH_RETRY.answerAttempts,
-      answerBackoffMs: BENCH_RETRY.answerBackoffMs,
-      judgeAttempts: BENCH_RETRY.judgeAttempts,
-      judgeBackoffMs: BENCH_RETRY.judgeBackoffMs,
+      answerAttempts: retryBudget(options).answerAttempts,
+      answerBackoffMs: retryBudget(options).answerBackoffMs,
+      judgeAttempts: retryBudget(options).judgeAttempts,
+      judgeBackoffMs: retryBudget(options).judgeBackoffMs,
       maxTurns: coding ? BENCH_MAX_TURNS.coding : BENCH_MAX_TURNS.standard,
+      // Present only on a suite with its own answer instruction (MemoryAgentBench-CR, BEAM), so no other suite's
+      // protocol hash (or resumable checkpoint) moves.
+      ...(suiteAnswerInstruction(options.suite) ? { answerInstruction: suiteAnswerInstruction(options.suite).version } : {}),
+      ...(options.suite === "memoryagentbench-cr" ? { factIngest: FACT_INGEST } : {}),
+      // Present only when set, so no other plan's protocol hash moves.
+      ...(options.finalTurnAnswer && !coding ? { finalTurnAnswer: FINAL_TURN_ANSWER_VERSION } : {}),
+      ...(options.stripSupersessionHints ? { stripSupersessionHints: STRIP_SUPERSESSION_VERSION } : {}),
     },
     memoryConfig: resolvedMemoryConfigs(options.memoryConfigs),
     inputTokens: 0,
@@ -822,6 +952,8 @@ export async function runBench(input = {}) {
   const startedAt = performance.now();
   const gate = createGate(report.concurrency);
   const answerCache = createAnswerCache({ root: options.answersDir ?? resolve(".cache/memory-bench/answers") });
+  // Private, text-bearing, gitignored with the answer cache: only `ontology-audit.mjs` reads these.
+  const claimsDir = options.ontologyClaimsDir ?? resolve(".cache/memory-bench/ontology-claims");
   const judgeRefs = report.judgePanel ?? [report.judge];
   const judgeCaches = new Map(
     judgeRefs.map((ref) => [
@@ -920,8 +1052,16 @@ export async function runBench(input = {}) {
   // Paid routes keep one pacer per judge model (the gateway quota is per model); free routes are
   // one account-wide pool, so they share the single pacer created above.
   const judgeRate = Number(process.env.PRISM_MEMORY_BENCH_JUDGE_RATE ?? "450");
+  // A judge on another provider than the answer model has its own quota (plan 208 Task 5: Command Code judges a Kilo or
+  // OpenRouter arm), so it gets its own pacer instead of spending the answer route's budget.
+  const ownJudgePace = () =>
+    createFreeRoutePace({ perMinute: process.env.PRISM_MEMORY_BENCH_JUDGE_PACE_PER_MINUTE ?? "10", freeOnly: true });
   const judgePace = new Map(
-    judgeRefs.map((ref) => [ref, sharedFreePace ?? createJudgePacer({ perHour: Number.isFinite(judgeRate) ? judgeRate : 450 })]),
+    judgeRefs.map((ref) => [
+      ref,
+      (sharedFreePace && refOf(ref).provider !== options.provider ? ownJudgePace() : sharedFreePace) ??
+        createJudgePacer({ perHour: Number.isFinite(judgeRate) ? judgeRate : 450 }),
+    ]),
   );
   const questionStates = new Set([state]);
   const readUsage = async (strict = true) => {
@@ -1122,6 +1262,18 @@ export async function runBench(input = {}) {
           baseId: question.id,
         })),
       );
+    // Plan 208 Task 5 series mode: the first `warmup` questions of each cluster warm the store and are never scored.
+    if (options.warmup) {
+      const series = seriesPartition(questions, options.warmup);
+      questions = series.scored;
+      report.series = {
+        warmup: options.warmup,
+        warmupQuestions: series.warmupIds.length,
+        scoredQuestions: series.scored.length,
+        droppedClusters: series.dropped.length,
+        warmupIdsHash: stableHash(series.warmupIds),
+      };
+    }
     options.inputCap = resolveInputCap(undefined, options.modelConfig);
     report.inputCap = options.inputCap;
     if (["full", "full-truncated"].includes(options.config)) {
@@ -1191,8 +1343,10 @@ export async function runBench(input = {}) {
           backoffMs: (attempt, error) => {
             const retryAfter = retryAfterMs(causeChainText(error));
             if (retryAfter !== undefined) return retryAfter + 2000;
-            return BENCH_RETRY.judgeBackoffMs[Math.min(attempt - 1, BENCH_RETRY.judgeBackoffMs.length - 1)];
+            const { judgeBackoffMs } = retryBudget(options);
+            return judgeBackoffMs[Math.min(attempt - 1, judgeBackoffMs.length - 1)];
           },
+          attempts: retryBudget(options).judgeAttempts,
         });
       };
     report.measurementPolicy = {
@@ -1204,6 +1358,9 @@ export async function runBench(input = {}) {
       seedSnapshot: Boolean(options.seedSnapshot),
     };
     const generate = generateFor(judgeRefs[0]);
+    // Plan 208 Task 5: a round-robin by ability makes any prefix a balanced slice, so a quick first read covers every
+    // ability. Order only: the question set and every answer key are unchanged, so the full run reuses the slice.
+    if (options.interleaveAbilities && !options.warmup) questions = interleaveByAbility(questions);
     const selected = questions.slice(0, options.maxQuestions ?? questions.length);
     // A read-side arm refuses to run without its write side; it never re-ingests silently.
     if (options.seedSnapshot) {
@@ -1282,6 +1439,7 @@ export async function runBench(input = {}) {
       if (labelInjectionsEnabled && done.answerOutcome !== "run_limit")
         await labelInjections(question, entry.answer, questionState, generate, { concurrency: report.concurrency, timing });
       stopEvaluation();
+      if (options.ontology) await markClaimBundleCorrect(claimsDir, report.ontology.arm, question.id, score.correct);
       const row = {
         ...done,
         outcome: "scored",
@@ -1375,6 +1533,19 @@ export async function runBench(input = {}) {
           if (!options.offline) console.log(`${report.results.length}/${questions.length} ingested; input=${report.inputTokens}`);
           return;
         }
+        if (response.claimBundleDraft)
+          await writeClaimBundle(
+            claimsDir,
+            claimBundle({
+              arm: report.ontology.arm,
+              model: `${report.provider}/${report.model}`,
+              suite: report.suite,
+              partition: ["dev", "development"].includes(options.subset) ? "dev" : options.subset,
+              history: question.id,
+              snapshot: response.claimBundleDraft.snapshot,
+              question: response.claimBundleDraft.question,
+            }),
+          );
         // Persist before any judge: an evaluation failure must never require answer regeneration.
         {
           const answerKey = answerCache.key({ protocolHash: report.protocolHash, id: question.id });
@@ -1417,6 +1588,7 @@ export async function runBench(input = {}) {
             fineEvidencePrecision: response.fineEvidencePrecision ?? null,
             evidenceCounts: response.evidenceCounts ?? null,
             ingest: response.ingest ?? null,
+            ...(response.ontology ? { ontology: response.ontology } : {}),
           });
           await account();
           if (options.output) await writeReport(summarize({ ...report, status: "running" }), options.output);
@@ -1441,6 +1613,7 @@ export async function runBench(input = {}) {
         if (!coding && response.outcome !== "run_limit" && labelInjectionsEnabled)
           await labelInjections(question, response.answer, questionState, generate, { concurrency: report.concurrency, timing });
         stopEvaluation();
+        if (response.claimBundleDraft) await markClaimBundleCorrect(claimsDir, report.ontology.arm, question.id, score.correct);
         report.results[answeredAt] = {
           ...answered,
           outcome: "scored",

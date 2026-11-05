@@ -301,6 +301,9 @@ export function runGates({
   // 2. API surface diff against checked-in baselines. A declaration emit that fails
   // is collected, not thrown, so one run names every failing package.
   const breaks = [];
+  // Experimental packages (plan 215 Task 2) keep their baselines, but a removal or change is only
+  // reported, in its own section: the line is outside the stability promise.
+  const experimental = [];
   for (const pkg of release.packages) {
     if (packageName && pkg.manifest.name !== packageName) continue;
     const emitted = declarationDir(release.root, pkg);
@@ -336,7 +339,10 @@ export function runGates({
         ]
           .filter(Boolean)
           .join("; ");
-        if (allowBreak && noted) {
+        if (pkg.experimental) {
+          experimental.push(`${pkg.manifest.name} ${detail}`);
+          console.log(`compat (experimental, not gated): ${pkg.manifest.name} ${detail}`);
+        } else if (allowBreak && noted) {
           console.log(`compat: ${pkg.manifest.name} documented break (${detail})`);
         } else {
           breaks.push(
@@ -382,5 +388,6 @@ export function runGates({
     version,
     updated: updateBaseline,
     packages: release.packages.length,
+    ...(experimental.length ? { experimental } : {}),
   };
 }

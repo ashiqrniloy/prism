@@ -18,6 +18,7 @@ import longmemevalM from "./robustness-longmemeval-m.json" with { type: "json" }
 import memoryagentbench from "./robustness-memoryagentbench-cr.json" with { type: "json" };
 import memorycode from "./robustness-memorycode.json" with { type: "json" };
 import vibemembench from "./robustness-vibemembench.json" with { type: "json" };
+import threeTier from "./three-tier-criteria.json" with { type: "json" };
 
 export const ROBUSTNESS_PARTITIONS = Object.freeze(["dev", "heldout-a", "heldout-b"]);
 export const ROBUSTNESS_CRITERIA = Object.freeze(criteria);
@@ -60,6 +61,60 @@ export function robustnessCriteriaHash(value = ROBUSTNESS_CRITERIA) {
   return createHash("sha256")
     .update(JSON.stringify(canonical(value)))
     .digest("hex");
+}
+
+export const THREE_TIER_CRITERIA = Object.freeze(threeTier);
+/** Plan 208 Task 1: the same canonical hash, over the pre-registered three-tier criteria. */
+export function threeTierCriteriaHash(value = THREE_TIER_CRITERIA) {
+  return robustnessCriteriaHash(value);
+}
+
+/**
+ * Checks the three-tier criteria against the files they pin: plan 202's criteria hash, each
+ * suite's committed partition ids hash, and that every consolidation-sensitive ability has items
+ * in every partition. Returns the criteria hash, throws on any mismatch.
+ */
+export function verifyThreeTierCriteria(value = THREE_TIER_CRITERIA) {
+  const fail = (message) => {
+    throw new Error(`ThreeTierCriteria: ${message}`);
+  };
+  if (value.schemaVersion !== 1 || value.plan !== 208 || typeof value.frozen !== "string") fail("schema, plan or frozen date is wrong");
+  if (!value.hashRule || !value.ownerDecisions) fail("hashRule and ownerDecisions are required");
+  if (value.pins?.robustnessCriteriaHash !== robustnessCriteriaHash()) fail("plan 202 robustness criteria changed");
+  for (const [suite, pinned] of Object.entries(value.pins.partitionIdsHash ?? {})) {
+    const draw = robustnessDraw(suite);
+    if (draw.idsHash !== pinned || robustnessIdsHash(draw.abilities) !== pinned) fail(`${suite} partition ids changed`);
+  }
+  const sensitive = value.abilities?.consolidationSensitive ?? {};
+  if (!Object.keys(sensitive).length) fail("no consolidation-sensitive abilities");
+  for (const [suite, abilities] of Object.entries(sensitive)) {
+    if (!value.pins.partitionIdsHash[suite]) fail(`${suite} partition is not pinned`);
+    const draw = robustnessDraw(suite);
+    for (const ability of abilities)
+      for (const partition of value.partitions.all)
+        if (!draw.abilities[partition]?.[ability]?.length) fail(`${suite}/${ability} has no items in ${partition}`);
+  }
+  for (const id of ["O1", "O2", "O3", "O4", "O5", "O6", "O7", "O8"]) if (!value.criteria?.[id]) fail(`criterion ${id} is missing`);
+  if (value.criteria.O8.row !== value.pins.workOutcomeRow) fail("O8 row is not the pinned work-outcome row");
+  for (const suite of value.criteria.O6.suites) if (!ROBUSTNESS_DRAWS[suite]) fail(`O6 suite ${suite} has no frozen partition`);
+  return threeTierCriteriaHash(value);
+}
+
+/** The two hashes every ontology manifest and report carries. */
+export function threeTierManifestPin() {
+  return { criteriaHash: robustnessCriteriaHash(), threeTierCriteriaHash: verifyThreeTierCriteria() };
+}
+
+/** Manifest rule (as 188.10): an ontology manifest or report must carry the current criteria hash. */
+export function assertThreeTierCriteriaPin(manifest) {
+  const expected = verifyThreeTierCriteria();
+  if (manifest?.threeTierCriteriaHash !== expected)
+    throw new Error(
+      `ThreeTierCriteria: manifest ${manifest?.threeTierCriteriaHash ? "pins a different" : "does not pin the"} three-tier criteria hash`,
+    );
+  if (manifest.criteriaHash !== undefined && manifest.criteriaHash !== robustnessCriteriaHash())
+    throw new Error("ThreeTierCriteria: manifest pins different robustness criteria");
+  return manifest;
 }
 
 /** Hash of the ids a draw holds, so a committed draw can be re-derived and compared. */
@@ -183,4 +238,21 @@ export function drawRobustnessPartitions(items, suite, { seed = `prism-202-memor
     residualPool[ability] = unique.length - needed;
   }
   return { seed, abilities, residualPool, idsHash: robustnessIdsHash(abilities) };
+}
+
+if (import.meta.main) {
+  const flag = process.argv.indexOf("--verify-criteria");
+  if (flag >= 0) {
+    const file = process.argv[flag + 1];
+    if (file !== "three-tier-criteria.json") {
+      console.error("MemoryBenchArguments: --verify-criteria takes three-tier-criteria.json");
+      process.exit(2);
+    }
+    try {
+      console.log(JSON.stringify({ file, threeTierCriteriaHash: verifyThreeTierCriteria() }));
+    } catch (error) {
+      console.error(error.message);
+      process.exit(1);
+    }
+  }
 }

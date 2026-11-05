@@ -487,6 +487,30 @@ function parentDirName(path: string): string {
 }
 
 const NAME_RE = /^[A-Za-z0-9 _-]+$/;
+const REQUIRES_TOOLS_KEY = "prism-requires-tools";
+const MAX_REQUIRED_TOOLS = 32;
+/** A tool name as `requiresTools` accepts it: letters, digits, `_`, `-`, `.` and `:` (`memory.recall`, MCP names). */
+const REQUIRED_TOOL_NAME_RE = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/;
+
+/** `metadata.prism-requires-tools`: a space-separated string. Anything else fails the parse, so a typo never silently un-gates a skill. */
+function parseRequiresTools(front: Map<string, unknown>, path: string): readonly string[] | undefined {
+  const metadata = front.get("metadata");
+  if (metadata === undefined) return undefined;
+  if (typeof metadata !== "object" || metadata === null || Array.isArray(metadata)) {
+    throw new Error(`Invalid skill metadata in ${path}: expected a mapping`);
+  }
+  const value = (metadata as Record<string, unknown>)[REQUIRES_TOOLS_KEY];
+  if (value === undefined) return undefined;
+  if (typeof value !== "string") throw new Error(`Invalid ${REQUIRES_TOOLS_KEY} in ${path}: expected a space-separated string`);
+  const names = [...new Set(value.split(/\s+/).filter(Boolean))];
+  if (names.length === 0) throw new Error(`Invalid ${REQUIRES_TOOLS_KEY} in ${path}: no tool names`);
+  if (names.length > MAX_REQUIRED_TOOLS) throw new Error(`Invalid ${REQUIRES_TOOLS_KEY} in ${path}: more than ${MAX_REQUIRED_TOOLS} tools`);
+  for (const name of names) {
+    if (!REQUIRED_TOOL_NAME_RE.test(name))
+      throw new Error(`Invalid ${REQUIRES_TOOLS_KEY} in ${path}: ${JSON.stringify(name)} is not a tool name`);
+  }
+  return names;
+}
 
 /** Parse a `SKILL.md` into a {@link Skill}. Frontmatter keys map to `name`
  *  (required), `description`, `toolNames` (comma- or YAML-list); the markdown
@@ -502,6 +526,7 @@ export function parseSkillFile(text: string, path: string): Skill {
   const description = front.has("description") ? String(front.get("description")) : undefined;
   const toolNamesValue = front.get("toolNames") ?? front.get("tools");
   const toolNames = Array.isArray(toolNamesValue) ? (toolNamesValue as string[]) : undefined;
+  const requiresTools = parseRequiresTools(front, path);
   const metadata: Record<string, JsonValue> = {};
   // ponytail: `context` from a file SKILL.md lands here as metadata only; a host wires it to a `context.build` handler.
   for (const [key, value] of front) {
@@ -515,6 +540,7 @@ export function parseSkillFile(text: string, path: string): Skill {
     instructions: body.replace(/^\n+/, ""),
     ...(path ? { path } : {}),
     ...(toolNames ? { toolNames } : {}),
+    ...(requiresTools ? { requiresTools } : {}),
     ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
   };
   return skill;

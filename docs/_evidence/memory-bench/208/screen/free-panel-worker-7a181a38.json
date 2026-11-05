@@ -1,0 +1,30 @@
+{
+  "kind": "208-free-panel",
+  "checkedAt": "2026-11-04T15:17:44.167Z",
+  "provider": "kilo",
+  "panel": [],
+  "route": {
+    "provider": "openrouter",
+    "panel": [
+      {
+        "ref": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+        "contextWindow": 1000000,
+        "maxOutputTokens": 65536
+      }
+    ],
+    "dailyFreeRequests": 1000,
+    "paidTier": true
+  },
+  "commandcode": [
+    {
+      "ref": "commandcode/stealth/glyph-cluster:free",
+      "contextWindow": 256000,
+      "paid": false
+    },
+    {
+      "ref": "commandcode/stealth/crouton-alpha",
+      "contextWindow": 1048576,
+      "paid": false
+    }
+  ]
+}

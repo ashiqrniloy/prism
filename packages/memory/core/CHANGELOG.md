@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Experimental in 0.13.0 (plan 215 Task 4).** The README opens with the experimental notice: install with `bun add @arnilo/prism-memory-core@experimental`, outside the stability promise of the stable packages, and the API, config, preset contents and defaults may change or be removed in any release until the package graduates.
+
 ### Added
 
 - `createMarkdownMemoryStores({ reviewEdit })` (plan 207 Task 7): the owning package reviews a note whose file changed outside the store before it is indexed. It may accept the file as parsed, return a reviewed record that the store indexes and writes back to the same file (logged as `reviewed`), or reject the edit: the previous version stays indexed, the file is left as written, the rejection is counted in `malformed` and logged once against the writer `human` until the file changes. Never called for an unreadable note. Additive; without the option nothing changes. The fabric uses it for concept notes.

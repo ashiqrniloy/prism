@@ -13,6 +13,8 @@ import {
   isBudgetQuotaCause,
   nextDailyReset,
   reservation,
+  transientCooldownMs,
+  transientFailure,
   writeManifest,
 } from "./campaign.mjs";
 import { openJournal, reserveAttempt, saveJournal, TERMINAL_ATTEMPT_STATUSES } from "./journal.mjs";
@@ -89,6 +91,23 @@ test("daily_free_quota_halts_resumable_without_consuming_attempt", async () => {
   assert.equal(isBudgetQuotaCause("quota-daily"), true);
   assert.equal(isBudgetQuotaCause("quota-window"), true);
   assert.equal(isBudgetQuotaCause("failed"), false);
+  // A transient provider fault is re-run from its checkpoint and never spends the job's attempts.
+  assert.equal(isBudgetQuotaCause("transient"), true);
+  const failed = (code, message) => ({ status: "failed", failure: { code, message: code, cause: { code: code.split(":").at(-1), message } } });
+  assert.equal(transientFailure(failed("MemoryBenchJudgeError:429", "Kilo's free models are limited to 200 requests per hour")), true);
+  assert.equal(transientFailure(failed("MemoryBenchAnswerError:400", "Kilo request failed: 400 ... error:message:Provider returned error,code:4")), true);
+  // An intermittent upstream content filter is transient: the same question passed on reruns.
+  assert.equal(transientFailure(failed("MemoryBenchAnswerError:400", "Command Code request failed: 400 error:message:400 InternalError.Algo.DataInspectionFailed: Input text data may contain inappropriate content.,type:invalid_request_error")), true);
+  // A 400 the gateway pins on the request itself fails the same way on every re-run.
+  assert.equal(transientFailure(failed("MemoryBenchAnswerError:400", "opencode-go request failed: 400 error:type:invalid_request_error,message:Upstream request failed: invalid_value Validation: tools array cannot be empty")), false);
+  assert.equal(transientFailure(failed("MemoryBenchAnswerError:502", "bad gateway")), true);
+  assert.equal(transientFailure({ status: "failed", failure: { message: "TypeError: ECONNRESET: The socket connection was closed unexpectedly" } }), true);
+  assert.equal(transientFailure(failed("MemoryBenchAnswerError:400", "invalid schema")), false, "an input 400 is not transient");
+  assert.equal(transientFailure(failed("MemoryBenchAnswerError:401", "unauthorized")), false);
+  assert.equal(transientFailure({ status: "failed", failure: { message: "maximum context length exceeded" } }), false);
+  assert.equal(transientFailure(daily), false, "a daily cap is its own pause");
+  assert.equal(transientFailure({ status: "completed" }), false);
+  assert.ok(transientCooldownMs(1) < transientCooldownMs(3) && transientCooldownMs(99) === transientCooldownMs(4));
   assert.ok(TERMINAL_ATTEMPT_STATUSES.includes("quota-daily"), "the halt is a terminal attempt status the journal accepts");
   // Two daily halts must not exhaust the job's two attempts: the rerun is still allowed.
   const attempts = Array.from({ length: 2 }, () => ({ jobId: "cell", cause: "quota-daily" }));

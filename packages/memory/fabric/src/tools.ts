@@ -32,7 +32,14 @@ import {
 } from "./types.js";
 
 /** Everything the tools call back into; all of it comes from the fabric closure. */
+/** The snippet budget of a `gather` call when the caller names none; the default call keeps 1200. */
+const GATHER_BUDGET_TOKENS = 3000;
+
 export interface MemoryFabricToolDeps {
+  /** `recall.supersessionHint` (plan 210 Task 3.1); absent means `all`. */
+  readonly supersessionHint?: import("./recall.js").SupersessionHintMode;
+  /** `recall.gather` (plan 210 Task 3.1): the `memory.recall` tool accepts `gather`. */
+  readonly gather?: boolean;
   readonly memory: Memory;
   readonly remember: MemoryFabric["remember"];
   readonly recall: MemoryFabric["recall"];
@@ -794,6 +801,14 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
               type: "boolean",
               description: "Also search archived notes, appended after the active hits and marked [archived].",
             },
+            ...(deps.gather === true
+              ? {
+                  gather: {
+                    type: "boolean",
+                    description: `For list and multi-hop questions: return the whole matching history in one call (up to ${HARD_TOP_K_CAP} hits), oldest first, with a larger snippet budget. Overrides the default page size, order and budget; an explicit topK, order or budget still wins.`,
+                  },
+                }
+              : {}),
           },
         } as JsonObject,
         async execute(args, context) {
@@ -809,7 +824,8 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
           const kinds = requestedKinds ?? (deps.ontology === undefined ? RECALL_TOOL_KINDS : RECALL_TOOL_KINDS_WITH_ONTOLOGY);
           const page = typeof args.page === "number" ? args.page : 0;
           if (!Number.isSafeInteger(page) || page < 0) throw new MemoryValidationError("page must be a non-negative safe integer");
-          const pageSize = typeof args.topK === "number" ? args.topK : RECALL_PAGE_SIZE;
+          const gather = deps.gather === true && args.gather === true;
+          const pageSize = typeof args.topK === "number" ? args.topK : gather ? HARD_TOP_K_CAP : RECALL_PAGE_SIZE;
           if (!Number.isSafeInteger(pageSize) || pageSize < 1) throw new MemoryValidationError("topK must be a positive safe integer");
           const pageStart = page * pageSize;
           if (pageStart >= HARD_TOP_K_CAP) throw new MemoryValidationError(`page is outside the ${HARD_TOP_K_CAP}-hit recall window`);
@@ -822,7 +838,7 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
             ...(typeof args.asOf === "string" ? { asOf: args.asOf } : {}),
             ...(typeof args.from === "string" ? { from: args.from } : {}),
             ...(typeof args.to === "string" ? { to: args.to } : {}),
-            ...(args.order === "time" ? { order: "time" as const } : {}),
+            ...(args.order === "time" || (gather && args.order === undefined) ? { order: "time" as const } : {}),
             ...(args.includeArchived === true ? { includeArchived: true } : {}),
             ...(context.signal === undefined ? {} : { signal: context.signal }),
             ...(deps.touchedPaths === undefined ? {} : { touchedPaths: deps.touchedPaths(context.sessionId) }),
@@ -838,8 +854,8 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
               else fused.set(hit.id, { hit, score: contribution });
             });
           }
-          const budget = typeof args.budget === "number" ? args.budget : 1200;
-          const ranked = groupRecallHits([...fused.values()].sort((a, b) => b.score - a.score).map(({ hit }) => hit)).slice(
+          const budget = typeof args.budget === "number" ? args.budget : gather ? GATHER_BUDGET_TOKENS : 1200;
+          const ranked = groupRecallHits([...fused.values()].sort((a, b) => b.score - a.score).map(({ hit }) => hit), deps.supersessionHint === undefined ? {} : { supersessionHint: deps.supersessionHint }).slice(
             0,
             HARD_TOP_K_CAP,
           );

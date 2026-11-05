@@ -19,6 +19,7 @@ import {
 } from "../baseline.mjs";
 import { attemptCharge, journalSpend, loadJournal, manifestFingerprint, stableHash } from "../journal.mjs";
 import rates from "../rates.json" with { type: "json" };
+import { assertThreeTierCriteriaPin } from "../robustness.mjs";
 import { cacheAdjustedCost, resolveRate } from "../usage.mjs";
 
 export const EVIDENCE = "docs/_evidence/memory-bench/202";
@@ -428,6 +429,72 @@ export async function assertCacheStabilityPin(manifest, { root = "." } = {}) {
     manifest,
   });
   if (blockers.length) throw new Error(`CacheStabilityPin: ${blockers.join(", ")}; run readiness.mjs --cache-stability`);
+}
+
+/**
+ * Plan 208 Task 3: what an ontology arm's product is. The fabric hash is the one plan 202's cache-stability record and
+ * plan 207's prefix-probe record pin; the ontology product adds the wiki package.
+ */
+export const ONTOLOGY_PRODUCT_PATHS = [...PREFIX_PRODUCT_PATHS, "packages/memory/wiki/src"];
+/** Plan 207's prefix-probe record: the fabric's cached segments, byte-checked with the ontology tier in the tree. */
+export const ONTOLOGY_PREFIX_PROBE = "docs/_evidence/memory-bench/207/prefix-probe.json";
+
+/** The pins an ontology manifest carries: Task 1's criteria, the ontology product, and the prefix-probe record. */
+export async function ontologyManifestPins({ root = ".", probePath = ONTOLOGY_PREFIX_PROBE } = {}) {
+  const { threeTierManifestPin } = await import("../robustness.mjs");
+  const text = existsSync(join(root, probePath)) ? await readFile(join(root, probePath), "utf8") : undefined;
+  const probe = text === undefined ? undefined : JSON.parse(text);
+  return {
+    ...threeTierManifestPin(),
+    productHash: await sourceFingerprint(ONTOLOGY_PRODUCT_PATHS, root),
+    ontologyPrefixProbe: probe === undefined ? null : { path: probePath, sha256: probe.sha256, fabricProductHash: probe.productHash },
+  };
+}
+
+/**
+ * Pure verdict on an ontology manifest: Task 1's criteria hash is pinned and current, the manifest's product hash is
+ * the current ontology product, and plan 207's prefix-probe record exists, is network-free, shows the extractor
+ * segments byte-stable, and was taken on the fabric as it is now. One named blocker per failure.
+ */
+export function ontologyManifestBlockers({ manifest, probe, fabricHash, productHash, criteria } = {}) {
+  const blockers = [];
+  if (criteria !== undefined) blockers.push(criteria);
+  if (!probe) blockers.push("ontology-prefix-probe-missing");
+  else {
+    if (
+      probe.schema !== "memory-prefix-probe-v1" ||
+      probe.networkCalls !== 0 ||
+      probe.assumptions?.extractor?.systemIdentical !== true ||
+      probe.assumptions?.extractor?.toolsIdentical !== true
+    )
+      blockers.push("ontology-prefix-probe-invalid");
+    if (probe.productHash !== fabricHash) blockers.push("ontology-prefix-probe-product-changed");
+    if (manifest?.ontologyPrefixProbe?.sha256 !== probe.sha256) blockers.push("ontology-manifest-probe-unpinned");
+  }
+  if (manifest?.productHash !== productHash) blockers.push("ontology-manifest-product-unpinned");
+  return blockers;
+}
+
+/** Refuse an ontology manifest whose criteria hash is not Task 1's or whose product lacks plan 207's prefix-probe record. */
+export async function assertOntologyManifestPin(manifest, { root = ".", probePath = ONTOLOGY_PREFIX_PROBE } = {}) {
+  let criteria;
+  try {
+    assertThreeTierCriteriaPin(manifest);
+  } catch (error) {
+    criteria = manifest?.threeTierCriteriaHash ? "three-tier-criteria-drift" : "three-tier-criteria-missing";
+    if (!(error instanceof Error) || !/ThreeTierCriteria/.test(error.message)) throw error;
+  }
+  const text = existsSync(join(root, probePath)) ? await readFile(join(root, probePath), "utf8") : undefined;
+  const blockers = ontologyManifestBlockers({
+    manifest,
+    probe: text === undefined ? undefined : JSON.parse(text),
+    fabricHash: await sourceFingerprint(PREFIX_PRODUCT_PATHS, root),
+    productHash: await sourceFingerprint(ONTOLOGY_PRODUCT_PATHS, root),
+    criteria,
+  });
+  if (blockers.length)
+    throw new Error(`OntologyManifestPin: ${blockers.join(", ")}; rerun scripts/memory-bench/prefix-probe.mjs --out ${probePath}`);
+  return manifest;
 }
 
 /** Run the 4.12-4.14 prefix suite and pin its result, with the equivalence file, to the current product hash. */

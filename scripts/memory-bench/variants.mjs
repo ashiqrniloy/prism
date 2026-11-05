@@ -94,8 +94,8 @@ export function transformVariantSource(path, source, input = []) {
   for (const budget of [600, 1200, 2400]) {
     if (active(`fabric.snippetBudget=${budget}`)) {
       replace(
-        'const budget = typeof args.budget === "number" ? args.budget : 1200;',
-        `const budget = typeof args.budget === "number" ? args.budget : ${budget};`,
+        'const budget = typeof args.budget === "number" ? args.budget : gather ? GATHER_BUDGET_TOKENS : 1200;',
+        `const budget = typeof args.budget === "number" ? args.budget : gather ? GATHER_BUDGET_TOKENS : ${budget};`,
       );
       replace(
         "Ceiling on the summed tokens of the rendered snippet lines; default 1200.",
@@ -130,6 +130,7 @@ export function transformVariantSource(path, source, input = []) {
             eligible.length,
             inject.minScore,
             fullTextScore,
+            inject.cardExcerpt,
           );`,
         `          const hits: MemoryNoteHit[] = [];
           const semanticLines: string[] = ["Cite the ids you use as [id]."];

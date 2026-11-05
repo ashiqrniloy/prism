@@ -1257,6 +1257,7 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Priority: P3
 - Source: plans/207-Phase-11-Part-O13-Memory-Three-Tier-Architecture-Ontology-Wiki-Over-The-Fabric.md
 - What: Plan 208 tests giving exchanges keywords or showing a cluster's neighbouring exchanges to the curator.
+- Update (2026-11-05, plan 208): the fabric's ontology port now derives keywords for an exchange stored without them (Task 5 notes), so a cluster can contain exchanges. Whether concepts then cite them well is open: evidence reach was 0 of 10 and 2 of 10; see "Make concepts reach the answer-bearing note".
 - Why: Exchanges carry no enrichment keywords, so a keyword cluster contains only typed notes and concepts cite no exchange today.
 
 ## Clean up failed or flagged source ingests
@@ -1283,3 +1284,75 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Source: plans/207-Phase-11-Part-O13-Memory-Three-Tier-Architecture-Ontology-Wiki-Over-The-Fabric.md
 - Compromise: An ingested source counts as `minNotes` notes in the accumulation triggers so one source is due on its own.
 - Implications: Ingesting many small files costs one background model call each; a threshold per source size would be fairer.
+
+## Revisit closing the 208 screen on a partial run
+
+- Section: Compromises Made
+- Priority: P2
+- Source: plans/208-Phase-11-Part-O14-Memory-Three-Tier-Evaluation-Claim-Support-And-Default-Decision.md
+- Compromise: Task 5 closed on each job's quick slice plus the Muse series arms (owner, 2026-11-05); O1, O2, O5 and O7 were not computed and no tuning revision was made.
+- Implications: The ontology tier has no accuracy evidence either way. Plan 210 Task 5 reruns the full-partition comparison on the post-remediation product.
+
+## Treat the O3 early read as development evidence only
+
+- Section: Compromises Made
+- Priority: P1
+- Source: plans/208-Phase-11-Part-O14-Memory-Three-Tier-Evaluation-Claim-Support-And-Default-Decision.md
+- Compromise: O3 ran at 60 claims per group with two paid judges and no human calibration (`valid=false`); the small arm could not be audited because its curators sat on the panel.
+- Implications: Supported share 0.75 / 0.75 / 0.65 against 0.95 cannot decide the tier. Plan 210 Task 3.2 calibrates the panel first.
+
+## Judge the evasive-lure residual with the panel
+
+- Section: Further Actions
+- Priority: P2
+- Source: plans/208-Phase-11-Part-O14-Memory-Three-Tier-Evaluation-Claim-Support-And-Default-Decision.md
+- What: Run the panel over the delivered claims of the Task 4 `evasiveResidual` fixture (plan 210 Task 3.2).
+- Why: O4's "no poison in a delivered claim" rests on the scripted check only.
+
+## Calibrate the claim-support panel and rerun O3 at full size
+
+- Section: Further Actions
+- Priority: P1
+- Source: plans/208-Phase-11-Part-O14-Memory-Three-Tier-Evaluation-Claim-Support-And-Default-Decision.md
+- What: Label 60 claims from `P+O.large`, compute the panel-human kappa (plan 210 Task 3.2), then run 200 claims per group under gate C-1.
+- Why: O3 cannot pass or fail while `valid=false`.
+
+## Measure the ontology tier on full partitions
+
+- Section: Further Actions
+- Priority: P1
+- Source: plans/208-Phase-11-Part-O14-Memory-Three-Tier-Evaluation-Claim-Support-And-Default-Decision.md
+- What: `P` versus `P+O` and default versus read-time triggers on full partitions, with ceiling and power beside each score (plan 210 Task 5, gate C-1).
+- Why: The partial screen showed no per-question difference at about 12 points of power.
+
+## Make concepts reach the answer-bearing note
+
+- Section: Further Actions
+- Priority: P2
+- Source: plans/208-Phase-11-Part-O14-Memory-Three-Tier-Evaluation-Claim-Support-And-Default-Decision.md
+- What: Plan 210 Task 3 decides whether the curator, the binding or the citation rendering explains evidence reach of 0 of 10 and 2 of 10.
+- Why: A concept that does not lead to the answer-bearing note cannot raise accuracy.
+
+## Revisit the read-time minCoReads threshold
+
+- Section: Further Actions
+- Priority: P3
+- Source: plans/208-Phase-11-Part-O14-Memory-Three-Tier-Evaluation-Claim-Support-And-Default-Decision.md
+- What: Plan 210 Task 6 owns the one tuning revision; read-time consolidation built almost no concepts in series mode at the current value.
+- Why: The cheaper trigger policy cannot be compared until it builds something.
+
+## Decide whether an added date or inference counts as unsupported
+
+- Section: Further Actions
+- Priority: P3
+- Source: plans/208-Phase-11-Part-O14-Memory-Three-Tier-Evaluation-Claim-Support-And-Default-Decision.md
+- What: Plan 210 Task 6 rules on the O3 rubric once Task 3.2 shows how the panel and the labels differ on "partially supported" claims.
+- Why: 14, 12 and 21 of 60 claims in the three groups were rated partial.
+
+## Delete the superseded 208 caches after the human set is built
+
+- Section: Further Actions
+- Priority: P4
+- Source: plans/208-Phase-11-Part-O14-Memory-Three-Tier-Evaluation-Claim-Support-And-Default-Decision.md
+- What: Remove `.cache/memory-bench/208/` once plan 210 Task 3.2 has built its set.
+- Why: It holds the only copy of the claim bundles' text.

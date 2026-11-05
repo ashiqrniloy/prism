@@ -472,6 +472,12 @@ export interface MemoryFabricScopeOpenInput {
 }
 
 export interface CreateMemoryFabricOptions {
+  /** `recall.supersessionHint` (plan 210 Task 3.1): `all` (default) or `keyed-only`. */
+  readonly supersessionHint?: import("./recall.js").SupersessionHintMode;
+  /** `recall.expansion` (plan 210 Task 3.1): expand the lexical query with informal and formal forms. Default off. */
+  readonly queryExpansion?: boolean;
+  /** `recall.gather` (plan 210 Task 3.1): add `gather` to the `memory.recall` tool. Default off. */
+  readonly gather?: boolean;
   /**
    * The ontology tier's subject source (plan 207 Task 3), from `createFabricOntology(...).subjects`. With it a
    * written note is bound to the one subject it names and the consolidation extractor is shown the scope's

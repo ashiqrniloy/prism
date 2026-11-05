@@ -1,0 +1,13 @@
+{
+  "$comment": "[2026-11-05] plan 215 Task 7. Tool names Prism has removed. The package-skills gate (scripts/package-skills-conformance.mjs) fails any package skill that backticks one, and plan 215 Task 35's retired-name sweep reads this file too. Add a name in the task that removes the tool, with the plan that removed it.",
+  "tools": [
+    { "name": "repo_list", "retiredBy": "plan 189 Task 8" },
+    { "name": "repo_search", "retiredBy": "plan 189 Task 8" },
+    { "name": "git_branch", "retiredBy": "plan 189 Task 8" },
+    { "name": "git_apply", "retiredBy": "plan 189 Task 8" },
+    { "name": "git_worktree", "retiredBy": "plan 189 Task 8" },
+    { "name": "wiki_record_insight", "retiredBy": "plan 207" },
+    { "name": "wiki_search", "retiredBy": "plan 207" },
+    { "name": "wiki_read_page", "retiredBy": "plan 207" }
+  ]
+}

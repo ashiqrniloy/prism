@@ -135,6 +135,27 @@ describe("context-files skill discovery", () => {
     }
   });
 
+  it("requires_tools_malformed_discovered_skill_skipped_with_note", async () => {
+    const root = await tempRoot();
+    const skills = join(root, ".agents", "skills");
+    await writeSkill(skills, "good", "Good skill.");
+    const dir = join(skills, "gated");
+    await mkdir(dir, { recursive: true });
+    const bad = join(dir, "SKILL.md");
+    await writeFile(bad, "---\nname: gated\ndescription: d\nmetadata:\n  prism-requires-tools: bad/name\n---\nbody\n");
+    const ok = join(skills, "ok");
+    await mkdir(ok, { recursive: true });
+    await writeFile(join(ok, "SKILL.md"), "---\nname: ok\ndescription: d\nmetadata:\n  prism-requires-tools: web_search memory.recall\n---\nbody\n");
+    const agent = await load(root);
+    try {
+      assert.deepEqual(skillNames(agent), ["good", "ok"]);
+      assert.match(notes(agent), /skipped skill .*gated.*prism-requires-tools/);
+      assert.deepEqual(agent.skills.find((skill) => skill.name === "ok")?.requiresTools, ["web_search", "memory.recall"]);
+    } finally {
+      await agent.dispose();
+    }
+  });
+
   it("malformed_skill_skipped_with_note_not_thrown", async () => {
     const root = await tempRoot();
     await writeSkill(join(root, ".agents", "skills"), "good", "Good skill.");

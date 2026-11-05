@@ -53,6 +53,7 @@
       "name": "@arnilo/prism-context-engineering",
       "version": "0.13.0",
       "devDependencies": {
+        "@arnilo/prism-memory-core": "file:../../memory/core",
         "@types/node": "^22.20.0",
         "typescript": "^7.0.2",
       },
@@ -328,7 +329,7 @@
     },
     "packages/memory/core": {
       "name": "@arnilo/prism-memory-core",
-      "version": "0.13.0",
+      "version": "0.13.0-experimental.0",
       "devDependencies": {
         "@types/node": "^22.20.0",
         "@types/pg": "^8.23.1",
@@ -345,10 +346,10 @@
     },
     "packages/memory/fabric": {
       "name": "@arnilo/prism-memory-fabric",
-      "version": "0.13.0",
+      "version": "0.13.0-experimental.0",
       "dependencies": {
-        "@arnilo/prism-memory-core": "^0.13.0",
-        "@arnilo/prism-memory-observational": "^0.13.0",
+        "@arnilo/prism-memory-core": "0.13.0-experimental.0",
+        "@arnilo/prism-memory-observational": "0.13.0-experimental.0",
       },
       "devDependencies": {
         "@arnilo/prism-memory-rag": "file:../rag",
@@ -367,7 +368,7 @@
     },
     "packages/memory/observational": {
       "name": "@arnilo/prism-memory-observational",
-      "version": "0.13.0",
+      "version": "0.13.0-experimental.0",
       "devDependencies": {
         "@types/node": "^22.20.0",
         "typescript": "^7.0.2",
@@ -378,9 +379,9 @@
     },
     "packages/memory/rag": {
       "name": "@arnilo/prism-memory-rag",
-      "version": "0.13.0",
+      "version": "0.13.0-experimental.0",
       "dependencies": {
-        "@arnilo/prism-memory-core": "^0.13.0",
+        "@arnilo/prism-memory-core": "0.13.0-experimental.0",
       },
       "devDependencies": {
         "@arnilo/prism-tools-web": "file:../../tools/web",
@@ -402,11 +403,11 @@
     },
     "packages/memory/wiki": {
       "name": "@arnilo/prism-memory-wiki",
-      "version": "0.13.0",
+      "version": "0.13.0-experimental.0",
       "dependencies": {
-        "@arnilo/prism-memory-core": "^0.13.0",
-        "@arnilo/prism-memory-observational": "^0.13.0",
-        "@arnilo/prism-memory-rag": "^0.13.0",
+        "@arnilo/prism-memory-core": "0.13.0-experimental.0",
+        "@arnilo/prism-memory-observational": "0.13.0-experimental.0",
+        "@arnilo/prism-memory-rag": "0.13.0-experimental.0",
       },
       "devDependencies": {
         "@arnilo/prism-memory-fabric": "file:../fabric",
@@ -416,7 +417,7 @@
       },
       "peerDependencies": {
         "@arnilo/prism": ">=0.13.0 <1.0.0",
-        "@arnilo/prism-memory-fabric": "^0.13.0",
+        "@arnilo/prism-memory-fabric": "0.13.0-experimental.0",
         "@arnilo/prism-tools-web": "^0.13.0",
       },
       "optionalPeers": [
@@ -1200,6 +1201,8 @@
     "@ag-ui/client/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 
     "@ag-ui/core/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
+
+    "@arnilo/prism-context-engineering/@arnilo/prism-memory-core": ["@arnilo/prism-memory-core@file:packages/memory/core", { "devDependencies": { "@types/node": "^22.20.0", "@types/pg": "^8.23.1", "pg": "^8.23.0", "typescript": "^7.0.2" }, "peerDependencies": { "@arnilo/prism": ">=0.13.0 <1.0.0", "pg": "^8.23.0" }, "optionalPeers": ["pg"] }],
 
     "@arnilo/prism-credentials-keyring/@arnilo/prism-provider-hyper": ["@arnilo/prism-provider-hyper@file:packages/providers/hyper", { "devDependencies": { "@types/node": "^22.20.0", "typescript": "^7.0.2" }, "peerDependencies": { "@arnilo/prism": ">=0.13.0 <1.0.0" } }],
 

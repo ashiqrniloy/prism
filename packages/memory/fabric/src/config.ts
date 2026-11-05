@@ -168,6 +168,11 @@ export interface MemoryFabricInjectConfig {
   readonly minScore?: number;
   /** At or above this confidence a hit renders full text; below it renders a pointer card. Default `0.35`. */
   readonly fullTextScore?: number;
+  /**
+   * What a pointer card shows (plan 210 Task 3.1). `head` (default): the first 120 characters of the user half.
+   * `query`: the same width, centred on the query terms across both halves of the exchange.
+   */
+  readonly cardExcerpt?: "head" | "query";
   /** Whole notes delivered per turn, best first. Default `12`. */
   readonly topK?: number;
   /**
@@ -582,6 +587,8 @@ export interface MemoryFabricConfig {
   readonly lifecycle?: MemoryFabricLifecycleConfig;
   /** The ontology tier's write-path knobs (plan 207). Nothing here turns the tier on: concepts do. */
   readonly ontology?: MemoryFabricOntologyConfig;
+  /** Opt-in recall variants (plan 210 Task 3.1); unset, recall is unchanged. */
+  readonly recall?: MemoryFabricRecallConfig;
   /**
    * Session consolidation. `false` or absent (the default) makes no
    * model call; an object enables the opt-in extractor pass and configures acceptance.
@@ -605,6 +612,27 @@ export type ResolvedMemoryFabricStore =
   | { readonly postgres: MemoryFabricPostgresStoreConfig };
 
 /** {@link MemoryFabricConfig} with every default applied, so `setup` reads one shape. */
+/** Recall variants under audit (plan 210 Task 3.1). Each is off by default and measured once before it can ship. */
+export interface MemoryFabricRecallConfig {
+  /**
+   * Which older group members the read-time grouping labels "superseded by" a newer one. `all` (default) marks every
+   * older member; `keyed-only` marks only members joined by a key or an explicit `supersedes` edge, so conversation
+   * exchanges that merely share subject terms are not labelled as replaced.
+   */
+  readonly supersessionHint?: import("./recall.js").SupersessionHintMode;
+  /**
+   * Expand the lexical query with the informal and formal forms of its words ("girlfriend" also asks for "gf"), from a
+   * small fixed English table: no model call, no embeddings. Default `false`; a query with no table term is unchanged.
+   */
+  readonly expansion?: boolean;
+  /**
+   * Adds `gather` to the `memory.recall` tool: one call returns the whole matching history (up to the 32-hit recall
+   * window), oldest first, in a larger snippet budget, instead of a five-hit relevance page. For list and multi-hop
+   * questions. Default `false`: the tool schema and results are unchanged.
+   */
+  readonly gather?: boolean;
+}
+
 export interface MemoryFabricOntologyConfig {
   /**
    * Matched tokens of one subject name (slug, title or alias) that bind a new note to that subject, when exactly
@@ -664,6 +692,7 @@ export interface ResolvedMemoryFabricConfig {
   readonly exchanges: ResolvedFabricExchangesOptions;
   readonly lifecycle: ResolvedLifecycleConfig;
   readonly ontology: { readonly bindThreshold: number; readonly conceptPrior: number; readonly maxClaimsRendered: number };
+  readonly recall: { readonly supersessionHint: import("./recall.js").SupersessionHintMode; readonly expansion: boolean; readonly gather: boolean };
   readonly promote: ResolvedPromoteConfig;
   /** Opt-in read-time state table; `false` keeps the read path model-free. */
   readonly state: false | ResolvedStateConfig;
@@ -705,6 +734,7 @@ const fabricConfigSchema: JsonSchema = {
             minSimilarity: { type: "number", minimum: -1, maximum: 1, default: 0.2 },
             minScore: { type: "number", minimum: 0, maximum: 1, default: 0.2 },
             fullTextScore: { type: "number", minimum: 0, maximum: 1, default: 0.35 },
+            cardExcerpt: { enum: ["head", "query"], default: "head" },
             topK: { type: "integer", minimum: 1, maximum: HARD_TOP_K_CAP, default: 12 },
             budgetTokens: { type: "integer", minimum: 1, default: 4000 },
             query: { enum: ["task", "user"] },
@@ -722,6 +752,7 @@ const fabricConfigSchema: JsonSchema = {
       maxTopics: { type: "integer", minimum: 1, maximum: HARD_DIRECTORY_TOPICS },
       maxFiles: { type: "integer", minimum: 1, maximum: HARD_DIRECTORY_FILES },
       maxTokens: { type: "integer", minimum: 1, maximum: HARD_DIRECTORY_TOKENS },
+      stopWords: { type: "boolean", default: false },
     }),
     core: flagOrObject({
       maxTokens: { type: "integer", minimum: 1, maximum: HARD_CORE_TOKENS },
@@ -910,6 +941,11 @@ const fabricConfigSchema: JsonSchema = {
         maxClaimsRendered: { type: "integer", minimum: 1, maximum: MAX_CLAIMS_RENDERED_LIMIT },
       },
     },
+    recall: {
+      type: "object",
+      additionalProperties: false,
+      properties: { supersessionHint: { enum: ["all", "keyed-only"], default: "all" }, expansion: { type: "boolean", default: false }, gather: { type: "boolean", default: false } },
+    },
     lifecycle: memoryFabricLifecycleSchema,
     promote: memoryFabricPromoteSchema,
     state: {
@@ -949,11 +985,16 @@ const TUNING_CONFIG_FIELDS: ReadonlySet<string> = new Set([
   "inject.minSimilarity",
   "inject.minScore",
   "inject.fullTextScore",
+  "inject.cardExcerpt",
   "inject.topK",
   "inject.budgetTokens",
   "directory.maxTopics",
   "directory.maxFiles",
   "directory.maxTokens",
+  "directory.stopWords",
+  "recall.supersessionHint",
+  "recall.expansion",
+  "recall.gather",
   "ontology.bindThreshold",
   "ontology.conceptPrior",
   "ontology.maxClaimsRendered",
@@ -1103,6 +1144,31 @@ function expandPreset(config: MemoryFabricConfig): {
   };
 }
 
+function resolveInject(input: false | MemoryFabricInjectConfig | undefined): false | MemoryFabricInjectConfig {
+  if (input === undefined || input === false) return false;
+  if (input.cardExcerpt !== undefined && input.cardExcerpt !== "head" && input.cardExcerpt !== "query")
+    throw new MemoryValidationError('inject.cardExcerpt must be "head" or "query"');
+  return input;
+}
+
+function resolveGather(value: unknown): boolean {
+  if (value === undefined) return false;
+  if (typeof value === "boolean") return value;
+  throw new MemoryValidationError("recall.gather must be a boolean");
+}
+
+function resolveExpansion(value: unknown): boolean {
+  if (value === undefined) return false;
+  if (typeof value === "boolean") return value;
+  throw new MemoryValidationError("recall.expansion must be a boolean");
+}
+
+function resolveSupersessionHint(value: unknown): import("./recall.js").SupersessionHintMode {
+  if (value === undefined) return "all";
+  if (value === "all" || value === "keyed-only") return value;
+  throw new MemoryValidationError('recall.supersessionHint must be "all" or "keyed-only"');
+}
+
 export function resolveMemoryFabricConfig(config: MemoryFabricConfig = {}): ResolvedMemoryFabricConfig {
   const expanded = expandPreset(config);
   return resolveExpandedConfig(expanded.config, expanded.preset);
@@ -1131,7 +1197,7 @@ function resolveExpandedConfig(config: MemoryFabricConfig, preset: ResolvedMemor
     enabled: config.enabled !== false,
     retrieval: config.retrieval ?? "lexical",
     semantic: config.semantic !== false,
-    inject: config.inject ?? false,
+    inject: resolveInject(config.inject),
     directory: resolveFabricDirectoryOptions(config.directory, config.semantic !== false || Boolean(config.tools?.root)),
     // The core is on by default: it is the always-present tier, and it costs nothing after the first
     // cached turn. A store without `scanMetadata` turns it off at setup instead.
@@ -1158,6 +1224,7 @@ function resolveExpandedConfig(config: MemoryFabricConfig, preset: ResolvedMemor
       conceptPrior: resolveConceptPrior(config.ontology?.conceptPrior),
       maxClaimsRendered: resolveMaxClaimsRendered(config.ontology?.maxClaimsRendered),
     },
+    recall: { supersessionHint: resolveSupersessionHint(config.recall?.supersessionHint), expansion: resolveExpansion(config.recall?.expansion), gather: resolveGather(config.recall?.gather) },
     promote: resolvePromoteConfig(config.promote),
     state: resolveStateConfig(config.state),
     decisions: resolveDecisionsConfig(config.decisions),

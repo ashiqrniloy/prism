@@ -546,7 +546,8 @@ async function main1888() {
 }
 
 if (import.meta.main) {
-  if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "188.8") await main1888();
+  if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "208") await main208();
+  else if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "188.8") await main1888();
   else if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "188.9") await main1889();
   else if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "188.10") await main18810();
   else await main();
@@ -907,4 +908,26 @@ async function main18810() {
   ];
   await writeFile(ACCEPTANCE_18810_COMPARISONS.replace(/\.json$/, ".md"), `${lines.join("\n")}\n`);
   console.log(JSON.stringify({ verdict: summary.verdict, missing, taskComplete: summary.taskComplete }, null, 2));
+}
+
+/* Plan 208 Task 5: the ontology development report, O1-O7 on the development partition only. */
+async function main208() {
+  const { writeOntologyDevReport } = await import("./ontology-report.mjs");
+  const partition = process.argv.includes("--partition") ? process.argv[process.argv.indexOf("--partition") + 1] : undefined;
+  try {
+    const report = await writeOntologyDevReport({ partition });
+    console.log(
+      JSON.stringify(
+        {
+          jobsRead: report.jobsRead,
+          rows: Object.fromEntries(Object.entries(report.rows).map(([k, v]) => [k, v.pass ?? v.status ?? null])),
+        },
+        null,
+        2,
+      ),
+    );
+  } catch (error) {
+    console.error(`${error.name}: ${error.message}`);
+    process.exitCode = 1;
+  }
 }

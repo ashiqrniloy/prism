@@ -1,0 +1,25 @@
+{
+  "kind": "208-free-panel",
+  "checkedAt": "2026-11-04T15:17:44.572Z",
+  "provider": "kilo",
+  "panel": [],
+  "commandcode": [
+    {
+      "ref": "commandcode/stealth/glyph-cluster:free",
+      "contextWindow": 256000,
+      "paid": false
+    },
+    {
+      "ref": "commandcode/stealth/crouton-alpha",
+      "contextWindow": 1048576,
+      "paid": false
+    }
+  ],
+  "opencodeGo": [
+    {
+      "ref": "opencode-go/beam-free",
+      "contextWindow": 1048576,
+      "canonical": "reflection/beam-1.0-501b-a23b"
+    }
+  ]
+}

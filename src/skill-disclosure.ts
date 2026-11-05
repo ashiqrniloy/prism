@@ -56,6 +56,18 @@ export interface SkillRenderContext {
   readonly loaded?: LoadedSkillSet;
   /** Budget demotion: render catalog-only even when eager/loaded. */
   readonly demotedBodies?: ReadonlySet<string>;
+  /** Names of the tools this request advertises. When set, a skill whose `requiresTools` are not all here is not rendered. */
+  readonly tools?: ReadonlySet<string>;
+}
+
+/** The `requiresTools` of `skill` that `tools` does not advertise. The one availability test every skill path calls. */
+export function missingSkillTools(skill: Skill, tools: ReadonlySet<string> | undefined): readonly string[] {
+  if (!tools || !skill.requiresTools?.length) return [];
+  return skill.requiresTools.filter((name) => !tools.has(name));
+}
+
+function isSkillAvailable(skill: Skill, tools: ReadonlySet<string> | undefined): boolean {
+  return missingSkillTools(skill, tools).length === 0;
 }
 
 export function resolveSkillsDisclosure(run?: SkillsDisclosure, agent?: SkillsDisclosure): SkillsDisclosure {
@@ -69,8 +81,9 @@ export function capSkillCatalog(skills: readonly Skill[]): readonly Skill[] {
 /** Skills that should appear in prompt assembly for the given disclosure mode. */
 export function selectSkillsForPrompt(skills: readonly Skill[], context: SkillRenderContext = {}): readonly Skill[] {
   const disclosure = context.disclosure ?? "progressive";
-  if (disclosure === "eager") return skills.filter((skill) => skill.instructions);
-  return skills;
+  const available = context.tools ? skills.filter((skill) => isSkillAvailable(skill, context.tools)) : skills;
+  if (disclosure === "eager") return available.filter((skill) => skill.instructions);
+  return available;
 }
 
 export function skillHasRenderableBody(skill: Skill, context: SkillRenderContext = {}): boolean {

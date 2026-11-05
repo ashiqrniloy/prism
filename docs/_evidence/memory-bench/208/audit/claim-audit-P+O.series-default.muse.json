@@ -1,0 +1,933 @@
+{
+  "kind": "ontology-claim-support-v1",
+  "plan": 208,
+  "arm": "P+O.series-default.muse",
+  "criteriaHash": "3d5a5c10fddda0931d00003aad8f2fccf5bdef2a829fa0b09bfac004b2bd263f",
+  "templateVersion": "60a9a66fca1ac1d1d4cf78d92e4204fb1b586a6169fec7b07ebde7254db9f8a5",
+  "seed": "prism-208-claim-audit",
+  "sample": 60,
+  "panel": [
+    {
+      "ref": "commandcode/Qwen/Qwen3.7-Flash",
+      "family": "qwen",
+      "citationOrder": "forward"
+    },
+    {
+      "ref": "commandcode/meta/muse-spark-1.3-contributor",
+      "family": "muse",
+      "citationOrder": "reversed"
+    }
+  ],
+  "pool": {
+    "claims": 1951,
+    "humanClaimsExcluded": 0,
+    "uncitedExcluded": 0
+  },
+  "judgeCalls": 120,
+  "groups": {
+    "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor": {
+      "sampled": 60,
+      "judged": 60,
+      "failed": 0,
+      "unresolved": 0,
+      "labels": {
+        "supported": 39,
+        "partially-supported": 21,
+        "unsupported": 0,
+        "contradicted": 0
+      },
+      "supportedShare": 0.65,
+      "supportedShareWilsonLow": 0.5236238380947751,
+      "citationPrecision": 0.9318181818181818,
+      "byStratum": {
+        "beam-100k:large": {
+          "sampled": 8,
+          "supported": 6
+        },
+        "beam-100k:medium": {
+          "sampled": 8,
+          "supported": 6
+        },
+        "locomo:large": {
+          "sampled": 8,
+          "supported": 2
+        },
+        "locomo:medium": {
+          "sampled": 8,
+          "supported": 3
+        },
+        "locomo:small": {
+          "sampled": 8,
+          "supported": 2
+        },
+        "memoryagentbench-cr:large": {
+          "sampled": 8,
+          "supported": 8
+        },
+        "memoryagentbench-cr:medium": {
+          "sampled": 8,
+          "supported": 8
+        },
+        "memoryagentbench-cr:small": {
+          "sampled": 4,
+          "supported": 4
+        }
+      }
+    }
+  },
+  "evidenceReach": {
+    "answered": 10,
+    "reached": 2,
+    "share": 0.2
+  },
+  "calibration": null,
+  "o3": {
+    "valid": false,
+    "invalidReasons": [
+      "no human labels"
+    ],
+    "pass": null
+  },
+  "rows": [
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|17:temporal_reasoning:0|5bd09f8be502|c7",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|1:summarization:1|fa91a07e1df1|c5",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 2,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|conv-41:175|8edd41fb230e|c5",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "locomo",
+      "size": "large",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 2,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|conv-44:30|4cd29ffcc92f|c8",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "locomo",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|conv-41:163|2190144d4acb|c2",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "locomo",
+      "size": "small",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "partially-supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|6:84|729928e1a0ea|c16",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "memoryagentbench-cr",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|2:86|4324002b7ebe|c6",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "memoryagentbench-cr",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|5:67|5ca1912f5a9e|c2",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "memoryagentbench-cr",
+      "size": "small",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|13:multi_session_reasoning:1|53bd36957f27|c22",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|9:instruction_following:1|ca0360f2c6b0|c6",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|conv-44:30|d566bfdae2fb|c6",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "locomo",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|conv-44:30|249ce5a77ec7|c5",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "locomo",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|conv-41:163|8ccfba050822|c1",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "locomo",
+      "size": "small",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 3,
+      "neededCount": 3,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|6:84|b5557a79492d|c11",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "memoryagentbench-cr",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|0:90|683cc296d8f7|c8",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "memoryagentbench-cr",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|5:72|f7157c229e3e|c2",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "memoryagentbench-cr",
+      "size": "small",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|18:temporal_reasoning:0|fb6d5e91a24b|c8",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|1:summarization:1|f63b3cb5e4b3|c6",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|conv-41:163|57cb7ab316a0|c8",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "locomo",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 2,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|conv-41:16|54f19bb3496d|c6",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "locomo",
+      "size": "medium",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "partially-supported",
+        "partially-supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|conv-41:175|957692be3b05|c2",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "locomo",
+      "size": "small",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "partially-supported",
+        "partially-supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|6:68|a43bf948fdf9|c12",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "memoryagentbench-cr",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|0:99|1d68b2c1b7c9|c1",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "memoryagentbench-cr",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|5:67|5ca1912f5a9e|c1",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "memoryagentbench-cr",
+      "size": "small",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|9:multi_session_reasoning:1|4e469660e534|c2",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|9:instruction_following:1|ca0360f2c6b0|c8",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|conv-44:30|24d0de1adc1e|c3",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "locomo",
+      "size": "large",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "partially-supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|conv-41:163|6d58bfe11083|c7",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "locomo",
+      "size": "medium",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "partially-supported",
+        "partially-supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|conv-41:175|957692be3b05|c1",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "locomo",
+      "size": "small",
+      "label": "supported",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|2:86|d2578954a04e|c11",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "memoryagentbench-cr",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|0:90|683cc296d8f7|c2",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "memoryagentbench-cr",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|5:72|f7157c229e3e|c1",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "memoryagentbench-cr",
+      "size": "small",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|17:temporal_reasoning:0|0b94292a9350|c10",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|10:summarization:0|500b97b979b7|c4",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|conv-44:30|d566bfdae2fb|c11",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "locomo",
+      "size": "large",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "partially-supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|conv-41:163|43dcd4775735|c2",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "locomo",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|conv-41:175|886b090c44a7|c3",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "locomo",
+      "size": "small",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "partially-supported",
+        "partially-supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|6:68|590ccd723bc4|c9",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "memoryagentbench-cr",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|0:99|a1fe4c82cd75|c5",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "memoryagentbench-cr",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|9:instruction_following:1|a5886c54869e|c26",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|1:summarization:1|fa91a07e1df1|c7",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|conv-41:175|d915290fa331|c17",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "locomo",
+      "size": "large",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 2,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|conv-44:30|249ce5a77ec7|c7",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "locomo",
+      "size": "medium",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "partially-supported",
+        "partially-supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|conv-41:175|957692be3b05|c3",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "locomo",
+      "size": "small",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 2,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|2:86|d2578954a04e|c10",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "memoryagentbench-cr",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|5:72|30ae10b08880|c2",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "memoryagentbench-cr",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|1:summarization:1|1015554cfe12|c5",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|1:summarization:1|fa91a07e1df1|c2",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|conv-41:175|15a81118f297|c18",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "locomo",
+      "size": "large",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "partially-supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|conv-44:30|5b0ce25fda5c|c7",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "locomo",
+      "size": "medium",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 2,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|conv-41:175|886b090c44a7|c2",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "locomo",
+      "size": "small",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|5:67|7668f3be96d0|c6",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "memoryagentbench-cr",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|0:90|fe89538d42cd|c5",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "memoryagentbench-cr",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|18:temporal_reasoning:0|989c7e6372b0|c9",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|1:summarization:1|fab133c380e6|c1",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|conv-44:30|36b3bfe4e241|c5",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "locomo",
+      "size": "large",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "partially-supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|conv-41:163|b797645b09f9|c2",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "locomo",
+      "size": "medium",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|conv-41:163|8ccfba050822|c2",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "locomo",
+      "size": "small",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 2,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|5:67|7668f3be96d0|c13",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "memoryagentbench-cr",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor|0:90|fe89538d42cd|c1",
+      "group": "P+O.series-default.muse|commandcode/meta/muse-spark-1.2-contributor",
+      "suite": "memoryagentbench-cr",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    }
+  ]
+}

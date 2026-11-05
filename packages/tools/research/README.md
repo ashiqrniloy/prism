@@ -33,7 +33,7 @@ Unknown keys are rejected. `maxRepairs` above 3 and `maxSources` above 5000 are 
 ## What it changes
 
 - Tools: `cite` (`effects: []`). `cite({ id, quote? })` returns `[[cite:<id>]]` when `id` is in the ledger, or an error result `unknown_source` when it is not. `quote` is not stored.
-- Skills: `research-scoping`, `source-triage`, `research-synthesis`, `research-report`, loaded from this package and progressive by default. The report skill tells the model to cite with markers from `cite`.
+- Skills: `research-scoping`, `source-triage`, `research-synthesis`, `research-report`, loaded from this package and progressive by default. The report skill tells the model to cite with markers from `cite`, and declares `requiresTools: cite`, so a request without that tool does not list it. Each description opens with when to use the skill (`scripts/package-skills-conformance.mjs` holds them to the package-skill contract in [Packages](../../../docs/packages.md#writing-a-package-skill)).
 - Command: `research.verify` → `{ verdict, unresolved, ledgerSize }` for the given session. `verdict` is `pending` until a run ends, then `passed` or `failed`. With no session it returns `pending` and does not throw.
 - Hooks: `tool.result` (transform, id `ledger`) and `run.end` (decide, id `citations`). A new source appends `ledger: S<n>` to the tool result. The transcript keeps `value` and drops text content when `value` is set, so the same line is also `value.ledger`.
 - Events: `research.citations.unresolved` with `{ unresolved: string[] }` when the check fails after the repair bound.

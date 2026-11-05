@@ -1,0 +1,30 @@
+{
+  "kind": "208-development-screen-run",
+  "journal": {
+    "campaignId": "campaign-a663cd71f84d",
+    "status": "finished",
+    "ceiling": 1300000000,
+    "spend": 142594,
+    "attempts": [
+      {
+        "attemptId": "208-screen.muse.P+O.series-readtime.memoryagentbench-cr@1",
+        "jobId": "208-screen.muse.P+O.series-readtime.memoryagentbench-cr",
+        "status": "failed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 142594
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "208-screen.muse.P+O.series-readtime.memoryagentbench-cr",
+      "attemptId": "208-screen.muse.P+O.series-readtime.memoryagentbench-cr@1",
+      "answersDir": ".cache/memory-bench/208/muse/P+O.series-readtime/answers",
+      "status": "partial",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 142594
+    }
+  ]
+}

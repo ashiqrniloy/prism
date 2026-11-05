@@ -21,8 +21,8 @@ Every agent is one `createAgent` call with a package list. The host code for eac
 | Agent | Source | Why it has these packages |
 | --- | --- | --- |
 | orchestrator | [`src/host/orchestrator.ts`](src/host/orchestrator.ts) | `workflows` for the graph, `delegate` for a research child, and one `definePackage` that registers the host's `build` command |
-| coding | [`src/host/coding.ts`](src/host/coding.ts) | `tools-coding` to edit the workspace, `approval` to gate writes, `context-files` and `hooks-json` for repo context, `context-engineering` for fold/accounting, and both memory packages (plus `memory-wiki` when `ontology` is on) |
-| research | [`src/host/research.ts`](src/host/research.ts) | `tools-web`, `tools-browser`, `memory-rag`, `tools-research` (the citation ledger and `run.end` check), and the same fold/accounting with a 20% block cap |
+| coding | [`src/host/coding.ts`](src/host/coding.ts) | `tools-coding` to edit the workspace, `approval` to gate writes, `context-files` and `hooks-json` for repo context, `context-engineering` for fold/accounting, and `memory-compaction`; with `memory` set, also `memory-fabric` and `memory-observational` (plus `memory-wiki` when `ontology` is on) |
+| research | [`src/host/research.ts`](src/host/research.ts) | `tools-web`, `tools-browser`, `tools-research` (the citation ledger and `run.end` check), `memory-compaction`, and the same fold/accounting with a 20% block cap; `memory-rag` only when `embeddings` is set, and `memory-fabric` with `memory-observational` only when `memory` is set |
 | external | [`src/host/external.ts`](src/host/external.ts) | a host-owned adapter over `driver-process`, for a vendor CLI the host does not control |
 | remote | [`src/host/remote.ts`](src/host/remote.ts) | `connectAgent`, reaching a worker served from a second process |
 
@@ -48,7 +48,7 @@ const agent = await createAgent({
 });
 ```
 
-Both memory packages claim the `compaction` slot; the explicit `slots` assignment is the SDK's conflict resolution, not a workaround. The orchestrator registers the build graph as a host command, not a model-visible tool:
+With `memory` set, `memory-compaction` and `memory-observational` both claim the `compaction` slot; the explicit `slots` assignment is the SDK's conflict resolution, not a workaround. The orchestrator registers the build graph as a host command, not a model-visible tool:
 
 ```ts
 import { createAgent, definePackage } from "@arnilo/prism";
@@ -109,6 +109,12 @@ stay unregistered (`nativeTools: false`), so a host that configures Obscura gets
 tools as every other backend.
 
 ## Memory
+
+> **Experimental in 0.13.0.** The default coding and research workers load no experimental package. Everything in
+> this section (`memory`, `ontology`, `embeddings`) installs `@arnilo/prism-memory-*`, which ships on the
+> `experimental` dist-tag (`bun add @arnilo/prism-memory-fabric@experimental`), outside the stable packages'
+> promise. `memory` loads the fabric and the observational memory together; `embeddings` loads `memory-rag` on the
+> research worker, with `rag_search`. `memory-compaction` (stable) owns the `compaction` slot on the default path.
 
 `memory: "conversational"` (off by default) installs `@arnilo/prism-memory-fabric` on the research and
 coding workers with the conversational preset. The preset archives each completed exchange verbatim,

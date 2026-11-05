@@ -21,6 +21,7 @@ import type { SecretRedactor } from "./redaction.js";
 import { loadTextResource } from "./resources.js";
 import {
   capSkillCatalog,
+  missingSkillTools,
   selectSkillsForPrompt,
   skillHasRenderableBody,
   skillMessages as buildSkillMessages,
@@ -59,11 +60,7 @@ export function formatUntrustedToolText(result: Pick<ToolResult, "name" | "conte
     .filter(Boolean)
     .join("\n");
   const body =
-    text.length > 0
-      ? text
-      : result.value === undefined
-        ? EMPTY_TOOL_RESULT_TEXT
-        : (JSON.stringify(result.value) ?? EMPTY_TOOL_RESULT_TEXT);
+    text.length > 0 ? text : result.value === undefined ? EMPTY_TOOL_RESULT_TEXT : (JSON.stringify(result.value) ?? EMPTY_TOOL_RESULT_TEXT);
   const source = untrustedSource(result.metadata);
   return [
     UNTRUSTED_PREAMBLE,
@@ -221,8 +218,8 @@ function buildProviderMessages(request: PromptComposition): readonly Message[] {
     : buildSkillMessages(
         request.skills,
         request.tailSkillBodies
-          ? { disclosure: "progressive" }
-          : { disclosure: request.skillsDisclosure, loaded: request.loadedSkills },
+          ? { disclosure: "progressive", tools: toolNameSet(request.tools) }
+          : { disclosure: request.skillsDisclosure, loaded: request.loadedSkills, tools: toolNameSet(request.tools) },
       );
   const declarations = toolMessages(tools);
   if ((request.inputLayout ?? "cache_aware") === "legacy") {
@@ -286,6 +283,7 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
       options.loadedSkills,
       messages,
       options.runId,
+      toolNameSet(tools),
     );
     messages = [...messages, ...tailMessages(tailSegments, activeTailSegments)];
   }
@@ -318,6 +316,8 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
     deferSkillCatalog(request, skills ?? [], {
       disclosure: tailSkillBodies ? "progressive" : options.skillsDisclosure,
       loaded: tailSkillBodies ? undefined : options.loadedSkills,
+      // The turn's advertised tools, not `draft.tools`: a `context.build` handler cannot widen a skill's availability.
+      tools: toolNameSet(tools),
     });
   }
   return request;
@@ -460,8 +460,9 @@ function appendSkillTailSegments(
   loaded: LoadedSkillSet | undefined,
   messages: readonly Message[],
   runId: string | undefined,
+  tools: ReadonlySet<string>,
 ): void {
-  const renderContext = { disclosure, loaded };
+  const renderContext = { disclosure, loaded, tools };
   const selected = capSkillCatalog(selectSkillsForPrompt(skills ?? [], renderContext));
   const byName = new Map(selected.map((skill) => [skill.name, skill]));
   if (disclosure === "eager") {
@@ -478,9 +479,19 @@ function appendSkillTailSegments(
     loaded?.entries?.() ?? (loaded?.list() ?? []).map((name) => ({ name }));
   const reattach: Skill[] = [];
   const previous: string[] = [];
+  const unavailable = new Set((skills ?? []).filter((skill) => missingSkillTools(skill, tools).length > 0).map((skill) => skill.name));
   for (const entry of entries) {
     const skill = byName.get(entry.name);
-    if (!skill || !skillHasRenderableBody(skill, renderContext)) continue;
+    if (!skill) {
+      // Loaded but its tools are not advertised this turn: name it, never re-attach it, and keep it loaded so
+      // its body returns with the tools. A transcript copy still on the wire needs no mention.
+      if (unavailable.has(entry.name) && !visible.has(entry.name)) {
+        tailSegments.delete(`skill:${entry.name}`);
+        previous.push(entry.name);
+      }
+      continue;
+    }
+    if (!skillHasRenderableBody(skill, renderContext)) continue;
     if (visible.has(entry.name)) {
       tailSegments.delete(`skill:${entry.name}`);
       continue;
@@ -524,6 +535,10 @@ function providerVisibleLoadedSkills(messages: readonly Message[]): Set<string> 
     names.add(name);
   }
   return names;
+}
+
+function toolNameSet(tools: readonly { readonly name: string }[] | undefined): ReadonlySet<string> {
+  return new Set((tools ?? []).map((tool) => tool.name));
 }
 
 function previouslyLoadedLine(names: readonly string[]): string {

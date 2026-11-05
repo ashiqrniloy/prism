@@ -7,7 +7,16 @@ import { providerDone, providerTextDelta, providerToolCall, toolCallContent } fr
 import { createMemoryVectorStore } from "@arnilo/prism-memory-core";
 import { createMemory, createMemoryFabric, createMemoryWorkingStore } from "@arnilo/prism-memory-fabric";
 import { normalizeDataset } from "./datasets.mjs";
-import { extractEvidence, gradeEvidence, mockProvider, replay, sessionRounds } from "./replay.mjs";
+import {
+  extractEvidence,
+  gradeEvidence,
+  MAB_CR_INSTRUCTION,
+  MAB_CR_INSTRUCTION_VERSION,
+  mockProvider,
+  replay,
+  sessionRounds,
+  suiteAnswerInstruction,
+} from "./replay.mjs";
 import { runBench } from "./run.mjs";
 
 const factQuestion = () =>
@@ -52,7 +61,7 @@ test("fact_list_import_preserves_both_versions_without_synthetic_assistant_messa
     writeSnapshot: root,
   });
   const ingest = report.results[0].ingest;
-  assert.equal(ingest.policy, "product-source-facts-v1");
+  assert.equal(ingest.policy, "product-source-facts-v3");
   assert.equal(ingest.sourceMessages, 2);
   assert.equal(ingest.coveredSourceMessages, 2);
   assert.equal(ingest.imported, 2);
@@ -62,6 +71,56 @@ test("fact_list_import_preserves_both_versions_without_synthetic_assistant_messa
   assert(notes.some((t) => t.includes("was amber")));
   assert(notes.some((t) => t.includes("now cobalt")));
   assert(notes.every((t) => !t.includes("assistant:")));
+  // The benchmark's own answer rule is part of this suite's protocol, and only this suite's.
+  assert.equal(report.protocol.answerInstruction, MAB_CR_INSTRUCTION_VERSION);
+  assert.equal(report.protocol.factIngest, "product-source-facts-v3");
+  assert.match(MAB_CR_INSTRUCTION, /larger serial number/);
+  assert.match(MAB_CR_INSTRUCTION, /do not use outside knowledge/);
+});
+
+test("a_fact_pool_store_is_built_once_and_copied_byte_identically_for_later_questions", async () => {
+  const cache = await mkdtemp(join(tmpdir(), "prism-fact-store-cache-"));
+  const previous = process.env.PRISM_MEMORY_BENCH_FACT_STORE_CACHE;
+  process.env.PRISM_MEMORY_BENCH_FACT_STORE_CACHE = cache;
+  try {
+    const write = async () => {
+      const root = await mkdtemp(join(tmpdir(), "prism-fact-ingest-"));
+      const report = await runBench({
+        offline: true,
+        suite: "memoryagentbench-cr",
+        config: "fabric-x-tools",
+        questions: [factQuestion()],
+        phase: "write",
+        writeSnapshot: root,
+      });
+      const files = (await readdir(root, { recursive: true })).filter((f) => f.endsWith(".md") && f.includes("/facts/")).sort();
+      return { ingest: report.results[0].ingest, notes: await Promise.all(files.map((f) => readFile(join(root, f), "utf8"))), files };
+    };
+    const first = await write();
+    const second = await write();
+    assert.equal(first.ingest.storeReused, undefined, "the first question builds the store");
+    assert.equal(second.ingest.storeReused, true, "a later question on the same pool copies it");
+    assert.equal(second.ingest.imported, first.ingest.imported);
+    assert.deepEqual(second.files, first.files);
+    assert.deepEqual(second.notes, first.notes);
+    assert.equal((await readdir(cache)).length, 1, "one store per pool, published atomically");
+  } finally {
+    if (previous === undefined) delete process.env.PRISM_MEMORY_BENCH_FACT_STORE_CACHE;
+    else process.env.PRISM_MEMORY_BENCH_FACT_STORE_CACHE = previous;
+  }
+});
+
+test("beam_answers_by_its_published_prompt_and_other_suites_keep_the_generic_one", () => {
+  for (const suite of ["beam-100k", "beam-1m"]) {
+    const own = suiteAnswerInstruction(suite);
+    assert.equal(own?.version, "beam-published-answer-v1");
+    assert.match(own.text, /ONLY the conversation history/);
+    assert.match(own.text, /without any explanation/);
+    // BEAM's published prompt carries no ability-specific rule, so neither does ours.
+    assert.doesNotMatch(own.text, /contradict/i);
+  }
+  assert.equal(suiteAnswerInstruction("memoryagentbench-cr")?.version, MAB_CR_INSTRUCTION_VERSION);
+  assert.equal(suiteAnswerInstruction("locomo"), undefined);
 });
 
 test("unsupported_user_only_conversation_refuses_before_an_answer_call", async () => {
@@ -311,4 +370,53 @@ test("fact_import_reports_trust_refusals_and_changed_snapshot_sources_fail_close
   assert.equal(seeded.status, "failed");
   assert.match(seeded.failure.code, /MemoryBenchWriteSideMismatch/);
   assert.equal(seeded.results.length, 0, "a fixture mismatch must never count as an incorrect answer");
+});
+
+test("the_final_answer_turn_carries_no_tools_and_earlier_turns_are_unchanged", async () => {
+  const { answerTurnIndex, finalTurnRequest, BENCH_MAX_TURNS, FINAL_TURN_NOTE } = await import("./replay.mjs");
+  const tools = [{ name: "memory.recall" }, { name: "memory.read" }, { name: "other.tool" }];
+  const user = (text) => ({ role: "user", content: [{ type: "text", text }] });
+  const call = () => ({ role: "assistant", content: [{ type: "tool_call", id: "c", name: "memory.recall", arguments: {} }] });
+  const result = () => ({ role: "tool", content: [{ type: "tool_result", id: "c", name: "memory.recall", result: {} }] });
+  const run = (turns) => [user("old question"), { role: "assistant", content: [{ type: "text", text: "old answer" }] }, user("q"), ...Array.from({ length: turns }, () => [call(), result()]).flat()];
+  assert.equal(answerTurnIndex(run(0)), 0, "an earlier exchange in the history is not this run's turn");
+  assert.equal(answerTurnIndex(run(3)), 3);
+  const max = BENCH_MAX_TURNS.standard;
+  for (let turns = 0; turns < max - 1; turns += 1) {
+    const request = { messages: run(turns), tools };
+    assert.equal(finalTurnRequest(request, max), request, `turn ${turns + 1} keeps its tools`);
+  }
+  const last = finalTurnRequest({ messages: run(max - 1), tools }, max);
+  assert.equal("tools" in last, false, "the last allowed turn has no tools at all (wiki and other tools too)");
+  // The last turn also says why: a model that wanted another search must not write the call as its answer.
+  const closing = last.messages.at(-1);
+  assert.equal(closing.role, "user", "a system message at the end left Beam Free with reasoning only and no answer");
+  assert.equal(closing.content[0].text, FINAL_TURN_NOTE);
+  assert.equal(last.messages.length, run(max - 1).length + 1, "one closing message, nothing else changed");
+  // An earlier turn carries no note.
+  assert.equal(finalTurnRequest({ messages: run(max - 2), tools }, max).messages.length, run(max - 2).length);
+  // A request that never had tools (nothing to remove) is returned as is.
+  const bare = { messages: run(max - 1) };
+  assert.equal(finalTurnRequest(bare, max), bare);
+  // Tool results carried in a user-role message do not reset the count.
+  const userResults = [user("q"), call(), { role: "user", content: [{ type: "tool_result", id: "c" }] }, call()];
+  assert.equal(answerTurnIndex(userResults), 2);
+});
+
+test("the_supersession_diagnostic_strips_only_the_hint_from_text_and_recall_results", async () => {
+  const { stripSupersessionHints } = await import("./replay.mjs");
+  const hit = { id: "a1", supersededBy: { id: "b2", at: "2023-02-05T00:00:00.000Z" }, content: "kept" };
+  const messages = [
+    { role: "system", content: [{ type: "text", text: '- [8d0f352609f4] project exchange (2026-11-04) tRef=2023-01-09T19:06:00.000Z superseded by afcd6e8fc83b on 2023-02-05? user: John said hi' }] },
+    { role: "tool", content: [{ type: "tool_result", name: "memory.recall", result: { hits: [hit], total: 1 } }] },
+    { role: "user", content: [{ type: "text", text: "A question that says superseded by nothing" }] },
+  ];
+  const out = stripSupersessionHints(messages);
+  assert.equal(out[0].content[0].text.includes("superseded"), false);
+  assert.match(out[0].content[0].text, /tRef=2023-01-09T19:06:00.000Z user: John said hi/);
+  assert.equal("supersededBy" in out[1].content[0].result.hits[0], false);
+  assert.equal(out[1].content[0].result.hits[0].content, "kept");
+  assert.equal(out[1].content[0].result.total, 1);
+  assert.deepEqual(out[2], messages[2], "an unrelated message is unchanged");
+  assert.equal(hit.supersededBy.id, "b2", "the input is not mutated");
 });

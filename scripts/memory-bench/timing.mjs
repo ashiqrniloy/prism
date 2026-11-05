@@ -69,7 +69,15 @@ export function createTiming({ now = () => performance.now() } = {}) {
         concurrency: concurrency ?? null,
         questions: { n: questionTimes.length, wallMs: timingStats(questionTimes) },
         phases: Object.fromEntries(
-          ["ingestion", "restore", "answer", "evaluation"].map((name) => {
+          [
+            "ingestion",
+            "restore",
+            // Plan 208 Task 3: the ontology settle wait is reported apart, never inside ingestion or the answer latency.
+            ...(results.some((row) => row.phaseTiming?.ontologySettle !== undefined) ? ["ontologySettle"] : []),
+            ...(results.some((row) => row.phaseTiming?.ontologyWarmup !== undefined) ? ["ontologyWarmup"] : []),
+            "answer",
+            "evaluation",
+          ].map((name) => {
             const values = results.map((row) => row.phaseTiming?.[name]).filter(Number.isFinite);
             return [name, { n: values.length, wallMs: timingStats(values) }];
           }),

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Plan 215 Task 7: the `computer-use-linux` skill description opens with when to use it, and its body no longer names the host-only `setup_accessibility` / `setup_window_targeting` tools (it says the host runs setup). Checked by `scripts/package-skills-conformance.mjs`.
+
 ### Added
 
 - `@arnilo/prism-tools-computer-use` (plan 155 Task 4): the `computer-use-linux` MCP bridge moved out

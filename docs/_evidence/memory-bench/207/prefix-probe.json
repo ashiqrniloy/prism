@@ -2,8 +2,8 @@
   "schema": "memory-prefix-probe-v1",
   "fixture": 1,
   "networkCalls": 0,
-  "productHash": "df2028250b6051719b9f3a544f2b9fd56add1906f004f0e235bc30432a0f574e",
-  "supportingSourceHash": "f506548cfa1e4a775615e1b57960e0639b09719ec6c30be5ef04591e38f9727d",
+  "productHash": "9780be7295970279b18dfc4d8e782fdbd13b3b4eccefa566d29a5161cd270e1b",
+  "supportingSourceHash": "e4fd159bfe6e254cfc902158838b4d27b41a840a73b5ddf878607829ad75478f",
   "probeSha256": "c5e56c320fe1375b7605a10f30616e727d3c48060893818745c099efe91da9e7",
   "provenance": [
     {
@@ -2015,5 +2015,5 @@
     "entriesAfterClose": 0,
     "evicted": true
   },
-  "sha256": "3993704c41808924f9ea013cd6e13d3264beb3d8267dc4ed9f9e42ade828bd6c"
+  "sha256": "47158c69e5acc1312b8758111b8d40d426bc669e8dd6f949e553adc3e9fe5cc1"
 }

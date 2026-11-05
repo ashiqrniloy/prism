@@ -100,7 +100,7 @@ Prism's own packages are optional, just like third-party ones. None of them is i
 | --- | --- |
 | Model providers | `@arnilo/prism-provider-{hyper, kilo, laya, liquid, litellm, openai-codex, opencode-go, openrouter, typesafe}` |
 | Tools | `@arnilo/prism-tools-{coding, web, browser, work, computer-use, openapi}` |
-| Memory and context | `@arnilo/prism-memory-{compaction, observational, rag, wiki, fabric}`, `@arnilo/prism-context-{files, engineering}` |
+| Memory and context | `@arnilo/prism-memory-compaction`, `@arnilo/prism-context-{files, engineering}`; experimental: `@arnilo/prism-memory-{core, observational, rag, wiki, fabric}` |
 | Session stores | `@arnilo/prism-store-{jsonl, sqlite, postgres}` |
 | Policy | `@arnilo/prism-approval`, `@arnilo/prism-governance`, `@arnilo/prism-guardrail-packs`, `@arnilo/prism-model-router` |
 | Integrations | `@arnilo/prism-mcp`, `@arnilo/prism-hooks-json`, `@arnilo/prism-observability`, `@arnilo/prism-workflows`, `@arnilo/prism-delegate` |
@@ -109,6 +109,8 @@ Prism's own packages are optional, just like third-party ones. None of them is i
 ### Memory
 
 Memory is three tiers over one store, and each tier is its own package. Nothing is installed or on by default.
+
+**Experimental in 0.13.0.** The memory packages (`@arnilo/prism-memory-{core, observational, fabric, wiki, rag}`) ship on an experimental prerelease line (`0.13.0-experimental.N`, npm dist-tag `experimental`; install with `bun add @arnilo/prism-memory-fabric@experimental`). They sit outside the stability promise of the stable packages, so their API, config and defaults may change or be removed in any release. They graduate to stable versions as the last step of the memory track, after 0.13.0, once each feature has been audited against measured evidence. `@arnilo/prism-memory-compaction` is stable. The stable packages and the reference host's default agents load no experimental package.
 
 **Standing rules.** `@arnilo/prism-memory-fabric` keeps the preferences, procedures and decisions a person stated or confirmed as typed notes. A small pinned block of them sits in the prompt prefix and stays byte-identical between turns, and a rule that applies to one subtree arrives as a short cue when the agent touches matching files. A rule is proposed until the person confirms it or it is used in two sessions.
 

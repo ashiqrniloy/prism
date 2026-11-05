@@ -1,0 +1,276 @@
+{
+  "schemaVersion": 1,
+  "kind": "208-task5-accuracy-investigation",
+  "date": "2026-11-04",
+  "note": "Counts only: no dataset, question, claim or answer text.",
+  "model": "commandcode/meta/muse-spark-1.2-contributor (every run)",
+  "partition": "dev",
+  "judges": [
+    "commandcode/stealth/glyph-cluster:free",
+    "commandcode/stealth/crouton-alpha"
+  ],
+  "protocol": "final-turn-answer-v4; config fabric-x-tools (recall) or oracle; passes --interleave-abilities; no ontology",
+  "costUsd": {
+    "recall": 0.17,
+    "nosuper": 0.15,
+    "oracle": 0.012,
+    "beamRecall": 0.215,
+    "beamOracle": 0.017,
+    "total": 0.564
+  },
+  "locomo": {
+    "recall": {
+      "total": {
+        "correct": 38,
+        "n": 60
+      },
+      "byAbility": {
+        "adversarial": {
+          "correct": 11,
+          "n": 12
+        },
+        "multi-hop": {
+          "correct": 3,
+          "n": 12
+        },
+        "open-domain": {
+          "correct": 7,
+          "n": 12
+        },
+        "single-hop": {
+          "correct": 9,
+          "n": 12
+        },
+        "temporal": {
+          "correct": 8,
+          "n": 12
+        }
+      },
+      "wrongByStage": {
+        "shownToModel": 14,
+        "neverCandidate": 4,
+        "candidateNotShown": 4
+      },
+      "judgeTies": 1
+    },
+    "recallWithoutSupersessionHint": {
+      "total": {
+        "correct": 39,
+        "n": 60
+      },
+      "byAbility": {
+        "adversarial": {
+          "correct": 11,
+          "n": 12
+        },
+        "multi-hop": {
+          "correct": 4,
+          "n": 12
+        },
+        "open-domain": {
+          "correct": 6,
+          "n": 12
+        },
+        "single-hop": {
+          "correct": 10,
+          "n": 12
+        },
+        "temporal": {
+          "correct": 8,
+          "n": 12
+        }
+      }
+    },
+    "oracle": {
+      "total": {
+        "correct": 42,
+        "n": 60
+      },
+      "byAbility": {
+        "adversarial": {
+          "correct": 12,
+          "n": 12
+        },
+        "multi-hop": {
+          "correct": 4,
+          "n": 12
+        },
+        "open-domain": {
+          "correct": 5,
+          "n": 12
+        },
+        "single-hop": {
+          "correct": 11,
+          "n": 12
+        },
+        "temporal": {
+          "correct": 10,
+          "n": 12
+        }
+      },
+      "judgeTies": 5
+    },
+    "recallRightOracleRight": 33,
+    "recallWrongOracleRight": 9,
+    "recallRightOracleWrong": 5,
+    "bothWrong": 13,
+    "byEvidenceSpeakerRole": {
+      "userOnly": {
+        "n": 32,
+        "recall": 21,
+        "oracle": 25
+      },
+      "assistantOnly": {
+        "n": 23,
+        "recall": 15,
+        "oracle": 16
+      },
+      "mixed": {
+        "n": 5,
+        "recall": 2,
+        "oracle": 1
+      }
+    },
+    "quickSliceOf10": {
+      "recall": 5,
+      "oracle": 7
+    },
+    "otherFifty": {
+      "recallApprox": 33
+    }
+  },
+  "beam100k": {
+    "recall": {
+      "total": {
+        "correct": 13,
+        "n": 40
+      },
+      "byAbility": {
+        "abstention": {
+          "correct": 1,
+          "n": 4
+        },
+        "contradiction_resolution": {
+          "correct": 0,
+          "n": 4
+        },
+        "event_ordering": {
+          "correct": 0,
+          "n": 4
+        },
+        "information_extraction": {
+          "correct": 3,
+          "n": 4
+        },
+        "instruction_following": {
+          "correct": 2,
+          "n": 4
+        },
+        "knowledge_update": {
+          "correct": 3,
+          "n": 4
+        },
+        "multi_session_reasoning": {
+          "correct": 0,
+          "n": 4
+        },
+        "preference_following": {
+          "correct": 3,
+          "n": 4
+        },
+        "summarization": {
+          "correct": 0,
+          "n": 4
+        },
+        "temporal_reasoning": {
+          "correct": 1,
+          "n": 4
+        }
+      },
+      "wrongByStage": {
+        "shownToModel": 15,
+        "candidateNotShown": 6,
+        "neverCandidate": 6
+      },
+      "judgeTies": 3
+    },
+    "oracle": {
+      "total": {
+        "correct": 16,
+        "n": 40
+      },
+      "byAbility": {
+        "abstention": {
+          "correct": 4,
+          "n": 4
+        },
+        "contradiction_resolution": {
+          "correct": 0,
+          "n": 4
+        },
+        "event_ordering": {
+          "correct": 2,
+          "n": 4
+        },
+        "information_extraction": {
+          "correct": 3,
+          "n": 4
+        },
+        "instruction_following": {
+          "correct": 0,
+          "n": 4
+        },
+        "knowledge_update": {
+          "correct": 4,
+          "n": 4
+        },
+        "multi_session_reasoning": {
+          "correct": 1,
+          "n": 4
+        },
+        "preference_following": {
+          "correct": 1,
+          "n": 4
+        },
+        "summarization": {
+          "correct": 1,
+          "n": 4
+        },
+        "temporal_reasoning": {
+          "correct": 0,
+          "n": 4
+        }
+      },
+      "judgeTies": 1
+    }
+  },
+  "supersessionHintShareOfInjectedHits": {
+    "locomoLarge": 0.43,
+    "locomoQwen": 0.27,
+    "locomoBeamFree": 0.39,
+    "beamLarge": 0.04
+  },
+  "finalTurnFaults": {
+    "toolCallMarkupAnswers": "3 of 10 BEAM answers (large model, final turn v2); 0 of about 270 earlier answers",
+    "emptyAnswersBeamFree": "8 of 10 under v1-v3; 0 of 5 after the closing note became a user message (v4)"
+  },
+  "earlyGiveUp": {
+    "note": "answers whose first 300 characters say the information is missing, in the recall runs; counts only",
+    "locomo": {
+      "answers": 60,
+      "saysMissing": 16,
+      "saysMissingWithEvidenceShown": 11,
+      "saysMissingAndWrong": 5,
+      "saysMissingWrongEvidenceShown": 3,
+      "saysMissingWrongEvidenceNotShown": 2
+    },
+    "beam100k": {
+      "answers": 40,
+      "saysMissing": 2,
+      "saysMissingWithEvidenceShown": 0,
+      "saysMissingAndWrong": 1,
+      "saysMissingWrongEvidenceShown": 0,
+      "saysMissingWrongEvidenceNotShown": 1
+    }
+  }
+}

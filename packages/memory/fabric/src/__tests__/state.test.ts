@@ -115,6 +115,32 @@ describe("read-time current state (plan 202 Task 7)", () => {
     assert.equal(unrelated.hits[0]?.supersededBy, undefined);
   });
 
+  it("speaker_names_do_not_chain_a_conversation_into_one_group_that_buries_the_best_match", async () => {
+    const { fabric } = harness();
+    // Every turn of a two-person chat carries both names; only the oldest turn is about the job.
+    const best = await fabric.remember({
+      kind: "exchange",
+      content: "Audrey: what's new? Andrew: I started a new job as a financial analyst last week",
+      keywords: ["andrew", "audrey", "job", "financial", "analyst"],
+      tRef: "2023-03-20T00:00:00.000Z",
+    });
+    const topics = ["dog", "hike", "park", "pizza", "rain", "movie", "garden", "book", "train", "beach", "camera", "music"];
+    for (const [index, topic] of topics.entries())
+      await fabric.remember({
+        kind: "exchange",
+        content: `Audrey: how was the ${topic}? Andrew: the ${topic} was great`,
+        keywords: ["andrew", "audrey", topic],
+        tRef: `2023-${String(4 + Math.floor(index / 2)).padStart(2, "0")}-${String(1 + (index % 2) * 10).padStart(2, "0")}T00:00:00.000Z`,
+      });
+
+    const result = await fabric.recall("Andrew financial analyst", { kinds: ["exchange"] });
+    assert.equal(result.hits[0]?.id, best.id, "the only full match leads the result");
+    assert.equal(result.hits[0]?.supersededBy, undefined, "a topic-less turn does not supersede it");
+    const output = await tool(fabric, "memory.recall").execute({ query: "Andrew financial analyst", kinds: ["exchange"] }, context);
+    assert.ok(text(output).includes(best.id), "the model is shown the full match");
+    assert.ok(!/Unmatched terms[^\n]*analyst/.test(text(output)));
+  });
+
   it("state_opt_in_makes_one_call_and_cites_ids", async () => {
     let calls = 0;
     let prompt = "";

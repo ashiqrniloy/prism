@@ -30,14 +30,21 @@ const ROOT = join(import.meta.dirname, "..");
 const INTERNAL_PACKAGE = "@arnilo/";
 const MANIFEST = /^(?:package\.json|packages\/(?:[^/]+\/)*[^/]+\/package\.json)$/;
 /**
- * Packages on their own version line. Plan 174 Task 7 retired the last one (the agent SDK), so the
- * set is empty until plan 175 Task 10 sets the post-publish shape; the machinery stays for the next
- * independent line. Independent packages do not claim the lockstep version, so the gate holds them to
- * self-consistency instead: the lockfile, package-truth, and every internal range that targets them
- * must equal their own manifest version. Same set as src/__tests__/packaging.test.ts.
- * Plan 173 Task 8: the Prism Code app left this set when its source was deleted from the repo.
+ * Packages on their own version line, read from `scripts/independent-packages.json` (the one source,
+ * shared with release.mjs and src/__tests__/packaging.test.ts): its `packages` plus its `experimental`
+ * list (plan 215 Task 2). Independent packages do not claim the lockstep version, so the gate holds
+ * them to self-consistency instead: the lockfile, package-truth, and every internal range that targets
+ * them must equal their own manifest version. An experimental package must carry an
+ * `x.y.z-experimental.N` version and is pinned exactly, because a caret never matches a prerelease;
+ * no other package may carry a prerelease identifier.
  */
-const INDEPENDENT_LINES = new Set([]);
+function loadIndependentLines(root) {
+  const data = JSON.parse(readFileSync(join(root, "scripts", "independent-packages.json"), "utf8"));
+  const experimental = new Set(data.experimental ?? []);
+  return { independent: new Set([...(data.packages ?? []), ...experimental]), experimental };
+}
+const { independent: INDEPENDENT_LINES, experimental: EXPERIMENTAL_LINES } = loadIndependentLines(ROOT);
+const EXPERIMENTAL_VERSION = /^\d+\.\d+\.\d+-experimental\.\d+$/;
 
 /** Every file this gate reads, keyed by repo-relative path. */
 function claimFiles(rootDir) {
@@ -219,8 +226,8 @@ function parseLock(files, path, problems) {
 export function claimViolations(files, current) {
   const problems = [];
   const manifests = [...files.keys()].filter((path) => MANIFEST.test(path)).sort();
-  if (manifests.length !== 43) {
-    problems.push(`expected 43 manifests (root + 42 workspaces) to check for lockstep ${current}, got ${manifests.length}`);
+  if (manifests.length !== 51) {
+    problems.push(`expected 51 manifests (root + 50 workspaces) to check for lockstep ${current}, got ${manifests.length}`);
   }
   const parsed = new Map();
   for (const path of manifests) {
@@ -232,8 +239,16 @@ export function claimViolations(files, current) {
     [...parsed.values()].filter((pkg) => INDEPENDENT_LINES.has(pkg.name)).map((pkg) => [pkg.name, pkg.version]),
   );
   const expected = (name) => independentVersions.get(name) ?? current;
+  /** The range a pin must carry: exact into an experimental prerelease, caret into everything else. */
+  const expectedRange = (name) => (EXPERIMENTAL_LINES.has(name) ? expected(name) : `^${expected(name)}`);
   for (const [path, pkg] of parsed) {
     if (!INDEPENDENT_LINES.has(pkg.name) && pkg.version !== current) problems.push(`${path}: version ${pkg.version} != ${current}`);
+    if (EXPERIMENTAL_LINES.has(pkg.name) && !EXPERIMENTAL_VERSION.test(String(pkg.version))) {
+      problems.push(`${path}: experimental package version ${pkg.version} is not x.y.z-experimental.N`);
+    }
+    if (!EXPERIMENTAL_LINES.has(pkg.name) && /-/.test(String(pkg.version))) {
+      problems.push(`${path}: version ${pkg.version} carries a prerelease but ${pkg.name} is not experimental`);
+    }
     for (const field of ["dependencies", "peerDependencies", "optionalDependencies"]) {
       for (const [name, range] of Object.entries(pkg[field] ?? {})) {
         if (!name.startsWith(INTERNAL_PACKAGE) || String(range).startsWith("file:")) continue;
@@ -244,7 +259,7 @@ export function claimViolations(files, current) {
         // The kernel peer is the API-level window (`>=0.13.0 <1.0.0`), not a cut pin; a kernel minor
         // does not rewrite it (docs/compatibility.md).
         if (name === "@arnilo/prism" && /^>=\d+\.\d+\.\d+ <1\.0\.0$/.test(String(range))) continue;
-        if (range !== `^${expected(name)}`) problems.push(`${path}: ${field}.${name} is ${range}, expected ^${expected(name)}`);
+        if (range !== expectedRange(name)) problems.push(`${path}: ${field}.${name} is ${range}, expected ${expectedRange(name)}`);
       }
     }
   }
@@ -334,6 +349,41 @@ test("positive control: a half-finished cut is reported surface by surface", () 
   assert.ok(
     claimViolations(vacuous, next).some((problem) => problem.includes("docs/index.md: missing")),
     "a deleted surface must be reported as unverifiable",
+  );
+});
+
+test("positive control: the experimental line is accepted for exactly the experimental set", () => {
+  const files = claimFiles(ROOT);
+  const current = currentVersion(ROOT);
+  assert.ok(EXPERIMENTAL_LINES.size > 0, "the experimental list is not empty");
+  const fabric = "packages/memory/fabric/package.json";
+  const tools = "packages/tools/web/package.json";
+  const manifest = JSON.parse(files.get(fabric));
+  assert.match(manifest.version, EXPERIMENTAL_VERSION, "an experimental package carries the prerelease");
+  const mutate = (path, change) => {
+    const next = new Map(files);
+    const parsed = JSON.parse(files.get(path));
+    change(parsed);
+    next.set(path, JSON.stringify(parsed));
+    return claimViolations(next, current);
+  };
+  assert.ok(
+    mutate(fabric, (m) => {
+      m.version = current;
+    }).some((problem) => problem.includes("is not x.y.z-experimental.N")),
+    "an experimental package at the plain release version is reported",
+  );
+  assert.ok(
+    mutate(tools, (m) => {
+      m.version = `${current}-experimental.0`;
+    }).some((problem) => problem.includes("is not experimental")),
+    "the prerelease anywhere else is reported",
+  );
+  assert.ok(
+    mutate("packages/memory/wiki/package.json", (m) => {
+      m.dependencies["@arnilo/prism-memory-core"] = `^${current}`;
+    }).some((problem) => problem.includes("expected 0.13.0-experimental")),
+    "a caret pin into the experimental line is reported",
   );
 });
 

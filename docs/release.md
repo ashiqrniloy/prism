@@ -15,11 +15,64 @@ supply-chain gates pass, the `publish` job:
    `security/license-policy.json`, and secret-scans the unpacked tarballs.
 3. Attests the tarballs and the SBOM with GitHub build provenance
    (`actions/attest-build-provenance`).
-4. Publishes the same tarballs with `bun publish <tarball> --access public --tag latest`, in
+4. Publishes the same tarballs with `bun publish <tarball> --access public --tag latest` (or
+   `--tag experimental` for a package on the [experimental line](#experimental-packages)), in
    dependency order, resumably (`--resume` compares the registry manifest before skipping a version).
 
 No npm binary runs in the release path. The SBOM is SPDX 2.3, built from `bun.lock` plus each
 installed package's `package.json` license.
+
+## Experimental packages
+
+A package can ship on an experimental prerelease line: the same npm name, a version of the form
+`x.y.z-experimental.N`, and the npm dist-tag `experimental`. The line sits outside
+the stability promise of the stable packages, so a host can try the package now while its API, config
+and defaults can still change or be removed in any release. A `^0.13.0` range never
+matches a prerelease, so a host reaches the line with `@experimental` or an exact version
+(`bun add @arnilo/prism-memory-fabric@experimental`).
+
+The set is one list: `experimental` in `scripts/independent-packages.json`. Today it names the five
+memory packages (`@arnilo/prism-memory-{core,observational,fabric,wiki,rag}`, at
+`0.13.0-experimental.0`). Nothing else carries the version or the tag. The release tooling enforces it:
+
+- **Tag.** `publishArgs` derives `--tag` from the list. An experimental package publishes under
+  `experimental`, never `latest`. A listed package whose version has no prerelease identifier fails with
+  `experimental_version_mismatch`, and an unlisted package whose version has one fails with
+  `stable_version_prerelease`, before any registry request.
+- **Lockstep cut.** A `v*` cut neither validates nor publishes an experimental package. It ships from its own
+  `@arnilo/<name>@<version>` tag, like any independent-line package.
+- **Pins.** Experimental packages pin each other exactly, in `dependencies` and in `peerDependencies`
+  (`0.13.0-experimental.0`, never a caret). Their ranges into stable packages and the kernel window
+  peer (`>=0.13.0 <1.0.0`) are the usual ones. `satisfiesInternalRange` lets a prerelease target satisfy
+  only an exact range, so a loose pin fails the release gates and never reaches an install.
+- **Bumping.** `bun scripts/release.mjs bump --package @arnilo/prism-memory-fabric --type prerelease`
+  turns `0.13.0-experimental.0` into `0.13.0-experimental.1`, rewrites the exact pins that name it in
+  the other manifests, and regenerates `bun.lock`. An experimental package bumps with `prerelease` only.
+- **Compat gate.** Experimental packages keep their baselines in `scripts/compat-baseline/`. A removal or a
+  changed signature in one is printed and listed in the gate report's `experimental` section, and never
+  fails the gate. A missing baseline still fails. Stable packages are classified as before.
+- **Version gates.** `scripts/package-truth.json`, the version tables in `README.md`, `docs/index.md` and
+  this page, `scripts/version-literal-gate.test.mjs` and `src/__tests__/packaging.test.ts` accept the
+  prerelease version for exactly the experimental set and reject it anywhere else.
+
+A package graduates by leaving the list and taking a stable version through a normal cut. No tooling
+decision is needed beyond removing the name.
+
+### Notice template
+
+Every experimental package's README opens, right after its title, with this notice. `<name>` is the
+package's own name. `src/__tests__/docs.test.ts` (`experimental_packages_carry_notice`) compares each README
+to this template word for word, ignoring line breaks, and fails when a package joins the list without it or a
+stable README carries it.
+
+```markdown
+> **Experimental in 0.13.0.** Install with `bun add <name>@experimental`. Outside the stability promise of the stable
+> packages: its API, config, preset contents and defaults may change or be removed in any release until it graduates.
+> Graduation is the memory track's final step, which sets the first stable version.
+```
+
+The `docs/index.md` entry of each experimental package says "(experimental)". Once `docs/compatibility.md`
+exists, the notice links it from "the stability promise of the stable packages".
 
 ## What a tarball contains
 
@@ -40,7 +93,8 @@ tag runs before packing.
 check, the reference host suite (`@arnilo/prism-agent`), the process-driver suite
 (`@arnilo/prism-driver-process`), the three reference adapters through
 `examples/adapters/conformance.ts` (it exits non-zero on a failed leg), the vendor-neutrality and
-kernel-constraint tests, the clean-install idempotence suite
+kernel-constraint tests, the package-skills gate (`scripts/package-skills-conformance.mjs`, see
+"Writing a package skill" in [Packages](packages.md)), the clean-install idempotence suite
 (`scripts/install-idempotence.test.mjs`), and finally `scripts/release.mjs gate` — which checks version-range drift, the
 per-package API surface against `scripts/compat-baseline/`, the kernel size budget, and the tarball
 deny list, for every publishable workspace. The reference host suite includes the offline evaluation
@@ -113,11 +167,11 @@ The inventory and the provider adapters below are generated from the workspace m
 | `@arnilo/prism-mcp` | 0.13.0 | capability — MCP client package: connects allowed servers, bridges their tools, and exposes mcp:status/reconnect/close |
 | `@arnilo/prism-mcp-server` | 0.13.0 | library — host library serving Prism tools, resources, and prompts over MCP (stdio and Streamable HTTP transports) |
 | `@arnilo/prism-memory-compaction` | 0.13.0 | capability |
-| `@arnilo/prism-memory-core` | 0.13.0 | library — shared memory contracts, vector stores, lineage, propagation, and scoring; no slot and no capability |
-| `@arnilo/prism-memory-fabric` | 0.13.0 | capability — T1 of the three-tier memory, the store of record: working, semantic, and scoped notes with the memory.* tools, a context block, and per-session state |
-| `@arnilo/prism-memory-observational` | 0.13.0 | capability — T0 of the three-tier memory: observes the session, keeps a source-backed ledger, and compacts from it |
-| `@arnilo/prism-memory-rag` | 0.13.0 | capability — indexed retrieval with a rag_search tool, an opt-in context block, and the embeddings service |
-| `@arnilo/prism-memory-wiki` | 0.13.0 | capability — T2 of the three-tier memory, opt-in and unmeasured: concept notes over the fabric, consolidated from cited evidence |
+| `@arnilo/prism-memory-core` | 0.13.0-experimental.0 | library — shared memory contracts, vector stores, lineage, propagation, and scoring; no slot and no capability |
+| `@arnilo/prism-memory-fabric` | 0.13.0-experimental.0 | capability — T1 of the three-tier memory, the store of record: working, semantic, and scoped notes with the memory.* tools, a context block, and per-session state |
+| `@arnilo/prism-memory-observational` | 0.13.0-experimental.0 | capability — T0 of the three-tier memory: observes the session, keeps a source-backed ledger, and compacts from it |
+| `@arnilo/prism-memory-rag` | 0.13.0-experimental.0 | capability — indexed retrieval with a rag_search tool, an opt-in context block, and the embeddings service |
+| `@arnilo/prism-memory-wiki` | 0.13.0-experimental.0 | capability — T2 of the three-tier memory, opt-in and unmeasured: concept notes over the fabric, consolidated from cited evidence |
 | `@arnilo/prism-model-router` | 0.13.0 | capability — policy around hook routing turns across candidates with budget, circuit, and rate-limit controls |
 | `@arnilo/prism-observability` | 0.13.0 | capability — OpenTelemetry spans and metrics over the agent event catalog as observe handlers; exports nothing itself |
 | `@arnilo/prism-remote` | 0.13.0 | library — host library serving a Prism agent to remote clients and connecting to remote agents over prism.remote/1 |
@@ -169,7 +223,8 @@ fails verification. The SBOM is attested the same way.
 
 ## Legacy deprecation
 
-`npm dist-tag` and `npm deprecate` have no Bun equivalent on 1.4.2. Retiring the 0.12 family packages
+`npm dist-tag` and `npm deprecate` have no Bun equivalent on 1.4.4 (`bun publish` accepts `--tag`; `bun pm`
+has no dist-tag command). Retiring the 0.12 family packages
 goes through the registry HTTP API instead (`scripts/registry-deprecate.mjs`), which is the same
 GET-then-PUT the npm CLI performs: read the packument, set `versions[v].deprecated`, write it back
 with `Authorization: Bearer $NPM_TOKEN`. No npm binary runs.

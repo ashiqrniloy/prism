@@ -24,7 +24,6 @@
  */
 import manifest from "../package.json" with { type: "json" };
 import { isAbsolute } from "node:path";
-import { fileURLToPath } from "node:url";
 import { definePackage, type JsonObject, type PackageAPI, type PackageInstance, type Secret, type ToolDefinition } from "@arnilo/prism";
 import { resolveCommand } from "./command.js";
 import { type ToolsWorkConfig, toolsWorkConfigSchema } from "./config.js";
@@ -52,6 +51,7 @@ import { closeWorkerPool } from "./runtime/worker-pool.js";
 import { createWorkComposition, type WorkSandbox } from "./sandbox/composition.js";
 import { createLocalWorkFilesystem } from "./tools/local-filesystem.js";
 import { createOfficeTools } from "./tools/office.js";
+import { loadWorkSkills } from "./skills/index.js";
 import { type AgentIdentity } from "./connectors/identity.js";
 export type {
   ToolsWorkConfig,
@@ -268,7 +268,7 @@ const definition = definePackage<ToolsWorkConfig>({
 
     for (const tool of tools) prism.tools.register(tool);
 
-    prism.skills.addDir(fileURLToPath(new URL("../vendor/hermes-agent/skills/productivity", import.meta.url)));
+    for (const skill of loadWorkSkills()) prism.skills.register(skill);
 
     prism.onDispose(() => closeWorkerPool());
   },

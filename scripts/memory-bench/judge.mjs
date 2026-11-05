@@ -14,6 +14,13 @@ export const JUDGE_KAPPA_MIN = 0.8;
  * to their provider so a panel cannot pass two look-alike aliases as independent judges.
  */
 const FAMILIES = [
+  // Command Code stealth previews (plan 208 Task 5, owner 2026-11-04): distinct ids, undisclosed vendors, so the
+  // different-family rule is taken on their names and recorded as unverifiable in the gate.
+  ["glyph", /glyph-cluster/i],
+  ["crouton", /crouton-alpha/i],
+  ["muse", /(^|\/)muse-/i],
+  // OpenCode Go's Beam Free is Reflection's Beam 1.0 (catalog canonical_id reflection/beam-1.0-501b-a23b).
+  ["reflection", /(^|\/)(beam-free|reflection\/)/i],
   ["dots", /(^|\/)dots-studio\//i],
   ["cohere", /(^|\/)cohere\//i],
   ["deepseek", /deepseek/i],

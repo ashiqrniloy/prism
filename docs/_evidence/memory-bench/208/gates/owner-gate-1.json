@@ -1,0 +1,308 @@
+{
+  "schemaVersion": 1,
+  "kind": "208-task5-owner-gate",
+  "plan": 208,
+  "task": 5,
+  "gate": "O-1",
+  "approved": true,
+  "approvedAt": "2026-11-03",
+  "approvedBy": "owner",
+  "text": "Providers: \"Kilo free gateway\". Budget: \"Use free models\". Curator: \"Kilo free models only\" (owner answers to the gate O-1 questions, 2026-11-03).",
+  "manifestHash": "eba834df120606d9e99baa3d514e622deeed5885bcd7fe405e9e46aa47a0786d",
+  "manifest": "docs/_evidence/memory-bench/208/screen/development-screen-manifest.json",
+  "criteria": {
+    "threeTierCriteriaHash": "3d5a5c10fddda0931d00003aad8f2fccf5bdef2a829fa0b09bfac004b2bd263f",
+    "robustnessCriteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7"
+  },
+  "product": {
+    "productHash": "5c7505064c802d15bb897d4c806dfa6fd17023c92ac937640cc8d2dbb493c5d0",
+    "ontologyPrefixProbe": {
+      "path": "docs/_evidence/memory-bench/207/prefix-probe.json",
+      "sha256": "4e0a9d519e4ba4f5c07e8331ba7fc6d29c2e486edfc7821f1918a0c618acd54d",
+      "fabricProductHash": "9780be7295970279b18dfc4d8e782fdbd13b3b4eccefa566d29a5161cd270e1b"
+    }
+  },
+  "scope": {
+    "partition": "dev",
+    "suites": [
+      "memoryagentbench-cr",
+      "beam-100k",
+      "locomo"
+    ],
+    "arms": [
+      "P",
+      "P+O",
+      "P+O.series-default",
+      "P+O.series-readtime"
+    ],
+    "warmupQuestionsPerCluster": 2,
+    "jobs": 24,
+    "answers": [
+      "kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "commandcode/Qwen/Qwen3.7-Flash",
+      "opencode-go/beam-free",
+      "commandcode/meta/muse-spark-1.2-contributor"
+    ],
+    "judges": [
+      "commandcode/stealth/glyph-cluster:free",
+      "commandcode/stealth/crouton-alpha"
+    ],
+    "curator": "agent-own (ontologyModel unset: each answer model curates its own concepts)",
+    "auditSample": {
+      "maxClaimsPerArmAndModel": 200,
+      "humanSetClaims": 60,
+      "note": "the 60 claims are labelled by a person; O3 is invalid until then"
+    },
+    "notScreened": [
+      {
+        "criteria": [
+          "O6"
+        ],
+        "reason": "the coding arms need plan 202 Task 11's coding preset and sandbox workspaces; neither exists on a free route. Enters plan 210's ledger."
+      },
+      {
+        "criteria": [
+          "O8"
+        ],
+        "reason": "waits for plan 209 Task 6"
+      },
+      {
+        "criteria": [
+          "O1 providers"
+        ],
+        "reason": "each model is served by one gateway (large Kilo, small Command Code, third OpenCode Go); O1 counts the providers of the passing models, and the development row stays advisory"
+      }
+    ]
+  },
+  "billing": {
+    "mode": "free-kilo",
+    "provider": "kilo",
+    "freeProductsOnly": true,
+    "paidFallbacks": [],
+    "productUsd": 0,
+    "judgeUsd": 0,
+    "totalUsd": 0
+  },
+  "caps": {
+    "concurrency": 1,
+    "maxInputTokensPerJob": 25000000,
+    "journalCeiling": 1300000000,
+    "wallTimeCapHoursBySuite": {
+      "memoryagentbench-cr": 12,
+      "beam-100k": 16,
+      "locomo": 24,
+      "seriesArmsDouble": true
+    },
+    "ceilingNote": "raised from 800M to 1.3B after the live smoke: the free route omits usage on some exchanges, so an attempt is charged its full 25.5M reservation; 18 jobs x 2 attempts need the room. Work bound only; USD 0."
+  },
+  "deviationsFromPlanText": [
+    "Both answer models are served by one provider (Kilo gateway), so O1's two-provider requirement cannot be met on this screen; the O1 row is advisory.",
+    "The small model is google/gemma-4-31b-it:free (the free-route stand-in for plan 202's small-model slot).",
+    "coding and coding+O arms (O6) are not screened: no coding preset or sandbox on a free route.",
+    "The cache-stability pin (plan 202 Task 4.15) is not asserted for this $0 advisory screen; plan 210 Task 9 pins it again before any paid held-out read."
+  ],
+  "preservation": {
+    "heldOutAccess": false,
+    "credentialValues": false,
+    "keysAreRefs": true
+  },
+  "smoke": "two-question smokes of series-readtime/MAB-CR, P+O/MAB-CR and P+O/beam-100k ran on the Kilo free route under this gate (evidence: smoke-208-task5-*.json)",
+  "amendments": [
+    {
+      "date": "2026-11-03",
+      "by": "owner",
+      "text": "O3, you do the labelling and go forward like that",
+      "effect": "The 60-claim human audit set is labelled by the assistant (Claude), label-blind (claim and cited notes only, no panel verdicts), instead of by a person. The O3 row therefore measures panel-versus-assistant agreement, not panel-versus-human; the report flags humanLabelSource and plan 210 must repeat O3 with a person before any published claim rests on it."
+    },
+    {
+      "date": "2026-11-03",
+      "by": "owner",
+      "text": "Move the pair suggested to openrouter and start. I think the way we are doing it is taking a lot of time and we need to run parallelly.",
+      "effect": "The large-model BEAM-100K pair (208-screen.large.P.beam-100k and 208-screen.large.P+O.beam-100k) runs on OpenRouter under the same :free model id, at $0, inside the 1000-free-requests-a-day key allowance. The judge panel stays on the Kilo free gateway. Both arms of the pair use the same provider so the paired comparison is not confounded. Every other job stays on Kilo. Job ids, configs, caps and the approved manifest hash are unchanged.",
+      "routeOverride": {
+        "provider": "openrouter",
+        "jobs": [
+          "208-screen.large.P.beam-100k",
+          "208-screen.large.P+O.beam-100k"
+        ],
+        "billing": {
+          "totalUsd": 0,
+          "paidFallbacks": []
+        },
+        "dailyFreeRequestsMax": 1000
+      }
+    },
+    {
+      "date": "2026-11-04",
+      "by": "owner",
+      "text": "Get this one - Product question: a real remember call without keywords still never triggers the wiki ... into scope and implement",
+      "effect": "Product change in scope: the fabric's ontology port derives the archive path's deterministic exchangeKeywords for any evidence note stored without keywords (view only; stored notes, recall weighting and the directory are unchanged), so a remember call without keywords can reach the wiki's unbound-cluster trigger. The ontology product hash moved, so the manifest hash moved; the jobs, arms, suites, caps and billing are unchanged. The gate is re-bound to the new hash under this amendment. Jobs already finished on the previous product (BEAM-100K/LoCoMo archive paths store keywords on every note, so the port change does not alter what their curator sees) are kept; every MemoryAgentBench-CR job reruns on the new product.",
+      "rebind": {
+        "from": "2c2fbe06340f4428bc364703e5eacc11b47fe70fa678f8aedfe42dee7ac4d96e",
+        "to": "c7f96f6d457220e73e73b473f6cc199984a1128e9a76cb24b1fbf839fcba0f10"
+      }
+    },
+    {
+      "date": "2026-11-04",
+      "by": "owner",
+      "text": "yes move the small model ones to openrouter",
+      "effect": "The Kilo free gateway dropped google/gemma-4-31b-it:free from its catalog on 2026-11-04 (preflight refusal: not in the Kilo catalog). The six small-model jobs run on OpenRouter under the same :free model id, at $0, inside the 1000-free-requests-a-day key allowance. The judge panel stays on the Kilo free gateway. Both arms of every small-model pair use the same provider, so the paired comparison is not confounded; the small-versus-large contrast now also crosses providers for those suites, which the report notes. Job ids, configs, caps and the approved manifest hash are unchanged.",
+      "routeOverride": {
+        "provider": "openrouter",
+        "jobs": [
+          "208-screen.small.P.beam-100k",
+          "208-screen.small.P+O.beam-100k",
+          "208-screen.small.P.memoryagentbench-cr",
+          "208-screen.small.P+O.memoryagentbench-cr",
+          "208-screen.small.P.locomo",
+          "208-screen.small.P+O.locomo"
+        ],
+        "billing": {
+          "totalUsd": 0,
+          "paidFallbacks": []
+        },
+        "dailyFreeRequestsMax": 1000
+      }
+    },
+    {
+      "date": "2026-11-04",
+      "by": "owner",
+      "text": "Stop the workers, fix recall grouping, then rerun. Also check BEAM's published answer prompt",
+      "effect": "Product change in scope: fabric read-time grouping (groupRecallHits) no longer chains exchanges transitively and ignores subject terms carried by at least 80% of five or more exchange hits (speaker names), so the best-matching note is no longer sorted behind a whole-conversation group and off the recall page (LoCoMo P: 20 of 34 wrong answers had the gold note as a candidate that was never shown). Harness change: BEAM suites answer under BEAM's published answer prompt (answer_generation_for_rag, github.com/mohammadtavakoli78/BEAM src/prompts.py), recorded as protocol.answerInstruction beam-published-answer-v1; it adds no contradiction rule because the published prompt has none. The product hash moved, so the manifest hash moved; jobs, arms, suites, caps, routes and billing are unchanged. Every job reruns on the new product; reports taken before this amendment are superseded.",
+      "rebind": {
+        "from": "c7f96f6d457220e73e73b473f6cc199984a1128e9a76cb24b1fbf839fcba0f10",
+        "to": "a979ec67fa394a7f6c9866a95928e85762e4612ea977e8fbf69926a22231b76d"
+      }
+    },
+    {
+      "date": "2026-11-04",
+      "by": "owner",
+      "text": "we also need to use free models from command code glyph cluster and crouton alpha both 1000 requests per day ... redesign the whole 18 jobs in the most efficient way such that we get at least some results quickly; you are also authorized to use qwen 3.7 flash from command code as a paid model as well. Answers: judges \"Move judges\"; Qwen role \"Fast first read\".",
+      "effect": "(1) The judge panel becomes Command Code's free stealth-preview models stealth/glyph-cluster:free and stealth/crouton-alpha (free while the preview lasts, 1000 requests a day per account each, official price sheet checked 2026-11-04), on their own pacer, so judging no longer spends the Kilo hourly or OpenRouter daily answer budget. (2) Qwen/Qwen3.7-Flash on Command Code is a third, paid answer model with P and P+O on all three suites (6 jobs; no series arms), as a fast first read; rates $0.03 input, $0.13 output, $0.006 cache read per million tokens; every other job stays free. (3) Every non-series job orders its questions round-robin by ability, and a quick first read runs a balanced prefix of each job (MAB-CR 8, BEAM-100K 10, LoCoMo 10) in its own journal; the full run replays that prefix from the same answer and judge caches. (4) Runs survive interruptions: HTTP-edge patience on free routes, longer answer and judge retry budgets on free runs, transient job failures re-run from checkpoint after a cooldown without spending attempts, and a supervisor that restarts a halted or crashed worker. Jobs 18 to 24; the manifest hash moved and the gate is re-bound.",
+      "paidAnswer": {
+        "ref": "commandcode/Qwen/Qwen3.7-Flash",
+        "usdCap": 15,
+        "rates": {
+          "input": 0.03,
+          "output": 0.13,
+          "cacheRead": 0.006
+        },
+        "note": "each job is capped at 25M input tokens, so six jobs bound input spend near $4.50 before output"
+      },
+      "rebind": {
+        "from": "a979ec67fa394a7f6c9866a95928e85762e4612ea977e8fbf69926a22231b76d",
+        "to": "f8fdf078465883d322dcae6ebeb06e3bcfe6368ddfc6b62ef8261b255b3badd3"
+      }
+    },
+    {
+      "date": "2026-11-04",
+      "by": "owner",
+      "text": "Yes fix the ontology speed issue as recommended. Stop everything and rerun. ... What about GPT OSS from Cloudfare? If GPT OSS from cloudfare does not work, use Qwen 3.7 flash for small models as well as I think it is a pretty small model. And change Qwen from the current locomo where qwen is being used to a different model that is comparatively larger. May be beam free. Go ahead with the fixes",
+      "effect": "(1) Harness: an ontology arm builds each history's memory once (product ingestion plus the settled concept passes) and restores it for every later question on the same history (key: history, answer model, fabric and wiki config, settle bound, memory product sources); series arms are excluded; the first question carries the build cost, a restored question records ontologyReused. Answers, judges, caps and arms are unchanged. (2) Small slot: OpenRouter's google/gemma-4-31b-it:free stayed rate-limited upstream (shared Google AI Studio pool; 9 of 10 quick LoCoMo answers hit the 10-minute run limit). Cloudflare Workers AI @cf/openai/gpt-oss-20b and -120b answer with tool calls, but the Workers AI free allocation (10,000 neurons a day, about 550k gpt-oss-20b input tokens) cannot carry six jobs and Cloudflare is not a benchmark provider, so per the owner's fallback the small slot is commandcode/Qwen/Qwen3.7-Flash (paid, under amendment 6's USD 15 cap). Amendment 4's OpenRouter route for the small jobs no longer applies (the route refuses a non-:free model). (3) Third model: opencode-go/beam-free (Reflection Beam 1.0, 501B total, 23B active; catalog price 0, tools supported; probed 2026-11-04) replaces the Qwen fast read, P and P+O on all three suites (jobs 208-screen.beamfree.*). (4) O1 counts providers among passing models (large Kilo, small Command Code, third OpenCode Go). Every job reruns; reports before this amendment are superseded. The manifest hash moved and the gate is re-bound.",
+      "freeAnswers": [
+        "opencode-go/beam-free"
+      ],
+      "rebind": {
+        "from": "f8fdf078465883d322dcae6ebeb06e3bcfe6368ddfc6b62ef8261b255b3badd3",
+        "to": "985acec2d4a9f50df45f25d6b7666677e9477257868c54292fb8af5638a3c89a"
+      }
+    },
+    {
+      "date": "2026-11-04",
+      "by": "owner",
+      "text": "Answer to: Beam Free never answered on 8 of its 10 LoCoMo P questions ... How should the third-model slot proceed? \"Final turn forces answer (Recommended)\"",
+      "effect": "Harness, every screen job: with --final-turn-answer (protocol.finalTurnAnswer final-turn-answer-v1) the last allowed answer turn carries no memory.* tools, so the model answers from what it has read instead of ending at the turn limit. The 8-turn cap, the answer instruction, background workers and the curator are unchanged. Reason: opencode-go/beam-free used all 8 turns on memory reads on 8 of 10 quick LoCoMo P questions. Every job restarts; reports before this amendment are superseded. The manifest hash moved and the gate is re-bound.",
+      "rebind": {
+        "from": "985acec2d4a9f50df45f25d6b7666677e9477257868c54292fb8af5638a3c89a",
+        "to": "8e17011026d575d60ce8ea067b8ecaae4e91a4272b3baa19a8f46fd7eaca8584"
+      }
+    },
+    {
+      "date": "2026-11-04",
+      "by": "owner",
+      "text": "Go ahead with the fixes (standing instruction for this screen)",
+      "effect": "Harness, the six beamfree jobs only: OpenCode Go's Beam Free upstream refused the P+O arm's wiki_ingest tool (400 invalid_function_parameters on its top-level oneOf). With --portable-tool-schemas (protocol.portableToolSchemas portable-tool-schemas-v1) the provider sees tool parameters without top-level oneOf/anyOf/allOf; the tool still enforces exactly one source when it runs. Answer and curator requests on every other route are unchanged, so no other job reruns. The product schema's portability goes to the backlog. The manifest hash moved and the gate is re-bound.",
+      "rebind": {
+        "from": "8e17011026d575d60ce8ea067b8ecaae4e91a4272b3baa19a8f46fd7eaca8584",
+        "to": "886d357d954ca6b96db3e92d540a91ef9c8de8508cd5a6348a4ab6339126fb85"
+      }
+    },
+    {
+      "date": "2026-11-04",
+      "by": "owner",
+      "text": "Go ahead with the fixes (standing instruction); builds on the answer \"Final turn forces answer\"",
+      "effect": "Harness, every screen job: the final-turn rule (amendment 8) removes every tool from the last allowed answer turn, not only memory.*. Reason: on P+O, Beam Free still had wiki_ingest and other tools on its last turn, called one, and ended at the turn limit on 3 of 3 quick LoCoMo questions. protocol.finalTurnAnswer moves final-turn-answer-v1 to -v2, so every answer reruns under the one rule; the P arms have only memory tools, so their behaviour is unchanged. Built ontology stores are kept. The manifest hash is unchanged."
+    },
+    {
+      "date": "2026-11-04",
+      "by": "owner",
+      "text": "Let's do option 1 with no cap (option 1: the six trigger-policy series arms on Muse Spark 1.2 Contributor in parallel; the Kilo lane keeps P and P+O)",
+      "effect": "The six series arms (series-default and series-readtime on MemoryAgentBench-CR, BEAM-100K and LoCoMo) move from the large Kilo model to commandcode/meta/muse-spark-1.2-contributor (jobs 208-screen.muse.P+O.series-*), a paid model at USD 0.10 input, 0.20 output and 0.002 cache read per million tokens (official price sheet checked 2026-11-04). It runs only the series arms; the large model keeps P and P+O, and the trigger-policy comparison (O-series row) is now read on Muse, whose curator is Muse itself. The owner set no USD cap (uncapped: true); the per-job 25M-token input cap and the 1.3B journal ceiling still bound the work (worst case about USD 2.50 of input a job). Six parallel workers, one job each. The judge panel is unchanged, and no judge request is added: the series arms' judge calls move off Kilo. Muse's family is distinct from the judges' and from the other answer models'. The manifest hash moved and the gate is re-bound.",
+      "paidAnswer": {
+        "ref": "commandcode/meta/muse-spark-1.2-contributor",
+        "uncapped": true,
+        "usdCap": null,
+        "rates": {
+          "input": 0.1,
+          "output": 0.2,
+          "cacheRead": 0.002
+        },
+        "note": "owner: no cap; bounded by each job's 25M input-token cap (about USD 2.50 of input a job at these rates)"
+      },
+      "rebind": {
+        "from": "886d357d954ca6b96db3e92d540a91ef9c8de8508cd5a6348a4ab6339126fb85",
+        "to": "005d4ed7e12fbed3d2790bea630c735656714795c7e346593cc6333a69345043"
+      }
+    },
+    {
+      "date": "2026-11-04",
+      "by": "owner",
+      "text": "Answer to: Beam Free's P+O arm built almost no ontology (concept passes cut off at the 120-second settle bound, 0 concepts on 9 of 10 LoCoMo quick questions). \"Raise its bound to 600s (Recommended)\"",
+      "effect": "The three opencode-go/beam-free P+O jobs run with --ontology-settle-ms 600000 (job field ontologySettleMs; report.ontology.settleMs, which is in the protocol fingerprint, records it), a documented per-model deviation from the pre-registered 120000 ms default. Every other job keeps the default. Evidence for the change: 10 of 10 Beam Free quick LoCoMo P+O questions hit the bound with an aborted pass and 1 concept in total, so that arm equalled P (2/10 each) without measuring the ontology; Nemotron, Qwen and Muse mostly complete or yield concepts within 120 s. The Beam Free P+O quick read and the invalid LoCoMo report are superseded and rerun. The manifest hash moved and the gate is re-bound.",
+      "rebind": {
+        "from": "005d4ed7e12fbed3d2790bea630c735656714795c7e346593cc6333a69345043",
+        "to": "d99993ef8a865574b849a5a5125efb55006f30b855d2330ba054834d805a4de3"
+      }
+    },
+    {
+      "date": "2026-11-04",
+      "by": "owner",
+      "text": "Yes go ahead with the first two (the final-turn fix and the oracle-ceiling run on the quick LoCoMo slice) - after the investigation 'why is the accuracy so low'",
+      "effect": "Harness, every screen job: the final-turn rule (amendments 8 and 10) now also appends one closing system message on the last allowed answer turn (FINAL_TURN_NOTE: tool use is over, answer from the retrieved memories in plain text, say so if they do not contain the answer, do not write a tool call). Reason: with tools removed, a model that wanted another search wrote its tool call as plain text and that markup became the recorded answer (3 of 10 quick BEAM-100K answers on Nemotron, all on turn 8; none in about 270 earlier answers). protocol.finalTurnAnswer moves final-turn-answer-v2 to -v3, so every answer reruns under the one rule; the manifest hash is unchanged. Built ontology stores are kept. The oracle-ceiling run (config oracle, same quick slice, large model) is a diagnostic outside the 24 jobs and enters no criterion row."
+    },
+    {
+      "date": "2026-11-04",
+      "by": "owner",
+      "text": "Yes go ahead with the first two (continuing the final-turn fix after live verification)",
+      "effect": "Refinement of amendment 13, every screen job: the closing note on the last allowed answer turn is a user message, not a system message. Evidence: opencode-go/beam-free returned reasoning only (no text) on every question that reached turn 8 under final-turn v1, v2 and v3 (8 of 10 quick LoCoMo answers empty), and replayed against the live route the same note as a user message made it answer in 3 of 3 cases, as a system message in 0 of 3; Nemotron answers under both. protocol.finalTurnAnswer is final-turn-answer-v4, so every answer reruns; the manifest hash is unchanged; built ontology stores are kept."
+    },
+    {
+      "date": "2026-11-05",
+      "by": "owner",
+      "text": "I agree (to: finish only the in-flight quick slices; stop the lanes before their full-run stage and stop the Muse LoCoMo default-policy series; run the O3 audit and the safety suite on the bundles already built; close plan 208 Task 5 by recorded disposition and move the full-partition ontology comparison to plan 210 Task 5 on the fixed product; then start plan 210 Task 3.1)",
+      "effect": "Scope reduction of the development screen, no new spend and no manifest change (hash unchanged). Executed: every job's quick slice (MemoryAgentBench-CR 8, BEAM-100K 10, LoCoMo 10 questions) for the large, small and Beam Free models; the Muse series arms on MemoryAgentBench-CR and BEAM-100K (both policies) and the read-time arm on LoCoMo. Not executed: the full-partition stage of the 18 non-series jobs, and the Muse LoCoMo default-policy series job (stopped at 4 of 42 questions), which is moot until read-time is tuned. The full-partition P versus P+O comparison, ontology on and off, is rerun once on the fixed product in plan 210 Task 5 (gate C-1), because plan 210 Task 3.1 changes recall and any source change invalidates the ontology-store and fact-store caches. O3 (claim support) and O4 (safety) are read from the bundles and suites already built; O1, O2, O5 and O7 are reported as advisory, low-power development reads."
+    },
+    {
+      "date": "2026-11-05",
+      "by": "owner",
+      "text": "Go with option 2 (swap the small model for MemoryAgentBench-CR when Qwen's route refuses some of its input)",
+      "effect": "The two small-slot MemoryAgentBench-CR jobs (208-screen.small.P.memoryagentbench-cr and 208-screen.small.P+O.memoryagentbench-cr) run on commandcode/meta/muse-spark-1.2-contributor instead of Qwen/Qwen3.7-Flash; the small slot's LoCoMo and BEAM-100K jobs stay on Qwen. Evidence: Command Code's Qwen route returned 400 InternalError.Algo.DataInspectionFailed on two different questions of that suite (5:69 once, 3:49 on every attempt after two re-asks), so the refusal depends on the question's content and a retry does not clear it. Both arms of the pair share the model, job ids, caches and pairing are unchanged, and the report reads the small slot's MemoryAgentBench-CR pair as Muse's. Muse is the owner-uncapped paid model of amendment 11 (USD 0.10 input, 0.20 output per million tokens; the per-job 25M-token input cap still applies), now also for these two jobs, which add about USD 0.1. The manifest hash moved and the gate is re-bound.",
+      "rebind": {
+        "from": "d99993ef8a865574b849a5a5125efb55006f30b855d2330ba054834d805a4de3",
+        "to": "eba834df120606d9e99baa3d514e622deeed5885bcd7fe405e9e46aa47a0786d"
+      }
+    },
+    {
+      "date": "2026-11-05",
+      "by": "owner",
+      "text": "Stop both now, start Task 3.1 (answer to: both free judges hit their daily cap and reset at 06:00 local; two quick slices are still open; which use of the wait?)",
+      "effect": "No new spend and no manifest change. Stopped, incomplete and kept as partial reads: Beam Free's LoCoMo P+O quick slice (its ontologies were still building, so Beam Free contributes no claim bundles and its P+O arm is not audited for O3; it stays an unpaired P read), the large model's MemoryAgentBench-CR P+O quick slice (4 of 8 scored; its P arm scored 8/8, a ceiling), and the Muse LoCoMo default-policy series (4 of 42). Not run: Beam Free's BEAM-100K and MemoryAgentBench-CR quick slices. Reason: both free judges (Glyph Cluster, Crouton Alpha) returned 429 'all 1000 free requests used today' after about 1,100 judge calls each on 2026-11-04, resetting at 00:00 UTC, so no judge-bound run could finish for about four hours; the open slices would have forced plan 210 Task 3.1 to wait for them, because a source change under packages/memory/ changes the ontology-store and fact-store cache keys of any job that starts later. The O3 audit runs after the reset on the bundles of the large, small and Muse default-policy arms (the labelled 60-claim set is drawn from the small arm); plan 210 Task 3.1 starts now."
+    },
+    {
+      "date": "2026-11-05",
+      "by": "owner",
+      "text": "I do not want to wait for the reset. Let's go for the smallest possible validation with paid qwen 3.7 flash and muse spark contributor 1.2 if needed now ... If a third model is required, use muse spark 1.3 contributor",
+      "effect": "The O3 claim-support audit runs now with paid judges instead of the exhausted free ones, at the smallest useful size: 60 claims per audited arm. Judges: commandcode/Qwen/Qwen3.7-Flash and commandcode/meta/muse-spark-1.2-contributor for the arm whose curator is Nemotron (P+O.large); commandcode/Qwen/Qwen3.7-Flash and commandcode/meta/muse-spark-1.3-contributor (the third model) for the arm whose curator is Muse 1.2 (P+O.series-default.muse). Rules kept: two judges from distinct families, and no judge is the curator of any bundle it judges (the audit refuses otherwise). The small arm (curators Qwen and Muse 1.2) cannot be audited with these judges, because only Muse 1.3 remains eligible and the audit needs two; it is left to plan 210. Because the 60 human labels were drawn from the small arm, this run has no human calibration, so O3 is reported valid=false and pass=null; the supported share per arm is an early read, not a verdict. Spend: about 120 judge calls per arm, rates in rates.json (Qwen 0.03/0.13, Muse 0.10/0.20 per million tokens), expected under USD 0.50 in all, inside amendment 6's Qwen cap and amendment 11's uncapped Muse. No manifest change. Result: reports claim-audit-P+O.large.json and claim-audit-P+O.series-default.muse.json; the harness bug found on first live use (mixed-case package name) is fixed; spend about USD 0.1."
+    }
+  ]
+}

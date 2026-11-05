@@ -1170,7 +1170,12 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
     const offset = (request.page ?? 0) * 8;
     return sorted.slice(offset, offset + 8).map((row) => row.id);
   }
-  const recall = createFabricRecall({ loadCandidates, limits, memory, getNotes: getNotesAcrossScopes, priors, onRecall: options.onRecall });
+  const recall = createFabricRecall({ loadCandidates, limits, memory, getNotes: getNotesAcrossScopes,
+    priors,
+    onRecall: options.onRecall,
+    ...(options.supersessionHint === undefined ? {} : { supersessionHint: options.supersessionHint }),
+    ...(options.queryExpansion === true ? { queryExpansion: true } : {}),
+  });
   const lifecycles = orderedMemories.map((scopeMemory) => createFabricLifecycle(scopeMemory));
   const routedVerify = async (id: string, verifyOptions: { readonly signal?: AbortSignal } = {}): Promise<boolean> => {
     const target = await memoryWithNote(id, verifyOptions.signal);
@@ -1236,6 +1241,8 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
         options.touchedPaths,
       ),
     tools: createMemoryFabricTools({
+      ...(options.supersessionHint === undefined ? {} : { supersessionHint: options.supersessionHint }),
+      ...(options.gather === true ? { gather: true } : {}),
       memory,
       remember,
       recall,

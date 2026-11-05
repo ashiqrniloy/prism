@@ -39,13 +39,24 @@ export function loadRelease(root = process.cwd()) {
   // Packages that own their version line (plan 140) come from release tooling data, never from a
   // manifest field: a manifest is published bytes, and touching one after its version shipped makes
   // the next `--resume` see a different package than the registry has.
+  //
+  // `experimental` (plan 215 Task 2) names the packages on the prerelease line: they are independent-line
+  // too, but publish under the `experimental` dist-tag and never under `latest`.
   const independentFile = join(root, "scripts", INDEPENDENT_PACKAGES_FILE);
-  const independentNames = new Set(existsSync(independentFile) ? (JSON.parse(readFileSync(independentFile, "utf8")).packages ?? []) : []);
+  const independentData = existsSync(independentFile) ? JSON.parse(readFileSync(independentFile, "utf8")) : {};
+  const experimentalNames = new Set(independentData.experimental ?? []);
+  const independentNames = new Set([...(independentData.packages ?? []), ...experimentalNames]);
   const packages = paths.map((path) => {
     const manifest = JSON.parse(readFileSync(join(root, path, "package.json"), "utf8"));
-    return { path, manifest, independent: independentNames.has(manifest.name) };
+    return {
+      path,
+      manifest,
+      independent: independentNames.has(manifest.name),
+      experimental: experimentalNames.has(manifest.name),
+    };
   });
   const byName = new Map(packages.map((pkg) => [pkg.manifest.name, pkg]));
+  for (const name of experimentalNames) if (!byName.has(name)) throw new Error(`unknown experimental package ${name}`);
   const release = { root, packages, byName };
   release.validate = (version) => validateRelease(release, version);
   release.validateIndependent = (opts) => validateReleaseIndependent(release, opts);
@@ -58,10 +69,11 @@ export function loadRelease(root = process.cwd()) {
  * still match. Workspace entries must carry their manifest version. One helper
  * for both validators, so a lockfile shape change is fixed once.
  */
-function lockVersionErrors(release, lock, versionFor) {
+function lockVersionErrors(release, lock, versionFor, { includeIndependent = false } = {}) {
   const errors = [];
-  // An independent package's lockfile entry follows its own manifest version, never the cut's.
-  for (const pkg of release.packages.filter((candidate) => !candidate.independent)) {
+  // An independent package's lockfile entry follows its own manifest version, never the cut's, so a
+  // lockstep cut skips it. The independent validator checks it against that manifest version.
+  for (const pkg of release.packages.filter((candidate) => includeIndependent || !candidate.independent)) {
     const entry = lockWorkspace(lock, pkg.path);
     const expected = versionFor(pkg);
     if (!entry) errors.push(`bun.lock missing ${pkg.path}`);
@@ -103,6 +115,7 @@ export function validateRelease(release, version) {
 
   const lock = readBunLock(release.root);
   errors.push(...lockVersionErrors(release, lock, () => version));
+  errors.push(...releaseLineErrors(release));
   if (errors.length) throw new Error(errors.join("\n"));
   // The publish set of a lockstep cut: independent-line packages ship from their own tag.
   return topologicalOrder(release).filter((pkg) => !pkg.independent);
@@ -197,27 +210,51 @@ const SEMVER_RE = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+([0-9A-Za-z.-]
 
 export function parseSemver(version) {
   const m = SEMVER_RE.exec(String(version));
-  return m ? { major: +m[1], minor: +m[2], patch: +m[3] } : undefined;
+  return m ? { major: +m[1], minor: +m[2], patch: +m[3], prerelease: m[4] === undefined ? [] : m[4].split(".") } : undefined;
 }
 
-function cmpSemver(a, b) {
+const NUMERIC_IDENTIFIER = /^\d+$/;
+
+/** semver 2.0.0 §11 precedence: a prerelease sorts below its release; identifiers compare numerically or lexically. */
+export function cmpSemver(a, b) {
   const pa = parseSemver(a);
   const pb = parseSemver(b);
   if (!pa || !pb) return 0;
-  return pa.major - pb.major || pa.minor - pb.minor || pa.patch - pb.patch;
+  const core = pa.major - pb.major || pa.minor - pb.minor || pa.patch - pb.patch;
+  if (core) return core;
+  if (!pa.prerelease.length || !pb.prerelease.length) return pb.prerelease.length - pa.prerelease.length;
+  for (let i = 0; i < Math.max(pa.prerelease.length, pb.prerelease.length); i++) {
+    const x = pa.prerelease[i];
+    const y = pb.prerelease[i];
+    if (x === undefined) return -1; // a shorter identifier list sorts first
+    if (y === undefined) return 1;
+    const xn = NUMERIC_IDENTIFIER.test(x);
+    const yn = NUMERIC_IDENTIFIER.test(y);
+    if (xn && yn) {
+      if (+x !== +y) return +x - +y;
+    } else if (xn !== yn) {
+      return xn ? -1 : 1; // numeric identifiers sort below alphanumeric ones
+    } else if (x !== y) {
+      return x < y ? -1 : 1;
+    }
+  }
+  return 0;
 }
 
 /**
  * Internal range satisfaction for @arnilo/* pins. Supports exact, caret, and
- * tilde with npm's 0.x bounds. No prerelease handling — first-party pins are
- * release versions.
+ * tilde with npm's 0.x bounds. A prerelease target (the experimental line) satisfies only an
+ * exact range: npm never matches a prerelease against a caret or tilde of the release, so a loose
+ * pin fails closed here instead of at install time.
  */
 export function satisfiesInternalRange(range, version) {
   const r = String(range).trim();
   const min = r.replace(/^[~^]/, "");
   const base = parseSemver(min);
   const target = parseSemver(version);
-  if (!base || !target || cmpSemver(version, min) < 0) return false;
+  if (!base || !target) return false;
+  if (target.prerelease.length) return r === version;
+  if (cmpSemver(version, min) < 0) return false;
   if (r.startsWith("~")) return target.major === base.major && target.minor === base.minor;
   if (r.startsWith("^")) {
     if (base.major > 0) return target.major === base.major;
@@ -233,7 +270,15 @@ export function incrementVersion(version, type) {
   if (type === "patch") return `${v.major}.${v.minor}.${v.patch + 1}`;
   if (type === "minor") return `${v.major}.${v.minor + 1}.0`;
   if (type === "major") return `${v.major + 1}.0.0`;
-  throw new Error(`unknown bump type: ${type}; use patch|minor|major`);
+  if (type === "prerelease") {
+    if (!v.prerelease.length) throw new Error(`prerelease bump needs a prerelease version, got ${version}`);
+    const ids = [...v.prerelease];
+    const last = ids.length - 1;
+    if (NUMERIC_IDENTIFIER.test(ids[last])) ids[last] = String(Number(ids[last]) + 1);
+    else ids.push("0");
+    return `${v.major}.${v.minor}.${v.patch}-${ids.join(".")}`;
+  }
+  throw new Error(`unknown bump type: ${type}; use patch|minor|major|prerelease`);
 }
 
 function shellGit(root, ...args) {
@@ -318,7 +363,8 @@ export function validateReleaseIndependent(release, { baseline, gitDiff = defaul
     }
   }
   const lock = readBunLock(release.root);
-  errors.push(...lockVersionErrors(release, lock, (pkg) => pkg.manifest.version));
+  errors.push(...lockVersionErrors(release, lock, (pkg) => pkg.manifest.version, { includeIndependent: true }));
+  errors.push(...releaseLineErrors(release));
   for (const pkg of release.packages) {
     const changed = gitDiff(release.root, resolved, pkg.path);
     const base = baselineVersion(release.root, resolved, pkg.path);
@@ -335,11 +381,30 @@ export function bumpPackage(release, name, type) {
   const pkg = release.byName.get(name);
   if (!pkg) throw new Error(`unknown package: ${name}`);
   const from = pkg.manifest.version;
+  // An experimental package stays a prerelease; a stable one never becomes one.
+  if (pkg.experimental && type !== "prerelease") throw new Error(`${name} is experimental: bump it with prerelease, not ${type}`);
   const to = incrementVersion(from, type);
   pkg.manifest.version = to;
   writeFileSync(join(release.root, pkg.path, "package.json"), `${JSON.stringify(pkg.manifest, null, 2)}\n`);
   if (name === "@arnilo/prism") syncKernelVersion(release.root, to);
-  return { name, from, to };
+  // Experimental packages pin each other exactly (a caret never matches a prerelease), so a bump moves
+  // every exact pin that named the old version. Dev `file:` links and loose ranges are left alone.
+  const repinned = [];
+  if (pkg.experimental) {
+    for (const dependent of release.packages) {
+      let dirty = false;
+      for (const field of DEPENDENCY_FIELDS) {
+        if (dependent.manifest[field]?.[name] === from) {
+          dependent.manifest[field][name] = to;
+          dirty = true;
+        }
+      }
+      if (!dirty) continue;
+      writeFileSync(join(release.root, dependent.path, "package.json"), `${JSON.stringify(dependent.manifest, null, 2)}\n`);
+      repinned.push(dependent.manifest.name);
+    }
+  }
+  return { name, from, to, repinned };
 }
 
 export function assertGitState(root, version, { allowDirty = false, allowUntagged = false, independent = false, packages = [], tag } = {}) {
@@ -398,8 +463,37 @@ function saveReport(path, report) {
   writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`);
 }
 
+/**
+ * The dist-tag a package publishes under, derived from the release line and never from the caller:
+ * an experimental package is `experimental`, everything else `latest`. A version that disagrees with
+ * its line fails closed, so a prerelease cannot reach `latest` and a stable cut cannot reach `experimental`.
+ */
+export function releaseTag(pkg, version) {
+  const prerelease = parseSemver(version)?.prerelease.length > 0;
+  const name = pkg.manifest.name;
+  if (pkg.experimental) {
+    if (!prerelease) throw new Error(`experimental_version_mismatch: ${name}@${version} is on the experimental line but has no prerelease identifier`);
+    return "experimental";
+  }
+  if (prerelease) throw new Error(`stable_version_prerelease: ${name}@${version} has a prerelease identifier but is not in the experimental list`);
+  return "latest";
+}
+
+/** Line errors for every package's manifest version, so `check` and the validators fail before a publish. */
+function releaseLineErrors(release) {
+  const errors = [];
+  for (const pkg of release.packages) {
+    try {
+      releaseTag(pkg, pkg.manifest.version);
+    } catch (error) {
+      errors.push(error.message);
+    }
+  }
+  return errors;
+}
+
 export function publishArgs(pkg, version, { dryRun = false, registry, artifactsDir = "release-artifacts" } = {}) {
-  const args = ["publish", join(artifactsDir, tarballName(pkg.manifest.name, version)), "--access", "public", "--tag", "latest"];
+  const args = ["publish", join(artifactsDir, tarballName(pkg.manifest.name, version)), "--access", "public", "--tag", releaseTag(pkg, version)];
   if (registry) args.push("--registry", registry);
   if (dryRun) args.push("--dry-run");
   return args;
@@ -440,6 +534,8 @@ export async function runRelease({
   const order = independent
     ? validated.filter((pkg) => changedPackages(release, independentOptions).some((changed) => changed.path === pkg.path))
     : validated;
+  // Fail on a mislabeled line before any registry call, in `check` mode too.
+  for (const pkg of order) releaseTag(pkg, independent ? pkg.manifest.version : version);
   const report = {
     version: independent ? "independent" : version,
     independent,
@@ -567,7 +663,7 @@ export function parseArgs(argv) {
     const lockstep = options.from && options.to;
     const single = options.package && options.type;
     if (lockstep === single)
-      throw new Error("bump requires either --from <v> --to <v> (lockstep) or --package <name> --type <patch|minor|major> (single)");
+      throw new Error("bump requires either --from <v> --to <v> (lockstep) or --package <name> --type <patch|minor|major|prerelease> (single)");
     if (options.ranges && (!lockstep || options.ranges !== "caret"))
       throw new Error("--ranges supports only caret with lockstep --from/--to");
     return options;
@@ -598,10 +694,11 @@ async function main() {
   }
   if (options.mode === "bump") {
     if (options.package) {
-      if (!options.type) throw new Error("bump --package requires --type <patch|minor|major>");
+      if (!options.type) throw new Error("bump --package requires --type <patch|minor|major|prerelease>");
       const result = bumpPackage(release, options.package, options.type);
       regenerateLockfile(root);
       console.log(`bumped ${result.name}: ${result.from} -> ${result.to}`);
+      if (result.repinned.length) console.log(`repinned ${result.repinned.join(", ")}`);
       return;
     }
     const changed = bumpRelease(release, options.from, options.to);

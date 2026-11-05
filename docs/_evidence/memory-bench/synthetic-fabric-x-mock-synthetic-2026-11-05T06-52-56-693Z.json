@@ -1,0 +1,3538 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 2,
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "threeTierCriteriaHash": "3d5a5c10fddda0931d00003aad8f2fccf5bdef2a829fa0b09bfac004b2bd263f",
+  "ontology": {
+    "arm": "fabric-x+O",
+    "settleMs": 120000
+  },
+  "usageSource": "mock",
+  "phase": "all",
+  "labelInjections": "on",
+  "concurrency": 1,
+  "generation": null,
+  "freeOnly": false,
+  "writeGeneration": null,
+  "generatedAt": "2026-11-05T06:52:56.693Z",
+  "suite": "synthetic",
+  "subset": "base",
+  "ability": null,
+  "seed": null,
+  "config": "fabric-x",
+  "ingestion": "product-per-session",
+  "embeddings": null,
+  "provider": "mock",
+  "model": "synthetic",
+  "judge": "mock/synthetic-judge",
+  "judgePanel": [
+    "mock/synthetic-judge"
+  ],
+  "judgeCalibration": null,
+  "repeats": 1,
+  "judgeProtocol": "mock-enum-v1",
+  "dataset": {
+    "license": "original synthetic fixture"
+  },
+  "maxInputTokens": 15000000,
+  "ablations": [],
+  "sourceVariants": [],
+  "sourceRevision": "5c4db4ab754af78db7c33052dc31e017fd32ce45",
+  "protocol": {
+    "answerAttempts": 3,
+    "answerBackoffMs": [
+      2000,
+      10000
+    ],
+    "judgeAttempts": 8,
+    "judgeBackoffMs": [
+      1000,
+      2000
+    ],
+    "maxTurns": 8
+  },
+  "memoryConfig": {
+    "observational": null,
+    "fabric": {
+      "preset": {
+        "name": "conversational",
+        "revision": 1,
+        "overridden": []
+      },
+      "enabled": true,
+      "retrieval": "lexical",
+      "semantic": true,
+      "inject": {
+        "query": "task",
+        "kinds": [
+          "exchange"
+        ]
+      },
+      "directory": {
+        "maxTopics": 8,
+        "maxFiles": 10,
+        "maxTokens": 200,
+        "stopWords": false
+      },
+      "core": {
+        "maxTokens": 600,
+        "scopes": [
+          "user",
+          "project"
+        ],
+        "kinds": [
+          "fact",
+          "preference",
+          "procedure",
+          "decision"
+        ]
+      },
+      "cues": {
+        "budgetTokens": 300,
+        "maxPerTurn": 2
+      },
+      "team": false,
+      "scopes": {
+        "tenantId": "prism",
+        "threadId": "default",
+        "priors": {
+          "path": 0.15,
+          "project": 0.1,
+          "team": 0.075,
+          "agent": 0.05,
+          "user": 0
+        },
+        "active": [
+          {
+            "level": "project",
+            "resourceId": "projects/bench--00000000"
+          }
+        ],
+        "project": {
+          "resourceId": "projects/bench--00000000",
+          "source": "path"
+        }
+      },
+      "store": "memory",
+      "tools": {},
+      "exchanges": {
+        "enabled": true,
+        "scope": "project"
+      },
+      "lifecycle": {
+        "verifyAfterSessions": 2,
+        "decay": {
+          "working": 0.4,
+          "episode": 0.8,
+          "fact": 0.4,
+          "preference": 0.2,
+          "procedure": 0.4,
+          "decision": 0.2,
+          "file": 0.4,
+          "exchange": 0.5
+        },
+        "storageWeights": {
+          "explicit": 1,
+          "sessions": 0.5,
+          "helpful": 0.5,
+          "harmful": 1,
+          "outcome": 0.5
+        },
+        "recall": {
+          "retrieval": 0.05,
+          "storage": 0.05
+        },
+        "archive": {
+          "retrievalBelow": -2,
+          "storageBelow": 1,
+          "graceSessions": 10
+        },
+        "capacity": {
+          "user": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "agent": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "project": {
+            "notes": 500,
+            "tokens": 60000
+          }
+        },
+        "exchangeCapacity": {
+          "hotTokens": 200000
+        },
+        "merge": {
+          "duplicateDice": 0.8
+        },
+        "widen": {
+          "minProjects": 2,
+          "minSiblings": 2,
+          "contradictionsToSupersede": 2
+        }
+      },
+      "ontology": {
+        "bindThreshold": 2,
+        "conceptPrior": 0.1,
+        "maxClaimsRendered": 8
+      },
+      "recall": {
+        "supersessionHint": "all",
+        "expansion": false,
+        "gather": false
+      },
+      "promote": {
+        "enabled": false,
+        "minScore": 0.5,
+        "maxCandidates": 48,
+        "minTurnsBetween": 8,
+        "derivableFrom": [
+          "AGENTS.md",
+          "README.md",
+          "package.json",
+          "CLAUDE.md"
+        ]
+      },
+      "state": false,
+      "decisions": false
+    },
+    "wiki": {
+      "consolidate": {
+        "minNotes": 2
+      }
+    }
+  },
+  "inputTokens": 37930,
+  "cacheReadTokens": 0,
+  "cacheWriteTokens": 0,
+  "outputTokens": 0,
+  "calls": {
+    "observer": 0,
+    "reflector": 0,
+    "dropper": 0,
+    "embedding": 0,
+    "decider": 0,
+    "consolidate": 0,
+    "judge": 56,
+    "judgeAttempts": 0,
+    "gatewayRetries": 0,
+    "judgeCacheHits": 12,
+    "judgeCacheMisses": 0,
+    "concurrencyHalvings": 0,
+    "overloads": 0,
+    "ontology": 14
+  },
+  "workerErrors": [],
+  "workerUsage": {
+    "observer": {
+      "calls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0
+    },
+    "reflector": {
+      "calls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0
+    },
+    "dropper": {
+      "calls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0
+    }
+  },
+  "turns": 14,
+  "injectedContextTokens": 3656,
+  "injections": [
+    {
+      "questionId": "synthetic:knowledge-update",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 136,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "used",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:knowledge-update",
+      "turn": 1,
+      "id": "bbd6cde69935",
+      "source": "fabric-semantic",
+      "tokens": 46,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.6666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:knowledge-update",
+      "turn": 1,
+      "id": "06d030811bcf",
+      "source": "fabric-semantic",
+      "tokens": 49,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.6666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:knowledge-update",
+      "turn": 1,
+      "id": "46433b5ed3c4",
+      "source": "fabric-semantic",
+      "tokens": 40,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:multi-session",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 136,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "used",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:multi-session",
+      "turn": 1,
+      "id": "4aae06c8f4f3",
+      "source": "fabric-semantic",
+      "tokens": 46,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.6666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:multi-session",
+      "turn": 1,
+      "id": "4d8afd557f07",
+      "source": "fabric-semantic",
+      "tokens": 49,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.6666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:multi-session",
+      "turn": 1,
+      "id": "47b8d9e1dc1e",
+      "source": "fabric-semantic",
+      "tokens": 40,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:single-session-assistant",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 136,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "used",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:single-session-assistant",
+      "turn": 1,
+      "id": "b8ba1687d2b9",
+      "source": "fabric-semantic",
+      "tokens": 46,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.6666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:single-session-assistant",
+      "turn": 1,
+      "id": "3cc29e2195a5",
+      "source": "fabric-semantic",
+      "tokens": 49,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.6666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:single-session-assistant",
+      "turn": 1,
+      "id": "f3b6b3848e7c",
+      "source": "fabric-semantic",
+      "tokens": 40,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:single-session-preference",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 136,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "used",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:single-session-preference",
+      "turn": 1,
+      "id": "60c1b280a15c",
+      "source": "fabric-semantic",
+      "tokens": 46,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.6666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:single-session-preference",
+      "turn": 1,
+      "id": "67363fb52e6b",
+      "source": "fabric-semantic",
+      "tokens": 49,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.6666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:single-session-preference",
+      "turn": 1,
+      "id": "8565041e2750",
+      "source": "fabric-semantic",
+      "tokens": 40,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:single-session-user",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 136,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "used",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:single-session-user",
+      "turn": 1,
+      "id": "8cbd06443911",
+      "source": "fabric-semantic",
+      "tokens": 46,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.6666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:single-session-user",
+      "turn": 1,
+      "id": "14a17e9a3712",
+      "source": "fabric-semantic",
+      "tokens": 49,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.6666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:single-session-user",
+      "turn": 1,
+      "id": "39443ac0fd86",
+      "source": "fabric-semantic",
+      "tokens": 40,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:temporal-reasoning",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 136,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "used",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:temporal-reasoning",
+      "turn": 1,
+      "id": "a0cc62688c36",
+      "source": "fabric-semantic",
+      "tokens": 46,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.6666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:temporal-reasoning",
+      "turn": 1,
+      "id": "9da7de291136",
+      "source": "fabric-semantic",
+      "tokens": 49,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.6666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:temporal-reasoning",
+      "turn": 1,
+      "id": "3b798ab04703",
+      "source": "fabric-semantic",
+      "tokens": 40,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:abstention",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 136,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "used",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:abstention",
+      "turn": 1,
+      "id": "061918350f11",
+      "source": "fabric-semantic",
+      "tokens": 19,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.25,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:abstention",
+      "turn": 1,
+      "id": "2a8aedadbc58",
+      "source": "fabric-semantic",
+      "tokens": 22,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.25,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:abstention",
+      "turn": 1,
+      "id": "0b96b7c94006",
+      "source": "fabric-semantic",
+      "tokens": 25,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.25,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:single-hop",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 136,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "used",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:single-hop",
+      "turn": 1,
+      "id": "85484ef043ab",
+      "source": "fabric-semantic",
+      "tokens": 46,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.6666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:single-hop",
+      "turn": 1,
+      "id": "7c86df6cf44c",
+      "source": "fabric-semantic",
+      "tokens": 49,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.6666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:single-hop",
+      "turn": 1,
+      "id": "8b7c7df8d155",
+      "source": "fabric-semantic",
+      "tokens": 40,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:multi-hop",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 136,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "used",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:multi-hop",
+      "turn": 1,
+      "id": "4e103852e35a",
+      "source": "fabric-semantic",
+      "tokens": 46,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.6666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:multi-hop",
+      "turn": 1,
+      "id": "688709023b75",
+      "source": "fabric-semantic",
+      "tokens": 49,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.6666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:multi-hop",
+      "turn": 1,
+      "id": "5400025a3470",
+      "source": "fabric-semantic",
+      "tokens": 40,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:temporal",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 136,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "used",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:temporal",
+      "turn": 1,
+      "id": "09543b739089",
+      "source": "fabric-semantic",
+      "tokens": 46,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.6666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:temporal",
+      "turn": 1,
+      "id": "1c75406c374c",
+      "source": "fabric-semantic",
+      "tokens": 49,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.6666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:temporal",
+      "turn": 1,
+      "id": "35908267541c",
+      "source": "fabric-semantic",
+      "tokens": 40,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:open-domain",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 136,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "used",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:open-domain",
+      "turn": 1,
+      "id": "7e873211e36a",
+      "source": "fabric-semantic",
+      "tokens": 46,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.6666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:open-domain",
+      "turn": 1,
+      "id": "06ed9c1e5b85",
+      "source": "fabric-semantic",
+      "tokens": 49,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.6666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:open-domain",
+      "turn": 1,
+      "id": "94fa154f0353",
+      "source": "fabric-semantic",
+      "tokens": 40,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:adversarial",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 136,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "used",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:adversarial",
+      "turn": 1,
+      "id": "f0ae12087e05",
+      "source": "fabric-semantic",
+      "tokens": 19,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.25,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:adversarial",
+      "turn": 1,
+      "id": "75608391bd50",
+      "source": "fabric-semantic",
+      "tokens": 22,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.25,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:adversarial",
+      "turn": 1,
+      "id": "88c8f8f358d7",
+      "source": "fabric-semantic",
+      "tokens": 25,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.25,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:conflict-resolution-single-hop",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 136,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "used",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:conflict-resolution-single-hop",
+      "turn": 1,
+      "id": "9848ed293f66",
+      "source": "fabric-semantic",
+      "tokens": 46,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.6666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:conflict-resolution-single-hop",
+      "turn": 1,
+      "id": "e88a86270921",
+      "source": "fabric-semantic",
+      "tokens": 49,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.6666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:conflict-resolution-single-hop",
+      "turn": 1,
+      "id": "23f85b269c4f",
+      "source": "fabric-semantic",
+      "tokens": 40,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:conflict-resolution-multi-hop",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 136,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "used",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:conflict-resolution-multi-hop",
+      "turn": 1,
+      "id": "fa1088a2f738",
+      "source": "fabric-semantic",
+      "tokens": 46,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.6666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:conflict-resolution-multi-hop",
+      "turn": 1,
+      "id": "94e7a0a090ca",
+      "source": "fabric-semantic",
+      "tokens": 49,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.6666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "synthetic:conflict-resolution-multi-hop",
+      "turn": 1,
+      "id": "215dfc934259",
+      "source": "fabric-semantic",
+      "tokens": 40,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 1,
+      "cited": false
+    }
+  ],
+  "attemptId": null,
+  "measurementVersion": "product-phases-delivery-v3",
+  "analysisVersion": "202-paired-cluster-v1",
+  "judgeTemplateVersion": "e3883a2aa5910f76c3f6b377f1758fd4a57ca6dda1449cd86291abd0eea5f306",
+  "gradedTemplateVersion": "f7ff5f9c24afd87f0a5e00bd168103019f6e7140d64031f3e5bec264043c24cb",
+  "protocolHash": "ba019e0dc6389c0617a68623ec0bb9d82abb04d0faf93fd281123b8217c2fecd",
+  "resumedResults": 0,
+  "results": [
+    {
+      "id": "synthetic:knowledge-update",
+      "ability": "knowledge-update",
+      "cluster": "synthetic:knowledge-update",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ontologySettle": 2.5,
+        "ingestion": 63.1,
+        "answer": 24.3,
+        "evaluation": 1
+      },
+      "answerKey": "c5e043a9973a3b1f4b5fd5d601b80ee30b9a37e09917a7520f8023c474dead1e",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 1,
+      "recalledIds": [
+        "session-0-r0",
+        "session-1-r0",
+        "session-2-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 135,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [],
+          "needed": 0,
+          "neverSurfaced": 0,
+          "candidateGap": false
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "ranked-valid-candidates-and-direct-reads",
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 2,
+        "selectedGold": 2,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 6,
+        "coveredSourceMessages": 6,
+        "eligibleExchanges": 3,
+        "refused": 0,
+        "unpairedSourceMessages": 0,
+        "sessions": 3,
+        "entries": 6,
+        "archived": 3,
+        "parts": 3,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 0
+      },
+      "ontology": {
+        "concepts": 1,
+        "claims": 1,
+        "claimsPerConcept": 1,
+        "boundNoteShare": 0.6666666666666666,
+        "passes": 1,
+        "modelCalls": 1,
+        "repairs": 0,
+        "rejected": {
+          "trust": 0,
+          "secret": 0,
+          "invalid": 0
+        },
+        "itemsLeftDue": 0,
+        "curator": {
+          "calls": 1,
+          "inputTokens": 873,
+          "outputTokens": 2,
+          "cacheReadTokens": 0
+        },
+        "ontologySettleMs": 2,
+        "ontologySettleRounds": 1,
+        "ontologySettleTimeout": false,
+        "ontologyAborted": 0,
+        "ontologyPassesInSettle": 0,
+        "conceptStage": "note",
+        "conceptsRecalled": 0
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "mock/synthetic-judge": "yes"
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "synthetic:multi-session",
+      "ability": "multi-session",
+      "cluster": "synthetic:multi-session",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ontologySettle": 2.2,
+        "ingestion": 23.5,
+        "answer": 8.1,
+        "evaluation": 0.2
+      },
+      "answerKey": "ebe314294c8b38faf201fc5ce61c409f31f0a3505998a85bff58b30ac215aed7",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 1,
+      "recalledIds": [
+        "session-0-r0",
+        "session-1-r0",
+        "session-2-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 135,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [],
+          "needed": 0,
+          "neverSurfaced": 0,
+          "candidateGap": false
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "ranked-valid-candidates-and-direct-reads",
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 2,
+        "selectedGold": 2,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 6,
+        "coveredSourceMessages": 6,
+        "eligibleExchanges": 3,
+        "refused": 0,
+        "unpairedSourceMessages": 0,
+        "sessions": 3,
+        "entries": 6,
+        "archived": 3,
+        "parts": 3,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 0
+      },
+      "ontology": {
+        "concepts": 1,
+        "claims": 1,
+        "claimsPerConcept": 1,
+        "boundNoteShare": 0.6666666666666666,
+        "passes": 1,
+        "modelCalls": 1,
+        "repairs": 0,
+        "rejected": {
+          "trust": 0,
+          "secret": 0,
+          "invalid": 0
+        },
+        "itemsLeftDue": 0,
+        "curator": {
+          "calls": 1,
+          "inputTokens": 873,
+          "outputTokens": 2,
+          "cacheReadTokens": 0
+        },
+        "ontologySettleMs": 2,
+        "ontologySettleRounds": 1,
+        "ontologySettleTimeout": false,
+        "ontologyAborted": 0,
+        "ontologyPassesInSettle": 0,
+        "conceptStage": "note",
+        "conceptsRecalled": 0
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "mock/synthetic-judge": "yes"
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "synthetic:single-session-assistant",
+      "ability": "single-session-assistant",
+      "cluster": "synthetic:single-session-assistant",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ontologySettle": 2.3,
+        "ingestion": 26,
+        "answer": 5.9,
+        "evaluation": 0.2
+      },
+      "answerKey": "27c5800096d5601eaebd80c43bd8406efac2b6ffc2604d77ccadfb4dfafc984c",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 1,
+      "recalledIds": [
+        "session-0-r0",
+        "session-1-r0",
+        "session-2-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 135,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [],
+          "needed": 0,
+          "neverSurfaced": 0,
+          "candidateGap": false
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "ranked-valid-candidates-and-direct-reads",
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 2,
+        "selectedGold": 2,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 6,
+        "coveredSourceMessages": 6,
+        "eligibleExchanges": 3,
+        "refused": 0,
+        "unpairedSourceMessages": 0,
+        "sessions": 3,
+        "entries": 6,
+        "archived": 3,
+        "parts": 3,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 0
+      },
+      "ontology": {
+        "concepts": 1,
+        "claims": 1,
+        "claimsPerConcept": 1,
+        "boundNoteShare": 0.6666666666666666,
+        "passes": 1,
+        "modelCalls": 1,
+        "repairs": 0,
+        "rejected": {
+          "trust": 0,
+          "secret": 0,
+          "invalid": 0
+        },
+        "itemsLeftDue": 0,
+        "curator": {
+          "calls": 1,
+          "inputTokens": 873,
+          "outputTokens": 2,
+          "cacheReadTokens": 0
+        },
+        "ontologySettleMs": 2,
+        "ontologySettleRounds": 1,
+        "ontologySettleTimeout": false,
+        "ontologyAborted": 0,
+        "ontologyPassesInSettle": 0,
+        "conceptStage": "note",
+        "conceptsRecalled": 0
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "mock/synthetic-judge": "yes"
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "synthetic:single-session-preference",
+      "ability": "single-session-preference",
+      "cluster": "synthetic:single-session-preference",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ontologySettle": 2.2,
+        "ingestion": 21.5,
+        "answer": 5.8,
+        "evaluation": 0.2
+      },
+      "answerKey": "0b621c6aa9052373750e7f0932cf61b9ced8e9ec75c9b89ed3c22c73ae328697",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 1,
+      "recalledIds": [
+        "session-0-r0",
+        "session-1-r0",
+        "session-2-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 135,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [],
+          "needed": 0,
+          "neverSurfaced": 0,
+          "candidateGap": false
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "ranked-valid-candidates-and-direct-reads",
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 2,
+        "selectedGold": 2,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 6,
+        "coveredSourceMessages": 6,
+        "eligibleExchanges": 3,
+        "refused": 0,
+        "unpairedSourceMessages": 0,
+        "sessions": 3,
+        "entries": 6,
+        "archived": 3,
+        "parts": 3,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 0
+      },
+      "ontology": {
+        "concepts": 1,
+        "claims": 1,
+        "claimsPerConcept": 1,
+        "boundNoteShare": 0.6666666666666666,
+        "passes": 1,
+        "modelCalls": 1,
+        "repairs": 0,
+        "rejected": {
+          "trust": 0,
+          "secret": 0,
+          "invalid": 0
+        },
+        "itemsLeftDue": 0,
+        "curator": {
+          "calls": 1,
+          "inputTokens": 873,
+          "outputTokens": 2,
+          "cacheReadTokens": 0
+        },
+        "ontologySettleMs": 2,
+        "ontologySettleRounds": 1,
+        "ontologySettleTimeout": false,
+        "ontologyAborted": 0,
+        "ontologyPassesInSettle": 0,
+        "conceptStage": "note",
+        "conceptsRecalled": 0
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "mock/synthetic-judge": "yes"
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "synthetic:single-session-user",
+      "ability": "single-session-user",
+      "cluster": "synthetic:single-session-user",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ontologySettle": 2.3,
+        "ingestion": 22.1,
+        "answer": 6.1,
+        "evaluation": 0.2
+      },
+      "answerKey": "a8d522a662cb45c56c85b819f1b5f79ca112191d6cec747a5cfaea65b910bcd8",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 1,
+      "recalledIds": [
+        "session-0-r0",
+        "session-1-r0",
+        "session-2-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 135,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [],
+          "needed": 0,
+          "neverSurfaced": 0,
+          "candidateGap": false
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "ranked-valid-candidates-and-direct-reads",
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 2,
+        "selectedGold": 2,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 6,
+        "coveredSourceMessages": 6,
+        "eligibleExchanges": 3,
+        "refused": 0,
+        "unpairedSourceMessages": 0,
+        "sessions": 3,
+        "entries": 6,
+        "archived": 3,
+        "parts": 3,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 0
+      },
+      "ontology": {
+        "concepts": 1,
+        "claims": 1,
+        "claimsPerConcept": 1,
+        "boundNoteShare": 0.6666666666666666,
+        "passes": 1,
+        "modelCalls": 1,
+        "repairs": 0,
+        "rejected": {
+          "trust": 0,
+          "secret": 0,
+          "invalid": 0
+        },
+        "itemsLeftDue": 0,
+        "curator": {
+          "calls": 1,
+          "inputTokens": 873,
+          "outputTokens": 2,
+          "cacheReadTokens": 0
+        },
+        "ontologySettleMs": 2,
+        "ontologySettleRounds": 1,
+        "ontologySettleTimeout": false,
+        "ontologyAborted": 0,
+        "ontologyPassesInSettle": 0,
+        "conceptStage": "note",
+        "conceptsRecalled": 0
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "mock/synthetic-judge": "yes"
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "synthetic:temporal-reasoning",
+      "ability": "temporal-reasoning",
+      "cluster": "synthetic:temporal-reasoning",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ontologySettle": 2.3,
+        "ingestion": 20.3,
+        "answer": 6.8,
+        "evaluation": 0.1
+      },
+      "answerKey": "5e72efcede473f3d5d522127c1048d5c94c5ec5f1a75cb4ebb19d0b5b114abb1",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 1,
+      "recalledIds": [
+        "session-0-r0",
+        "session-1-r0",
+        "session-2-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 135,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [],
+          "needed": 0,
+          "neverSurfaced": 0,
+          "candidateGap": false
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "ranked-valid-candidates-and-direct-reads",
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 2,
+        "selectedGold": 2,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 6,
+        "coveredSourceMessages": 6,
+        "eligibleExchanges": 3,
+        "refused": 0,
+        "unpairedSourceMessages": 0,
+        "sessions": 3,
+        "entries": 6,
+        "archived": 3,
+        "parts": 3,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 0
+      },
+      "ontology": {
+        "concepts": 1,
+        "claims": 1,
+        "claimsPerConcept": 1,
+        "boundNoteShare": 0.6666666666666666,
+        "passes": 1,
+        "modelCalls": 1,
+        "repairs": 0,
+        "rejected": {
+          "trust": 0,
+          "secret": 0,
+          "invalid": 0
+        },
+        "itemsLeftDue": 0,
+        "curator": {
+          "calls": 1,
+          "inputTokens": 873,
+          "outputTokens": 2,
+          "cacheReadTokens": 0
+        },
+        "ontologySettleMs": 2,
+        "ontologySettleRounds": 1,
+        "ontologySettleTimeout": false,
+        "ontologyAborted": 0,
+        "ontologyPassesInSettle": 0,
+        "conceptStage": "note",
+        "conceptsRecalled": 0
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "mock/synthetic-judge": "yes"
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "synthetic:abstention",
+      "ability": "abstention",
+      "cluster": "synthetic:abstention",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ontologySettle": 2.3,
+        "ingestion": 20.8,
+        "answer": 7,
+        "evaluation": 0.4
+      },
+      "answerKey": "cdb557cc71b809c7204a3c78baf363580c7c306c740c61f4d28def95dc9dbb02",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 1,
+      "recalledIds": [
+        "session-0-r0",
+        "session-1-r0",
+        "session-2-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 66,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [],
+          "needed": 0,
+          "neverSurfaced": 0,
+          "candidateGap": false
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "ranked-valid-candidates-and-direct-reads",
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 0,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 6,
+        "coveredSourceMessages": 6,
+        "eligibleExchanges": 3,
+        "refused": 0,
+        "unpairedSourceMessages": 0,
+        "sessions": 3,
+        "entries": 6,
+        "archived": 3,
+        "parts": 3,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 0
+      },
+      "ontology": {
+        "concepts": 1,
+        "claims": 1,
+        "claimsPerConcept": 1,
+        "boundNoteShare": 0.6666666666666666,
+        "passes": 1,
+        "modelCalls": 1,
+        "repairs": 0,
+        "rejected": {
+          "trust": 0,
+          "secret": 0,
+          "invalid": 0
+        },
+        "itemsLeftDue": 0,
+        "curator": {
+          "calls": 1,
+          "inputTokens": 873,
+          "outputTokens": 2,
+          "cacheReadTokens": 0
+        },
+        "ontologySettleMs": 2,
+        "ontologySettleRounds": 1,
+        "ontologySettleTimeout": false,
+        "ontologyAborted": 0,
+        "ontologyPassesInSettle": 0,
+        "conceptStage": "none",
+        "conceptsRecalled": 0
+      },
+      "correct": true,
+      "judgeVerdicts": {
+        "mock/synthetic-judge": "yes"
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "synthetic:single-hop",
+      "ability": "single-hop",
+      "cluster": "synthetic:single-hop",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ontologySettle": 2.3,
+        "ingestion": 23,
+        "answer": 5.7,
+        "evaluation": 0.1
+      },
+      "answerKey": "60f5b97bad3e54e6b68aca48f6ca14bea7e5170b99f10800d00801cd023ea318",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 1,
+      "recalledIds": [
+        "session-0-r0",
+        "session-1-r0",
+        "session-2-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 135,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [],
+          "needed": 0,
+          "neverSurfaced": 0,
+          "candidateGap": false
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "ranked-valid-candidates-and-direct-reads",
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 2,
+        "selectedGold": 2,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 6,
+        "coveredSourceMessages": 6,
+        "eligibleExchanges": 3,
+        "refused": 0,
+        "unpairedSourceMessages": 0,
+        "sessions": 3,
+        "entries": 6,
+        "archived": 3,
+        "parts": 3,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 0
+      },
+      "ontology": {
+        "concepts": 1,
+        "claims": 1,
+        "claimsPerConcept": 1,
+        "boundNoteShare": 0.6666666666666666,
+        "passes": 1,
+        "modelCalls": 1,
+        "repairs": 0,
+        "rejected": {
+          "trust": 0,
+          "secret": 0,
+          "invalid": 0
+        },
+        "itemsLeftDue": 0,
+        "curator": {
+          "calls": 1,
+          "inputTokens": 873,
+          "outputTokens": 2,
+          "cacheReadTokens": 0
+        },
+        "ontologySettleMs": 2,
+        "ontologySettleRounds": 1,
+        "ontologySettleTimeout": false,
+        "ontologyAborted": 0,
+        "ontologyPassesInSettle": 0,
+        "conceptStage": "note",
+        "conceptsRecalled": 0
+      },
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "mock/synthetic-judge": "yes"
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "synthetic:multi-hop",
+      "ability": "multi-hop",
+      "cluster": "synthetic:multi-hop",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ontologySettle": 2.3,
+        "ingestion": 21.1,
+        "answer": 7.4,
+        "evaluation": 0.1
+      },
+      "answerKey": "c90ad61a3b16f001ab236d41d8d62efddfd93671795d4f7b64c00a4a31d45ac3",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 1,
+      "recalledIds": [
+        "session-0-r0",
+        "session-1-r0",
+        "session-2-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 135,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [],
+          "needed": 0,
+          "neverSurfaced": 0,
+          "candidateGap": false
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "ranked-valid-candidates-and-direct-reads",
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 2,
+        "selectedGold": 2,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 6,
+        "coveredSourceMessages": 6,
+        "eligibleExchanges": 3,
+        "refused": 0,
+        "unpairedSourceMessages": 0,
+        "sessions": 3,
+        "entries": 6,
+        "archived": 3,
+        "parts": 3,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 0
+      },
+      "ontology": {
+        "concepts": 1,
+        "claims": 1,
+        "claimsPerConcept": 1,
+        "boundNoteShare": 0.6666666666666666,
+        "passes": 1,
+        "modelCalls": 1,
+        "repairs": 0,
+        "rejected": {
+          "trust": 0,
+          "secret": 0,
+          "invalid": 0
+        },
+        "itemsLeftDue": 0,
+        "curator": {
+          "calls": 1,
+          "inputTokens": 873,
+          "outputTokens": 2,
+          "cacheReadTokens": 0
+        },
+        "ontologySettleMs": 2,
+        "ontologySettleRounds": 1,
+        "ontologySettleTimeout": false,
+        "ontologyAborted": 0,
+        "ontologyPassesInSettle": 0,
+        "conceptStage": "note",
+        "conceptsRecalled": 0
+      },
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "mock/synthetic-judge": "yes"
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "synthetic:temporal",
+      "ability": "temporal",
+      "cluster": "synthetic:temporal",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ontologySettle": 2.3,
+        "ingestion": 19.4,
+        "answer": 5.8,
+        "evaluation": 0.3
+      },
+      "answerKey": "fd42ed3975b0db12b33edbf87a1b66dccd40a04453929a6607f7f9836c8965ae",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 1,
+      "recalledIds": [
+        "session-0-r0",
+        "session-1-r0",
+        "session-2-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 135,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [],
+          "needed": 0,
+          "neverSurfaced": 0,
+          "candidateGap": false
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "ranked-valid-candidates-and-direct-reads",
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 2,
+        "selectedGold": 2,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 6,
+        "coveredSourceMessages": 6,
+        "eligibleExchanges": 3,
+        "refused": 0,
+        "unpairedSourceMessages": 0,
+        "sessions": 3,
+        "entries": 6,
+        "archived": 3,
+        "parts": 3,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 0
+      },
+      "ontology": {
+        "concepts": 1,
+        "claims": 1,
+        "claimsPerConcept": 1,
+        "boundNoteShare": 0.6666666666666666,
+        "passes": 1,
+        "modelCalls": 1,
+        "repairs": 0,
+        "rejected": {
+          "trust": 0,
+          "secret": 0,
+          "invalid": 0
+        },
+        "itemsLeftDue": 0,
+        "curator": {
+          "calls": 1,
+          "inputTokens": 873,
+          "outputTokens": 2,
+          "cacheReadTokens": 0
+        },
+        "ontologySettleMs": 2,
+        "ontologySettleRounds": 1,
+        "ontologySettleTimeout": false,
+        "ontologyAborted": 0,
+        "ontologyPassesInSettle": 0,
+        "conceptStage": "note",
+        "conceptsRecalled": 0
+      },
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "mock/synthetic-judge": "yes"
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "synthetic:open-domain",
+      "ability": "open-domain",
+      "cluster": "synthetic:open-domain",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ontologySettle": 2.2,
+        "ingestion": 24.4,
+        "answer": 5.9,
+        "evaluation": 0.1
+      },
+      "answerKey": "89249cfb1e526c45009f2337f3b04610a7d6097951b7d9cf581bc77a5d113d26",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 1,
+      "recalledIds": [
+        "session-0-r0",
+        "session-1-r0",
+        "session-2-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 135,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [],
+          "needed": 0,
+          "neverSurfaced": 0,
+          "candidateGap": false
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "ranked-valid-candidates-and-direct-reads",
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 2,
+        "selectedGold": 2,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 6,
+        "coveredSourceMessages": 6,
+        "eligibleExchanges": 3,
+        "refused": 0,
+        "unpairedSourceMessages": 0,
+        "sessions": 3,
+        "entries": 6,
+        "archived": 3,
+        "parts": 3,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 0
+      },
+      "ontology": {
+        "concepts": 1,
+        "claims": 1,
+        "claimsPerConcept": 1,
+        "boundNoteShare": 0.6666666666666666,
+        "passes": 1,
+        "modelCalls": 1,
+        "repairs": 0,
+        "rejected": {
+          "trust": 0,
+          "secret": 0,
+          "invalid": 0
+        },
+        "itemsLeftDue": 0,
+        "curator": {
+          "calls": 1,
+          "inputTokens": 873,
+          "outputTokens": 2,
+          "cacheReadTokens": 0
+        },
+        "ontologySettleMs": 2,
+        "ontologySettleRounds": 1,
+        "ontologySettleTimeout": false,
+        "ontologyAborted": 0,
+        "ontologyPassesInSettle": 0,
+        "conceptStage": "note",
+        "conceptsRecalled": 0
+      },
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "mock/synthetic-judge": "yes"
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "synthetic:adversarial",
+      "ability": "adversarial",
+      "cluster": "synthetic:adversarial",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ontologySettle": 2.2,
+        "ingestion": 22.1,
+        "answer": 6,
+        "evaluation": 0.1
+      },
+      "answerKey": "3f6d82c52e20c67817966830482d33059ca72bd97d0b6d5a443561317070ed28",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 1,
+      "recalledIds": [
+        "session-0-r0",
+        "session-1-r0",
+        "session-2-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 66,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [],
+          "needed": 0,
+          "neverSurfaced": 0,
+          "candidateGap": false
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "ranked-valid-candidates-and-direct-reads",
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 0,
+        "candidateGold": 0,
+        "selectedGold": 0,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 6,
+        "coveredSourceMessages": 6,
+        "eligibleExchanges": 3,
+        "refused": 0,
+        "unpairedSourceMessages": 0,
+        "sessions": 3,
+        "entries": 6,
+        "archived": 3,
+        "parts": 3,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 0
+      },
+      "ontology": {
+        "concepts": 1,
+        "claims": 1,
+        "claimsPerConcept": 1,
+        "boundNoteShare": 0.6666666666666666,
+        "passes": 1,
+        "modelCalls": 1,
+        "repairs": 0,
+        "rejected": {
+          "trust": 0,
+          "secret": 0,
+          "invalid": 0
+        },
+        "itemsLeftDue": 0,
+        "curator": {
+          "calls": 1,
+          "inputTokens": 873,
+          "outputTokens": 2,
+          "cacheReadTokens": 0
+        },
+        "ontologySettleMs": 2,
+        "ontologySettleRounds": 1,
+        "ontologySettleTimeout": false,
+        "ontologyAborted": 0,
+        "ontologyPassesInSettle": 0,
+        "conceptStage": "none",
+        "conceptsRecalled": 0
+      },
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "mock/synthetic-judge": "yes"
+      },
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "synthetic:conflict-resolution-single-hop",
+      "ability": "conflict-resolution-single-hop",
+      "cluster": "synthetic:conflict-resolution-single-hop",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ontologySettle": 2.2,
+        "ingestion": 22.3,
+        "answer": 5.9,
+        "evaluation": 0.4
+      },
+      "answerKey": "f9b8eeb36dabf7aa36aa12ad42620c773b2aa58b8093f5560b7287324a6d54a7",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 1,
+      "recalledIds": [
+        "session-0-r0",
+        "session-1-r0",
+        "session-2-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 135,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [],
+          "needed": 0,
+          "neverSurfaced": 0,
+          "candidateGap": false
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "ranked-valid-candidates-and-direct-reads",
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 2,
+        "selectedGold": 2,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 6,
+        "coveredSourceMessages": 6,
+        "eligibleExchanges": 3,
+        "refused": 0,
+        "unpairedSourceMessages": 0,
+        "sessions": 3,
+        "entries": 6,
+        "archived": 3,
+        "parts": 3,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 0
+      },
+      "ontology": {
+        "concepts": 1,
+        "claims": 1,
+        "claimsPerConcept": 1,
+        "boundNoteShare": 0.6666666666666666,
+        "passes": 1,
+        "modelCalls": 1,
+        "repairs": 0,
+        "rejected": {
+          "trust": 0,
+          "secret": 0,
+          "invalid": 0
+        },
+        "itemsLeftDue": 0,
+        "curator": {
+          "calls": 1,
+          "inputTokens": 873,
+          "outputTokens": 2,
+          "cacheReadTokens": 0
+        },
+        "ontologySettleMs": 2,
+        "ontologySettleRounds": 1,
+        "ontologySettleTimeout": false,
+        "ontologyAborted": 0,
+        "ontologyPassesInSettle": 0,
+        "conceptStage": "note",
+        "conceptsRecalled": 0
+      },
+      "correct": true,
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    },
+    {
+      "id": "synthetic:conflict-resolution-multi-hop",
+      "ability": "conflict-resolution-multi-hop",
+      "cluster": "synthetic:conflict-resolution-multi-hop",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ontologySettle": 2.2,
+        "ingestion": 20,
+        "answer": 5.7,
+        "evaluation": 0.1
+      },
+      "answerKey": "799b1b45815e7013e6c6eaa4069732937a40e89fee85ccdc14a73a1f95f0ae34",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 1,
+      "recalledIds": [
+        "session-0-r0",
+        "session-1-r0",
+        "session-2-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 135,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [],
+          "needed": 0,
+          "neverSurfaced": 0,
+          "candidateGap": false
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "ranked-valid-candidates-and-direct-reads",
+        "labelSource": "answer_text_or_session",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": 2,
+        "selectedGold": 2,
+        "fineRounds": 0,
+        "fineSelected": 0
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 6,
+        "coveredSourceMessages": 6,
+        "eligibleExchanges": 3,
+        "refused": 0,
+        "unpairedSourceMessages": 0,
+        "sessions": 3,
+        "entries": 6,
+        "archived": 3,
+        "parts": 3,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 0
+      },
+      "ontology": {
+        "concepts": 1,
+        "claims": 1,
+        "claimsPerConcept": 1,
+        "boundNoteShare": 0.6666666666666666,
+        "passes": 1,
+        "modelCalls": 1,
+        "repairs": 0,
+        "rejected": {
+          "trust": 0,
+          "secret": 0,
+          "invalid": 0
+        },
+        "itemsLeftDue": 0,
+        "curator": {
+          "calls": 1,
+          "inputTokens": 873,
+          "outputTokens": 2,
+          "cacheReadTokens": 0
+        },
+        "ontologySettleMs": 2,
+        "ontologySettleRounds": 1,
+        "ontologySettleTimeout": false,
+        "ontologyAborted": 0,
+        "ontologyPassesInSettle": 0,
+        "conceptStage": "note",
+        "conceptsRecalled": 0
+      },
+      "correct": true,
+      "attributionProvenance": "answer_text_or_session",
+      "stage": "correct"
+    }
+  ],
+  "status": "completed",
+  "limitations": [
+    "Block-level injection accounting until item metadata lands in Tasks 4, 9, 11 and 12.",
+    "Injection token allocations are character estimates, not billing usage.",
+    "OpenCode Go and Hyper judges differ from the papers; scores are not directly comparable."
+  ],
+  "ratesAsOf": "2026-10-29",
+  "ratesStatus": "provider-catalog",
+  "inputCap": 125952,
+  "selectedQuestionIds": [
+    "synthetic:knowledge-update",
+    "synthetic:multi-session",
+    "synthetic:single-session-assistant",
+    "synthetic:single-session-preference",
+    "synthetic:single-session-user",
+    "synthetic:temporal-reasoning",
+    "synthetic:abstention",
+    "synthetic:single-hop",
+    "synthetic:multi-hop",
+    "synthetic:temporal",
+    "synthetic:open-domain",
+    "synthetic:adversarial",
+    "synthetic:conflict-resolution-single-hop",
+    "synthetic:conflict-resolution-multi-hop"
+  ],
+  "runPathFingerprint": "46a9b7c9e57a1dd3707f0089941809a362a15a2539e4daa0a7fc7b2ad065da1a",
+  "measurementPolicy": {
+    "version": "product-phases-v1",
+    "judgeCallsPerHour": 450,
+    "injectionAnnotation": true,
+    "retriesAndBackoffIncluded": true,
+    "queueWaitIncluded": false,
+    "seedSnapshot": false
+  },
+  "sourceMessageTokens": 0,
+  "timing": {
+    "wallMs": 557.7,
+    "concurrency": {
+      "initial": 1,
+      "active": 1,
+      "floor": 1
+    },
+    "questions": {
+      "n": 14,
+      "wallMs": {
+        "p50": 34,
+        "p95": 109.5,
+        "mean": 39.6
+      }
+    },
+    "phases": {
+      "ingestion": {
+        "n": 14,
+        "wallMs": {
+          "p50": 22.1,
+          "p95": 63.1,
+          "mean": 25
+        }
+      },
+      "restore": {
+        "n": 0,
+        "wallMs": {
+          "p50": null,
+          "p95": null,
+          "mean": null
+        }
+      },
+      "ontologySettle": {
+        "n": 14,
+        "wallMs": {
+          "p50": 2.3,
+          "p95": 2.5,
+          "mean": 2.3
+        }
+      },
+      "answer": {
+        "n": 14,
+        "wallMs": {
+          "p50": 5.9,
+          "p95": 24.3,
+          "mean": 7.6
+        }
+      },
+      "evaluation": {
+        "n": 14,
+        "wallMs": {
+          "p50": 0.2,
+          "p95": 1,
+          "mean": 0.3
+        }
+      }
+    },
+    "policy": {
+      "answer": "after ingestion, before grading, annotation, final background settlement and disposal",
+      "queueWaitIncluded": false,
+      "retriesAndBackoffIncluded": true
+    },
+    "roles": {
+      "curator": {
+        "calls": 14,
+        "firstByteMs": {
+          "p50": 0,
+          "p95": 0.4,
+          "mean": 0
+        },
+        "totalMs": {
+          "p50": 0.1,
+          "p95": 0.7,
+          "mean": 0.1
+        }
+      },
+      "injection-label": {
+        "calls": 56,
+        "firstByteMs": {
+          "p50": 0,
+          "p95": 0,
+          "mean": 0
+        },
+        "totalMs": {
+          "p50": 0,
+          "p95": 0,
+          "mean": 0
+        }
+      },
+      "judge": {
+        "calls": 56,
+        "firstByteMs": {
+          "p50": 0,
+          "p95": 0,
+          "mean": 0
+        },
+        "totalMs": {
+          "p50": 0,
+          "p95": 0,
+          "mean": 0
+        }
+      },
+      "solver": {
+        "calls": 14,
+        "firstByteMs": {
+          "p50": 0,
+          "p95": 0.1,
+          "mean": 0
+        },
+        "totalMs": {
+          "p50": 0.1,
+          "p95": 0.3,
+          "mean": 0.1
+        }
+      }
+    },
+    "calls": 140
+  },
+  "metricVersion": 2,
+  "abilities": {
+    "knowledge-update": {
+      "n": 1,
+      "correct": 1,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "knowledge-update",
+      "definition": "fraction of knowledge-update answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "multi-session": {
+      "n": 1,
+      "correct": 1,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "multi-session",
+      "definition": "fraction of multi-session answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-assistant": {
+      "n": 1,
+      "correct": 1,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "single-session-assistant",
+      "definition": "fraction of single-session-assistant answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-preference": {
+      "n": 1,
+      "correct": 1,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "single-session-preference",
+      "definition": "fraction of single-session-preference answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-user": {
+      "n": 1,
+      "correct": 1,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "single-session-user",
+      "definition": "fraction of single-session-user answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "temporal-reasoning": {
+      "n": 1,
+      "correct": 1,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "temporal-reasoning",
+      "definition": "fraction of temporal-reasoning answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "abstention": {
+      "n": 1,
+      "correct": 1,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-hop": {
+      "n": 1,
+      "correct": 1,
+      "scored": 1,
+      "f1": 1,
+      "recallAtK": 1,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "single-hop",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "multi-hop": {
+      "n": 1,
+      "correct": 1,
+      "scored": 1,
+      "f1": 1,
+      "recallAtK": 1,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "multi-hop",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "temporal": {
+      "n": 1,
+      "correct": 1,
+      "scored": 1,
+      "f1": 1,
+      "recallAtK": 1,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "temporal",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "open-domain": {
+      "n": 1,
+      "correct": 1,
+      "scored": 1,
+      "f1": 1,
+      "recallAtK": 1,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "open-domain",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "adversarial": {
+      "n": 1,
+      "correct": 1,
+      "scored": 1,
+      "f1": 1,
+      "recallAtK": null,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "adversarial",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "conflict-resolution-single-hop": {
+      "n": 1,
+      "correct": 1,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "conflict-resolution-single-hop",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "conflict-resolution-multi-hop": {
+      "n": 1,
+      "correct": 1,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "conflict-resolution-multi-hop",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    }
+  },
+  "abilityGroups": {
+    "knowledge-update": {
+      "n": 1,
+      "correct": 1,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "knowledge-update",
+      "definition": "fraction of knowledge-update answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "multi-session": {
+      "n": 1,
+      "correct": 1,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "multi-session",
+      "definition": "fraction of multi-session answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "information-extraction": {
+      "n": 3,
+      "correct": 3,
+      "scored": 3,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "information-extraction",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "temporal-reasoning": {
+      "n": 1,
+      "correct": 1,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "temporal-reasoning",
+      "definition": "fraction of temporal-reasoning answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "abstention": {
+      "n": 1,
+      "correct": 1,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-hop": {
+      "n": 1,
+      "correct": 1,
+      "scored": 1,
+      "f1": 1,
+      "recallAtK": 1,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "single-hop",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "multi-hop": {
+      "n": 1,
+      "correct": 1,
+      "scored": 1,
+      "f1": 1,
+      "recallAtK": 1,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "multi-hop",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "temporal": {
+      "n": 1,
+      "correct": 1,
+      "scored": 1,
+      "f1": 1,
+      "recallAtK": 1,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "temporal",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "open-domain": {
+      "n": 1,
+      "correct": 1,
+      "scored": 1,
+      "f1": 1,
+      "recallAtK": 1,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "open-domain",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "adversarial": {
+      "n": 1,
+      "correct": 1,
+      "scored": 1,
+      "f1": 1,
+      "recallAtK": null,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "adversarial",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "conflict-resolution-single-hop": {
+      "n": 1,
+      "correct": 1,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "conflict-resolution-single-hop",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "conflict-resolution-multi-hop": {
+      "n": 1,
+      "correct": 1,
+      "scored": 1,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "conflict-resolution-multi-hop",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    }
+  },
+  "metricDefinitions": {
+    "knowledge-update": {
+      "definition": "fraction of knowledge-update answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "multi-session": {
+      "definition": "fraction of multi-session answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-assistant": {
+      "definition": "fraction of single-session-assistant answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-preference": {
+      "definition": "fraction of single-session-preference answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-user": {
+      "definition": "fraction of single-session-user answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "temporal-reasoning": {
+      "definition": "fraction of temporal-reasoning answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "abstention": {
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-hop": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "multi-hop": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "temporal": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "open-domain": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "adversarial": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "conflict-resolution-single-hop": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "conflict-resolution-multi-hop": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    }
+  },
+  "runLimitRate": 0,
+  "errorRate": 0,
+  "cacheReadRatio": 0,
+  "cacheWriteRatio": 0,
+  "cost": {
+    "currency": "USD",
+    "unit": "per_million_tokens",
+    "rates": null,
+    "pricingStatus": "unpriced",
+    "measured": null,
+    "cachedPrefixSimulation": null,
+    "simulationAssumption": null,
+    "ratesAsOf": "2026-10-29",
+    "ratesStatus": "provider-catalog"
+  },
+  "injectionPrecision": {
+    "granularity": "block",
+    "tokensPerTurn": 261.14285714285717,
+    "irrelevantRate": 0,
+    "citedIdRate": 0,
+    "tokenAccounting": "estimated ceil(characters/4); billing is wire usage"
+  },
+  "injectionPrecisionReason": null,
+  "toolCalls": 0,
+  "toolCallsPerQuestion": 0,
+  "recallCalls": 14,
+  "retrievedSnippetTokens": 1752,
+  "answerSessionHitAtK": null,
+  "evidenceRoundCoverage": null,
+  "evidenceAllRequired": null,
+  "fineEvidenceRecall": null,
+  "fineEvidencePrecision": null,
+  "legacyRetrievalRecallAtK": 1,
+  "retrievalRecallAtK": 1,
+  "ontologySummary": {
+    "histories": 14,
+    "concepts": 14,
+    "claims": 14,
+    "claimsPerConcept": 1,
+    "boundNoteShare": 0.6666666666666666,
+    "passes": 14,
+    "modelCalls": 14,
+    "repairs": 0,
+    "rejected": {
+      "trust": 0,
+      "secret": 0,
+      "invalid": 0
+    },
+    "itemsLeftDue": 0,
+    "curator": {
+      "calls": 14,
+      "inputTokens": 12222,
+      "outputTokens": 28,
+      "cacheReadTokens": 0,
+      "callsPerHistory": 1,
+      "inputTokensPerHistory": 873,
+      "outputTokensPerHistory": 2
+    },
+    "settle": {
+      "n": 14,
+      "p50Ms": 2,
+      "p95Ms": 2,
+      "maxMs": 2,
+      "timeouts": 0,
+      "excludedFromAnswerLatency": true
+    },
+    "conceptStages": {
+      "all": {
+        "concept": 0,
+        "note": 12,
+        "none": 2
+      },
+      "byAbility": {
+        "abstention": {
+          "concept": 0,
+          "note": 0,
+          "none": 1
+        },
+        "adversarial": {
+          "concept": 0,
+          "note": 0,
+          "none": 1
+        },
+        "conflict-resolution-multi-hop": {
+          "concept": 0,
+          "note": 1,
+          "none": 0
+        },
+        "conflict-resolution-single-hop": {
+          "concept": 0,
+          "note": 1,
+          "none": 0
+        },
+        "knowledge-update": {
+          "concept": 0,
+          "note": 1,
+          "none": 0
+        },
+        "multi-hop": {
+          "concept": 0,
+          "note": 1,
+          "none": 0
+        },
+        "multi-session": {
+          "concept": 0,
+          "note": 1,
+          "none": 0
+        },
+        "open-domain": {
+          "concept": 0,
+          "note": 1,
+          "none": 0
+        },
+        "single-hop": {
+          "concept": 0,
+          "note": 1,
+          "none": 0
+        },
+        "single-session-assistant": {
+          "concept": 0,
+          "note": 1,
+          "none": 0
+        },
+        "single-session-preference": {
+          "concept": 0,
+          "note": 1,
+          "none": 0
+        },
+        "single-session-user": {
+          "concept": 0,
+          "note": 1,
+          "none": 0
+        },
+        "temporal": {
+          "concept": 0,
+          "note": 1,
+          "none": 0
+        },
+        "temporal-reasoning": {
+          "concept": 0,
+          "note": 1,
+          "none": 0
+        }
+      }
+    },
+    "deviations": []
+  },
+  "stages": {
+    "correct": 14
+  }
+}

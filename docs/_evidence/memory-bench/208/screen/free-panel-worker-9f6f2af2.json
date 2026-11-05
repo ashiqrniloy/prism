@@ -1,0 +1,23 @@
+{
+  "kind": "208-free-panel",
+  "checkedAt": "2026-11-04T15:17:45.267Z",
+  "provider": "kilo",
+  "panel": [],
+  "commandcode": [
+    {
+      "ref": "commandcode/meta/muse-spark-1.2-contributor",
+      "contextWindow": 1048576,
+      "paid": true
+    },
+    {
+      "ref": "commandcode/stealth/glyph-cluster:free",
+      "contextWindow": 256000,
+      "paid": false
+    },
+    {
+      "ref": "commandcode/stealth/crouton-alpha",
+      "contextWindow": 1048576,
+      "paid": false
+    }
+  ]
+}

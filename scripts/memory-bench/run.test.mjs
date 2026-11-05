@@ -1131,6 +1131,56 @@ test("memory_bench_retries_empty_gateway_errors_but_not_validation_errors", asyn
   assert.equal(calls, 0);
 });
 
+test("interleave_by_ability_makes_every_prefix_balanced_without_changing_the_set", async () => {
+  const { interleaveByAbility } = await import("./run.mjs");
+  const questions = ["a1", "a2", "a3", "b1", "b2", "c1"].map((id) => ({ id, ability: id[0] }));
+  const out = interleaveByAbility(questions);
+  assert.deepEqual(
+    out.map((question) => question.id),
+    ["a1", "b1", "c1", "a2", "b2", "a3"],
+  );
+  assert.deepEqual(new Set(out.map((question) => question.id)), new Set(questions.map((question) => question.id)));
+});
+
+test("free_route_fetch_waits_out_transient_faults_and_hands_daily_caps_back", async () => {
+  const { benchmarkFetch, PATIENT_RETRY } = await import("./run.mjs");
+  const slept = [];
+  const sleep = async (ms) => {
+    slept.push(ms);
+  };
+  const script = (steps) => {
+    let index = 0;
+    return async () => {
+      const step = steps[Math.min(index++, steps.length - 1)];
+      if (step instanceof Error) throw step;
+      return step();
+    };
+  };
+  const reset = Object.assign(new Error("The socket connection was closed unexpectedly"), { code: "ECONNRESET" });
+  const hourly = () => new Response("Kilo's free models are limited to 200 requests per hour", { status: 429 });
+  // A dropped socket, an hourly 429 past the default policy and an upstream 400 are all waited out.
+  const patient = benchmarkFetch({
+    patient: true,
+    sleep,
+    fetch: script([reset, hourly, hourly, hourly, hourly, () => new Response("Provider returned error", { status: 400 }), () => new Response("ok")]),
+  });
+  assert.equal((await patient("https://example.invalid")).status, 200);
+  assert.ok(slept.length >= 3 && slept.every((ms) => ms <= PATIENT_RETRY.maxRetryAfterMs));
+  // A daily cap is returned at once: the campaign, not the turn, waits for it.
+  slept.length = 0;
+  const daily = benchmarkFetch({
+    patient: true,
+    sleep,
+    fetch: async () => new Response('{"error":{"message":"Rate limit exceeded: free-models-per-day"}}', { status: 429 }),
+  });
+  assert.equal((await daily("https://example.invalid")).status, 429);
+  assert.equal(slept.length, 0);
+  // Patience is bounded, and a paid route keeps the old behaviour: no socket retry.
+  const bounded = benchmarkFetch({ patient: true, sleep, fetch: async () => hourly() });
+  assert.equal((await bounded("https://example.invalid")).status, 429);
+  await assert.rejects(benchmarkFetch({ fetch: script([reset]) })("https://example.invalid"), /socket/);
+});
+
 test("memory_bench_report_writes_remain_valid_under_concurrent_checkpoints", async () => {
   const { writeReport, summarize } = await import("./report.mjs");
   const dir = await mkdtemp(join(tmpdir(), "memory-bench-report-"));
@@ -2991,6 +3041,10 @@ test("a_dropped_socket_is_retried_for_both_answers_and_judges", async () => {
   const dropped = { status: "failed", error: { code: "ECONNRESET", message: "socket hang up" } };
   assert.equal(isTransportFailure(dropped), true);
   assert.equal(isTransportFailure({ status: "completed" }), false);
+  // An intermittent content-filter refusal is re-asked like a dropped stream.
+  assert.equal(isTransportFailure({ status: "failed", error: { code: "400", message: "x", cause: { message: "400 InternalError.Algo.DataInspectionFailed: Input text data may contain inappropriate content." } } }), true);
+  // One oversized stream event loses the stream, not the question.
+  assert.equal(isTransportFailure({ status: "failed", error: { code: "sse_event_overflow", message: "SSE event exceeded 262144 bytes" } }), true);
   assert.equal(isTransportFailure({ status: "failed", error: { code: "ERR_PRISM_RUN_LIMIT", message: "ECONNRESET" } }), false);
   assert.equal(isRetryableJudgeFailure(new Error("MemoryBenchJudgeError:ECONNRESET")), true);
   assert.equal(isRetryableJudgeFailure(new Error("MemoryBenchJudgeError:23", { cause: { name: "TimeoutError" } })), true);

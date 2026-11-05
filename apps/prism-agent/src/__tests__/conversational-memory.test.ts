@@ -7,6 +7,7 @@ import { mockProvider, providerDone } from "@arnilo/prism/testing";
 import { createCodingWorker } from "../host/coding.js";
 import type { HostConfig } from "../host/config.js";
 import { loadHostConfig } from "../host/config.js";
+import { createOrchestrator } from "../host/orchestrator.js";
 import { createResearchWorker } from "../host/research.js";
 import { conversationalMemory, MEMORY_FACT } from "../scenarios/conversational-memory.js";
 import { ontologyMemory } from "../scenarios/ontology-memory.js";
@@ -39,20 +40,81 @@ test("conversational_memory_scenario_recalls_across_sessions_and_forgets", async
   }
 });
 
-test("default_agents_do_not_load_memory_fabric", async () => {
+const EXPERIMENTAL = [
+  "@arnilo/prism-memory-core",
+  "@arnilo/prism-memory-observational",
+  "@arnilo/prism-memory-fabric",
+  "@arnilo/prism-memory-wiki",
+  "@arnilo/prism-memory-rag",
+];
+
+test("reference_host_default_loads_no_experimental_package", async () => {
   const root = mkdtempSync(join(tmpdir(), "pa-memory-default-"));
   mkdirSync(join(root, "workspace"));
   try {
     const provider = mockProvider([[providerDone()]]);
-    const coding = await createCodingWorker(config(root), { packages: [provider] });
-    const research = await createResearchWorker(config(root), { packages: [provider] });
+    const cfg = config(root);
+    const coding = await createCodingWorker(cfg, { packages: [provider] });
+    const research = await createResearchWorker(cfg, { packages: [provider] });
+    const orchestrator = await createOrchestrator(cfg, { packages: [provider] });
+    try {
+      for (const agent of [coding, research, orchestrator]) {
+        const names = agent.inspect().packages.map((entry) => entry.name);
+        assert.deepEqual(
+          names.filter((name) => EXPERIMENTAL.includes(name)),
+          [],
+          "a default agent loads no experimental package",
+        );
+      }
+      const compaction = research.inspect().packages.find((entry) => entry.name === "@arnilo/prism-memory-compaction");
+      assert.ok(compaction, "memory-compaction owns compaction on the default path");
+    } finally {
+      await Promise.all([coding.dispose(), research.dispose(), orchestrator.dispose()]);
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("reference_host_memory_opt_in_loads_om_and_fabric", async () => {
+  const root = mkdtempSync(join(tmpdir(), "pa-memory-optin-"));
+  mkdirSync(join(root, "workspace"));
+  try {
+    const provider = mockProvider([[providerDone()]]);
+    const coding = await createCodingWorker({ ...config(root), memory: "coding" }, { packages: [provider] });
+    const research = await createResearchWorker({ ...config(root), memory: "conversational" }, { packages: [provider] });
     try {
       for (const agent of [coding, research]) {
         const names = agent.inspect().packages.map((entry) => entry.name);
-        assert.equal(names.includes("@arnilo/prism-memory-fabric"), false, "memory-fabric is opt-in");
+        assert.equal(names.includes("@arnilo/prism-memory-fabric"), true);
+        assert.equal(names.includes("@arnilo/prism-memory-observational"), true);
+        assert.equal(names.includes("@arnilo/prism-memory-compaction"), true, "compaction stays on the compaction slot");
       }
+      assert.equal(
+        research.inspect().packages.some((entry) => entry.name === "@arnilo/prism-memory-rag"),
+        false,
+        "rag needs embeddings",
+      );
     } finally {
       await coding.dispose();
+      await research.dispose();
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("research_worker_loads_memory_rag_only_with_embeddings", async () => {
+  const root = mkdtempSync(join(tmpdir(), "pa-memory-rag-"));
+  mkdirSync(join(root, "workspace"));
+  try {
+    const provider = mockProvider([[providerDone()]]);
+    const research = await createResearchWorker({ ...config(root), embeddings: { model: "mock/embed" } }, { packages: [provider] });
+    try {
+      const names = research.inspect().packages.map((entry) => entry.name);
+      assert.equal(names.includes("@arnilo/prism-memory-rag"), true);
+      assert.equal(names.includes("@arnilo/prism-memory-fabric"), false);
+    } finally {
       await research.dispose();
     }
   } finally {

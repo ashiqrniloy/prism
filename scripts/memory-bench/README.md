@@ -38,6 +38,100 @@ the full LongMemEval-S/LoCoMo false-refusal audit, and PII handling. Thresholds 
 `safety/criteria.json` (kept separate because `robustness-criteria.json`'s Task 18 hash is frozen).
 It writes only ids, counts, classes and booleans; no corpus text and zero model calls.
 
+Plan 208 Task 4 adds the ontology probes to the same runner (`safety/ontology.mjs`, thresholds in
+`safety/ontology-criteria.json`, kept separate so `criteria.json` and every plan 202 report hash stay put):
+`bun scripts/memory-bench/safety/run.mjs --ontology` (add `--suite offline` to skip the false-refusal corpora).
+Five probes drive the shipped ontology path with no model call:
+
+- **Deletion cascade:** forget a note a claim cites; the paraphrasing claim must be gone from every concept file, recall,
+  `memory.read`, the passive tail and an OKF export, in the same session, after an index rebuild and in the next session;
+  an emptied concept leaves the index and the tail.
+- **Cross-scope exposure:** one shared store, so isolation comes from scopes. A project concept never reaches another
+  project or tenant (recall, read, port, subjects, tail); a user concept cites only user notes and a project note is
+  never bound into it.
+- **Concept poisoning:** the real `runWikiPass` with a curator that copies every note it is shown. Archive-refused turns
+  and an imported poison note (quarantined `candidate`) never reach the curator, a direct citation of one is refused
+  (`cites_inactive`), and a note flagged after a claim cites it takes the claim out of recall and the tail.
+- **Team concept trust:** an injected instruction in a shared concept or fact is quarantined on load.
+- **Human-edit bypass:** claim, title and exfil injections in an edited concept file are quarantined and stamped `human`;
+  a clean edit lifts them.
+
+A scripted check (`carriesPoison`: the canary, the "reply exactly" lure or any trust-scan hit) reads the delivered claim
+surfaces. A lure that evades the pattern scan is run as an informational residual outside the gate (`panelRequired`):
+the live gate judges delivered claims with the plan 199 panel. The report carries `ontology` and `o4`; `o4` reads the
+ontology probes and plan 202's gate side by side (`pending-gate-202` when the corpora were not read) and never changes
+plan 202's own `verdict`.
+
+Plan 208 Task 1's pre-registered three-tier criteria are `three-tier-criteria.json`, hashed by
+`threeTierCriteriaHash()` in `robustness.mjs` and checked with
+`bun scripts/memory-bench/robustness.mjs --verify-criteria three-tier-criteria.json`. It defines the `P` / `P+O` arms
+(`conversational` and `coding`), the consolidation-sensitive abilities, and criteria O1-O8 with the outcome classes. It
+pins plan 202's criteria hash and each suite's partition ids hash, so it cannot drift from them. It is kept separate from
+`robustness-criteria.json` (whose hash is frozen) and is frozen itself before any ontology arm runs on a development
+partition. Ontology manifests and reports carry `threeTierManifestPin()`; `assertThreeTierCriteriaPin()` refuses a
+manifest that lacks it or pins another hash. Plan 210 Task 9 runs the held-out arms against it.
+
+Plan 208 Task 2's claim-support audit is `ontology-audit.mjs`. It samples model-written, cited concept claims
+(seeded, stratified by suite and subject size, at most 200 per arm and model; human-written claims are excluded) and asks
+a plan 199 `createJudgePanel` whether the cited notes, shown verbatim and nothing else, fully support each claim:
+`supported`, `partially-supported`, `unsupported` or `contradicted`. Only `supported` counts toward O3. Judges see the
+citations in alternating order (forward, reversed). A claim with a cited note missing from its bundle, or whose panel loses
+quorum, counts as `unsupported`. It also reports citation precision (share of cited notes the panel majority called
+needed, over supported claims) and evidence reach (correct answers whose answer-bearing notes are cited by a recalled
+concept). Input is a private `ontology-claims-v1` bundle per history in `<campaign>/ontology-claims/<arm>/*.json`, built
+with `bundleFromConcepts()` from concept bodies and note text; bundles hold text and are never published, reports hold
+ids, labels and counts only (a report carrying claim or note text is refused).
+
+```sh
+timeout 1800 bun scripts/memory-bench/ontology-audit.mjs --offline                        # scripted judges, fixtures, no model call
+timeout 600 bun scripts/memory-bench/ontology-audit.mjs --campaign <dir> --arm conversational+O --build-human-set <out>
+timeout 1800 bun scripts/memory-bench/ontology-audit.mjs --campaign <dir> --arm conversational+O --sample 200 \
+  --judges provider/a,provider/b --labels claim-audit-labels.json --gate <gate O-1 record> --output <report.json>
+```
+
+The human set is 60 claims from development partitions only, drawn label-blind; `--build-human-set` writes a local
+`review.html` (text stays there) and `ids.json`; the person downloads `claim-audit-labels.json` (ids and verdicts only,
+via `audit/claim-review.mjs`). The audit calibrates the panel through `calibrateJudge`. The governing agreement is
+supported-versus-not Cohen's kappa, since only `supported` counts; the four-label kappa is reported beside it. The O3 row is
+`valid: false` (neither pass nor fail) below kappa 0.8 or with fewer than 60 labelled claims. A live run needs the approved
+gate O-1 record and refuses a judge that is the curator's own model or shares a family with another judge.
+
+Plan 208 Task 3 adds ontology arms to the campaign machinery. `--ontology` (on `run.mjs`; a job's `ontology: true` in
+`campaign.mjs`) installs `@arnilo/prism-memory-wiki` next to a product-ingestion fabric arm (`fabric-x`, `fabric-xc`, the
+`-tools` arms). Ingestion is the product's: each history is archived session by session, and the fabric binds notes at
+write time. The concept pass is a background job that a session opening schedules, exactly as for a user; the bench then
+reopens the session until a pass makes no model call, writes nothing and binds nothing (`ontology-arm.mjs` `settle`),
+bounded to 120 s per wait by the agent's `backgroundSettleMs`. A pass still running at the bound is aborted by the session
+and recorded as `ontologySettleTimeout` (a deviation listed in `ontologySummary.deviations`, never a silent skip). The
+settle wait is its own timing phase (`phaseTiming.ontologySettle`, `timing.phases.ontologySettle`): it is not in ingestion
+or in the answer latency p50/p95. The ontology arm takes no write-side snapshot (`--seed-snapshot`, `--write-snapshot`,
+`--phase write`, a job's `writeSide` or `reuse`): a restored store would skip the passes being measured. Every other arm's
+config, report shape and protocol hash are unchanged.
+
+- **Cost.** The curator's calls carry the wiki's `prism-wiki-consolidate` cache key, so `usage.mjs` accounts them under the
+  `product-ontology` role beside `product` and `product-extract` (`cost.productOntology`, one line in the Markdown report).
+  The role appears only when an arm made such a call.
+- **Report.** Each row carries `ontology` (concepts, claims, bound notes, passes, model calls, repairs, rejected edits,
+  curator tokens, settle wait and the `concept` stage); `ontologySummary` aggregates them with claims per concept, bound-note
+  share, the settle wait p50/p95/max and the stage table by ability. The `concept` stage records how answer-bearing evidence
+  was reached: through a recalled concept that cites it (`concept`), through a recalled note (`note`), or not at all (`none`).
+  No claim, note or corpus text.
+- **Claim bundles.** After the settle the arm snapshots its concepts and the notes they cite, and after scoring writes one
+  private `ontology-claims-v1` bundle per history to `<--ontology-claims-dir>/<arm>/<history>.json` (default
+  `.cache/memory-bench/ontology-claims`, gitignored). `ontology-audit.mjs --campaign <dir>` reads `<dir>/ontology-claims/<arm>`.
+- **Tuning.** `wiki.consolidate.{triggers,minNotes,minCoReads,minIntervalTurns,maxSubjectsPerPass,maxClaimsPerConcept,model}`
+  are ablation paths (`--ablate 'wiki.consolidate.triggers=["co-read","repair"]'`); Task 5 compares trigger policies with them.
+  The offline arm uses `minNotes: 2` because its fixture holds a handful of notes.
+- **Manifest rule.** `ontologyJobArgs(job)` and `ontologyTwin(job, { arm })` build the `+O` twin of a base job (its own
+  answer and judge directories, so the pair never shares checkpoints). `buildOntologyManifest()` pins Task 1's criteria hash,
+  the ontology product hash (fabric plus wiki) and plan 207's prefix-probe record; `assertOntologyManifestPin()` in
+  `audit/readiness.mjs` refuses a manifest that lacks the criteria hash or whose product has no matching, network-free
+  prefix-probe record (`ontology-prefix-probe-missing`, `-invalid`, `-product-changed`, `ontology-manifest-product-unpinned`).
+
+```sh
+timeout 600 bun scripts/memory-bench/run.mjs --offline --ontology                       # fabric-x + memory-wiki, mock provider, deterministic
+```
+
 Task 16's role harness is `bun scripts/memory-bench/observational-role.mjs`. It runs four offline
 lifecycle arms (fabric and OM+fabric, promotion off/on) across several seeds, writes promotion,
 later-use and accuracy metrics, and makes zero model calls. The opt-in live worker smoke is
@@ -2141,3 +2235,18 @@ recall candidates and passive injection do not count as tool results. The retrie
 diagnostic reports `toolSurfacingSummary`; its question-only rankings remain ablations.
 Older reports without tool-result instrumentation have unknown surfacing (`null`),
 not zero candidate gaps. Held-out partitions remain prohibited in these diagnostics.
+
+## Plan 208 Task 5: ontology development screen
+
+- `campaign.mjs --plan 208 --manifest --partition dev` writes the proposal manifest; `campaign.mjs --plan 208 --partition dev` runs it only with a matching owner gate record (`docs/_evidence/memory-bench/208/gates/owner-gate-1.json`). Any other partition is refused.
+- Set `PRISM_MEMORY_BENCH_PYTHON` to a python with `pyarrow==23.0.1` (for example `.cache/memory-bench/venv/bin/python3`).
+- Smoke: `PRISM_MEMORY_BENCH_208_SMOKE=<job id substring> PRISM_MEMORY_BENCH_JOURNAL=<fresh file> campaign.mjs --plan 208 --partition dev` runs two questions of the matching approved jobs in their own journal and `smoke-208-task5-*` reports.
+- Series mode: `run.mjs --ontology --warmup K` asks the first K questions of each cluster, unscored, before every scored question of that cluster (fresh sessions, passes settled, accounting kept apart); a cluster with K or fewer questions is dropped and counted.
+- Report: `acceptance-report.mjs --plan 208 --partition dev` (O1-O7, trigger-policy row, `concept` stage table, plan 210 ledger candidates). Ids, counts and rates only.
+
+## Ceiling and power instruments (plan 210 Task 3.1)
+
+A score is only readable beside its ceiling and beside the smallest difference its sample can show.
+
+- `bun scripts/memory-bench/ceiling.mjs --recall recall.json --oracle oracle.json [--output ceiling.json]` reads the run reports of two arms on the same model, partition, judges and rules (`--config fabric-x-tools` and `--config oracle`) and writes a counts-only report: totals, per ability, the wrong recall answers by retrieval stage (never a candidate, candidate not shown, shown to the model), judge ties, and the paired recall/oracle table. No question, reference or answer text enters it.
+- `bun scripts/memory-bench/power.mjs --n 60 --discordance 0.1` prints the smallest difference in accuracy, in points, that a paired design of `n` question pairs can show with 80% power at the 95% level, given the share of pairs the two arms answer differently (about 11 points for 60 pairs at 10%; 16 for 40 pairs at 15%; 21 for 20 pairs at 15%).

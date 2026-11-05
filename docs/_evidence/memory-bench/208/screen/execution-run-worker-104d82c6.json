@@ -1,0 +1,47 @@
+{
+  "kind": "208-development-screen-run",
+  "journal": {
+    "campaignId": "campaign-7640a6eb7c52",
+    "status": "finished",
+    "ceiling": 1300000000,
+    "spend": 25857333,
+    "attempts": [
+      {
+        "attemptId": "208-screen.small.P.memoryagentbench-cr@1",
+        "jobId": "208-screen.small.P.memoryagentbench-cr",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 357333
+      },
+      {
+        "attemptId": "208-screen.small.P+O.memoryagentbench-cr@1",
+        "jobId": "208-screen.small.P+O.memoryagentbench-cr",
+        "status": "completed",
+        "usageComplete": false,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 634824
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "208-screen.small.P.memoryagentbench-cr",
+      "attemptId": "208-screen.small.P.memoryagentbench-cr@1",
+      "answersDir": ".cache/memory-bench/208/small/P/answers",
+      "status": "partial",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 357333
+    },
+    {
+      "id": "208-screen.small.P+O.memoryagentbench-cr",
+      "attemptId": "208-screen.small.P+O.memoryagentbench-cr@1",
+      "answersDir": ".cache/memory-bench/208/small/P+O/answers",
+      "status": "partial",
+      "cause": null,
+      "usageComplete": false,
+      "charged": 25500000
+    }
+  ]
+}

@@ -163,6 +163,8 @@ export interface ToolInfo {
 export interface SkillInfo {
   readonly name: string;
   readonly description: string;
+  /** The skill's `requiresTools`, listed even while a request hides the skill. */
+  readonly requiresTools?: readonly string[];
   /** The registering package, or `host`. */
   readonly package: string;
 }
@@ -353,6 +355,12 @@ export interface Skill {
   /** Absolute path to the source `SKILL.md` when loaded from disk. */
   readonly path?: string;
   readonly toolNames?: readonly string[];
+  /**
+   * Tools that must all be in a request's advertised tools for this skill to be listed, rendered or loaded.
+   * Unlike `toolNames`, a missing tool hides the skill for that request and never fails the run, and it
+   * grants no tool. Frontmatter: `metadata.prism-requires-tools`, a space-separated list.
+   */
+  readonly requiresTools?: readonly string[];
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 

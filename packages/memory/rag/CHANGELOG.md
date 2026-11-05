@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Experimental in 0.13.0 (plan 215 Task 4).** The README opens with the experimental notice: install with `bun add @arnilo/prism-memory-rag@experimental`, outside the stability promise of the stable packages, and the API, config, preset contents and defaults may change or be removed in any release until the package graduates.
+
 ### Added
 
 - `@arnilo/prism-memory-rag` (plan 158 Task 3): the 0.12 RAG library (chunking, retrieval, fusion,

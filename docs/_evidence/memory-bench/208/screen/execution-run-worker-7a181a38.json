@@ -1,0 +1,47 @@
+{
+  "kind": "208-development-screen-run",
+  "journal": {
+    "campaignId": "campaign-1ac9c2e6f019",
+    "status": "finished",
+    "ceiling": 1300000000,
+    "spend": 26039249,
+    "attempts": [
+      {
+        "attemptId": "208-screen.large.P.beam-100k@1",
+        "jobId": "208-screen.large.P.beam-100k",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 539249
+      },
+      {
+        "attemptId": "208-screen.large.P+O.beam-100k@1",
+        "jobId": "208-screen.large.P+O.beam-100k",
+        "status": "completed",
+        "usageComplete": false,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 2115484
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "208-screen.large.P.beam-100k",
+      "attemptId": "208-screen.large.P.beam-100k@1",
+      "answersDir": ".cache/memory-bench/208/openrouter/large/P/answers",
+      "status": "partial",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 539249
+    },
+    {
+      "id": "208-screen.large.P+O.beam-100k",
+      "attemptId": "208-screen.large.P+O.beam-100k@1",
+      "answersDir": ".cache/memory-bench/208/openrouter/large/P+O/answers",
+      "status": "partial",
+      "cause": null,
+      "usageComplete": false,
+      "charged": 25500000
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "kind": "208-free-panel",
+  "checkedAt": "2026-11-04T15:17:44.359Z",
+  "provider": "kilo",
+  "panel": [],
+  "commandcode": [
+    {
+      "ref": "commandcode/Qwen/Qwen3.7-Flash",
+      "contextWindow": 1000000,
+      "paid": true
+    },
+    {
+      "ref": "commandcode/stealth/glyph-cluster:free",
+      "contextWindow": 256000,
+      "paid": false
+    },
+    {
+      "ref": "commandcode/stealth/crouton-alpha",
+      "contextWindow": 1048576,
+      "paid": false
+    }
+  ]
+}

@@ -359,6 +359,7 @@ SESSION_SEARCH_WORKSPACE_METADATA_KEY	export declare const SESSION_SEARCH_WORKSP
 SESSION_TITLE_MAX_LENGTH	export declare const SESSION_TITLE_MAX_LENGTH = 80
 SESSION_TITLE_METADATA_KEY	export declare const SESSION_TITLE_METADATA_KEY: "title"
 SKILL_LOAD_ERROR_CODE	export declare const SKILL_LOAD_ERROR_CODE: "skill_load_failed"
+SKILL_UNAVAILABLE_ERROR_CODE	export declare const SKILL_UNAVAILABLE_ERROR_CODE: "skill_unavailable"
 SLOT_NAMES	export declare const SLOT_NAMES: readonly SlotName[]
 STORE_CONFORMANCE_STEPS	export declare const STORE_CONFORMANCE_STEPS: readonly ["append-and-read", "branch-and-fork", "package-state", "package-state-log", "external-state", "suspended-run", "search", "title", "list-and-delete", "session-links", "restart"]
 SUPPORTED_API_LEVELS	export declare const SUPPORTED_API_LEVELS: readonly number[]
@@ -378,6 +379,7 @@ SessionStateStore	export declare class SessionStateStore
 SkillLoadError	export declare class SkillLoadError extends Error
 SkillRegistryOptions	export type { ResolveActiveSkillsOptions, SkillRegistryOptions } from "./skills.js"
 SkillRenderContext	export type { LoadedSkillSet, SkillRenderContext, SkillsDisclosure } from "./skill-disclosure.js"
+SkillUnavailableError	export declare class SkillUnavailableError extends SkillLoadError
 SkillsDisclosure	export type { LoadedSkillSet, SkillRenderContext, SkillsDisclosure } from "./skill-disclosure.js"
 SlotAssignments	export type { Compactor, SlotAssignments, SlotContracts, SlotName, SlotProvider, SlotRegistry } from "./slots/index.js"
 SlotConflictError	export declare class SlotConflictError extends Error
@@ -760,6 +762,7 @@ mergeProviderRequestOptions	export declare function mergeProviderRequestOptions(
 mergeRetry	export declare function mergeRetry(agent: false | RetryOptions | undefined, run: false | RetryOptions | undefined): RetryOptions | undefined
 mergeSystemPromptConfig	export declare function mergeSystemPromptConfig(config: SystemPromptConfig | undefined, override: SystemPromptConfig | undefined): SystemPromptConfig
 messageTextBytes	export declare function messageTextBytes(message: Message): number
+missingSkillTools	export declare function missingSkillTools(skill: Skill, tools: ReadonlySet<string> | undefined): readonly string[]
 mockProvider	export declare function mockProvider(script?: readonly (readonly ProviderEvent[])[], options?: MockProviderPackageOptions): PackageInstance
 modelEntrySchema	export declare const modelEntrySchema: JsonSchema
 modelSupportsDecisions	export declare function modelSupportsDecisions(capabilities?: ModelCapabilities): boolean

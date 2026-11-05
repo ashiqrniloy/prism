@@ -85,6 +85,16 @@ The 0.12 config fields and registries are removed, not aliased. Each maps to a h
 | `@arnilo/prism-all` | retired; install the packages you list |
 | `@arnilo/prism-mcp`, `@arnilo/prism-ag-ui`, `@arnilo/prism-channels`, `@arnilo/prism-evals`, `@arnilo/prism-workflows`, `@arnilo/prism-model-router` | the same name, reused by the 0.13 package or host library |
 
+## Memory packages
+
+`@arnilo/prism-memory` is replaced by `@arnilo/prism-memory-{core, fabric, rag, wiki, compaction, observational}` (the map above). In 0.13.0 five of them are **experimental**: `core`, `fabric`, `observational`, `wiki` and `rag` ship as `0.13.0-experimental.N` on the npm dist-tag `experimental`, outside the stability promise of the stable packages. A `^0.13.0` range never matches a prerelease, so install them with the tag:
+
+```bash
+bun add @arnilo/prism-memory-fabric@experimental
+```
+
+Their API, config, preset contents and defaults may change or be removed in any release until they graduate. `@arnilo/prism-memory-compaction` is stable and is the only memory package the stable core and the reference host's default agents load.
+
 ## Wiki → ontology tier
 
 `@arnilo/prism-memory-wiki` is no longer a second page store. It is the ontology tier over the fabric: concept notes in the fabric's own store, each claim citing the notes it rests on. It requires `@arnilo/prism-memory-fabric` (with `semantic` memory on) and fails closed with `missing_service` without it. There is no alias for any 0.12 name.

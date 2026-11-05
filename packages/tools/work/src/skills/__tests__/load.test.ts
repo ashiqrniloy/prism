@@ -4,13 +4,13 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { loadWorkSkills, MAX_SKILL_FILE_BYTES, WORK_SKILL_NAMES, WORK_SKILL_TOOLS } from "../index.js";
+import { loadWorkSkills, MAX_SKILL_FILE_BYTES, WORK_SKILL_NAMES, WORK_SKILL_REQUIRES_TOOLS } from "../index.js";
 
 const packageRoot = resolve(import.meta.dirname, "../../..");
 const script = resolve(packageRoot, "../../../scripts/vendor-hermes-skills.mjs");
 
 describe("loadWorkSkills", () => {
-  it("returns four vendored skills with overlay toolNames", () => {
+  it("returns four vendored skills that require work_exec", () => {
     const skills = loadWorkSkills();
     assert.deepEqual(
       skills.map((skill) => skill.name),
@@ -19,7 +19,8 @@ describe("loadWorkSkills", () => {
     for (const skill of skills) {
       assert.ok(skill.description);
       assert.ok(skill.instructions);
-      assert.deepEqual(skill.toolNames, [...WORK_SKILL_TOOLS[skill.name as keyof typeof WORK_SKILL_TOOLS]]);
+      assert.deepEqual(skill.requiresTools, [...WORK_SKILL_REQUIRES_TOOLS]);
+      assert.equal(skill.toolNames, undefined, "a missing tool hides the skill; it never fails the run");
     }
   });
 

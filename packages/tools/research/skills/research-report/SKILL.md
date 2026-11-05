@@ -1,6 +1,8 @@
 ---
 name: research-report
-description: Write the report. Every factual claim cites a ledger id with a marker from the cite tool.
+description: Use when writing the report. Every factual claim cites a ledger id with a marker from the cite tool.
+metadata:
+  prism-requires-tools: cite
 ---
 
 # Research report

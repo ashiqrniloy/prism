@@ -1,0 +1,47 @@
+{
+  "kind": "208-development-screen-run",
+  "journal": {
+    "campaignId": "campaign-3295d463ecd6",
+    "status": "finished",
+    "ceiling": 1300000000,
+    "spend": 104519,
+    "attempts": [
+      {
+        "attemptId": "208-screen.small.P.memoryagentbench-cr@1",
+        "jobId": "208-screen.small.P.memoryagentbench-cr",
+        "status": "abandoned",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 12551
+      },
+      {
+        "attemptId": "208-screen.small.P.memoryagentbench-cr@2",
+        "jobId": "208-screen.small.P.memoryagentbench-cr",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 91968
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "208-screen.small.P.memoryagentbench-cr",
+      "attemptId": "208-screen.small.P.memoryagentbench-cr@1",
+      "answersDir": ".cache/memory-bench/208/small/P/answers",
+      "status": "transient-retry",
+      "cause": "transient",
+      "usageComplete": true,
+      "charged": 12551
+    },
+    {
+      "id": "208-screen.small.P.memoryagentbench-cr",
+      "attemptId": "208-screen.small.P.memoryagentbench-cr@2",
+      "answersDir": ".cache/memory-bench/208/small/P/answers",
+      "status": "partial",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 91968
+    }
+  ]
+}

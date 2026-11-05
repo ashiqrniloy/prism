@@ -136,7 +136,7 @@ describe("memory directory", () => {
         tags: [`a-rather-long-topic-name-${String(index).padStart(2, "0")}`],
       });
     }
-    const wide = { maxTopics: 20, maxFiles: 10, maxTokens: 40 };
+    const wide = { maxTopics: 20, maxFiles: 10, maxTokens: 40, stopWords: false };
     const block = await directoryText(memory, directory, wide);
     assert.ok(Math.ceil(block!.content.length / 4) <= 40);
     assert.ok(block!.content.startsWith("20 facts."), "counts survive the shrink");
@@ -224,5 +224,21 @@ describe("memory directory", () => {
     // Without a directory (or with a path) the tool keeps listing the memory root.
     const plain = await view.execute({} as JsonObject, toolContext);
     assert.ok(plain.error, "no root and no directory: file access fails closed");
+  });
+  // Plan 210 Task 3.1: `directory.stopWords` drops topics made only of stop words. Off by default, so nothing moves.
+  it("topic_list_drops_stop_words_and_keeps_content_words", async () => {
+    const { fabric, memory } = harness();
+    await fabric.remember({ kind: "fact", content: "billing uses stripe", tags: ["i", "it", "we", "billing", "hey john"] });
+    const topicsOf = async (source: ReturnType<typeof createFabricDirectory>) => (await source.snapshot()).topics.map((topic) => topic.tag).sort();
+    const off = await topicsOf(createFabricDirectory({ memory }));
+    assert.deepEqual(off, ["billing", "hey john", "i", "it", "we"], "unset keeps every topic, as before");
+    const on = await topicsOf(createFabricDirectory({ memory, stopWords: true }));
+    assert.deepEqual(on, ["billing", "hey john"], "a topic of stop words only is dropped; a phrase with a content word stays");
+  });
+
+  it("directory_stop_words_field_is_off_by_default_and_fails_closed_on_a_non_boolean", () => {
+    assert.equal((resolveFabricDirectoryOptions(true, true) as ResolvedFabricDirectoryOptions).stopWords, false);
+    assert.equal((resolveFabricDirectoryOptions({ stopWords: true }, true) as ResolvedFabricDirectoryOptions).stopWords, true);
+    assert.throws(() => resolveFabricDirectoryOptions({ stopWords: "yes" as unknown as boolean }, true), /directory\.stopWords must be a boolean/);
   });
 });

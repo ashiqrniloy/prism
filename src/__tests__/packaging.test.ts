@@ -25,9 +25,13 @@ const KERNEL_PEER = ">=0.13.0 <1.0.0";
  * a lockstep cut that rewrote it would change an already-published manifest, and the next release
  * --resume would then refuse because the local manifest no longer matches the registry's.
  */
-const INDEPENDENT_LINES = new Set(
-  (JSON.parse(readFileSync(join(repoRoot, "scripts", "independent-packages.json"), "utf8")) as { packages: string[] }).packages,
-);
+const independentFile = JSON.parse(readFileSync(join(repoRoot, "scripts", "independent-packages.json"), "utf8")) as {
+  packages: string[];
+  experimental?: string[];
+};
+const INDEPENDENT_LINES = new Set(independentFile.packages);
+/** The experimental memory line (plan 215 Task 2): independent too, but on `x.y.z-experimental.N` and the kernel window peer. */
+const EXPERIMENTAL_LINES = new Set(independentFile.experimental ?? []);
 const corePin = (owner: string, range: string | undefined): string | undefined => {
   if (!INDEPENDENT_LINES.has(owner)) return range;
   const [major, minor] = (releaseVersion() as string).split(".");
@@ -698,10 +702,17 @@ describe("packaging guard", () => {
   });
 
   it("independent_packages_list_names_only_live_workspaces", () => {
-    const list = (JSON.parse(readFileSync(join(repoRoot, "scripts", "independent-packages.json"), "utf8")) as { packages: string[] })
-      .packages;
     const live = new Set(packages.map((pkg) => pkg.name));
-    for (const name of list) assert.ok(live.has(name), `independent-packages.json names a missing workspace: ${name}`);
+    for (const name of independentFile.packages) assert.ok(live.has(name), `independent-packages.json names a missing workspace: ${name}`);
+  });
+
+  it("experimental_list_names_workspace_packages", () => {
+    const live = new Set(packages.map((pkg) => pkg.name));
+    assert.ok(EXPERIMENTAL_LINES.size > 0, "independent-packages.json carries the experimental list");
+    for (const name of EXPERIMENTAL_LINES) {
+      assert.ok(live.has(name), `independent-packages.json experimental names a missing workspace: ${name}`);
+      assert.ok(!INDEPENDENT_LINES.has(name), `${name} is listed as both independent and experimental`);
+    }
   });
 
   it("work move has no forbidden runtime package edges", () => {
@@ -856,7 +867,11 @@ describe("packaging guard", () => {
     assert.ok(names.includes("@arnilo/prism-tools-work"), "work package must be present");
     assert.ok(!names.includes("@arnilo/prism-office"), "office package must be absent");
     // Plan 140 Task 1: the SDK is on its own version line (0.1.x).
-    const independentLines = new Set<string>([]);
+    const independentLines = new Set<string>([...INDEPENDENT_LINES, ...EXPERIMENTAL_LINES]);
+    for (const name of EXPERIMENTAL_LINES) {
+      const version = readPkg(packages.find((p) => p.name === name)?.dir ?? "missing").version as string;
+      assert.match(version, /^\d+\.\d+\.\d+-experimental\.\d+$/, `${name} must carry the experimental prerelease, got ${version}`);
+    }
     for (const pkg of packages.filter((p) => !independentLines.has(p.name))) {
       // Plan 055/066/070 cut history lives in CHANGELOG.md; here the invariant is the
       // lockstep itself: every active manifest at the root version (plan 071 Task 1).

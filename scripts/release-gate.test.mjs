@@ -211,6 +211,7 @@ export * as ns from "./mod.js";
       const baselinePath = join(release.root, BASELINE_DIR, baselineName(pkg.manifest.name));
       const diff = diffSurface(extractDeclaredSurface(distDir), parseSurface(readFileSync(baselinePath, "utf8")));
       if (!diff.removed.length && !diff.changed.length) continue;
+      if (pkg.experimental) continue; // plan 215 Task 2: the gate reports an experimental drift and never fails on it
       stale.push(
         `${pkg.manifest.name} ${[
           diff.removed.length ? `removed: ${diff.removed.join(", ")}` : "",
@@ -268,6 +269,75 @@ export * as ns from "./mod.js";
       assert.ok(error, "the gate must fail when a declaration emit fails");
       assert.match(error.message, /@arnilo\/prism-alpha declaration emit failed/);
       assert.match(error.message, /@arnilo\/prism-beta declaration emit failed/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  // Plan 215 Task 2: two source-export packages with the same surface and a baseline that carries a
+  // removed export and a changed signature. Only the experimental one may drift without failing.
+  function compatFixture() {
+    const root = mkdtempSync(join(import.meta.dirname, "..", ".gate-fixture-"));
+    writeFileSync(
+      join(root, "tsconfig.packages.json"),
+      `${JSON.stringify({ compilerOptions: { target: "ES2022", module: "NodeNext", moduleResolution: "NodeNext", strict: true } })}\n`,
+    );
+    const packages = [];
+    for (const [name, experimental] of [
+      ["alpha", false],
+      ["beta", true],
+    ]) {
+      const path = `packages/${name}`;
+      mkdirSync(join(root, path, "src"), { recursive: true });
+      const manifest = {
+        name: `@arnilo/prism-${name}`,
+        version: experimental ? "1.0.0-experimental.0" : "1.0.0",
+        exports: { ".": "./src/index.ts" },
+      };
+      writeFileSync(join(root, path, "package.json"), `${JSON.stringify(manifest)}\n`);
+      writeFileSync(join(root, path, "src", "index.ts"), "export const kept: number = 1;\nexport const moved: number = 2;\n");
+      packages.push({ path, manifest, experimental });
+    }
+    const release = { root, packages, byName: new Map(), validate: () => {}, validateIndependent: () => {} };
+    release.byName = new Map(packages.map((pkg) => [pkg.manifest.name, pkg]));
+    // Record the real surface as the baseline, then make it disagree with the source.
+    runGates({ release, version: "1.0.0", skipTarball: true, updateBaseline: true });
+    for (const pkg of packages) {
+      const file = join(root, BASELINE_DIR, baselineName(pkg.manifest.name));
+      const text = readFileSync(file, "utf8").replace(/^moved\t.*$/m, "moved\texport declare const moved: string");
+      writeFileSync(file, `${text}gone\texport declare const gone: number\n`);
+    }
+    return { root, release, packages };
+  }
+
+  it("compat_experimental_changes_never_fail", () => {
+    const { root, release, packages } = compatFixture();
+    try {
+      // Both packages carry the same drift (one removal, one changed signature). The stable one fails the gate.
+      assert.throws(
+        () => runGates({ release, version: "1.0.0", skipTarball: true }),
+        (error) => {
+          assert.match(error.message, /compat: @arnilo\/prism-alpha removed: gone; changed: moved/);
+          assert.doesNotMatch(error.message, /prism-beta/, "the experimental package is not a failure");
+          return true;
+        },
+      );
+      // The experimental package alone is reported in its own section and passes.
+      const report = runGates({ release, version: "1.0.0", skipTarball: true, packageName: "@arnilo/prism-beta" });
+      assert.deepEqual(report.experimental, ["@arnilo/prism-beta removed: gone; changed: moved"]);
+      // The same package is a failure once it leaves the experimental list.
+      packages[1].experimental = false;
+      assert.throws(
+        () => runGates({ release, version: "1.0.0", skipTarball: true, packageName: "@arnilo/prism-beta" }),
+        /compat: @arnilo\/prism-beta removed: gone; changed: moved/,
+      );
+      // A missing baseline still fails an experimental package: baselines are kept, not skipped.
+      packages[1].experimental = true;
+      rmSync(join(root, BASELINE_DIR, baselineName("@arnilo/prism-beta")));
+      assert.throws(
+        () => runGates({ release, version: "1.0.0", skipTarball: true, packageName: "@arnilo/prism-beta" }),
+        /compat: missing baseline .*arnilo__prism-beta\.txt/,
+      );
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

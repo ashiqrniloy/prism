@@ -33,19 +33,22 @@ export async function createCodingWorker(config: HostConfig, deps: HostDeps = {}
     ownership: { tenantId: "prism-agent", userId: "prism-agent" },
     ...(host === undefined ? {} : { host }),
     ...(deps.hooks === undefined ? {} : { hooks: deps.hooks }),
-    // Both memory packages claim the compaction slot. The assignment is the SDK's conflict resolution.
+    // Compaction and the observational memory (opt-in) both claim the compaction slot. The assignment is the SDK's conflict resolution.
     slots: { compaction: COMPACTION },
     packages: [
       sqlitePackage(config.storePath),
       toolsCoding({ root: config.workspace, principal: { id: "prism-agent" } }),
       approvalPackage({ mode: config.approval }),
+      // Memory is the experimental opt-in: unset, the worker loads no experimental package (plan 215 Task 3).
       ...(config.memory === undefined
         ? []
-        : [memoryFabric({ preset: config.memory, tools: { root: join(dirname(config.storePath), "memory") } })]),
+        : [
+            memoryFabric({ preset: config.memory, tools: { root: join(dirname(config.storePath), "memory") } }),
+            observational({ context: { compactAt: observationalCompactAtFor(config.models.coding) } }),
+          ]),
       ...ontologyPackages(config, config.workspace),
       contextFiles({ root: config.workspace }),
       hooksFromWorkspace(config.workspace),
-      observational({ context: { compactAt: observationalCompactAtFor(config.models.coding) } }),
       compaction({ profile: "coding", trigger: compactionTriggerFor(config.models.coding) }),
       contextEngineering({
         fold: {

@@ -10,12 +10,17 @@ import { DATASETS, loadDataset, normalizeDataset, parseJsonArrayIncremental, sel
 import { extractEvidence, gradeEvidence, sessionRounds } from "./replay.mjs";
 import { diagnoseRetrieval } from "./retrieval-diagnostics.mjs";
 import {
+  assertThreeTierCriteriaPin,
   drawRobustnessPartitions,
   ROBUSTNESS_CRITERIA,
   robustnessCriteriaHash,
   robustnessDraw,
   robustnessIdsHash,
+  THREE_TIER_CRITERIA,
+  threeTierCriteriaHash,
+  threeTierManifestPin,
   verifyLongMemEvalMItems,
+  verifyThreeTierCriteria,
 } from "./robustness.mjs";
 import { runBench } from "./run.mjs";
 
@@ -297,4 +302,58 @@ test("selection_uses_only_the_frozen_partition", () => {
 test("robustness_criteria_hash_unchanged_by_cache_tasks", () => {
   // Plan 202 Tasks 4.11-4.15 change cache behavior, not the pre-registered criteria. This is the hash every baseline report since 2026-10-27 carries.
   assert.equal(robustnessCriteriaHash(), "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7");
+});
+
+test("three_tier_criteria_hash_is_stable_and_pinned_by_manifests", () => {
+  const hash = threeTierCriteriaHash();
+  assert.match(hash, /^[a-f0-9]{64}$/);
+  // Key order and formatting do not move the hash; a content change does.
+  const reversed = (value) =>
+    Array.isArray(value)
+      ? value.map(reversed)
+      : value && typeof value === "object"
+        ? Object.fromEntries(
+            Object.keys(value)
+              .reverse()
+              .map((key) => [key, reversed(value[key])]),
+          )
+        : value;
+  assert.equal(threeTierCriteriaHash(reversed(THREE_TIER_CRITERIA)), hash);
+  assert.notEqual(threeTierCriteriaHash({ ...THREE_TIER_CRITERIA, frozen: "2000-01-01" }), hash);
+  assert.equal(verifyThreeTierCriteria(), hash);
+  assert.equal(threeTierManifestPin().threeTierCriteriaHash, hash);
+  assert.equal(threeTierManifestPin().criteriaHash, robustnessCriteriaHash());
+  // Plan 202's frozen hash is untouched by this file.
+  assert.equal(robustnessCriteriaHash(), THREE_TIER_CRITERIA.pins.robustnessCriteriaHash);
+  assertThreeTierCriteriaPin({ ...threeTierManifestPin(), jobs: [] });
+});
+
+test("manifest_refuses_three_tier_criteria_drift", () => {
+  const pin = threeTierManifestPin();
+  assert.throws(() => assertThreeTierCriteriaPin({ criteriaHash: pin.criteriaHash }), /does not pin/);
+  assert.throws(() => assertThreeTierCriteriaPin({ ...pin, threeTierCriteriaHash: "0".repeat(64) }), /pins a different/);
+  assert.throws(() => assertThreeTierCriteriaPin({ ...pin, criteriaHash: "0".repeat(64) }), /different robustness criteria/);
+  // Drift in the file itself: a moved partition pin or a vanished criterion is refused by the validator.
+  const moved = structuredClone(THREE_TIER_CRITERIA);
+  moved.pins.partitionIdsHash.locomo = "0".repeat(64);
+  assert.throws(() => verifyThreeTierCriteria(moved), /locomo partition ids changed/);
+  const stale = structuredClone(THREE_TIER_CRITERIA);
+  stale.pins.robustnessCriteriaHash = "0".repeat(64);
+  assert.throws(() => verifyThreeTierCriteria(stale), /robustness criteria changed/);
+  const missing = structuredClone(THREE_TIER_CRITERIA);
+  delete missing.criteria.O4;
+  assert.throws(() => verifyThreeTierCriteria(missing), /criterion O4 is missing/);
+});
+
+test("consolidation_sensitive_abilities_exist_in_every_partition", () => {
+  for (const [suite, abilities] of Object.entries(THREE_TIER_CRITERIA.abilities.consolidationSensitive)) {
+    const draw = robustnessDraw(suite);
+    for (const ability of abilities)
+      for (const partition of ["dev", "heldout-a", "heldout-b"])
+        assert.ok(draw.abilities[partition][ability]?.length > 0, `${suite}/${ability} empty in ${partition}`);
+  }
+  // A named ability that a partition lacks is refused.
+  const bad = structuredClone(THREE_TIER_CRITERIA);
+  bad.abilities.consolidationSensitive.locomo = ["no-such-ability"];
+  assert.throws(() => verifyThreeTierCriteria(bad), /no items in dev/);
 });

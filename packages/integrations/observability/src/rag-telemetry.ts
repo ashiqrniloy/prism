@@ -1,5 +1,22 @@
-import type { RagTelemetry, RagTelemetryAttributeValue, RagTelemetrySpan } from "@arnilo/prism-memory-rag";
 import type { PrismMeter, PrismSpan, PrismTracer } from "./instrumentation.js";
+
+/*
+ * The telemetry seam `@arnilo/prism-memory-rag` accepts, declared structurally. This stable package must not
+ * import the experimental memory line (plan 215 Task 3), so the shape lives here and a test in this package
+ * asserts memory-rag's own types stay assignable to it. Keep it identical to memory-rag's `telemetry.ts`.
+ */
+export type RagTelemetryAttributeValue = string | number | boolean;
+
+export interface RagTelemetrySpan {
+  setAttribute(name: string, value: RagTelemetryAttributeValue): void;
+  addEvent(name: string, attributes?: Readonly<Record<string, RagTelemetryAttributeValue>>): void;
+  recordError(): void;
+  end(): void;
+}
+
+export interface RagTelemetry {
+  startSpan(name: string, attributes?: Readonly<Record<string, RagTelemetryAttributeValue>>, parent?: RagTelemetrySpan): RagTelemetrySpan;
+}
 
 export interface CreateRagTelemetryOptions {
   readonly tracer: PrismTracer;

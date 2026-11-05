@@ -45,14 +45,18 @@ export async function createResearchWorker(config: HostConfig, deps: HostDeps = 
         ...(config.web.cache === undefined ? {} : { cache: config.web.cache }),
       }),
       toolsBrowser(),
-      memoryRag(config.embeddings === undefined ? {} : { embeddings: { model: config.embeddings.model } }),
+      // Experimental packages load only on an opt-in: `embeddings` for the RAG tier, `memory` for the fabric and
+      // the observational memory. With both unset the worker loads none (plan 215 Task 3).
+      ...(config.embeddings === undefined ? [] : [memoryRag({ embeddings: { model: config.embeddings.model } })]),
       ...(config.memory === undefined
         ? []
-        : [memoryFabric({ preset: config.memory, tools: { root: join(dirname(config.storePath), "memory") } })]),
+        : [
+            memoryFabric({ preset: config.memory, tools: { root: join(dirname(config.storePath), "memory") } }),
+            observational({ context: { compactAt: observationalCompactAtFor(config.models.research) } }),
+          ]),
       ...ontologyPackages(config, config.workspace),
       toolsResearch({ maxRepairs: repairs }),
       approvalPackage({ mode: "ask", rules: ALLOWED.map((tool) => ({ tool })) }),
-      observational({ context: { compactAt: observationalCompactAtFor(config.models.research) } }),
       compaction({ trigger: compactionTriggerFor(config.models.research) }),
       contextEngineering({
         fold: {

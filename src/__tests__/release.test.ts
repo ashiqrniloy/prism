@@ -7,10 +7,14 @@ import { join } from "node:path";
 
 import {
   assertGitState,
+  bumpPackage,
+  cmpSemver,
   detectBaselineTag,
+  incrementVersion,
   loadRelease,
   publishArgs,
   runRelease,
+  satisfiesInternalRange,
   validateRelease,
   validateReleaseIndependent,
   // @ts-expect-error stdlib-only release CLI intentionally ships as directly runnable JavaScript.
@@ -263,4 +267,185 @@ test("detectBaselineTag skips current release tags and resolves prior baseline",
   // When validating 0.3.0 release, baseline must be v0.2.9 (prior tag), not v0.3.0
   const baseline = detectBaselineTag(root, undefined, "0.3.0");
   assert.equal(baseline, "v0.2.9");
+});
+
+// --- plan 215 Task 2: the experimental release line ---
+
+const PRE = "0.13.0-experimental.0";
+
+/** Kernel + a stable addon on 0.13.0, and two experimental packages on the prerelease that pin each other exactly. */
+function experimentalFixture(experimental: unknown = ["@arnilo/prism-memory-core", "@arnilo/prism-memory-fabric"]) {
+  const root = mkdtempSync(join(tmpdir(), "prism-release-exp-"));
+  const kernelPeer = ">=0.13.0 <1.0.0";
+  const manifests: Array<[string, Record<string, unknown>]> = [
+    ["", { name: "@arnilo/prism", version: "0.13.0" }],
+    ["packages/addon", { name: "@arnilo/prism-addon", version: "0.13.0", peerDependencies: { "@arnilo/prism": kernelPeer } }],
+    ["packages/memory/core", { name: "@arnilo/prism-memory-core", version: PRE, peerDependencies: { "@arnilo/prism": kernelPeer } }],
+    [
+      "packages/memory/fabric",
+      {
+        name: "@arnilo/prism-memory-fabric",
+        version: PRE,
+        dependencies: { "@arnilo/prism-memory-core": PRE },
+        peerDependencies: { "@arnilo/prism": kernelPeer, "@arnilo/prism-addon": "^0.13.0" },
+        devDependencies: { "@arnilo/prism-memory-core": "file:../core" },
+      },
+    ],
+  ];
+  const lock: string[] = [];
+  for (const [path, manifest] of manifests) {
+    mkdirSync(join(root, path), { recursive: true });
+    writeFileSync(join(root, path, "package.json"), `${JSON.stringify({ ...manifest, publishConfig: { access: "public" } }, null, 2)}\n`);
+    lock.push(`    ${JSON.stringify(path)}: ${JSON.stringify({ name: manifest.name, ...(path === "" ? {} : { version: manifest.version }) })},`);
+  }
+  writeFileSync(join(root, "bun.lock"), `{\n  "lockfileVersion": 2,\n  "workspaces": {\n${lock.join("\n")}\n  },\n}\n`);
+  mkdirSync(join(root, "scripts"), { recursive: true });
+  writeFileSync(join(root, "scripts", "independent-packages.json"), `${JSON.stringify({ packages: [], experimental })}\n`);
+  return root;
+}
+
+const unchanged = { baseline: "HEAD", gitDiff: () => false, baselineVersion: () => undefined };
+
+test("semver_prerelease_sorts_below_release", () => {
+  assert.ok(cmpSemver("0.13.0-experimental.0", "0.13.0") < 0);
+  assert.ok(cmpSemver("0.13.0", "0.13.0-experimental.9") > 0);
+  assert.ok(cmpSemver("0.13.0-experimental.0", "0.12.9") > 0, "the core still orders first");
+  assert.equal(cmpSemver("0.13.0-experimental.0", "0.13.0-experimental.0"), 0);
+});
+
+test("semver_prerelease_identifiers_compare", () => {
+  // semver 2.0.0 section 11: numeric identifiers compare as numbers, alphanumeric ones lexically,
+  // numeric sorts below alphanumeric, and a shorter list sorts below a longer one with the same prefix.
+  const ordered = ["1.0.0-alpha", "1.0.0-alpha.1", "1.0.0-alpha.beta", "1.0.0-beta", "1.0.0-beta.2", "1.0.0-beta.11", "1.0.0-rc.1", "1.0.0"];
+  for (let i = 0; i < ordered.length - 1; i++) {
+    assert.ok(cmpSemver(ordered[i], ordered[i + 1]) < 0, `${ordered[i]} < ${ordered[i + 1]}`);
+    assert.ok(cmpSemver(ordered[i + 1], ordered[i]) > 0, `${ordered[i + 1]} > ${ordered[i]}`);
+  }
+  assert.ok(cmpSemver("0.13.0-experimental.10", "0.13.0-experimental.9") > 0, "10 > 9 numerically, not lexically");
+});
+
+test("internal_range_into_prerelease_is_exact_only", () => {
+  assert.equal(satisfiesInternalRange(PRE, PRE), true);
+  assert.equal(satisfiesInternalRange("^0.13.0-experimental.0", "0.13.0-experimental.1"), false, "a caret never reaches a prerelease");
+  assert.equal(satisfiesInternalRange("~0.13.0-experimental.0", PRE), false);
+  assert.equal(satisfiesInternalRange("^0.13.0", PRE), false);
+  assert.equal(satisfiesInternalRange("0.13.0-experimental.0", "0.13.0-experimental.1"), false, "an exact pin to another prerelease");
+  // release targets are classified exactly as before
+  assert.equal(satisfiesInternalRange("^0.13.0", "0.13.4"), true);
+  assert.equal(satisfiesInternalRange("^0.13.1", "0.13.0"), false);
+  assert.equal(satisfiesInternalRange("^0.12.0", "0.13.0"), false);
+});
+
+test("increment_prerelease", () => {
+  assert.equal(incrementVersion("0.13.0-experimental.0", "prerelease"), "0.13.0-experimental.1");
+  assert.equal(incrementVersion("0.13.0-experimental.9", "prerelease"), "0.13.0-experimental.10");
+  assert.equal(incrementVersion("0.13.0-experimental", "prerelease"), "0.13.0-experimental.0");
+  assert.throws(() => incrementVersion("0.13.0", "prerelease"), /needs a prerelease version/);
+  assert.equal(incrementVersion("0.13.0", "patch"), "0.13.1", "release bumps are unchanged");
+  assert.throws(() => incrementVersion("0.13.0", "weekly"), /patch\|minor\|major\|prerelease/);
+});
+
+test("bump_prerelease_rewrites_dependent_pins", () => {
+  const root = experimentalFixture();
+  const release = loadRelease(root);
+  const result = bumpPackage(release, "@arnilo/prism-memory-core", "prerelease");
+  assert.deepEqual([result.from, result.to, result.repinned], [PRE, "0.13.0-experimental.1", ["@arnilo/prism-memory-fabric"]]);
+  const read = (path: string) => JSON.parse(readFileSync(join(root, path, "package.json"), "utf8"));
+  assert.equal(read("packages/memory/core").version, "0.13.0-experimental.1");
+  const fabric = read("packages/memory/fabric");
+  assert.equal(fabric.dependencies["@arnilo/prism-memory-core"], "0.13.0-experimental.1");
+  assert.equal(fabric.devDependencies["@arnilo/prism-memory-core"], "file:../core", "dev file: links are left alone");
+  assert.equal(fabric.peerDependencies["@arnilo/prism-addon"], "^0.13.0", "a loose range into a stable package is left alone");
+  // the bumped graph still validates once the lockfile follows (the CLI regenerates it)
+  assert.throws(() => validateReleaseIndependent(loadRelease(root), unchanged), /bun\.lock packages\/memory\/core version is 0\.13\.0-experimental\.0/);
+  // an experimental package bumps with prerelease only, and a stable package never takes it
+  assert.throws(() => bumpPackage(release, "@arnilo/prism-memory-fabric", "patch"), /is experimental: bump it with prerelease/);
+  assert.throws(() => bumpPackage(release, "@arnilo/prism-addon", "prerelease"), /needs a prerelease version/);
+});
+
+test("publish_args_use_experimental_tag", () => {
+  const release = loadRelease(experimentalFixture());
+  const [kernel, addon, core] = ["@arnilo/prism", "@arnilo/prism-addon", "@arnilo/prism-memory-core"].map((name) => release.byName.get(name));
+  const tag = (args: string[]) => args[args.indexOf("--tag") + 1];
+  assert.equal(tag(publishArgs(core, PRE)), "experimental");
+  assert.equal(tag(publishArgs(addon, "0.13.0")), "latest");
+  assert.equal(tag(publishArgs(kernel, "0.13.0")), "latest");
+  for (const args of [publishArgs(core, PRE), publishArgs(core, PRE, { dryRun: true })]) {
+    assert.ok(!args.includes("latest"), "an experimental package never publishes under latest");
+  }
+  assert.deepEqual(publishArgs(core, PRE, { dryRun: true }), [
+    "publish",
+    join("release-artifacts", "arnilo-prism-memory-core-0.13.0-experimental.0.tgz"),
+    "--access",
+    "public",
+    "--tag",
+    "experimental",
+    "--dry-run",
+  ]);
+});
+
+test("publish_args_reject_mislabeled_versions", async () => {
+  const release = loadRelease(experimentalFixture());
+  const addon = release.byName.get("@arnilo/prism-addon");
+  const core = release.byName.get("@arnilo/prism-memory-core");
+  assert.throws(() => publishArgs(core, "0.13.0"), /experimental_version_mismatch: @arnilo\/prism-memory-core@0\.13\.0/);
+  assert.throws(() => publishArgs(addon, PRE), /stable_version_prerelease: @arnilo\/prism-addon@0\.13\.0-experimental\.0/);
+  // the check runs before any registry call, in check mode too
+  const calls: string[] = [];
+  const fetcher = async (url: string | URL | Request) => {
+    calls.push(String(url));
+    return new Response("not found", { status: 404 });
+  };
+  addon.manifest.version = PRE;
+  await assert.rejects(
+    runRelease({ release, independent: true, independentOptions: { ...unchanged, gitDiff: () => true }, mode: "check", fetcher }),
+    /stable_version_prerelease/,
+  );
+  assert.deepEqual(calls, [], "no registry request before the line check");
+});
+
+test("lockstep_cut_excludes_experimental", () => {
+  const root = experimentalFixture();
+  const release = loadRelease(root);
+  const order = validateRelease(release, "0.13.0").map((pkg: { manifest: { name: string } }) => pkg.manifest.name);
+  assert.deepEqual(order, ["@arnilo/prism", "@arnilo/prism-addon"], "the memory packages are left out of the publish order");
+  assert.equal(release.byName.get("@arnilo/prism-memory-core").experimental, true);
+  assert.equal(release.byName.get("@arnilo/prism-addon").experimental, false);
+  // a stable pin into the experimental line is not a lockstep claim, and the cut still ignores the prerelease versions
+  const lockstepOnly = experimentalFixture([]);
+  assert.throws(() => validateRelease(loadRelease(lockstepOnly), "0.13.0"), /@arnilo\/prism-memory-core version is 0\.13\.0-experimental\.0, expected 0\.13\.0/);
+});
+
+test("independent_validate_accepts_exact_prerelease_pins", () => {
+  const root = experimentalFixture();
+  assert.doesNotThrow(() => validateReleaseIndependent(loadRelease(root), unchanged));
+  // a caret into the prerelease fails closed
+  const manifestPath = join(root, "packages/memory/fabric/package.json");
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  manifest.dependencies["@arnilo/prism-memory-core"] = "^0.13.0-experimental.0";
+  writeFileSync(manifestPath, JSON.stringify(manifest));
+  assert.throws(
+    () => validateReleaseIndependent(loadRelease(root), unchanged),
+    /@arnilo\/prism-memory-fabric dependencies\.@arnilo\/prism-memory-core range \^0\.13\.0-experimental\.0 does not satisfy @arnilo\/prism-memory-core@0\.13\.0-experimental\.0/,
+  );
+});
+
+test("experimental_list_rejects_unknown_workspace", () => {
+  const root = experimentalFixture(["@arnilo/prism-memory-core", "@arnilo/prism-memory-ghost"]);
+  assert.throws(() => loadRelease(root), /unknown experimental package @arnilo\/prism-memory-ghost/);
+});
+
+test("release_tag_is_never_latest_for_an_experimental_package_in_the_real_graph", () => {
+  const release = loadRelease(process.cwd());
+  const experimental = release.packages.filter((pkg: { experimental: boolean }) => pkg.experimental);
+  assert.deepEqual(
+    experimental.map((pkg: { manifest: { name: string } }) => pkg.manifest.name).sort(),
+    ["@arnilo/prism-memory-core", "@arnilo/prism-memory-fabric", "@arnilo/prism-memory-observational", "@arnilo/prism-memory-rag", "@arnilo/prism-memory-wiki"],
+  );
+  for (const pkg of experimental) {
+    const args = publishArgs(pkg, pkg.manifest.version);
+    assert.equal(args[args.indexOf("--tag") + 1], "experimental");
+  }
+  const lockstep = validateRelease(release, release.byName.get("@arnilo/prism").manifest.version);
+  assert.ok(lockstep.every((pkg: { experimental: boolean }) => !pkg.experimental), "a lockstep cut publishes none of them");
 });

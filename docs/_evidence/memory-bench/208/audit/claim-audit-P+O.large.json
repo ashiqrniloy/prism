@@ -1,0 +1,1786 @@
+{
+  "kind": "ontology-claim-support-v1",
+  "plan": 208,
+  "arm": "P+O.large",
+  "criteriaHash": "3d5a5c10fddda0931d00003aad8f2fccf5bdef2a829fa0b09bfac004b2bd263f",
+  "templateVersion": "60a9a66fca1ac1d1d4cf78d92e4204fb1b586a6169fec7b07ebde7254db9f8a5",
+  "seed": "prism-208-claim-audit",
+  "sample": 60,
+  "panel": [
+    {
+      "ref": "commandcode/Qwen/Qwen3.7-Flash",
+      "family": "qwen",
+      "citationOrder": "forward"
+    },
+    {
+      "ref": "commandcode/meta/muse-spark-1.2-contributor",
+      "family": "muse",
+      "citationOrder": "reversed"
+    }
+  ],
+  "pool": {
+    "claims": 1243,
+    "humanClaimsExcluded": 0,
+    "uncitedExcluded": 0
+  },
+  "judgeCalls": 240,
+  "groups": {
+    "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free": {
+      "sampled": 60,
+      "judged": 60,
+      "failed": 0,
+      "unresolved": 0,
+      "labels": {
+        "supported": 45,
+        "partially-supported": 14,
+        "unsupported": 0,
+        "contradicted": 1
+      },
+      "supportedShare": 0.75,
+      "supportedShareWilsonLow": 0.627676890545152,
+      "citationPrecision": 1,
+      "byStratum": {
+        "locomo:large": {
+          "sampled": 12,
+          "supported": 11
+        },
+        "locomo:medium": {
+          "sampled": 12,
+          "supported": 10
+        },
+        "locomo:small": {
+          "sampled": 12,
+          "supported": 0
+        },
+        "memoryagentbench-cr:large": {
+          "sampled": 12,
+          "supported": 12
+        },
+        "memoryagentbench-cr:medium": {
+          "sampled": 12,
+          "supported": 12
+        }
+      }
+    },
+    "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free": {
+      "sampled": 60,
+      "judged": 60,
+      "failed": 0,
+      "unresolved": 0,
+      "labels": {
+        "supported": 45,
+        "partially-supported": 12,
+        "unsupported": 2,
+        "contradicted": 1
+      },
+      "supportedShare": 0.75,
+      "supportedShareWilsonLow": 0.627676890545152,
+      "citationPrecision": 0.8333333333333334,
+      "byStratum": {
+        "beam-100k:large": {
+          "sampled": 35,
+          "supported": 25
+        },
+        "beam-100k:medium": {
+          "sampled": 25,
+          "supported": 20
+        }
+      }
+    }
+  },
+  "evidenceReach": {
+    "answered": 10,
+    "reached": 0,
+    "share": 0
+  },
+  "calibration": null,
+  "o3": {
+    "valid": false,
+    "invalidReasons": [
+      "no human labels"
+    ],
+    "pass": null
+  },
+  "rows": [
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-48:36|45366cf50ff7|c8",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-26:82|9b1c5b691663|c3",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-44:24|0c658c97ae07|c3",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "small",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 10,
+      "neededCount": 7,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|2:20|4e4233c426f5|c4",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "memoryagentbench-cr",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|0:30|fc5eda5b60ab|c1",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "memoryagentbench-cr",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-48:81|cbd8ddd41551|c7",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-48:81|ad67b2cc1ca4|c3",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-41:21|3f27589c4ed6|c3",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "small",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "partially-supported",
+        "partially-supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|6:99|5281349aa854|c8",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "memoryagentbench-cr",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|0:24|fc5eda5b60ab|c5",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "memoryagentbench-cr",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-26:103|51b4123ef526|c11",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-41:21|e204b9b8586f|c2",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 2,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-41:21|1b3a0eb7767b|c3",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "small",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 11,
+      "neededCount": 10,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|6:99|5281349aa854|c2",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "memoryagentbench-cr",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|0:30|5b52640f7dd5|c7",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "memoryagentbench-cr",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-48:36|e883a903fce4|c8",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-48:81|f46e2d04f8d2|c1",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "medium",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 14,
+      "neededCount": 12,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-41:21|3f27589c4ed6|c2",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "small",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "partially-supported",
+        "partially-supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|2:20|4e4233c426f5|c7",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "memoryagentbench-cr",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|0:30|5b52640f7dd5|c1",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "memoryagentbench-cr",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-41:163|ae7ce687be61|c1",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "large",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 8,
+      "neededCount": 8,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-41:21|d51fcb0d534a|c4",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "medium",
+      "label": "contradicted",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 2,
+      "labels": [
+        "contradicted",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-41:21|1b3a0eb7767b|c1",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "small",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 5,
+      "neededCount": 5,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|3:49|6fcc963cc0d4|c12",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "memoryagentbench-cr",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|0:24|fc5eda5b60ab|c4",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "memoryagentbench-cr",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-48:81|45366cf50ff7|c14",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-26:103|e5a9950a1d88|c5",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-48:81|9f0ab9a277d9|c1",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "small",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 8,
+      "neededCount": 3,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|6:99|5281349aa854|c5",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "memoryagentbench-cr",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|0:30|fc5eda5b60ab|c4",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "memoryagentbench-cr",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-26:82|df372fda8e7f|c4",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-48:36|93990518ef3e|c4",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-44:24|638f23220f4e|c2",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "small",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 10,
+      "neededCount": 6,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|6:99|5281349aa854|c11",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "memoryagentbench-cr",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|0:30|5b52640f7dd5|c6",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "memoryagentbench-cr",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-26:50|51b4123ef526|c11",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-48:81|b4164556edf5|c2",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 3,
+      "neededCount": 3,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-41:21|521cb7cb0332|c3",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "small",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 11,
+      "neededCount": 11,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|3:49|6fcc963cc0d4|c13",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "memoryagentbench-cr",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|0:24|fc5eda5b60ab|c1",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "memoryagentbench-cr",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-48:81|e883a903fce4|c4",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-48:81|817c5881c9e9|c6",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-41:21|9d06e9cb5fd5|c3",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "small",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 11,
+      "neededCount": 8,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|2:20|4e4233c426f5|c6",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "memoryagentbench-cr",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|0:30|fc5eda5b60ab|c5",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "memoryagentbench-cr",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-26:50|df372fda8e7f|c4",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-26:50|86a9c72b145c|c7",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-41:21|521cb7cb0332|c1",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "small",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 3,
+      "neededCount": 3,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|2:20|c4ad980124ea|c3",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "memoryagentbench-cr",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|0:30|fc5eda5b60ab|c2",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "memoryagentbench-cr",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-48:81|e883a903fce4|c1",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-48:81|8e7302e25884|c4",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 2,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-41:21|9d06e9cb5fd5|c1",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "small",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 2,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|2:20|4e4233c426f5|c18",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "memoryagentbench-cr",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|0:24|fc5eda5b60ab|c2",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "memoryagentbench-cr",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-26:82|51b4123ef526|c6",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-48:36|faad2bfc37f5|c6",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|conv-44:24|097e64505ddb|c1",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "locomo",
+      "size": "small",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 10,
+      "neededCount": 4,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|2:20|4e4233c426f5|c15",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "memoryagentbench-cr",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|0:30|5b52640f7dd5|c2",
+      "group": "P+O.large|kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "memoryagentbench-cr",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|10:summarization:0|978e65ef8805|c11",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 4,
+      "neededCount": 3,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|4:knowledge_update:0|9b05bc5303f3|c6",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 4,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|6:multi_session_reasoning:1|fb4387d2b184|c8",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|4:knowledge_update:0|9b05bc5303f3|c3",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 5,
+      "neededCount": 4,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|5:abstention:1|0d3e20f64d6e|c3",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 5,
+      "neededCount": 2,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|13:event_ordering:0|eb5da778606b|c4",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|10:preference_following:1|5cfb2c6e7c90|c1",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|18:temporal_reasoning:0|a726f857efab|c8",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 2,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|8:contradiction_resolution:1|90a2346beaec|c8",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|18:temporal_reasoning:0|a726f857efab|c7",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 3,
+      "neededCount": 2,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|10:preference_following:1|5cfb2c6e7c90|c3",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|4:knowledge_update:0|9b05bc5303f3|c4",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 5,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|5:abstention:1|0d3e20f64d6e|c7",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|18:temporal_reasoning:0|a726f857efab|c4",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 3,
+      "neededCount": 3,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|8:contradiction_resolution:1|90a2346beaec|c15",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|4:knowledge_update:0|9b05bc5303f3|c2",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 7,
+      "neededCount": 7,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|10:preference_following:1|5cfb2c6e7c90|c4",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "unsupported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "unsupported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|13:event_ordering:0|eb5da778606b|c6",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|10:preference_following:1|2cd380375129|c9",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 2,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|18:temporal_reasoning:0|a726f857efab|c2",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|8:contradiction_resolution:1|90a2346beaec|c7",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|13:event_ordering:0|eb5da778606b|c8",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|6:multi_session_reasoning:1|fb4387d2b184|c12",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 2,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|13:event_ordering:0|eb5da778606b|c3",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|10:preference_following:1|5cfb2c6e7c90|c13",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 2,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|13:event_ordering:0|eb5da778606b|c7",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 2,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|16:information_extraction:0|ab4c56e8414f|c2",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|4:knowledge_update:0|9b05bc5303f3|c7",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|6:multi_session_reasoning:1|fb4387d2b184|c4",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|13:event_ordering:0|eb5da778606b|c2",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "unsupported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 0,
+      "labels": [
+        "unsupported",
+        "unsupported"
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|10:preference_following:1|2cd380375129|c6",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|4:knowledge_update:0|9b05bc5303f3|c5",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|16:information_extraction:0|ab4c56e8414f|c8",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|13:event_ordering:0|eb5da778606b|c5",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|10:summarization:0|978e65ef8805|c10",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|18:temporal_reasoning:0|a726f857efab|c1",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|16:information_extraction:0|ab4c56e8414f|c7",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|13:event_ordering:0|eb5da778606b|c1",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|10:preference_following:1|2cd380375129|c3",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 2,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|18:temporal_reasoning:0|a726f857efab|c3",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|16:information_extraction:0|ab4c56e8414f|c6",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|4:knowledge_update:0|9b05bc5303f3|c8",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 2,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|6:multi_session_reasoning:1|fb4387d2b184|c9",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 2,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|18:temporal_reasoning:0|a726f857efab|c5",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 7,
+      "neededCount": 5,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|8:contradiction_resolution:1|90a2346beaec|c17",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|4:knowledge_update:0|9b05bc5303f3|c1",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 4,
+      "neededCount": 4,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|8:contradiction_resolution:1|90a2346beaec|c1",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 1,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|18:temporal_reasoning:0|a726f857efab|c6",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 3,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|8:contradiction_resolution:1|90a2346beaec|c10",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "partially-supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "partially-supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|4:knowledge_update:0|9b05bc5303f3|c9",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "medium",
+      "label": "supported",
+      "judged": true,
+      "cited": 4,
+      "neededCount": 4,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|10:preference_following:1|2cd380375129|c1",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 2,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|10:preference_following:1|2cd380375129|c7",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 2,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|16:information_extraction:0|ab4c56e8414f|c4",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|6:multi_session_reasoning:1|fb4387d2b184|c10",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 2,
+      "labels": [
+        "supported",
+        "supported"
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|6:multi_session_reasoning:1|fb4387d2b184|c6",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "contradicted",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 2,
+      "labels": [
+        "contradicted",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|5:abstention:1|0d3e20f64d6e|c8",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 2,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|16:information_extraction:0|ab4c56e8414f|c10",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 1,
+      "neededCount": 1,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|8:contradiction_resolution:1|90a2346beaec|c12",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 2,
+      "neededCount": 2,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|4:knowledge_update:0|1c1c5469063f|c12",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 3,
+      "neededCount": 3,
+      "labels": [
+        "supported",
+        null
+      ]
+    },
+    {
+      "id": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free|5:abstention:1|0d3e20f64d6e|c11",
+      "group": "P+O.large|openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "suite": "beam-100k",
+      "size": "large",
+      "label": "supported",
+      "judged": true,
+      "cited": 4,
+      "neededCount": 3,
+      "labels": [
+        "supported",
+        null
+      ]
+    }
+  ]
+}

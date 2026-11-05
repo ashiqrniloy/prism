@@ -510,6 +510,7 @@ export function createFabricContext(
             eligible.length,
             inject.minScore,
             fullTextScore,
+            inject.cardExcerpt,
           );
           if (semanticLines.length > 0) {
             lines = semanticLines;

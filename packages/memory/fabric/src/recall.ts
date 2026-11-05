@@ -10,6 +10,7 @@ import {
   resolveMemoryLimits,
 } from "@arnilo/prism-memory-core";
 import { ARCHIVE_SEARCH_COVERAGE, isActiveNote, MAX_ARCHIVED_HITS } from "./lifecycle/index.js";
+import { expandLexicalQuery } from "./lexical-expansion.js";
 import {
   baseScore,
   DEFAULT_SCOPE_PRIORS,
@@ -125,11 +126,30 @@ function subjectClass(hit: MemoryNoteHit): "active" | "archived" {
   return hit.status === "archived" ? "archived" : "active";
 }
 
-function sameSubject(left: MemoryNoteHit, right: MemoryNoteHit): boolean {
+/**
+ * A term carried by nearly every exchange in one result (a speaker's name, the conversation's standing topic) names
+ * the conversation, not a subject. Counted only over a result of at least `COMMON_SUBJECT_MIN_HITS` exchanges, so a
+ * small same-subject history keeps every term it shares.
+ */
+const COMMON_SUBJECT_SHARE = 0.8;
+const COMMON_SUBJECT_MIN_HITS = 5;
+
+function resultSubjectTerms(hits: readonly MemoryNoteHit[]): (hit: MemoryNoteHit) => ReadonlySet<string> {
+  const exchanges = hits.filter((hit) => hit.kind === "exchange");
+  const own = new Map(exchanges.map((hit) => [hit.id, subjectTerms(hit)]));
+  if (exchanges.length < COMMON_SUBJECT_MIN_HITS) return (hit) => own.get(hit.id) ?? subjectTerms(hit);
+  const frequency = new Map<string, number>();
+  for (const terms of own.values()) for (const term of terms) frequency.set(term, (frequency.get(term) ?? 0) + 1);
+  const common = new Set([...frequency].filter(([, count]) => count >= exchanges.length * COMMON_SUBJECT_SHARE).map(([term]) => term));
+  const distinct = new Map([...own].map(([id, terms]) => [id, new Set([...terms].filter((term) => !common.has(term)))]));
+  return (hit) => distinct.get(hit.id) ?? subjectTerms(hit);
+}
+
+function sameSubject(left: MemoryNoteHit, right: MemoryNoteHit, termsOf: (hit: MemoryNoteHit) => ReadonlySet<string>): boolean {
   if (left.kind !== "exchange" || right.kind !== "exchange") return false;
   if ((left.level ?? "project") !== (right.level ?? "project") || subjectClass(left) !== subjectClass(right)) return false;
-  const a = subjectTerms(left);
-  const b = subjectTerms(right);
+  const a = termsOf(left);
+  const b = termsOf(right);
   return a.size > 0 && b.size > 0 && lexicalDice(a, b) >= DEFAULT_SUBJECT_DICE;
 }
 
@@ -138,14 +158,35 @@ function hitTime(hit: MemoryNoteHit): number {
   return Number.isFinite(ms) ? ms : Date.parse(hit.ingestedAt) || 0;
 }
 
+/** What labels an older group member "superseded by" a newer one (plan 210 Task 3.1, `recall.supersessionHint`). */
+export type SupersessionHintMode = "all" | "keyed-only";
+export interface GroupRecallOptions {
+  /** `all` (default): every older member of a group. `keyed-only`: only members joined by a key or a `supersedes` edge. */
+  readonly supersessionHint?: SupersessionHintMode;
+}
+
 /**
- * Read-time grouping (plan 202 Task 7): same key, an explicit `supersedes` edge, or similar exchange
- * subject terms put hits in one group. Each group keeps the position of its best-ranked member and
- * is ordered newest-first; every earlier member gets a `supersededBy` hint. No hit is removed.
+ * Read-time grouping (plan 202 Task 7): same key, an explicit `supersedes` edge, or exchange subject
+ * terms shared with the group's best-ranked seed put hits in one group (terms common to nearly every
+ * hit of the result do not count). Each group keeps the position of its best-ranked member and is
+ * ordered newest-first; every earlier member gets a `supersededBy` hint. No hit is removed.
  */
-export function groupRecallHits(hits: readonly MemoryNoteHit[]): MemoryNoteHit[] {
+export function groupRecallHits(hits: readonly MemoryNoteHit[], options: GroupRecallOptions = {}): MemoryNoteHit[] {
   if (hits.length < 2) return [...hits];
+  const keyedOnly = options.supersessionHint === "keyed-only";
   const parent = Array.from({ length: hits.length }, (_, index) => index);
+  // Key and `supersedes` unions only, kept apart so `keyed-only` can tell a keyed update from a shared-subject neighbour.
+  const keyedParent = Array.from({ length: hits.length }, (_, index) => index);
+  const keyedFind = (value: number): number => {
+    let root = value;
+    while (keyedParent[root] !== root) root = keyedParent[root]!;
+    return root;
+  };
+  const keyedUnion = (left: number, right: number): void => {
+    const a = keyedFind(left);
+    const b = keyedFind(right);
+    if (a !== b) keyedParent[Math.max(a, b)] = Math.min(a, b);
+  };
   const find = (value: number): number => {
     let root = value;
     while (parent[root] !== root) root = parent[root]!;
@@ -168,7 +209,10 @@ export function groupRecallHits(hits: readonly MemoryNoteHit[]): MemoryNoteHit[]
       const identity = `${subjectClass(hit)}|${hit.level ?? "project"}|${hit.kind}|${hit.key}`;
       const first = byKey.get(identity);
       if (first === undefined) byKey.set(identity, index);
-      else union(index, first);
+      else {
+        union(index, first);
+        keyedUnion(index, first);
+      }
     }
     if (hit.supersedes !== undefined) {
       const older = byId.get(hit.supersedes);
@@ -176,12 +220,21 @@ export function groupRecallHits(hits: readonly MemoryNoteHit[]): MemoryNoteHit[]
         older !== undefined &&
         (hits[older]!.level ?? "project") === (hit.level ?? "project") &&
         subjectClass(hits[older]!) === subjectClass(hit)
-      )
+      ) {
         union(index, older);
+        keyedUnion(index, older);
+      }
     }
   }
-  for (let index = 0; index < hits.length; index += 1)
-    for (let other = index + 1; other < hits.length; other += 1) if (sameSubject(hits[index]!, hits[other]!)) union(index, other);
+  // Subject similarity is not transitive: a hit joins the group of the best-ranked seed it is itself similar to, so
+  // a chain of loosely related turns cannot merge a whole conversation into one group and bury its best match.
+  const termsOf = resultSubjectTerms(hits);
+  const seeds: number[] = [];
+  for (let index = 0; index < hits.length; index += 1) {
+    const seed = seeds.find((candidate) => sameSubject(hits[candidate]!, hits[index]!, termsOf));
+    if (seed === undefined) seeds.push(index);
+    else union(seed, index);
+  }
 
   const groups = new Map<number, { readonly index: number; readonly hit: MemoryNoteHit }[]>();
   for (const [index, hit] of hits.entries()) {
@@ -212,7 +265,17 @@ export function groupRecallHits(hits: readonly MemoryNoteHit[]): MemoryNoteHit[]
         out.push(member.hit);
         continue;
       }
-      const newer = members[index - 1]!;
+      // `all`: the member just before it. `keyed-only`: the nearest newer member it shares a key or `supersedes` edge with.
+      const newer = keyedOnly
+        ? members
+            .slice(0, index)
+            .reverse()
+            .find((candidate) => keyedFind(candidate.index) === keyedFind(member.index))
+        : members[index - 1]!;
+      if (newer === undefined) {
+        out.push(member.hit);
+        continue;
+      }
       out.push({
         ...member.hit,
         supersededBy: { id: newer.hit.id, at: new Date(hitTime(newer.hit)).toISOString() },
@@ -270,6 +333,10 @@ export function createFabricRecall(deps: {
   readonly getNotes?: (ids: readonly string[], signal?: AbortSignal) => Promise<readonly MemoryVectorRecord[]>;
   /** Additive priors applied by the scope loader; used here only for shadowed explain rows. */
   readonly priors?: import("./scope/recall.js").ScopePriors;
+  /** `recall.supersessionHint` (plan 210 Task 3.1); absent means `all`. */
+  readonly supersessionHint?: SupersessionHintMode;
+  /** `recall.expansion` (plan 210 Task 3.1); absent means off. */
+  readonly queryExpansion?: boolean;
 }): MemoryFabric["recall"] {
   const { loadCandidates, limits } = deps;
 
@@ -307,6 +374,7 @@ export function createFabricRecall(deps: {
     };
   }
 
+  const groupOptions: GroupRecallOptions = deps.supersessionHint === undefined ? {} : { supersessionHint: deps.supersessionHint };
   return async function recall(query: string, recallOptions: MemoryFabricRecallOptions = {}): Promise<MemoryFabricRecallResult> {
     if (
       recallOptions.tRef &&
@@ -326,14 +394,18 @@ export function createFabricRecall(deps: {
     const asOfMs = resolveRecallAsOf(recallOptions.asOf);
     const topK = resolveMemoryLimits({ topK: recallOptions.topK ?? limits.topK }).topK;
     const budget = resolveBudget(recallOptions.budget);
+    const searchQuery = deps.queryExpansion === true ? expandLexicalQuery(query) : query;
+    // Alternates add query terms, and the store's coverage is matched terms over query terms. Scale the floor by the
+    // share of terms that are the caller's own, so the same threshold keeps its meaning ("how much of the question").
+    const floorScale = searchQuery === query ? 1 : lexicalTerms(query).size / Math.max(1, lexicalTerms(searchQuery).size);
     const loaded = await loadCandidates(
-      query,
+      searchQuery,
       kinds,
       asOfMs,
       resolveCandidateLimit(topK),
       recallOptions.signal,
       recallOptions.scoring,
-      recallOptions.minSimilarity ?? 0.35,
+      (recallOptions.minSimilarity ?? 0.35) * floorScale,
       recallOptions.touchedPaths,
     );
     const candidates = loaded.candidates;
@@ -394,7 +466,7 @@ export function createFabricRecall(deps: {
     const archivedChosen: ChosenHit[] = [];
     if (searchArchives) {
       const archivedLoaded = await loadCandidates(
-        query,
+        searchQuery,
         kinds,
         asOfMs,
         resolveCandidateLimit(archivedCap),
@@ -423,7 +495,7 @@ export function createFabricRecall(deps: {
     // Group before selection so a same-subject history competes for the budget as one unit, not as
     // unrelated hits. An explicit time order keeps its chronological contract and is not regrouped.
     const rankedById = new Map(ranked.map((item) => [item.candidate.hit.id, item]));
-    const ordered = timeOrder ? ranked : groupRecallHits(ranked.map((item) => toHit(item.candidate))).map((hit) => rankedById.get(hit.id)!);
+    const ordered = timeOrder ? ranked : groupRecallHits(ranked.map((item) => toHit(item.candidate)), groupOptions).map((hit) => rankedById.get(hit.id)!);
     const picked = new Set(
       selectWithScopeReserve(ordered, {
         ...(budget === undefined ? {} : { budget }),
@@ -461,6 +533,6 @@ export function createFabricRecall(deps: {
     } catch {
       /* Diagnostic observers cannot affect retrieval. */
     }
-    return { hits: timeOrder ? hits : groupRecallHits(hits), explain };
+    return { hits: timeOrder ? hits : groupRecallHits(hits, groupOptions), explain };
   };
 }
