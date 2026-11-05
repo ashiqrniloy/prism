@@ -1,0 +1,357 @@
+{
+  "skill": "delegating-work",
+  "package": "@arnilo/prism-delegate",
+  "plan": "215 Task 11",
+  "round": 1,
+  "mode": "live",
+  "startedAt": "2026-11-05T20:51:30.688Z",
+  "finishedAt": "2026-11-05T21:19:25.712Z",
+  "criteriaHash": "305bb1539cbecc375145262b3b92ca319e19eb8c8ee86139882ea9d61e009531",
+  "criteriaLockedAt": "2026-11-05T19:49:35.988Z",
+  "datasetContentHash": "sha256:15a5431c23fd2aeeee6df4e7ed4fb02d74ea490252066bd5f605ad62cc66a44b",
+  "datasetVersion": "2",
+  "skillsRevision": "sha256:297d5b3b0e854cebaee76df17791d9314ad9c15a3c02c3ec91c86a6ade36958f",
+  "runtimeRevision": "318dd770420140c0389f71f8571796f5c64d8cc3",
+  "trials": 3,
+  "providers": [
+    {
+      "provider": "commandcode",
+      "model": "Qwen/Qwen3.7-Flash",
+      "arms": {
+        "skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 1,
+            "ci95": {
+              "low": 1,
+              "high": 1
+            },
+            "items": 15,
+            "records": 45
+          },
+          "failedCount": 0,
+          "limitedRuns": 0,
+          "scoredRuns": 45,
+          "byLoading": {
+            "loaded": {
+              "runs": 13,
+              "passed": 13
+            },
+            "notLoaded": {
+              "runs": 32,
+              "passed": 32
+            }
+          },
+          "toolMisuse": 0,
+          "inputTokens": 120154,
+          "cacheReadTokens": 65080,
+          "uncachedInputTokens": 55074,
+          "outputTokens": 18346,
+          "costComplete": false,
+          "meanDurationMs": 55994.48122826665,
+          "durationMs": {
+            "p50": 21527.04092,
+            "p95": 35528.459031000035
+          }
+        },
+        "no-skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 0.9777777777777777,
+            "ci95": {
+              "low": 0.9333333333333332,
+              "high": 1
+            },
+            "items": 15,
+            "records": 45
+          },
+          "failedCount": 0,
+          "limitedRuns": 0,
+          "scoredRuns": 45,
+          "toolMisuse": 0,
+          "inputTokens": 72701,
+          "cacheReadTokens": 17649,
+          "uncachedInputTokens": 55052,
+          "outputTokens": 17492,
+          "costComplete": false,
+          "meanDurationMs": 55658.151087733364,
+          "durationMs": {
+            "p50": 20796.954800999956,
+            "p95": 31485.13750199997
+          }
+        }
+      },
+      "decision": {
+        "verdict": "fail",
+        "roundVerdict": "rewrite",
+        "reason": "trigger recall 0.36 < 0.7",
+        "comparison": {
+          "baselineMean": 0.9777777777777777,
+          "candidateMean": 1,
+          "difference": 0.022222222222222223,
+          "ci95": {
+            "low": 0,
+            "high": 0.06666666666666667
+          },
+          "pValue": 1,
+          "test": "paired_permutation",
+          "qValue": 1,
+          "significant": false
+        },
+        "trigger": {
+          "triggerTrials": 36,
+          "nonTriggerTrials": 9,
+          "loaded": 13,
+          "loadedOnTrigger": 13,
+          "loadedOnNonTrigger": 0,
+          "recall": 0.3611111111111111,
+          "precision": 1
+        }
+      },
+      "items": [
+        {
+          "id": "delegate-count-errors",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 1,
+          "loadTrials": 3
+        },
+        {
+          "id": "delegate-sum-invoice",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 2,
+          "loadTrials": 3
+        },
+        {
+          "id": "delegate-extract-emails",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "delegate-diff-config",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 1,
+          "loadTrials": 3
+        },
+        {
+          "id": "delegate-longest-word",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 2,
+          "loadTrials": 3
+        },
+        {
+          "id": "delegate-iso-dates",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "delegate-classify-reviews",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 1,
+          "loadTrials": 3
+        },
+        {
+          "id": "delegate-average",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 1,
+          "loadTrials": 3
+        },
+        {
+          "id": "delegate-find-bug",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "delegate-cheapest-quote",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 2,
+          "loadTrials": 3
+        },
+        {
+          "id": "delegate-secret-in-config",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 2,
+          "loadTrials": 3
+        },
+        {
+          "id": "delegate-trivial-no-child",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 2,
+            "trials": 3,
+            "firstFailure": "delegated a job the skill says to do yourself",
+            "unscored": 0
+          },
+          "loaded": 1,
+          "loadTrials": 3
+        },
+        {
+          "id": "delegate-none-capital",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "delegate-none-leap",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "delegate-none-synonym",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        }
+      ]
+    }
+  ],
+  "verdict": "rewrite"
+}
