@@ -25,6 +25,7 @@
 **0.13.0 release path — the single remaining release plan, run alongside plan 208.** It can start at once: it consumes no plan 208 result, because 208's default and claims decisions moved to plan 210 and the ontology tier ships opt-in inside the experimental `memory-wiki` either way (owner decision 2026-11-04). Running the two together has three conditions:
 - **Isolation.** Plan 208 Task 5's paid screen runs from a dedicated git worktree at a pinned commit, with the current 208 work committed first. The screen's product hash covers only `packages/memory/{core,fabric,wiki}/src` and `scripts/memory-bench` (`scripts/memory-bench/audit/readiness.mjs:438`, `scripts/memory-bench/replay.mjs:1137`), not the kernel. This plan's kernel edits (Tasks 6, 26, 27, 29) and wiki edits (Tasks 6–7) would otherwise silently change, or invalidate, a running screen.
 - **Merges.** Plan 208 Task 8 (portable `wiki_ingest` schema) and Tasks 6–7 here both edit `packages/memory/wiki/src`. Whichever lands second rebases onto the other.
+- **Memory track branch (owner, 2026-11-05).** Plans 209 and 210 run on the branch `experiment/memory`. This plan follows `main` and publishes 0.13.0 without that branch, so no task here may wait on or import work from it. Plan 208 and plan 210 Task 3.1's first build are already on `main` (commit `74bf7598`) and ship as they stand in the experimental memory line. A memory fix the release needs is made on `main`; the branch takes it by merging `main`. Nothing from `experiment/memory` reaches a release without a separate owner decision.
 - **Publish prerequisite.** Plan 208 Task 8 lands before Task 39 publishes, so the experimental `memory-wiki` ships the portable schema. Task 5's screen may still be running at publish time, from its worktree. It replaces steps 17e–21 of the old path (plans 209, 210, 211, 212, 184, 185, 186, 187) and is the last plan before 0.13.0 ships. Its tasks run strictly in number order, and nothing runs in parallel. This is the publish part of roadmap **Phase 11**, so the memory prerelease versions (Task 2) and the publish (Task 39) belong here.
 
 **Review tasks.** The plan creates a package and changes kernel contracts (`Skill.requiresTools`, the root export surface, credential shapes, store forward compatibility), so it carries five read-only reviews, one at the head of each part:
@@ -104,8 +105,8 @@ OpenRouter never uses `openrouter/free` or `openrouter/auto` for parity. Prism r
 | 187 sweep and publish | superseded by 215, with no task executed: Tasks 1–2 → Tasks 35 and 39. Tasks 36–38 are new: CI review, registry cleanup, trusted publishing. |
 | 211 module skills | superseded by 215: Tasks 1–5 and 7–9 → Tasks 5–12. Task 6 (memory skills) → plan 210 Task 11. |
 | 212 host-builder kit | superseded by 215: Tasks 1–8 → Tasks 13–20 |
-| 209 working-agent memory | off the 0.13.0 path: post-0.13.0 memory track, unchanged content |
-| 210 memory audit | off the 0.13.0 path: post-0.13.0 memory track. It gains Task 11 (ex-211 Task 6), and its Task 10 becomes the graduation from experimental to stable. |
+| 209 working-agent memory | off the 0.13.0 path: post-0.13.0 memory track on branch `experiment/memory` (owner, 2026-11-05), unchanged content |
+| 210 memory audit | off the 0.13.0 path: post-0.13.0 memory track on branch `experiment/memory` (owner, 2026-11-05). It gains Task 11 (ex-211 Task 6), and its Task 10 becomes the graduation from experimental to stable. |
 | 208 three-tier evaluation | runs alongside this plan (2026-11-04): Task 5 from a pinned worktree; Task 8 lands before Task 39 |
 
 ## Tasks
