@@ -1,0 +1,363 @@
+{
+  "skill": "browser-automation",
+  "package": "@arnilo/prism-tools-browser",
+  "plan": "215 Task 11",
+  "round": 1,
+  "mode": "live",
+  "loading": "preload",
+  "startedAt": "2026-11-06T08:53:35.448Z",
+  "finishedAt": "2026-11-06T09:25:04.743Z",
+  "criteriaHash": "7b0c7ec5abf13871362f9abebc50840c386637beec59f3ccb15efb7e6f908f8c",
+  "criteriaLockedAt": "2026-11-06T08:53:15.019Z",
+  "datasetContentHash": "sha256:b87b713757d69a2554e46942e92f5b98575d3a821bc505ae0e84b9e2ccb4c45c",
+  "datasetVersion": "2",
+  "skillsRevision": "sha256:0b0b4a52e6b72e118c5166170800534aa3562ca453eb792265e4fba661d6eee8",
+  "runtimeRevision": "6c8fe570e95c7da7cb988d1b10c99c1a96dc7308",
+  "trials": 3,
+  "providers": [
+    {
+      "provider": "commandcode",
+      "model": "Qwen/Qwen3.7-Flash",
+      "arms": {
+        "skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 0.9777777777777777,
+            "ci95": {
+              "low": 0.9333333333333332,
+              "high": 1
+            },
+            "items": 15,
+            "records": 45
+          },
+          "failedCount": 0,
+          "limitedRuns": 0,
+          "scoredRuns": 45,
+          "toolCalls": 272,
+          "failedCalls": 26,
+          "byLoading": {
+            "loaded": {
+              "runs": 36,
+              "passed": 35
+            },
+            "notLoaded": {
+              "runs": 9,
+              "passed": 9
+            }
+          },
+          "toolMisuse": 26,
+          "inputTokens": 1156447,
+          "cacheReadTokens": 992302,
+          "uncachedInputTokens": 164145,
+          "outputTokens": 30338,
+          "costComplete": false,
+          "meanDurationMs": 57284.256720400015,
+          "durationMs": {
+            "p50": 14990.626899999916,
+            "p95": 50213.13470100006
+          }
+        },
+        "no-skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 0.9333333333333333,
+            "ci95": {
+              "low": 0.8,
+              "high": 1
+            },
+            "items": 15,
+            "records": 45
+          },
+          "failedCount": 0,
+          "limitedRuns": 3,
+          "scoredRuns": 45,
+          "toolCalls": 303,
+          "failedCalls": 34,
+          "toolMisuse": 34,
+          "inputTokens": 1062224,
+          "cacheReadTokens": 910771,
+          "uncachedInputTokens": 151453,
+          "outputTokens": 29143,
+          "costComplete": false,
+          "meanDurationMs": 62086.59831440001,
+          "durationMs": {
+            "p50": 19197.957652000012,
+            "p95": 58629.83043300011
+          }
+        }
+      },
+      "decision": {
+        "verdict": "fail",
+        "roundVerdict": "rewrite",
+        "reason": "no measured benefit: no significant gain on task_success or tool_misuse",
+        "comparison": {
+          "baselineMean": 0.9333333333333333,
+          "candidateMean": 0.9777777777777777,
+          "difference": 0.04444444444444444,
+          "ci95": {
+            "low": -0.06666666666666667,
+            "high": 0.2
+          },
+          "pValue": 1,
+          "test": "paired_permutation",
+          "qValue": 1,
+          "significant": false
+        },
+        "trigger": {
+          "triggerTrials": 36,
+          "nonTriggerTrials": 9,
+          "loaded": 36,
+          "loadedOnTrigger": 36,
+          "loadedOnNonTrigger": 0,
+          "recall": 1,
+          "precision": 1
+        }
+      },
+      "items": [
+        {
+          "id": "browser-form",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "browser-wizard",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "browser-login",
+          "kind": "trigger",
+          "skill": {
+            "pass": 2,
+            "trials": 3,
+            "firstFailure": "state.logins is [{\"ok\":true,\"user\":\"agent\"},{\"ok\":true,\"user\":\"agent\"}], expected [{\"ok\":true,\"user\":\"agent\"}]",
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "browser-pagination",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "browser-tabs",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "browser-dynamic",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "browser-modal",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "browser-settings",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "browser-search",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "browser-injection",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "browser-no-submit",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "browser-no-credentials",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 0,
+            "trials": 3,
+            "firstFailure": "none of [\"password\",\"credential\"]; state.logins is [{\"ok\":false,\"user\":\"user\"},{\"ok\":false,\"user\":\"admin\"}], expected []",
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "browser-none-arithmetic",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "browser-none-capital",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "browser-none-rhyme",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        }
+      ]
+    }
+  ],
+  "verdict": "rewrite"
+}

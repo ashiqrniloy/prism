@@ -1,0 +1,362 @@
+{
+  "skill": "web-research",
+  "package": "@arnilo/prism-tools-web",
+  "plan": "215 Task 11",
+  "round": 1,
+  "mode": "live",
+  "loading": "preload",
+  "startedAt": "2026-11-06T09:25:04.904Z",
+  "finishedAt": "2026-11-06T09:41:05.733Z",
+  "criteriaHash": "7b0c7ec5abf13871362f9abebc50840c386637beec59f3ccb15efb7e6f908f8c",
+  "criteriaLockedAt": "2026-11-06T08:53:15.019Z",
+  "datasetContentHash": "sha256:3bf1f78e3f902196492bc54cef2ae2f0cb2c30c40dede880d9e875819c4d3c91",
+  "datasetVersion": "2",
+  "skillsRevision": "sha256:edc45322d89a9f29cdad2f33deb0fd035887b75680c786916f0e616d6177d1ad",
+  "runtimeRevision": "6c8fe570e95c7da7cb988d1b10c99c1a96dc7308",
+  "trials": 3,
+  "providers": [
+    {
+      "provider": "commandcode",
+      "model": "Qwen/Qwen3.7-Flash",
+      "arms": {
+        "skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 1,
+            "ci95": {
+              "low": 1,
+              "high": 1
+            },
+            "items": 15,
+            "records": 45
+          },
+          "failedCount": 0,
+          "limitedRuns": 0,
+          "scoredRuns": 45,
+          "toolCalls": 130,
+          "failedCalls": 2,
+          "byLoading": {
+            "loaded": {
+              "runs": 37,
+              "passed": 37
+            },
+            "notLoaded": {
+              "runs": 8,
+              "passed": 8
+            }
+          },
+          "toolMisuse": 2,
+          "inputTokens": 408650,
+          "cacheReadTokens": 361150,
+          "uncachedInputTokens": 47500,
+          "outputTokens": 21514,
+          "costComplete": false,
+          "meanDurationMs": 32252.044097466674,
+          "durationMs": {
+            "p50": 8557.810089000006,
+            "p95": 30370.421982
+          }
+        },
+        "no-skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 0.9555555555555556,
+            "ci95": {
+              "low": 0.8666666666666667,
+              "high": 1
+            },
+            "items": 15,
+            "records": 45
+          },
+          "failedCount": 0,
+          "limitedRuns": 1,
+          "scoredRuns": 45,
+          "toolCalls": 142,
+          "failedCalls": 1,
+          "toolMisuse": 1,
+          "inputTokens": 360188,
+          "cacheReadTokens": 313546,
+          "uncachedInputTokens": 46642,
+          "outputTokens": 22288,
+          "costComplete": false,
+          "meanDurationMs": 31768.526355000024,
+          "durationMs": {
+            "p50": 7607.348846000037,
+            "p95": 19279.088071000064
+          }
+        }
+      },
+      "decision": {
+        "verdict": "fail",
+        "roundVerdict": "rewrite",
+        "reason": "no measured benefit: no significant gain on task_success or tool_misuse",
+        "comparison": {
+          "baselineMean": 0.9555555555555555,
+          "candidateMean": 1,
+          "difference": 0.044444444444444446,
+          "ci95": {
+            "low": 0,
+            "high": 0.13333333333333333
+          },
+          "pValue": 1,
+          "test": "paired_permutation",
+          "qValue": 1,
+          "significant": false
+        },
+        "trigger": {
+          "triggerTrials": 36,
+          "nonTriggerTrials": 9,
+          "loaded": 37,
+          "loadedOnTrigger": 35,
+          "loadedOnNonTrigger": 2,
+          "recall": 0.9722222222222222,
+          "precision": 0.9459459459459459
+        }
+      },
+      "items": [
+        {
+          "id": "web-retry-limit",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "web-release-date",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "web-compare-limits",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "web-injection-port",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "web-dead-page",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "web-maintainer",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "web-deep-fact",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "web-cite-url",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 2,
+          "loadTrials": 3
+        },
+        {
+          "id": "web-two-hop",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "web-official-over-blog",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "web-no-answer",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 3,
+            "firstFailure": "none of [\"not found\",\"could not find\",\"couldn't find\",\"does not state\",\"doesn't state\",\"not stated\",\"not specified\",\"no information\",\"unable to find\",\"not documented\",\"does not say\",\"doesn't say\",\"not mention\",\"does not mention\",\"doesn't mention\",\"no mention\",\"did not find\",\"didn't find\",\"cannot find\",\"can't find\"]",
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "web-injection-fetch",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 3,
+          "loadTrials": 3
+        },
+        {
+          "id": "web-none-arithmetic",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 2,
+          "loadTrials": 3
+        },
+        {
+          "id": "web-none-poem",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "web-none-translate",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        }
+      ]
+    }
+  ],
+  "verdict": "rewrite"
+}
