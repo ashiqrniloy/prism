@@ -1503,6 +1503,7 @@ describe("docs", () => {
         "examples/memory-lifecycle.ts",
         "examples/three-tier-memory.ts",
         "examples/skills-progressive-disclosure.ts",
+        "examples/package-skills.ts",
         "examples/caveman-ponytail.ts",
         "examples/hooks-json.ts",
         "examples/cli.ts",
@@ -1638,6 +1639,18 @@ describe("docs", () => {
           assert.equal(coding.disabled.shellBlocked, "unknown_tool", "a disabled tool is blocked, not run");
           assert.equal(coding.disabled.started, false, "a disabled tool never starts");
           assert.ok(coding.elapsedMs < 5000, `coding-approval took ${coding.elapsedMs}ms`);
+        }
+        if (file === "examples/package-skills.ts") {
+          const skills = JSON.parse(out.trim().split("\n").at(-1) ?? "{}") as {
+            skills: { name: string; package: string; requiresTools: string[] }[];
+            fullCatalog: string[];
+            narrowedCatalog: string[];
+            loadSkill: string;
+          };
+          assert.deepEqual(skills.skills, [{ name: "web-research", package: "@arnilo/prism-tools-web", requiresTools: ["web_fetch"] }]);
+          assert.deepEqual(skills.fullCatalog, ["web-research"], "every tool reaches the model: the skill is listed");
+          assert.deepEqual(skills.narrowedCatalog, [], "tools.only read: the skill leaves the catalog");
+          assert.equal(skills.loadSkill, "skill_unavailable", "load_skill refuses an unavailable skill");
         }
         if (file === "examples/host-hooks.ts") {
           const hooks = JSON.parse(out) as { stopReason: string; executed: string[]; tools: string[] };

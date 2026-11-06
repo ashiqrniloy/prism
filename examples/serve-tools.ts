@@ -5,7 +5,8 @@
  * `session.run` and, for that run's session, it:
  *  - binds a git worktree through the `workspace` service, and materializes the vendor's MCP configuration into
  *    that worktree with `excludeOverlay`, so the file is git-excluded and never reaches a diff or a commit
- *  - serves `read` and `edit` from `@arnilo/prism-tools-coding`, plus the permission tool, with `serveTools`
+ *  - serves `read` and `edit` from `@arnilo/prism-tools-coding`, plus the permission tool, with `serveTools`,
+ *    and lends the one skill those two tools satisfy (a small host skill the example writes, `edit-notes`) as an MCP resource with `skillResources`
  *  - runs the vendor binary (the scripted CLI from `@arnilo/prism/testing`, `jsonl-stream` dialect) over
  *    `loopback-http` first and `stdio-relay` second, handing it the endpoint as `--mcp-endpoint`
  *  - closes the served handle and runs the vendor again, to show a call after `close()` is refused
@@ -58,7 +59,7 @@ import {
   createScriptedHostUi,
   jsonlStreamDialect,
 } from "@arnilo/prism/testing";
-import { type ServeToolsTransport, serveTools } from "@arnilo/prism-mcp-server";
+import { type ServeToolsTransport, serveTools, skillResources } from "@arnilo/prism-mcp-server";
 import approval from "@arnilo/prism-approval";
 import toolsCoding, { type WorkspaceService } from "@arnilo/prism-tools-coding";
 
@@ -66,6 +67,8 @@ import toolsCoding, { type WorkspaceService } from "@arnilo/prism-tools-coding";
 const MCP_CONFIG = ".mcp.json";
 /** The tracked file the vendor edits. The driver re-seeds it per leg, so both legs start from the same worktree. */
 const EDITED_FILE = "a.txt";
+/** The tools lent to the vendor. A skill is lent with them only when everything it `requiresTools` is in this list. */
+const SERVED_TOOLS = ["read", "edit"];
 /** The origin every served call is attributed to; it rides each `tool.*` event the call emits. */
 const ORIGIN: EventOrigin = { kind: "external", agent: "vendor-loop", agentId: "vendor-loop", vendor: "example", depth: 0 };
 /** The broker's answer when a relay frame arrives and the route cannot: the vendor must not proceed. */
@@ -202,10 +205,12 @@ async function runAdapter(context: DriverRunContext<DriverConfig>, deps: DriverD
             broker,
             // The definitions are the agent's own registered tools; only the allow list is exposed.
             tools: context.tools,
-            allow: ["read", "edit"],
+            allow: SERVED_TOOLS,
             transport,
             origin: ORIGIN,
             permissionTool: { name: "permission" },
+            // `edit-notes` requires `read edit`, so the vendor can read it as `prism-skill://edit-notes`.
+            resources: skillResources(context.skills.list(), SERVED_TOOLS).resources,
             ...(transport === "stdio-relay" ? { relay: { command: relayCommand() } } : {}),
           });
           // The vendor reads its MCP configuration from the worktree. Prism writes it there and excludes it from git.
@@ -418,8 +423,16 @@ export async function demo(): Promise<Record<string, unknown>> {
   const profiles = createProfiles({ root: join(base, "profiles"), driver, host: { ui: scriptedUi.ui }, binary: process.execPath });
   try {
     await profiles.create("example", { mode: "key", principal: "u1" });
+    // A host skill that needs exactly the served tools; `skillResources` lends it only because both are in SERVED_TOOLS.
+    const skillsDir = join(base, "skills");
+    mkdirSync(join(skillsDir, "edit-notes"), { recursive: true });
+    writeFileSync(
+      join(skillsDir, "edit-notes", "SKILL.md"),
+      "---\nname: edit-notes\ndescription: Load before editing a tracked file. Read it first and keep the edit to the lines the task names.\nmetadata:\n  prism-requires-tools: read edit\n---\n\n# Edit notes\n\n- Read the file before you edit it.\n- Change only the lines the task names.\n",
+    );
     const agent: Agent = await createAgent({
       id: "serve-tools-example",
+      skills: { dirs: [skillsDir] },
       ownership: { tenantId: "example" },
       principal: { kind: "user", id: "u1" },
       packages: [

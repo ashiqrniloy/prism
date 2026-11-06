@@ -515,12 +515,21 @@ async function liveJudges({ refs, bundles, calls, gate }) {
   const panel = resolveJudgePanel({ judges: refs });
   for (const bundle of bundles)
     if (panel.refs.includes(bundle.model)) throw new Error("MemoryBenchJudgePanel: the curator model cannot judge its own claims");
+  return openClaimJudges({ refs: panel.refs, calls });
+}
+
+/**
+ * The live claim panel without a gate check: the caller verifies its own gate first (plan 208 O-1 above, plan 209
+ * W-1 in `work-outcome/live.mjs`). `calls` bounds the wire attempts and tokens; the panel accounts its own usage.
+ */
+export async function openClaimJudges({ refs, calls, root = ".cache/memory-bench/audit/208-claims", freeOnly = false }) {
+  const panel = resolveJudgePanel({ judges: refs });
   const { createAgent } = await import("@arnilo/prism");
   const { providerPackage } = await import("@arnilo/prism/provider-kit");
   const { openDiagnostic } = await import("./audit/zero-score.mjs");
   const { askJudge, refOf } = await import("./run.mjs");
   const limits = { wireAttempts: calls * 3, inputTokens: calls * 8_000, outputTokens: calls * 1_500, wallMs: 14_400_000, retries429: 4 };
-  const session = await openDiagnostic({ root: ".cache/memory-bench/audit/208-claims", refs: panel.refs, limits });
+  const session = await openDiagnostic({ root, refs: panel.refs, limits, freeOnly });
   const agents = new Map();
   for (const ref of panel.refs)
     agents.set(
@@ -529,7 +538,14 @@ async function liveJudges({ refs, bundles, calls, gate }) {
         model: { ...session.live.models.get(ref), parameters: { temperature: 0, maxTokens: 1024 } },
         compaction: false,
         retry: false,
-        packages: [providerPackage(`claim-audit-${refOf(ref).model.replaceAll(/[^a-zA-Z0-9-]/g, "-").toLowerCase()}`, session.live.providers)],
+        packages: [
+          providerPackage(
+            `claim-audit-${refOf(ref)
+              .model.replaceAll(/[^a-zA-Z0-9-]/g, "-")
+              .toLowerCase()}`,
+            session.live.providers,
+          ),
+        ],
         limits: { maxTurns: 1, maxInputTokens: null, maxTotalTokens: null, maxWallTimeMs: 180_000 },
       }),
     );
@@ -548,6 +564,7 @@ async function liveJudges({ refs, bundles, calls, gate }) {
           timeoutMs: 300_000,
         }),
     })),
+    usage: () => session.usage?.() ?? null,
     close: async () => {
       for (const agent of agents.values()) await agent.dispose();
       session.close();

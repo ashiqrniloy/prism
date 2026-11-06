@@ -29,7 +29,7 @@ import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/cli
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import approval from "@arnilo/prism-approval";
 import toolsCoding, { createEditTool } from "@arnilo/prism-tools-coding";
-import { ServeToolsError, serveTools } from "../index.js";
+import { ServeToolsError, serveTools, skillResources } from "../index.js";
 import type {
   PermissionCodec,
   ServeToolsHandle,
@@ -586,6 +586,29 @@ describe("serveTools", () => {
       await broker.close();
     });
     assert.equal((caught as { code?: string }).code, "serve_tools_resource_bytes");
+  });
+
+  it("served_skill_readable_over_mcp", async () => {
+    const { resources, skipped } = skillResources(
+      [
+        { name: "echoing", description: "Use when echoing.", instructions: "Call echo with the text.", requiresTools: ["echo"] },
+        { name: "unlent", description: "Needs a tool that is not served.", instructions: "Never sent.", requiresTools: ["echo", "shell"] },
+      ],
+      ["echo"],
+    );
+    assert.deepEqual(skipped, []);
+    await withServed({ allow: ["echo"], tools: [echoTool()], transport: "loopback-http", resources }, async ({ client }) => {
+      const listed = await client.listResources();
+      assert.deepEqual(
+        listed.resources.map((resource) => resource.uri),
+        ["prism-skill://echoing"],
+      );
+      const read = await client.readResource({ uri: "prism-skill://echoing" });
+      const content = read.contents[0] as { text?: string; mimeType?: string };
+      assert.equal(content.mimeType, "text/markdown");
+      assert.match(content.text ?? "", /^---\nname: "echoing"\n[\s\S]*\n---\n\nCall echo with the text\.$/);
+      await assert.rejects(() => client.readResource({ uri: "prism-skill://unlent" }));
+    });
   });
 
   it("name_prefix_maps_back_to_the_tool", async () => {

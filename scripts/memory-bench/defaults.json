@@ -33,7 +33,7 @@
         "maxTokens": 200,
         "stopWords": false
       },
-      "core": {
+      "rules": {
         "maxTokens": 600,
         "scopes": [
           "user",
@@ -44,7 +44,8 @@
           "preference",
           "procedure",
           "decision"
-        ]
+        ],
+        "capture": "off"
       },
       "cues": {
         "budgetTokens": 300,
@@ -53,7 +54,13 @@
       "team": false,
       "exchanges": {
         "enabled": false,
-        "scope": "user"
+        "scope": "user",
+        "steps": false
+      },
+      "lessons": {
+        "nudge": false,
+        "minTurnsBetweenNudges": 5,
+        "archiveAfterSessions": 20
       },
       "lifecycle": {
         "verifyAfterSessions": 2,
@@ -81,7 +88,8 @@
         "archive": {
           "retrievalBelow": -2,
           "storageBelow": 1,
-          "graceSessions": 10
+          "graceSessions": 10,
+          "lessonSessions": 20
         },
         "capacity": {
           "user": {

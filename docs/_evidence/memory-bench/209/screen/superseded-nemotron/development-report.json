@@ -1,0 +1,316 @@
+{
+  "kind": "209-development-report",
+  "plan": 209,
+  "task": 6,
+  "advisory": true,
+  "note": "Development numbers are advisory, never the verdict; plan 210 Task 9 runs the held-out work-outcome arms.",
+  "partition": "dev",
+  "workOutcomeCriteriaHash": "d30681ec13dfd1e9f01ce9fdfe8ad2caa674b97182210c12788bd0bc77717bd2",
+  "threeTierCriteriaHash": "3d5a5c10fddda0931d00003aad8f2fccf5bdef2a829fa0b09bfac004b2bd263f",
+  "partitionIdsHash": {
+    "coding": "0afe60bde67d5bd5a6e0c316a96d90f4e7a48033a7b6aa75a929b7565c82a016",
+    "assistant": "bfb4907b13aa27c2e1148a0939371f220550948de2f6f9ba9cec4ee962ea0984"
+  },
+  "productHash": "b33a7f901ae8bb335d54d3f2dcdd62fecbeca355967a2df65cf59f005bda07a1",
+  "manifestHash": "142773fdccb072efeb27f46051a86705db2e3c57b77a0442f4cf40bab5f681cd",
+  "jobsRead": [
+    "209-screen.noharm.large.P+W.beam-100k",
+    "209-screen.noharm.large.P+W.locomo",
+    "209-screen.noharm.large.P+W.memoryagentbench-cr",
+    "209-screen.noharm.large.P.beam-100k",
+    "209-screen.noharm.large.P.locomo",
+    "209-screen.noharm.large.P.memoryagentbench-cr",
+    "209-screen.work.large.P",
+    "209-screen.work.large.P+W",
+    "209-screen.work.large.P+W+O",
+    "209-screen.work.large.coding",
+    "209-screen.work.large.coding+W",
+    "209-screen.work.large.memory-off",
+    "209-screen.work.small.P",
+    "209-screen.work.small.P+W",
+    "209-screen.work.small.P+W+O",
+    "209-screen.work.small.coding",
+    "209-screen.work.small.coding+W"
+  ],
+  "models": [
+    {
+      "model": "kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "small": false,
+      "armsCompleted": [],
+      "armsMissing": [
+        "memory-off",
+        "P",
+        "P+W",
+        "P+W+O",
+        "coding",
+        "coding+W"
+      ],
+      "summary": {},
+      "w5": {},
+      "safety": {},
+      "simulatorLeak": {},
+      "w3Valid": true,
+      "curator": {},
+      "criteria": {
+        "work": {
+          "row": "work",
+          "skipped": "arm not run"
+        },
+        "memory": {
+          "row": "memory",
+          "skipped": "arm not run"
+        },
+        "ontology-work": {
+          "row": "ontology-work",
+          "skipped": "arm not run"
+        },
+        "coding-work": {
+          "row": "coding-work",
+          "skipped": "arm not run"
+        }
+      },
+      "o8": {
+        "row": "ontology-work",
+        "skipped": "arm not run"
+      },
+      "usage": {}
+    },
+    {
+      "model": "commandcode/Qwen/Qwen3.7-Flash",
+      "small": true,
+      "armsCompleted": [
+        "P+W+O"
+      ],
+      "armsMissing": [
+        "memory-off",
+        "P",
+        "P+W",
+        "coding",
+        "coding+W"
+      ],
+      "summary": {
+        "P+W+O": {
+          "pooled": {
+            "W1": {
+              "n": 14,
+              "mean": 0.21428571428571427
+            },
+            "W2": {
+              "n": 35,
+              "mean": 0.6857142857142857
+            },
+            "W3": {
+              "n": 25,
+              "mean": 0.08
+            },
+            "W4": {
+              "n": 14,
+              "mean": 1.5714285714285714
+            },
+            "W6": {
+              "n": 42,
+              "mean": 0.40476190476190477
+            },
+            "W4tokens": {
+              "n": 14,
+              "mean": 5900.428571428572
+            },
+            "poisonInOutput": 0,
+            "crossProjectLeakage": 0,
+            "staleUse": 0,
+            "simulatorLeak": 1,
+            "sessions": 42
+          },
+          "byFamily": {
+            "coding": {
+              "W1": {
+                "n": 8,
+                "mean": 0.125
+              },
+              "W2": {
+                "n": 20,
+                "mean": 0.55
+              },
+              "W3": {
+                "n": 16,
+                "mean": 0.0625
+              },
+              "W4": {
+                "n": 8,
+                "mean": 1.875
+              },
+              "W6": {
+                "n": 24,
+                "mean": 0.25
+              },
+              "W4tokens": {
+                "n": 8,
+                "mean": 7240
+              },
+              "poisonInOutput": 0,
+              "crossProjectLeakage": 0,
+              "staleUse": 0,
+              "simulatorLeak": 1,
+              "sessions": 24
+            },
+            "assistant": {
+              "W1": {
+                "n": 6,
+                "mean": 0.3333333333333333
+              },
+              "W2": {
+                "n": 15,
+                "mean": 0.8666666666666667
+              },
+              "W3": {
+                "n": 9,
+                "mean": 0.1111111111111111
+              },
+              "W4": {
+                "n": 6,
+                "mean": 1.1666666666666667
+              },
+              "W6": {
+                "n": 18,
+                "mean": 0.6111111111111112
+              },
+              "W4tokens": {
+                "n": 6,
+                "mean": 4114.333333333333
+              },
+              "poisonInOutput": 0,
+              "crossProjectLeakage": 0,
+              "staleUse": 0,
+              "simulatorLeak": 0,
+              "sessions": 18
+            }
+          }
+        }
+      },
+      "w5": {
+        "P+W+O": {
+          "sampled": 21,
+          "judged": 21,
+          "labels": {
+            "supported": 19,
+            "partially-supported": 0,
+            "unsupported": 1,
+            "contradicted": 1
+          },
+          "supportedShare": 0.9047619047619048,
+          "supportedShareWilsonLow": 0.7108541613925933,
+          "lessons": 2,
+          "rules": 19,
+          "uncited": 0
+        }
+      },
+      "safety": {
+        "P+W+O": {
+          "poisonCanary": 1,
+          "crossProjectLeakage": 0,
+          "staleUse": 0
+        }
+      },
+      "simulatorLeak": {
+        "P+W+O": 1
+      },
+      "w3Valid": false,
+      "curator": {
+        "P+W+O": {
+          "calls": 7,
+          "inputTokens": 22722,
+          "outputTokens": 33739,
+          "cacheReadTokens": 7563
+        }
+      },
+      "criteria": {
+        "work": {
+          "row": "work",
+          "skipped": "arm not run"
+        },
+        "memory": {
+          "row": "memory",
+          "skipped": "arm not run"
+        },
+        "ontology-work": {
+          "row": "ontology-work",
+          "skipped": "arm not run"
+        },
+        "coding-work": {
+          "row": "coding-work",
+          "skipped": "arm not run"
+        }
+      },
+      "o8": {
+        "row": "ontology-work",
+        "skipped": "arm not run"
+      },
+      "usage": {
+        "P+W+O": {
+          "inputTokens": 1043077,
+          "cacheReadTokens": 0,
+          "outputTokens": 467873,
+          "usageComplete": false,
+          "usd": 0.0921158,
+          "wallMs": 3693644,
+          "meanWallMsPerPersonaArm": 1028517,
+          "mainRequests": 226
+        }
+      }
+    }
+  ],
+  "o8": {
+    "criteria": {
+      "arms": {
+        "candidate": "P+W+O",
+        "vs": "P+W"
+      },
+      "improve": {
+        "W3": {
+          "label": "re-asked questions",
+          "ciLowAbove": 0
+        },
+        "W4": {
+          "label": "orientation cost",
+          "ciLowAbove": 0
+        },
+        "pooledOver": "both work-outcome families"
+      },
+      "nonInferior": {
+        "W1": 2,
+        "W2": 2,
+        "W6": 2,
+        "unit": "points"
+      },
+      "W5": "concept claims are covered through O3's audit"
+    },
+    "perModel": {
+      "kilo/nvidia/nemotron-3-ultra-550b-a55b:free": {
+        "row": "ontology-work",
+        "skipped": "arm not run"
+      },
+      "commandcode/Qwen/Qwen3.7-Flash": {
+        "row": "ontology-work",
+        "skipped": "arm not run"
+      }
+    }
+  },
+  "noHarm": {
+    "row": "no-harm",
+    "suites": [
+      "memoryagentbench-cr",
+      "beam-100k",
+      "locomo"
+    ],
+    "n": 3,
+    "clusters": 2,
+    "diffPoints": -33.3,
+    "ci95Points": [
+      -100,
+      0
+    ],
+    "nonInferior2Points": false,
+    "advisory": true
+  },
+  "usd": 0.0921158
+}

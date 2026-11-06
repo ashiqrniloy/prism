@@ -1,0 +1,43 @@
+{
+  "seed": "prism-209-work-outcome-coding",
+  "draw": "SHA-256(\"prism-209-work-outcome-coding:\" + id), ascending inside the family stratum",
+  "source": "work-outcome/personas.mjs family=coding (project-owned synthetic generator)",
+  "strata": {
+    "coding-work": [
+      4,
+      4,
+      4
+    ]
+  },
+  "part": "dev | heldout-a | heldout-b; dev is plan 209 Task 6's; heldout-a and heldout-b are plan 210 Task 9's (heldout-b only for its single remediation round)",
+  "residualPool": {
+    "coding-work": 0
+  },
+  "idsHash": "0afe60bde67d5bd5a6e0c316a96d90f4e7a48033a7b6aa75a929b7565c82a016",
+  "abilities": {
+    "dev": {
+      "coding-work": [
+        "wc6",
+        "wc10",
+        "wc1",
+        "wc4"
+      ]
+    },
+    "heldout-a": {
+      "coding-work": [
+        "wc3",
+        "wc5",
+        "wc11",
+        "wc7"
+      ]
+    },
+    "heldout-b": {
+      "coding-work": [
+        "wc9",
+        "wc8",
+        "wc0",
+        "wc2"
+      ]
+    }
+  }
+}

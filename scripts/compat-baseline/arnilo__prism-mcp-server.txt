@@ -1,4 +1,5 @@
 CreatePrismMcpWebHandlerOptions	export type { CreatePrismMcpWebHandlerOptions, PermissionCodec, PermissionDecision, PermissionRequest, PrismMcpAuthorization, PrismMcpAuthorizationInput, PrismMcpAuthorizer, PrismMcpRequestIdentity, PrismMcpStdioHandle, PrismMcpWebHandler, ServeMcpHandle, ServeMcpOptions, ServePrismMcpStdioOptions, ServeToolsHandle, ServeToolsLimits, ServeToolsOptions, ServeToolsPermissionTool, ServeToolsResource, ServeToolsTransport, } from "./types.js"
+MAX_RESOURCE_BYTES	export declare const MAX_RESOURCE_BYTES: number
 McpBridgeError	export { McpBridgeError } from "@arnilo/prism-mcp"
 PermissionCodec	export type { CreatePrismMcpWebHandlerOptions, PermissionCodec, PermissionDecision, PermissionRequest, PrismMcpAuthorization, PrismMcpAuthorizationInput, PrismMcpAuthorizer, PrismMcpRequestIdentity, PrismMcpStdioHandle, PrismMcpWebHandler, ServeMcpHandle, ServeMcpOptions, ServePrismMcpStdioOptions, ServeToolsHandle, ServeToolsLimits, ServeToolsOptions, ServeToolsPermissionTool, ServeToolsResource, ServeToolsTransport, } from "./types.js"
 PermissionDecision	export type { CreatePrismMcpWebHandlerOptions, PermissionCodec, PermissionDecision, PermissionRequest, PrismMcpAuthorization, PrismMcpAuthorizationInput, PrismMcpAuthorizer, PrismMcpRequestIdentity, PrismMcpStdioHandle, PrismMcpWebHandler, ServeMcpHandle, ServeMcpOptions, ServePrismMcpStdioOptions, ServeToolsHandle, ServeToolsLimits, ServeToolsOptions, ServeToolsPermissionTool, ServeToolsResource, ServeToolsTransport, } from "./types.js"
@@ -29,5 +30,8 @@ mcpHost	export declare function mcpHost(): HostPort
 serveMcp	export declare function serveMcp(agent: Agent, options: ServeMcpOptions): ServeMcpHandle
 servePrismMcpStdio	export declare function servePrismMcpStdio(server: McpServer | McpServerFactory, options?: ServePrismMcpStdioOptions): PrismMcpStdioHandle
 serveTools	export declare function serveTools(run: RunController, options: ServeToolsOptions): Promise<ServeToolsHandle>
+skillResources	export declare function skillResources(skills: readonly Skill[], servedToolNames: readonly string[]): SkillResources
 truncateUtf8	export declare function truncateUtf8(text: string, maxBytes: number): string
+type SkillResources	export { type SkillResources, type SkippedSkillResource, skillResources } from "./skill-resources.js"
+type SkippedSkillResource	export { type SkillResources, type SkippedSkillResource, skillResources } from "./skill-resources.js"
 unbindMcpSession	export declare function unbindMcpSession(port: HostPort | undefined, sessionId: string): void

@@ -2,7 +2,7 @@ ARCHIVE_SEARCH_COVERAGE	export declare const ARCHIVE_SEARCH_COVERAGE = 0.34
 ActiveNoteOptions	export type { ActiveNoteOptions, MemoryNoteStatus } from "./status.js"
 ArchiveConfig	export type { ArchiveConfig, ArchiveDecisionOptions } from "./archive.js"
 ArchiveDecisionOptions	export type { ArchiveConfig, ArchiveDecisionOptions } from "./archive.js"
-CODING_PRESET_REVISION	export declare const CODING_PRESET_REVISION = 1
+CODING_PRESET_REVISION	export declare const CODING_PRESET_REVISION = 2
 CONCEPT_DIRTY_REASONS	export declare const CONCEPT_DIRTY_REASONS: readonly ["removed", "stale", "evidence", "edited"]
 CONCEPT_RELATIONS	export declare const CONCEPT_RELATIONS: readonly ["part-of", "instance-of", "uses", "related"]
 CONCEPT_TYPES	export declare const CONCEPT_TYPES: readonly ["entity", "topic"]
@@ -24,11 +24,10 @@ DECISION_POINT_SPECS	export declare const DECISION_POINT_SPECS: Readonly<Record<
 DEFAULT_ARCHIVE_CONFIG	export declare const DEFAULT_ARCHIVE_CONFIG: ArchiveConfig
 DEFAULT_BIND_THRESHOLD	export declare const DEFAULT_BIND_THRESHOLD = 2
 DEFAULT_CAPACITY	export declare const DEFAULT_CAPACITY: Readonly<Record<"user" | "agent" | "project", CapacityLimits>>
+DEFAULT_CAPTURE_RULES_TOKENS	export declare const DEFAULT_CAPTURE_RULES_TOKENS = 2000
 DEFAULT_CONCEPT_PRIOR	export declare const DEFAULT_CONCEPT_PRIOR = 0.1
 DEFAULT_CONSOLIDATION_THRESHOLD	export declare const DEFAULT_CONSOLIDATION_THRESHOLD = 0.85
 DEFAULT_CONVERSATION_SEARCH_TOP_K	export declare const DEFAULT_CONVERSATION_SEARCH_TOP_K = 5
-DEFAULT_CORE_KINDS	export declare const DEFAULT_CORE_KINDS: readonly MemoryNoteKind[]
-DEFAULT_CORE_OPTIONS	export declare const DEFAULT_CORE_OPTIONS: ResolvedFabricCoreOptions
 DEFAULT_CUES_OPTIONS	export declare const DEFAULT_CUES_OPTIONS: ResolvedFabricCuesOptions
 DEFAULT_DECAY	export declare const DEFAULT_DECAY: MemoryNoteDecay
 DEFAULT_DERIVABLE_FROM	export declare const DEFAULT_DERIVABLE_FROM: readonly string[]
@@ -36,9 +35,12 @@ DEFAULT_DIRECTORY_OPTIONS	export declare const DEFAULT_DIRECTORY_OPTIONS: Resolv
 DEFAULT_DUPLICATE_DICE	export declare const DEFAULT_DUPLICATE_DICE = 0.8
 DEFAULT_EPISODE_MIN_CLUSTER	export declare const DEFAULT_EPISODE_MIN_CLUSTER = 5
 DEFAULT_EXCHANGE_CAPACITY	export declare const DEFAULT_EXCHANGE_CAPACITY: ExchangeCapacityLimits
+DEFAULT_EXCHANGE_STEPS	export declare const DEFAULT_EXCHANGE_STEPS = 24
 DEFAULT_FABRIC_MAX_FILE_BYTES	export declare const DEFAULT_FABRIC_MAX_FILE_BYTES: number
 DEFAULT_INJECT_FULL_TEXT_SCORE	export declare const DEFAULT_INJECT_FULL_TEXT_SCORE = 0.35
 DEFAULT_INJECT_MIN_SCORE	export declare const DEFAULT_INJECT_MIN_SCORE = 0.2
+DEFAULT_LESSON_ARCHIVE_SESSIONS	export declare const DEFAULT_LESSON_ARCHIVE_SESSIONS = 20
+DEFAULT_LESSON_NUDGE_TURNS	export declare const DEFAULT_LESSON_NUDGE_TURNS = 5
 DEFAULT_LINKER_TOP_K	export declare const DEFAULT_LINKER_TOP_K = 3
 DEFAULT_MAX_CLAIMS_RENDERED	export declare const DEFAULT_MAX_CLAIMS_RENDERED = 8
 DEFAULT_MAX_CONSOLIDATION_CANDIDATES	export declare const DEFAULT_MAX_CONSOLIDATION_CANDIDATES = 48
@@ -49,6 +51,9 @@ DEFAULT_PROMOTION_MIN_SCORE	export declare const DEFAULT_PROMOTION_MIN_SCORE = 0
 DEFAULT_PROMOTION_WEIGHTS	export declare const DEFAULT_PROMOTION_WEIGHTS: PromotionWeights
 DEFAULT_RECALL_KINDS	export declare const DEFAULT_RECALL_KINDS: readonly MemoryNoteKind[]
 DEFAULT_RECURRENCE_SATURATION	export declare const DEFAULT_RECURRENCE_SATURATION = 4
+DEFAULT_RULES_KINDS	export declare const DEFAULT_RULES_KINDS: readonly MemoryNoteKind[]
+DEFAULT_RULES_OPTIONS	export declare const DEFAULT_RULES_OPTIONS: ResolvedFabricRulesOptions
+DEFAULT_RULES_TOKENS	export declare const DEFAULT_RULES_TOKENS = 600
 DEFAULT_SCOPE_PRIORS	export declare const DEFAULT_SCOPE_PRIORS: ScopePriors
 DEFAULT_STORAGE_WEIGHTS	export declare const DEFAULT_STORAGE_WEIGHTS: StorageWeights
 DEFAULT_STRENGTH_WEIGHTS	export declare const DEFAULT_STRENGTH_WEIGHTS: StrengthWeights
@@ -63,6 +68,7 @@ DecisionPointSpec	export type { DecisionCandidate, DecisionPoint, DecisionPointS
 DuplicateGroup	export type { DuplicateGroup, EpisodeCluster, EpisodeSummary } from "./merge.js"
 EPISODE_MERGE_SYSTEM	export declare const EPISODE_MERGE_SYSTEM = "You compress a run of episodes into one durable note.\n\nYou are given episodes of one subject in one project, oldest first. Write what they add up to: the recurring goal, how it was solved, what kept going wrong. A reader who never saw the episodes must be able to act on the note.\n\nRules:\n- Call record_episode_history exactly once.\n- text is one self-contained statement of at most 1000 characters. No code blocks, no quotes, no ids.\n- kind is \"p
 EPISODE_MERGE_TOOL	export declare const EPISODE_MERGE_TOOL = "record_episode_history"
+EVIDENCE_RELATION	export declare const EVIDENCE_RELATION = "evidence"
 EXTRACTED_NOTE_KEYS	export declare const EXTRACTED_NOTE_KEYS: readonly string[]
 EXTRACTION_REASONS	export declare const EXTRACTION_REASONS: ReadonlySet<ConsolidationExtractionReason>
 EXTRACT_KEY_PATTERN	export declare const EXTRACT_KEY_PATTERN = "^[a-z0-9.-]
@@ -72,13 +78,13 @@ EXTRACT_SUBJECT_NEW	export declare const EXTRACT_SUBJECT_NEW = "new"
 EXTRACT_TOOL_NAME	export declare const EXTRACT_TOOL_NAME = "record_notes"
 EpisodeCluster	export type { DuplicateGroup, EpisodeCluster, EpisodeSummary } from "./merge.js"
 EpisodeSummary	export type { DuplicateGroup, EpisodeCluster, EpisodeSummary } from "./merge.js"
+EvidenceNotFoundError	export declare class EvidenceNotFoundError extends MemoryValidationError
 ExchangeCapacityLimits	export type { CapacityLimits, CapacityNote, CapacityUsage, ExchangeCapacityLimits } from "./capacity.js"
 FABRIC_BLOCK_LABEL	export declare const FABRIC_BLOCK_LABEL: RegExp
 FabricConsolidationReport	export type { FabricConsolidationReport, MemoryFabricPromoteConfig, ResolvedPromoteConfig } from "./promote.js"
-FabricCoreScope	export type { FabricCoreScope } from "./delivery/core.js"
 FabricDecisions	export type { DecisionCandidate, DecisionPoint, DecisionPointSpec, FabricDecisions, MemoryFabricDecisionsConfig, ResolvedDecisionsConfig, SupersessionChoice, } from "./decisions.js"
+FabricRulesScope	export type { FabricRulesScope } from "./delivery/rules.js"
 FabricSubjects	export type { FabricSubjects, SubjectListing, SubjectScopeListing } from "./ontology/index.js"
-HARD_CORE_TOKENS	export declare const HARD_CORE_TOKENS = 1000
 HARD_CUES_PER_TURN	export declare const HARD_CUES_PER_TURN = 5
 HARD_CUE_TOKENS	export declare const HARD_CUE_TOKENS = 1000
 HARD_DIRECTORY_FILES	export declare const HARD_DIRECTORY_FILES = 100
@@ -89,11 +95,14 @@ HARD_FABRIC_VIEW_ENTRIES	export declare const HARD_FABRIC_VIEW_ENTRIES = 200
 HARD_MAX_FABRIC_LINK_TOP_K	export declare const HARD_MAX_FABRIC_LINK_TOP_K = 32
 HARD_PROMOTE_MAX_OUTPUT_TOKENS	export declare const HARD_PROMOTE_MAX_OUTPUT_TOKENS = 32768
 HARD_PROMOTE_MIN_TURNS_BETWEEN	export declare const HARD_PROMOTE_MIN_TURNS_BETWEEN = 1000
+HARD_RULES_TOKENS	export declare const HARD_RULES_TOKENS = 3000
 HARD_VERIFY_AFTER_SESSIONS	export declare const HARD_VERIFY_AFTER_SESSIONS = 100
 INITIAL_PROMOTE_STATE	export declare const INITIAL_PROMOTE_STATE: FabricPromoteState
 INVALID_CONCEPT_VERB	export declare const INVALID_CONCEPT_VERB = "invalid-concept"
 ISO_TIMESTAMP_PATTERN	export declare const ISO_TIMESTAMP_PATTERN = "^[0-9]
 InspectNoteInput	export type { InspectNoteInput, LifecycleDecisionView, LifecycleNoteView } from "./inspect.js"
+LESSON_TAG	export declare const LESSON_TAG = "lesson"
+LessonRequiresEvidenceError	export declare class LessonRequiresEvidenceError extends MemoryValidationError
 LifecycleDecisionView	export type { InspectNoteInput, LifecycleDecisionView, LifecycleNoteView } from "./inspect.js"
 LifecycleNoteView	export type { InspectNoteInput, LifecycleDecisionView, LifecycleNoteView } from "./inspect.js"
 MAX_ARCHIVED_HITS	export declare const MAX_ARCHIVED_HITS = 3
@@ -115,6 +124,8 @@ MAX_DUPLICATE_DICE	export declare const MAX_DUPLICATE_DICE = 1
 MAX_EPISODE_CHARS	export declare const MAX_EPISODE_CHARS = 280
 MAX_EPISODE_CLUSTER	export declare const MAX_EPISODE_CLUSTER = 50
 MAX_EPISODE_SUMMARY_CHARS	export declare const MAX_EPISODE_SUMMARY_CHARS = 1000
+MAX_EVIDENCE_IDS	export declare const MAX_EVIDENCE_IDS = 8
+MAX_EXCHANGE_STEPS	export declare const MAX_EXCHANGE_STEPS = 64
 MAX_EXISTING_NOTES_PER_SCOPE	export declare const MAX_EXISTING_NOTES_PER_SCOPE = 12
 MAX_EXTRACTED_ALIASES	export declare const MAX_EXTRACTED_ALIASES = 8
 MAX_EXTRACTED_EVIDENCE	export declare const MAX_EXTRACTED_EVIDENCE = 16
@@ -125,6 +136,8 @@ MAX_FABRIC_CAPACITY_NOTES	export declare const MAX_FABRIC_CAPACITY_NOTES = 10000
 MAX_FABRIC_CAPACITY_TOKENS	export declare const MAX_FABRIC_CAPACITY_TOKENS = 1000000
 MAX_GRACE_SESSIONS	export declare const MAX_GRACE_SESSIONS = 10000
 MAX_ITEM_CITES	export declare const MAX_ITEM_CITES = 16
+MAX_LESSON_ARCHIVE_SESSIONS	export declare const MAX_LESSON_ARCHIVE_SESSIONS = 10000
+MAX_LESSON_NUDGE_TURNS	export declare const MAX_LESSON_NUDGE_TURNS = 1000
 MAX_ONTOLOGY_PENDING	export declare const MAX_ONTOLOGY_PENDING = 64
 MAX_ONTOLOGY_READ_IDS	export declare const MAX_ONTOLOGY_READ_IDS = 32
 MAX_SCOPE_PRIOR	export declare const MAX_SCOPE_PRIOR = 0.5
@@ -160,6 +173,7 @@ MemoryNoteStatus	export type { ActiveNoteOptions, MemoryNoteStatus } from "./sta
 MemoryNoteUseEvent	export type { MemoryNoteCoReadEvent, MemoryNoteUseEvent } from "./lifecycle/events.js"
 MemoryRetractEvent	export type { MemoryRetractEvent, MemoryRetractReason } from "./ontology/retract.js"
 MemoryRetractReason	export type { MemoryRetractEvent, MemoryRetractReason } from "./ontology/retract.js"
+NO_RULES_EDIT	export declare const NO_RULES_EDIT: RulesReconcileReport
 PREAMBLE	export declare const PREAMBLE = "Cite the memory ids you use as [id]."
 PROJECT_ID_PATTERN	export declare const PROJECT_ID_PATTERN: RegExp
 PromotionWeights	export type { PromotionWeights } from "./consolidation/score.js"
@@ -194,14 +208,17 @@ appendCoReadEvent	export declare function appendCoReadEvent(events: readonly Mem
 appendFabricBlock	export declare function appendFabricBlock(memory: Memory, block: string, text: string, options?:
 appendUseEvent	export declare function appendUseEvent(uses: readonly MemoryNoteUseEvent[], event: MemoryNoteUseEvent): readonly MemoryNoteUseEvent[]
 approveScopedPending	export declare function approveScopedPending(input:
+assertEvidenceInput	export declare function assertEvidenceInput(evidence: unknown, isMemoryId: (value: string) => boolean): void
 assertFabricBlockLabel	export declare function assertFabricBlockLabel(block: unknown): asserts block is string
+assertLessonInput	export declare function assertLessonInput(input:
 baseScore	export declare function baseScore(hit: MemoryVectorHit): number
 buildConsolidationExtractPrompt	export declare function buildConsolidationExtractPrompt(input: ConsolidationPromptInput): JsonObject
 buildStateTable	export declare function buildStateTable(input: BuildStateTableInput): Promise<string | undefined>
 candidateIds	export declare function candidateIds(candidates: readonly ConsolidationCandidate[]): readonly string[]
 capacityForLevel	export declare function capacityForLevel(level: MemoryNoteScope, capacity?: Readonly<Record<string, CapacityLimits>>): CapacityLimits
 capacityUsage	export declare function capacityUsage(notes: readonly CapacityNote[]): CapacityUsage
-captureDecision	export declare function captureDecision(userText: string, sourceEntryIds: readonly string[]): MemoryFabricRememberInput | undefined
+captureAndConfirmRule	export declare function captureAndConfirmRule(input: RuleCaptureInput): Promise<
+captureRule	export declare function captureRule(userText: string, sourceEntryIds: readonly string[]): MemoryFabricRememberInput | undefined
 caseConclusionsNotProcedures	export declare function caseConclusionsNotProcedures(environment:
 citationEvidence	export declare function citationEvidence(input: CitationEvidenceInput): CitationEvidence
 citedByCurrentClaims	export declare function citedByCurrentClaims(doc: ConceptDoc, stale: readonly string[] | undefined): readonly string[]
@@ -210,20 +227,17 @@ conceptInPlay	export declare function conceptInPlay(hit: Pick<MemoryNoteHit, "su
 conceptMetadata	export declare function conceptMetadata(previous: JsonObject | undefined, fabric: JsonObject, patch:
 conceptPointerLine	export declare function conceptPointerLine(id: string, subject: string | undefined): string
 conceptSources	export declare function conceptSources(doc: ConceptDoc): readonly string[]
-confirmDecisionProposals	export declare function confirmDecisionProposals(ui: HostUi | undefined, proposals: readonly DecisionProposal[]): Promise<readonly string[]>
+confirmRuleProposals	export declare function confirmRuleProposals(ui: HostUi | undefined, proposals: readonly RuleProposal[]): Promise<readonly string[]>
 consolidationExtractSchema	export declare function consolidationExtractSchema(input:
 consolidationReport	export declare function consolidationReport(at: string, fields?: Partial<FabricConsolidationReport>, pass?: string): FabricConsolidationReport
-coreCandidateRows	export declare function coreCandidateRows(rows: readonly MemoryVectorMetadataRow[], weights?: StorageWeights, kinds?: readonly MemoryNoteKind[]): readonly
-coreHeading	export declare function coreHeading(label: string): string
 createConceptCascade	export declare function createConceptCascade(deps:
 createConceptDeletionHandler	export declare function createConceptDeletionHandler(ontology: Pick<FabricOntology, "retract">): DeletionPropagationHandler
 createConceptIndex	export declare function createConceptIndex(deps:
 createConsolidationLease	export declare function createConsolidationLease():
 createExchangeArchive	export declare function createExchangeArchive(options: ExchangeArchiveOptions): ExchangeArchive
 createFabricCitationTracker	export declare function createFabricCitationTracker(): FabricCitationTracker
-createFabricContext	export declare function createFabricContext(memory: Memory, recall: MemoryFabric["recall"], inject?: false | MemoryFabricInjectConfig, options?: MemoryContextProviderOptions, directory?: FabricDirectoryHandle, tracker?: FabricCitationTracker, touchedPaths?: (sessionId: string) => readonly string[], core?: FabricCore, cues?: FabricCues, memories?: readonly Memory[], delivery?: FabricDeliveryStateStore, decisions?: FabricDecisions):
+createFabricContext	export declare function createFabricContext(memory: Memory, recall: MemoryFabric["recall"], inject?: false | MemoryFabricInjectConfig, options?: MemoryContextProviderOptions, directory?: FabricDirectoryHandle, tracker?: FabricCitationTracker, touchedPaths?: (sessionId: string) => readonly string[], core?: FabricRules, cues?: FabricCues, memories?: readonly Memory[], delivery?: FabricDeliveryStateStore, decisions?: FabricDecisions, lessonNudges?: Pick<LessonNudges, "take" | "forget">):
 createFabricConversationSearch	export declare function createFabricConversationSearch(deps:
-createFabricCore	export declare function createFabricCore(input: CreateFabricCoreOptions): FabricCore
 createFabricCues	export declare function createFabricCues(input: CreateFabricCuesOptions): FabricCues
 createFabricDecisions	export declare function createFabricDecisions(input:
 createFabricDirectory	export declare function createFabricDirectory(options: CreateFabricDirectoryOptions): FabricDirectory
@@ -232,8 +246,10 @@ createFabricLifecycle	export declare function createFabricLifecycle(memory: Memo
 createFabricOntology	export declare function createFabricOntology(deps:
 createFabricRecall	export declare function createFabricRecall(deps:
 createFabricRepointHandler	export declare function createFabricRepointHandler(options:
+createFabricRules	export declare function createFabricRules(input: CreateFabricRulesOptions): FabricRules
 createFabricSubjects	export declare function createFabricSubjects(deps: CreateFabricSubjectsDeps): FabricSubjects
 createFabricTeam	export declare function createFabricTeam(input:
+createLessonNudges	export declare function createLessonNudges(options:
 createMemory	export declare function createMemory(options: CreateMemoryOptions): Memory
 createMemoryFabric	export declare function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFabric
 createMemoryFabricTools	export declare function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: MemoryFabricToolsOptions) => readonly ToolDefinition[]
@@ -247,7 +263,6 @@ createTouchedPathTracker	export declare function createTouchedPathTracker(option
 crossProjectGroups	export declare function crossProjectGroups(notes: readonly WidenNote[], options?:
 cueBucket	export declare function cueBucket(glob: string): string
 decideConsolidation	export declare function decideConsolidation(input:
-decisionNoteId	export declare function decisionNoteId(sessionId: string, userEntryId: string): string
 default	export default
 defaultScopeFor	export declare function defaultScopeFor(kind: MemoryNoteKind): MemoryNoteScope
 describeItem	export declare function describeItem(item: ConceptItem, options?:
@@ -260,7 +275,9 @@ ephemeralReason	export declare function ephemeralReason(text: string, scratchDir
 episodeClusters	export declare function episodeClusters(notes: readonly CapacityNote[], minCluster: number): readonly EpisodeCluster[]
 estimateNoteTokens	export declare function estimateNoteTokens(text: string): number
 evictionOrder	export declare function evictionOrder(notes: readonly CapacityNote[], clock: number, options?: ArchiveDecisionOptions): readonly CapacityNote[]
+evidenceLevelsFor	export declare function evidenceLevelsFor(level: MemoryNoteScope): ReadonlySet<MemoryNoteScope>
 exchangeDemotionOrder	export declare function exchangeDemotionOrder(notes: readonly CapacityNote[], clock: number, options?: ArchiveDecisionOptions): readonly CapacityNote[]
+exchangeDialogue	export declare function exchangeDialogue(text: string): string
 exchangeKeywords	export declare function exchangeKeywords(text: string): readonly string[]
 exchangeNoteId	export declare function exchangeNoteId(sessionId: string, userEntryId: string, assistantEntryId: string, part: number): string
 exchangePairs	export declare function exchangePairs(entries: readonly SessionEntry[]): readonly ExchangePair[]
@@ -268,11 +285,13 @@ expandLexicalQuery	export declare function expandLexicalQuery(text: string): str
 exportMemoryOkf	export declare function exportMemoryOkf(memory: Memory, options: ExportMemoryOkfOptions): Promise<ExportMemoryOkfResult>
 extractConsolidationNotes	export declare function extractConsolidationNotes(input: ExtractConsolidationNotesInput): Promise<ConsolidationExtraction>
 fabricBlockId	export declare function fabricBlockId(block: string): string
+findCorrectedRule	export declare function findCorrectedRule(proposalText: string, rules: readonly
 fitInjection	export declare function fitInjection(hits: Iterable<MemoryNoteHit>, queryTerms: ReadonlySet<string>, budgetTokens: number, topK: number, eligibleCount?: number, minScore?: number, fullTextScore?: number, cardExcerpt?: "head" | "query"):
 gateScopedMemoryContent	export declare function gateScopedMemoryContent(text: string): void
 gatherConsolidationCandidates	export declare function gatherConsolidationCandidates(entries: readonly SessionEntry[], options?: GatherConsolidationOptions): readonly ConsolidationCandidate[]
 globMatches	export declare function globMatches(pattern: string, path: string): boolean
 groupRecallHits	export declare function groupRecallHits(hits: readonly MemoryNoteHit[], options?: GroupRecallOptions): MemoryNoteHit[]
+hasFailedThenPassed	export declare function hasFailedThenPassed(steps: readonly ExchangeStep[], patterns: readonly string[]): boolean
 hasNewObservationalMaterial	export declare function hasNewObservationalMaterial(entries: readonly SessionEntry[], cursor: string | undefined): boolean
 hasPartialSelectionCue	export declare function hasPartialSelectionCue(text: string): boolean
 importMemoryOkf	export declare function importMemoryOkf(memory: Memory, options: ImportMemoryOkfOptions): Promise<ImportMemoryOkfResult>
@@ -284,6 +303,7 @@ isDecisionScope	export declare function isDecisionScope(scope: MemoryNoteScope |
 isExtractedNoteKind	export declare function isExtractedNoteKind(value: unknown): value is ExtractedNoteKind
 isFabricDirectoryEmpty	export declare function isFabricDirectoryEmpty(snapshot: FabricDirectorySnapshot): boolean
 isFinalAssistant	export declare function isFinalAssistant(message: Message | undefined): boolean
+isLessonTagged	export declare function isLessonTagged(tags: readonly string[] | undefined): boolean
 isMemoryDecisionDeliverable	export declare function isMemoryDecisionDeliverable(note: Pick<MemoryNoteMetadata, "kind" | "decisionStatus" | "status"> |
 isMemoryDecisionStatus	export declare function isMemoryDecisionStatus(value: unknown): value is MemoryDecisionStatus
 isMemoryNoteKind	export declare function isMemoryNoteKind(value: unknown): value is MemoryNoteKind
@@ -293,6 +313,9 @@ isMemoryNoteValidAt	export declare function isMemoryNoteValidAt(metadata: Pick<M
 isNoteId	export declare function isNoteId(value: unknown): value is string
 isStorableExtractedKind	export declare function isStorableExtractedKind(kind: ExtractedNoteKind): kind is Extract<MemoryNoteKind, "fact" | "procedure" | "preference">
 itemKindOf	export declare function itemKindOf(id: string): ConceptItemKind
+lessonNudgeLine	export declare function lessonNudgeLine(signal: LessonSignal, exchangeId: string, insertTool?: string): string
+lessonSignal	export declare function lessonSignal(entries: readonly SessionEntry[], pair: ExchangePair, options?:
+lessonUnused	export declare function lessonUnused(metadata: Pick<MemoryNoteMetadata, "uses" | "pinned" | "created" | "tags">, clock: number, archive: ArchiveConfig): boolean
 listScopedPending	export declare function listScopedPending(ledgerFile: string): Promise<readonly
 loadDerivableSources	export declare function loadDerivableSources(root: string, files?: readonly string[]): Promise<DerivableSources>
 loadScopedLedger	export declare function loadScopedLedger(path: string, options?:
@@ -335,6 +358,7 @@ parseMemoryNoteProvenance	export declare function parseMemoryNoteProvenance(valu
 parseProjectFile	export declare function parseProjectFile(content: string): ProjectFileSections | undefined
 parsePromotionStamp	export declare function parsePromotionStamp(value: unknown): MemoryNotePromotionStamp | undefined
 parseRecallKinds	export declare function parseRecallKinds(value: unknown): readonly MemoryNoteKind[] | undefined
+parseRulesFile	export declare function parseRulesFile(body: string): ParsedRulesFile
 planMemoryConsolidation	export declare function planMemoryConsolidation(input:
 presetFields	export declare function presetFields(name: MemoryFabricPresetName): MemoryFabricConfig
 priorFor	export declare function priorFor(metadata: MemoryNoteMetadata, priors: ScopePriors, touchedPaths: readonly string[]): number
@@ -353,6 +377,7 @@ readUseEvents	export declare function readUseEvents(value: unknown): readonly Me
 recallPeriod	export declare function recallPeriod(text: string, timestamp: string):
 recallScopedMemory	export declare function recallScopedMemory(input:
 reconcileFabricFiles	export declare function reconcileFabricFiles(options:
+reconcileRulesFile	export declare function reconcileRulesFile(input: RulesReconcileInput): Promise<RulesReconcileReport>
 recurrenceSignal	export declare function recurrenceSignal(sessions: number, saturation?: number): number
 registerMemoryFabricContext	export declare function registerMemoryFabricContext(hooks: HookRegistrar, memory: Memory, options?: MemoryContextProviderOptions, recall?: MemoryFabric["recall"], inject?: false | MemoryFabricInjectConfig, tracker?: FabricCitationTracker, lifecycle?:
 rejectScopedPending	export declare function rejectScopedPending(input:
@@ -361,10 +386,12 @@ remoteUrlFromConfig	export declare function remoteUrlFromConfig(config: string):
 renderConceptBody	export declare function renderConceptBody(doc: ConceptDoc): string
 renderConceptClaims	export declare function renderConceptClaims(conceptId: string, input: ConceptRenderInput): ConceptRender
 renderConceptRead	export declare function renderConceptRead(text: string, stale: readonly string[] | undefined): string
-renderCore	export declare function renderCore(label: string, lines: readonly CoreLine[]):
 renderFabricDirectory	export declare function renderFabricDirectory(snapshot: FabricDirectorySnapshot, options: ResolvedFabricDirectoryOptions):
 renderProjectFile	export declare function renderProjectFile(identity:
+renderRules	export declare function renderRules(label: string, lines: readonly RuleLine[]):
+renderRulesFile	export declare function renderRulesFile(label: string, lines: readonly RuleLine[]): string
 renderScopedMirror	export declare function renderScopedMirror(input:
+renderSteps	export declare function renderSteps(steps: readonly ExchangeStep[], limits:
 resetFabricDeliveryState	export declare function resetFabricDeliveryState(store: FabricDeliveryStateStore, session: SessionContext): Promise<void>
 resolveBindThreshold	export declare function resolveBindThreshold(value: number | undefined): number
 resolveCandidateLimit	export declare function resolveCandidateLimit(topK: number): number
@@ -372,9 +399,9 @@ resolveConceptPrior	export declare function resolveConceptPrior(value: number | 
 resolveConsolidationThreshold	export declare function resolveConsolidationThreshold(value: unknown): number
 resolveDates	export declare function resolveDates(text: string, tRef: string): readonly MemoryNoteDate[]
 resolveDecisionsConfig	export declare function resolveDecisionsConfig(value: unknown): false | ResolvedDecisionsConfig
-resolveFabricCoreOptions	export declare function resolveFabricCoreOptions(input: boolean | MemoryFabricCoreConfig | undefined, defaultOn: boolean): false | ResolvedFabricCoreOptions
 resolveFabricCuesOptions	export declare function resolveFabricCuesOptions(input: boolean | MemoryFabricCuesConfig | undefined, defaultOn: boolean): false | ResolvedFabricCuesOptions
 resolveFabricDirectoryOptions	export declare function resolveFabricDirectoryOptions(input: boolean | MemoryFabricDirectoryConfig | undefined, defaultOn: boolean): false | ResolvedFabricDirectoryOptions
+resolveFabricRulesOptions	export declare function resolveFabricRulesOptions(input: boolean | MemoryFabricRulesConfig | undefined, defaultOn: boolean): false | ResolvedFabricRulesOptions
 resolveFabricTeamOptions	export declare function resolveFabricTeamOptions(value: boolean | MemoryFabricTeamConfig | undefined, projectRoot: string | undefined): false | ResolvedFabricTeamOptions
 resolveLifecycleConfig	export declare function resolveLifecycleConfig(value: MemoryFabricLifecycleConfig | undefined): ResolvedLifecycleConfig
 resolveMaxClaimsRendered	export declare function resolveMaxClaimsRendered(value: number | undefined): number
@@ -390,6 +417,10 @@ retrievalStrength	export declare function retrievalStrength(metadata: Pick<Memor
 reviewConceptEdit	export declare function reviewConceptEdit(record: MemoryVectorRecord, previous: MemoryVectorRecord | undefined, now?: () => Date): ConceptEditReview | undefined
 reviewScopedSession	export declare function reviewScopedSession(input:
 rowFromMetadata	export declare function rowFromMetadata(id: string, metadata: JsonObject | undefined): ConceptRow | undefined
+ruleCandidateRows	export declare function ruleCandidateRows(rows: readonly MemoryVectorMetadataRow[], weights?: StorageWeights, kinds?: readonly MemoryNoteKind[]): readonly RuleRow[]
+ruleLineNoteId	export declare function ruleLineNoteId(resourceId: string, text: string): string
+ruleNoteId	export declare function ruleNoteId(sessionId: string, userEntryId: string): string
+rulesHeading	export declare function rulesHeading(label: string): string
 runConsolidationPass	export declare function runConsolidationPass(input: ConsolidationPassInput): Promise<ConsolidationPassResult>
 runFabricEvolutionWorker	export declare function runFabricEvolutionWorker(input:
 runMaintenance	export declare function runMaintenance(deps: MaintenanceDeps, options?: MemoryFabricMaintainOptions): Promise<MemoryFabricMaintenanceReport>
@@ -407,7 +438,7 @@ selectWithScopeReserve	export declare function selectWithScopeReserve<T>(ranked:
 setFabricBlock	export declare function setFabricBlock(memory: Memory, block: string, content: string, options?:
 setMemoryRetractListener	export declare function setMemoryRetractListener(memory: object, listener: MemoryRetractListener | undefined): void
 shadowedExplain	export declare function shadowedExplain(shadowed: readonly ShadowedCandidate[], priors: ScopePriors, touchedPaths: readonly string[]): MemoryFabricExplainEntry[]
-shouldArchive	export declare function shouldArchive(metadata: Pick<MemoryNoteMetadata, "kind" | "uses" | "useSessions" | "helpful" | "harmful" | "promotion" | "pinned" | "created">, clock: number, options?: ArchiveDecisionOptions): boolean
+shouldArchive	export declare function shouldArchive(metadata: Pick<MemoryNoteMetadata, "kind" | "uses" | "useSessions" | "helpful" | "harmful" | "promotion" | "pinned" | "created" | "tags">, clock: number, options?: ArchiveDecisionOptions): boolean
 siblingGroups	export declare function siblingGroups(pathNotes: readonly CapacityNote[], minSiblings?: number): readonly SiblingGroup[]
 splitExchange	export declare function splitExchange(userText: string, assistantText: string, maxChars: number): readonly string[]
 stampProvenance	export declare function stampProvenance(by: MemoryNoteActor, at: string, extra?:
@@ -415,6 +446,7 @@ storageStrength	export declare function storageStrength(metadata: Pick<MemoryNot
 strengthPrior	export declare function strengthPrior(metadata: Pick<MemoryNoteMetadata, "kind" | "uses" | "useSessions" | "helpful" | "harmful" | "promotion">, clock: number, options?: StrengthPriorOptions): number
 subjectPromptBlock	export declare function subjectPromptBlock(lists: readonly SubjectScopeListing[]): SubjectPromptBlock | undefined
 summarizeEpisodeCluster	export declare function summarizeEpisodeCluster(input: SummarizeEpisodeClusterInput): Promise<EpisodeSummary | undefined>
+summarizeSteps	export declare function summarizeSteps(entries: readonly SessionEntry[], options?: Pick<ExchangeStepsOptions, "argumentFields">): readonly ExchangeStep[]
 tombstoneFabricBlock	export declare function tombstoneFabricBlock(memory: Memory, block: string, options?:
 type ApplyConceptEditsOptions	export { type ApplyConceptEditsOptions, type ApplyConceptEditsResult, type ConceptEdit, type ConceptWriter, createFabricOntology, type FabricOntology, type FabricOntologyPort, MEMORY_FABRIC_SERVICE, type OntologyDirtyEntry, type OntologyNoteView, type OntologyPendingOptions, type OntologyPendingPage, type OntologySourceInput, type OntologySourceResult, type OntologySubject, } from "./ontology/port.js"
 type ApplyConceptEditsResult	export { type ApplyConceptEditsOptions, type ApplyConceptEditsResult, type ConceptEdit, type ConceptWriter, createFabricOntology, type FabricOntology, type FabricOntologyPort, MEMORY_FABRIC_SERVICE, type OntologyDirtyEntry, type OntologyNoteView, type OntologyPendingOptions, type OntologyPendingPage, type OntologySourceInput, type OntologySourceResult, type OntologySubject, } from "./ontology/port.js"
@@ -439,7 +471,7 @@ type ImportMemoryOkfResult	export { type ExportMemoryOkfOptions, type ExportMemo
 type MemoryConformanceStores	export { type MemoryConformanceStores, runMemoryConformance } from "./conformance.js"
 type MemoryDecisionStatus	export { CONCEPT_RELATIONS, type ConceptDirtyReason, type ConceptRelation, type ConceptType, type CreateMemoryFabricOptions, encodeMemoryNoteMetadata, type FabricScopeLevel, type MemoryDecisionStatus, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type Memory
 type MemoryFabric	export { CONCEPT_RELATIONS, type ConceptDirtyReason, type ConceptRelation, type ConceptType, type CreateMemoryFabricOptions, encodeMemoryNoteMetadata, type FabricScopeLevel, type MemoryDecisionStatus, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type Memory
-type MemoryFabricConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabri
+type MemoryFabricConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricRulesConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabr
 type MemoryFabricConsolidateOptions	export { CONCEPT_RELATIONS, type ConceptDirtyReason, type ConceptRelation, type ConceptType, type CreateMemoryFabricOptions, encodeMemoryNoteMetadata, type FabricScopeLevel, type MemoryDecisionStatus, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type Memory
 type MemoryFabricConsolidateResult	export { CONCEPT_RELATIONS, type ConceptDirtyReason, type ConceptRelation, type ConceptType, type CreateMemoryFabricOptions, encodeMemoryNoteMetadata, type FabricScopeLevel, type MemoryDecisionStatus, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type Memory
 type MemoryFabricConsolidateSource	export { CONCEPT_RELATIONS, type ConceptDirtyReason, type ConceptRelation, type ConceptType, type CreateMemoryFabricOptions, encodeMemoryNoteMetadata, type FabricScopeLevel, type MemoryDecisionStatus, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type Memory
@@ -447,35 +479,35 @@ type MemoryFabricConsolidationOptions	export { CONCEPT_RELATIONS, type ConceptDi
 type MemoryFabricConversationHit	export { CONCEPT_RELATIONS, type ConceptDirtyReason, type ConceptRelation, type ConceptType, type CreateMemoryFabricOptions, encodeMemoryNoteMetadata, type FabricScopeLevel, type MemoryDecisionStatus, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type Memory
 type MemoryFabricConversationSearchOptions	export { CONCEPT_RELATIONS, type ConceptDirtyReason, type ConceptRelation, type ConceptType, type CreateMemoryFabricOptions, encodeMemoryNoteMetadata, type FabricScopeLevel, type MemoryDecisionStatus, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type Memory
 type MemoryFabricConversationSearchResult	export { CONCEPT_RELATIONS, type ConceptDirtyReason, type ConceptRelation, type ConceptType, type CreateMemoryFabricOptions, encodeMemoryNoteMetadata, type FabricScopeLevel, type MemoryDecisionStatus, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type Memory
-type MemoryFabricCoreConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabri
-type MemoryFabricCuesConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabri
+type MemoryFabricCuesConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricRulesConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabr
 type MemoryFabricEvolutionOptions	export { CONCEPT_RELATIONS, type ConceptDirtyReason, type ConceptRelation, type ConceptType, type CreateMemoryFabricOptions, encodeMemoryNoteMetadata, type FabricScopeLevel, type MemoryDecisionStatus, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type Memory
-type MemoryFabricExchangesConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabri
+type MemoryFabricExchangesConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricRulesConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabr
 type MemoryFabricExplainEntry	export { CONCEPT_RELATIONS, type ConceptDirtyReason, type ConceptRelation, type ConceptType, type CreateMemoryFabricOptions, encodeMemoryNoteMetadata, type FabricScopeLevel, type MemoryDecisionStatus, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type Memory
 type MemoryFabricForgetInput	export { CONCEPT_RELATIONS, type ConceptDirtyReason, type ConceptRelation, type ConceptType, type CreateMemoryFabricOptions, encodeMemoryNoteMetadata, type FabricScopeLevel, type MemoryDecisionStatus, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type Memory
 type MemoryFabricForgetResult	export { CONCEPT_RELATIONS, type ConceptDirtyReason, type ConceptRelation, type ConceptType, type CreateMemoryFabricOptions, encodeMemoryNoteMetadata, type FabricScopeLevel, type MemoryDecisionStatus, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type Memory
-type MemoryFabricInjectConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabri
-type MemoryFabricLifecycleConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabri
+type MemoryFabricInjectConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricRulesConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabr
+type MemoryFabricLifecycleConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricRulesConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabr
 type MemoryFabricLinkerOptions	export { CONCEPT_RELATIONS, type ConceptDirtyReason, type ConceptRelation, type ConceptType, type CreateMemoryFabricOptions, encodeMemoryNoteMetadata, type FabricScopeLevel, type MemoryDecisionStatus, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type Memory
 type MemoryFabricMaintainOptions	export { CONCEPT_RELATIONS, type ConceptDirtyReason, type ConceptRelation, type ConceptType, type CreateMemoryFabricOptions, encodeMemoryNoteMetadata, type FabricScopeLevel, type MemoryDecisionStatus, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type Memory
 type MemoryFabricMaintenanceReport	export { CONCEPT_RELATIONS, type ConceptDirtyReason, type ConceptRelation, type ConceptType, type CreateMemoryFabricOptions, encodeMemoryNoteMetadata, type FabricScopeLevel, type MemoryDecisionStatus, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type Memory
-type MemoryFabricMarkdownStoreConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabri
+type MemoryFabricMarkdownStoreConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricRulesConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabr
 type MemoryFabricObservationSource	export { CONCEPT_RELATIONS, type ConceptDirtyReason, type ConceptRelation, type ConceptType, type CreateMemoryFabricOptions, encodeMemoryNoteMetadata, type FabricScopeLevel, type MemoryDecisionStatus, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type Memory
-type MemoryFabricOntologyConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabri
-type MemoryFabricPostgresStoreConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabri
-type MemoryFabricPresetName	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabri
-type MemoryFabricProjectScopeConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabri
+type MemoryFabricOntologyConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricRulesConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabr
+type MemoryFabricPostgresStoreConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricRulesConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabr
+type MemoryFabricPresetName	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricRulesConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabr
+type MemoryFabricProjectScopeConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricRulesConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabr
 type MemoryFabricRecallOptions	export { CONCEPT_RELATIONS, type ConceptDirtyReason, type ConceptRelation, type ConceptType, type CreateMemoryFabricOptions, encodeMemoryNoteMetadata, type FabricScopeLevel, type MemoryDecisionStatus, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type Memory
 type MemoryFabricRecallResult	export { CONCEPT_RELATIONS, type ConceptDirtyReason, type ConceptRelation, type ConceptType, type CreateMemoryFabricOptions, encodeMemoryNoteMetadata, type FabricScopeLevel, type MemoryDecisionStatus, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type Memory
 type MemoryFabricRememberInput	export { CONCEPT_RELATIONS, type ConceptDirtyReason, type ConceptRelation, type ConceptType, type CreateMemoryFabricOptions, encodeMemoryNoteMetadata, type FabricScopeLevel, type MemoryDecisionStatus, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type Memory
+type MemoryFabricRulesConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricRulesConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabr
 type MemoryFabricScopeBinding	export { CONCEPT_RELATIONS, type ConceptDirtyReason, type ConceptRelation, type ConceptType, type CreateMemoryFabricOptions, encodeMemoryNoteMetadata, type FabricScopeLevel, type MemoryDecisionStatus, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type Memory
 type MemoryFabricScopeBudget	export { CONCEPT_RELATIONS, type ConceptDirtyReason, type ConceptRelation, type ConceptType, type CreateMemoryFabricOptions, encodeMemoryNoteMetadata, type FabricScopeLevel, type MemoryDecisionStatus, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type Memory
 type MemoryFabricScopeOpenInput	export { CONCEPT_RELATIONS, type ConceptDirtyReason, type ConceptRelation, type ConceptType, type CreateMemoryFabricOptions, encodeMemoryNoteMetadata, type FabricScopeLevel, type MemoryDecisionStatus, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type Memory
-type MemoryFabricScopedConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabri
-type MemoryFabricScopesConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabri
-type MemoryFabricStateConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabri
-type MemoryFabricTeamConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabri
-type MemoryFabricToolsConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabri
+type MemoryFabricScopedConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricRulesConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabr
+type MemoryFabricScopesConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricRulesConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabr
+type MemoryFabricStateConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricRulesConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabr
+type MemoryFabricTeamConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricRulesConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabr
+type MemoryFabricToolsConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricRulesConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabr
 type MemoryFabricToolsOptions	export { CONCEPT_RELATIONS, type ConceptDirtyReason, type ConceptRelation, type ConceptType, type CreateMemoryFabricOptions, encodeMemoryNoteMetadata, type FabricScopeLevel, type MemoryDecisionStatus, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type Memory
 type MemoryFabricWriteOptions	export { CONCEPT_RELATIONS, type ConceptDirtyReason, type ConceptRelation, type ConceptType, type CreateMemoryFabricOptions, encodeMemoryNoteMetadata, type FabricScopeLevel, type MemoryDecisionStatus, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type Memory
 type MemoryNote	export { CONCEPT_RELATIONS, type ConceptDirtyReason, type ConceptRelation, type ConceptType, type CreateMemoryFabricOptions, encodeMemoryNoteMetadata, type FabricScopeLevel, type MemoryDecisionStatus, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricConsolidationOptions, type MemoryFabricConversationHit, type MemoryFabricConversationSearchOptions, type MemoryFabricConversationSearchResult, type Memory
@@ -503,13 +535,13 @@ type OntologySourceInput	export { type ApplyConceptEditsOptions, type ApplyConce
 type OntologySourceResult	export { type ApplyConceptEditsOptions, type ApplyConceptEditsResult, type ConceptEdit, type ConceptWriter, createFabricOntology, type FabricOntology, type FabricOntologyPort, MEMORY_FABRIC_SERVICE, type OntologyDirtyEntry, type OntologyNoteView, type OntologyPendingOptions, type OntologyPendingPage, type OntologySourceInput, type OntologySourceResult, type OntologySubject, } from "./ontology/port.js"
 type OntologySubject	export { type ApplyConceptEditsOptions, type ApplyConceptEditsResult, type ConceptEdit, type ConceptWriter, createFabricOntology, type FabricOntology, type FabricOntologyPort, MEMORY_FABRIC_SERVICE, type OntologyDirtyEntry, type OntologyNoteView, type OntologyPendingOptions, type OntologyPendingPage, type OntologySourceInput, type OntologySourceResult, type OntologySubject, } from "./ontology/port.js"
 type RecordUsesOptions	export { type ArchiveConfig, type CapacityLimits, type MemoryNoteDecay, type MemoryNoteStatus, type MemoryNoteUseEvent, type RecordUsesOptions, SCOPE_CLOCK_COUNTER, type StorageWeights, type StrengthWeights, } from "./lifecycle/index.js"
-type ResolvedFabricCoreOptions	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabri
-type ResolvedFabricExchangesOptions	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabri
-type ResolvedFabricScope	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabri
-type ResolvedFabricTeamOptions	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabri
-type ResolvedLifecycleConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabri
-type ResolvedMemoryFabricConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabri
-type ResolvedStateConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabri
+type ResolvedFabricExchangesOptions	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricRulesConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabr
+type ResolvedFabricRulesOptions	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricRulesConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabr
+type ResolvedFabricScope	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricRulesConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabr
+type ResolvedFabricTeamOptions	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricRulesConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabr
+type ResolvedLifecycleConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricRulesConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabr
+type ResolvedMemoryFabricConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricRulesConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabr
+type ResolvedStateConfig	export { CODING_PRESET_REVISION, CONVERSATIONAL_PRESET_REVISION, type MemoryFabricConfig, type MemoryFabricRulesConfig, type MemoryFabricCuesConfig, type MemoryFabricExchangesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricOntologyConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricPresetName, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabr
 type ScopeClock	export { createScopeClock, readScopeClockState, SCOPE_CLOCK_COUNTER, type ScopeClock, type ScopeClockSessionState, type ScopeClockTick, } from "./clock.js"
 type ScopeClockSessionState	export { createScopeClock, readScopeClockState, SCOPE_CLOCK_COUNTER, type ScopeClock, type ScopeClockSessionState, type ScopeClockTick, } from "./clock.js"
 type ScopeClockTick	export { createScopeClock, readScopeClockState, SCOPE_CLOCK_COUNTER, type ScopeClock, type ScopeClockSessionState, type ScopeClockTick, } from "./clock.js"

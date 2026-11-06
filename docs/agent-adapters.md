@@ -160,6 +160,8 @@ descriptor, so `requires` fails at `createAgent` instead of silently ignoring it
 | `profile` | The profile the driver already created; the adapter only names the home variable in `descriptor.auth.modes`. |
 | `vendor` | Whatever the adapter's `vendor` schema validates. |
 
+A driver that serves tools with `serveTools` can also lend the guidance for exactly those tools as MCP resources: `skillResources(ctx.skills.list(), allow)` returns one `prism-skill://<name>` resource per skill whose `requiresTools` the served tools satisfy. That path writes nothing into the vendor's home, which strict isolation keeps empty. See [Lending skills with tools](../packages/hosts/mcp-server/README.md#lending-skills-with-tools).
+
 `configure` returns the launch plan. A flag-configured adapter writes settings into the private run directory and
 returns `args`; a workspace-file adapter returns `overlays` for the bound worktree. From
 `examples/adapters/workspace-config.ts`:

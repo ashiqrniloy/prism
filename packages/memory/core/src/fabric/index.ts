@@ -140,11 +140,25 @@ export interface MarkdownMemoryStores {
     update: (current: string | undefined) => string,
   ): Promise<void>;
   /**
-   * Write a derived resource file (for example `core.md`) under the store lock. The file carries a
-   * marker whose hash covers its own body, so a manual edit is detected, overwritten once, and logged
-   * with a pointer at `pinned: true` on the note.
+   * Write a derived resource file (for example `rules.md`) under the store lock. The file carries a
+   * marker whose hash covers its own body, so a manual edit is detectable. A file a person edited is
+   * kept, never overwritten: the call returns `false` until the caller has consumed the edit and
+   * passes `replaceEdited: true`. Returns `true` when the file now holds `body`.
    */
-  writeDerivedFile(scope: { readonly tenantId: string; readonly resourceId: string }, name: string, body: string): Promise<void>;
+  writeDerivedFile(
+    scope: { readonly tenantId: string; readonly resourceId: string },
+    name: string,
+    body: string,
+    options?: { readonly replaceEdited?: boolean },
+  ): Promise<boolean>;
+  /**
+   * Read a derived resource file: the body after its marker, and whether a person edited it since
+   * the last derived write (a missing or non-matching marker counts as edited). `undefined` when absent.
+   */
+  readDerivedFile(
+    scope: { readonly tenantId: string; readonly resourceId: string },
+    name: string,
+  ): Promise<{ readonly body: string; readonly edited: boolean } | undefined>;
 }
 
 const HARD_INVALIDATION_BATCH = 64;
@@ -780,28 +794,31 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
         await atomicWriteFile(abs, update(current));
       });
     },
-    async writeDerivedFile(scope, name, body) {
+    async writeDerivedFile(scope, name, body, writeOptions = {}) {
       resourceFileName(name);
       if (typeof body !== "string" || body.includes("\0")) {
         throw new MemoryValidationError("derived file body must be text without NUL");
       }
-      await lock.run(async () => {
+      return lock.run(async () => {
         const abs = join(root, scopeDirectory(scope.tenantId, scope.resourceId), name);
         await assertInsideRoot(root, abs);
         const current = await readFile(abs, "utf8").catch(() => undefined);
         const content = renderDerivedFile(body);
-        if (current === content) return;
-        if (current !== undefined && !derivedFileIntact(current)) {
-          await appendLog([
-            {
-              date: new Date().toISOString().slice(0, 10),
-              verb: "overwritten",
-              id: name,
-              note: "a manual edit of a derived file was replaced; set pinned: true on a note to keep it in the core",
-            },
-          ]);
-        }
+        if (current === content) return true;
+        if (current !== undefined && !derivedFileIntact(current) && writeOptions.replaceEdited !== true) return false;
         await atomicWriteFile(abs, content);
+        return true;
+      });
+    },
+    async readDerivedFile(scope, name) {
+      resourceFileName(name);
+      return lock.run(async () => {
+        const abs = join(root, scopeDirectory(scope.tenantId, scope.resourceId), name);
+        await assertInsideRoot(root, abs);
+        const current = await readFile(abs, "utf8").catch(() => undefined);
+        if (current === undefined) return undefined;
+        const marker = DERIVED_MARKER.exec(current);
+        return { body: marker === null ? current : current.slice(marker[0].length), edited: !derivedFileIntact(current) };
       });
     },
   };

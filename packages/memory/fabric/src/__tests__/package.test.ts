@@ -251,7 +251,7 @@ describe("@arnilo/prism-memory-fabric package (plan 158 Task 4)", () => {
     }
   });
 
-  it("core_block_renders_in_the_prefix_after_the_directory_and_stays_stable", async () => {
+  it("rules_block_renders_in_the_prefix_after_the_directory_and_stays_stable", async () => {
     const root = join(await tempRoot(), "core-root");
     await mkdir(root, { recursive: true });
     const { agent, requests } = await harness({
@@ -271,15 +271,15 @@ describe("@arnilo/prism-memory-fabric package (plan 158 Task 4)", () => {
       await session.run("next");
       await session.run("last");
       const rendered = requests.map((request) => JSON.stringify(request));
-      assert.ok(!rendered[0]!.includes("Core memory"), "an empty core renders no block");
-      assert.match(rendered[2]!, /Core memory \(project prism\): \[[0-9a-f]{12}\] deploys run on fridays/);
-      assert.ok(rendered[2]!.indexOf("Long-term memory") < rendered[2]!.indexOf("Core memory"), "the directory stays first");
-      const core = (text: string) => /Core memory \(project prism\): [^"]+/.exec(text)?.[0];
+      assert.ok(!rendered[0]!.includes("Standing rules"), "an empty rule set renders no block");
+      assert.match(rendered[2]!, /Standing rules \(project prism\): \[[0-9a-f]{12}\] deploys run on fridays/);
+      assert.ok(rendered[2]!.indexOf("Long-term memory") < rendered[2]!.indexOf("Standing rules"), "the directory stays first");
+      const core = (text: string) => /Standing rules \(project prism\): [^"]+/.exec(text)?.[0];
       assert.equal(core(rendered[2]!), core(rendered[3]!), "no write between turns: identical bytes");
       assert.match(
-        readFileSync(join(root, PROJECT_NOTES, "core.md"), "utf8"),
+        readFileSync(join(root, PROJECT_NOTES, "rules.md"), "utf8"),
         /deploys run on fridays/,
-        "the markdown store persists the derived core",
+        "the markdown store persists the editable rules.md",
       );
       await session.close();
     } finally {

@@ -10,14 +10,14 @@ const probe = async () =>
   JSON.parse((await exec(process.execPath, ["scripts/memory-bench/prefix-probe.mjs"], { timeout: 60_000, maxBuffer: 4_000_000 })).stdout);
 
 test("prefix_probe_detects_a_seeded_prefix_change", () => {
-  const request = (content) => ({ context: [{ content, metadata: { source: "fabric-core" } }], messages: [] });
+  const request = (content) => ({ context: [{ content, metadata: { source: "fabric-rules" } }], messages: [] });
   const result = summarizeRequests([
     { turn: 1, writes: [], request: request("seed") },
     { turn: 2, writes: [], request: request("seed") },
     { turn: 3, writes: ["memory.insert"], request: request("changed") },
   ]);
-  assert.equal(result.firstChanges["fabric-core"].request, 3);
-  assert.deepEqual(result.firstChanges["fabric-core"].writes, ["memory.insert"]);
+  assert.equal(result.firstChanges["fabric-rules"].request, 3);
+  assert.deepEqual(result.firstChanges["fabric-rules"].writes, ["memory.insert"]);
   assert.equal(result.firstChanges.prefix.request, 3);
   assert.notEqual(result.requests[1].prefixSha256, result.requests[2].prefixSha256);
 });

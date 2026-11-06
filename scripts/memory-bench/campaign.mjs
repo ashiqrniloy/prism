@@ -113,6 +113,7 @@ import {
   TASK5_SUMMARY,
 } from "./task5-execute.mjs";
 import { variantProvenance } from "./variants.mjs";
+import { screen209WorkArgv as workOutcomeArgv } from "./work-outcome/argv.mjs";
 
 const evidence = "docs/_evidence/memory-bench/task6";
 const logs = ".cache/memory-bench/task6-resume";
@@ -260,7 +261,38 @@ export function incrementalAttemptUsage(report, prior) {
 }
 
 /** Per-mode evidence, journal, manifest and gate rules. 188.8 reuses 188.7's journal machinery. */
+/** The owner-gated development screens: free routes plus named paid models, re-run from checkpoint on transient faults. */
+const SCREEN_MODES = new Set(["screen208", "screen209"]);
+
 function runSpec(mode) {
+  // Plan 209 Task 6: the work-outcome development screen (gate W-1). Loaded lazily, like plan 208's.
+  if (mode === "screen209") {
+    let built;
+    const screen = () => import("./work-outcome/screen.mjs");
+    return {
+      evidence: "docs/_evidence/memory-bench/209/screen",
+      logs: ".cache/memory-bench/209/logs",
+      outputPrefix: process.env.PRISM_MEMORY_BENCH_209_SMOKE === "1" ? "smoke-209-task6" : "run-209-task6",
+      summaryPath: "docs/_evidence/memory-bench/209/screen/execution-run.json",
+      journalPath: ".cache/memory-bench/209/journal.json",
+      summaryKind: "209-development-screen-run",
+      timeout: "86400s",
+      maxAttempts: 2,
+      // The gate is verified here, before any evidence file or journal is written.
+      build: async () => {
+        built = await (await screen()).buildExecutableScreen209Manifest();
+        return built;
+      },
+      write: async () => {
+        const { SCREEN209_EXECUTION_MANIFEST } = await screen();
+        await mkdir("docs/_evidence/memory-bench/209/screen", { recursive: true });
+        await writeFile(
+          built.executionManifestPath ?? SCREEN209_EXECUTION_MANIFEST,
+          `${JSON.stringify({ generatedAt: new Date().toISOString(), ...built, results: [] }, null, 2)}\n`,
+        );
+      },
+    };
+  }
   // Plan 208 Task 5: the ontology development screen. Loaded lazily, since the module builds on this one.
   if (mode === "screen208") {
     let built;
@@ -481,7 +513,7 @@ export function campaignJobs() {
     ["lifecycle.capacity=off"],
     ["lifecycle.merge=off"],
     ["fabric.cues=off"],
-    ["fabric.core=off"],
+    ["fabric.rules=off"],
     ...["explicit", "correction", "outcome", "recurrence", "generality", "ephemerality", "derivability"].map((signal) => [
       `promote.signal.${signal}=off`,
     ]),
@@ -881,7 +913,8 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
   // Plan 202 Task 4.15: no paid campaign runs a product without a passing cache-stability record.
   // The ontology screen runs on the $0 Kilo gateway and is advisory: its cost rows are not the cache-adjusted ones plan
   // 202 pins. Plan 210 Task 9 pins the cache-stability record again before the paid held-out read.
-  if (mode !== "screen208") await assertCacheStabilityPin(manifest);
+  // Plan 209's screen is advisory on the same terms (free routes plus one cheap named paid model, gate W-1).
+  if (!SCREEN_MODES.has(mode)) await assertCacheStabilityPin(manifest);
   const frozenBaseline = mode === "baseline202" ? structuredClone(manifest) : undefined;
   const jobLimit = Number(process.env.PRISM_MEMORY_BENCH_MAX_JOBS ?? 0);
   if (Number.isSafeInteger(jobLimit) && jobLimit > 0) manifest.jobs = manifest.jobs.slice(0, jobLimit);
@@ -933,6 +966,14 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
     const writeSideDir = (jobId) => writeSideDirs.get(jobId) ?? null;
     const pushResult = (row) => manifest.results.push(row);
     const jobArgv = (job, attempt, maxInput) => {
+      // Plan 209 Task 6: a work-outcome job is its own child (`work-outcome/live.mjs`), under the same journal.
+      if (job.kind === "work-outcome")
+        return [
+          "timeout",
+          job.wallTimeCapHours ? `${Math.ceil(job.wallTimeCapHours * 3600)}s` : spec.timeout,
+          "bun",
+          ...workOutcomeArgv(job, { output: attempt.output, maxInput }),
+        ];
       const argv = [
         "timeout",
         job.wallTimeCapHours ? `${Math.ceil(job.wallTimeCapHours * 3600)}s` : spec.timeout,
@@ -1122,7 +1163,7 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
           !dailyQuota &&
           (quotaWindowFailure(report) ||
             (mode === "baseline202" && /429|402|quota|free.models.per.day/i.test(report.failure?.message ?? "")));
-        const transient = mode === "screen208" && !dailyQuota && !quotaWindow && transientFailure(report);
+        const transient = SCREEN_MODES.has(mode) && !dailyQuota && !quotaWindow && transientFailure(report);
         reconcileAttempt(journal, attempt.attemptId, {
           status: dailyQuota
             ? "quota-daily"
@@ -1152,8 +1193,22 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
           id: job.id,
           attemptId: attempt.attemptId,
           answersDir: job.answersDir,
-          status: dailyQuota ? "quota-daily" : quotaWindow ? "quota-pause" : transient ? "transient-retry" : permanent ? "unsupported" : report.status,
-          cause: dailyQuota ? "quota-daily" : quotaWindow ? "quota-window" : transient ? "transient" : (permanent ?? report.failure?.message ?? null),
+          status: dailyQuota
+            ? "quota-daily"
+            : quotaWindow
+              ? "quota-pause"
+              : transient
+                ? "transient-retry"
+                : permanent
+                  ? "unsupported"
+                  : report.status,
+          cause: dailyQuota
+            ? "quota-daily"
+            : quotaWindow
+              ? "quota-window"
+              : transient
+                ? "transient"
+                : (permanent ?? report.failure?.message ?? null),
           usageComplete: report.usageComplete !== false,
           charged: attemptCharge(journal.attempts.at(-1)),
         });
@@ -1193,8 +1248,8 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
         await saveJournal(journalPath, journal);
         console.error(`pause ${attempt.attemptId}: quota window closed; waiting ${Math.round(pauseMs / 60000)} min`);
         await new Promise((resolve) => setTimeout(resolve, pauseMs));
-        // The plan 208 screen re-runs the same job from its checkpoint instead of leaving it for a later campaign.
-        if (mode === "screen208") {
+        // The plan 208 and 209 screens re-run the same job from its checkpoint instead of leaving it for a later campaign.
+        if (SCREEN_MODES.has(mode)) {
           journal.status = "active";
           await saveJournal(journalPath, journal);
           return runJob(job);
@@ -1210,7 +1265,9 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
           return;
         }
         const waitMs = transientCooldownMs(count);
-        console.error(`retry ${attempt.attemptId}: transient provider fault (${count}); re-running from checkpoint in ${Math.round(waitMs / 60000)} min`);
+        console.error(
+          `retry ${attempt.attemptId}: transient provider fault (${count}); re-running from checkpoint in ${Math.round(waitMs / 60000)} min`,
+        );
         await saveJournal(journalPath, journal);
         await new Promise((resolve) => setTimeout(resolve, waitMs));
         return runJob(job);
@@ -1261,27 +1318,29 @@ if (import.meta.main) {
   const mode =
     planArg === "208"
       ? "screen208"
-      : process.argv.includes("--baseline-202")
-        ? "baseline202"
-        : process.argv.includes("--task5")
-          ? "task5"
-          : process.argv.includes("--task5-smoke")
-            ? "task5-smoke"
-            : process.argv.includes("--acceptance-188.10-screen-a")
-              ? "screenA18810"
-              : process.argv.includes("--acceptance-188.10")
-                ? "acceptance18810"
-                : process.argv.includes("--acceptance-188.9-probe")
-                  ? "probe1889"
-                  : process.argv.includes("--acceptance-188.9-screen")
-                    ? "screen1889"
-                    : process.argv.includes("--acceptance-188.9")
-                      ? "acceptance1889"
-                      : process.argv.includes("--acceptance-188.8")
-                        ? "acceptance1888"
-                        : process.argv.includes("--acceptance")
-                          ? "acceptance"
-                          : "task6";
+      : planArg === "209"
+        ? "screen209"
+        : process.argv.includes("--baseline-202")
+          ? "baseline202"
+          : process.argv.includes("--task5")
+            ? "task5"
+            : process.argv.includes("--task5-smoke")
+              ? "task5-smoke"
+              : process.argv.includes("--acceptance-188.10-screen-a")
+                ? "screenA18810"
+                : process.argv.includes("--acceptance-188.10")
+                  ? "acceptance18810"
+                  : process.argv.includes("--acceptance-188.9-probe")
+                    ? "probe1889"
+                    : process.argv.includes("--acceptance-188.9-screen")
+                      ? "screen1889"
+                      : process.argv.includes("--acceptance-188.9")
+                        ? "acceptance1889"
+                        : process.argv.includes("--acceptance-188.8")
+                          ? "acceptance1888"
+                          : process.argv.includes("--acceptance")
+                            ? "acceptance"
+                            : "task6";
   if (mode === "screen208") {
     // Plan 208 reads the development partition only; held-out reads belong to plan 210 Task 9's manifest.
     const { assertScreen208Partition, writeScreen208Manifest } = await import("./ontology-screen.mjs");
@@ -1297,6 +1356,22 @@ if (import.meta.main) {
       console.log(
         `manifest ${manifest.manifestHash}; ${manifest.jobs.length} jobs; docs/_evidence/memory-bench/208/screen/development-screen-manifest.json`,
       );
+      process.exit(0);
+    }
+  }
+  if (mode === "screen209") {
+    // Plan 209 reads the work-outcome and plan 202 development partitions only; held-out reads are plan 210 Task 9's.
+    const { assertScreen209Partition, writeScreen209Manifest, SCREEN209_MANIFEST } = await import("./work-outcome/screen.mjs");
+    const partition = process.argv.includes("--partition") ? process.argv[process.argv.indexOf("--partition") + 1] : undefined;
+    try {
+      assertScreen209Partition(partition);
+    } catch (error) {
+      console.error(`${error.name}: ${error.message}`);
+      process.exit(1);
+    }
+    if (process.argv.includes("--manifest")) {
+      const manifest = await writeScreen209Manifest();
+      console.log(`manifest ${manifest.manifestHash}; ${manifest.jobs.length} jobs; ${SCREEN209_MANIFEST}`);
       process.exit(0);
     }
   }

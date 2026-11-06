@@ -34,7 +34,11 @@ const paths = new Set([
   "fabric.lifecycle.exchangeCapacity.hotTokens",
   "fabric.lifecycle.merge.duplicateDice",
   "fabric.lifecycle.merge.episodes",
-  "fabric.core",
+  "fabric.rules",
+  // Plan 209 Task 6: the `P+W` no-harm arm on plan 202's suites (tool steps, confirmed rule capture, the lesson nudge).
+  "fabric.exchanges.steps",
+  "fabric.rules.capture",
+  "fabric.lessons.nudge",
   "fabric.cues",
   "fabric.lifecycle.widen.minProjects",
   "fabric.lifecycle.widen.minSiblings",

@@ -13,6 +13,10 @@ Scaffold inputs shipped with the kernel.
 | `personal-assistant` | Personal workstation assistant: single-user ownership, local tools, credential references, and dev inspection | `@arnilo/prism` |
 | `business-worker` | Multi-tenant business worker: durable storage, tenant isolation, verified identity, and governed boundaries | `@arnilo/prism`, `@arnilo/prism-tools-work` |
 
+## Host skills
+
+A host writes its own product rules as `skills.dirs` entries (`SKILL.md` directories it owns, for example `createAgent({ skills: { dirs: ["./skills"] } })`). A package's skills cover only how to use that module: they ship in the package, list only while the tools they need reach the model (`requiresTools`), and are never where a host's own policy lives. See `examples/skills.ts` for host skills and `examples/package-skills.ts` for package skills.
+
 ## Usage
 
 ```bash

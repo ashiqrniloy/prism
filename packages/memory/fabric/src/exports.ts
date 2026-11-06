@@ -7,7 +7,7 @@ export type { ResolvedMemoryFabricStore, ResolvedMergeConfig, ResolvedWidenConfi
 export type { ConsolidationExtractionReason } from "./consolidation/extract.js";
 export type { PromotionWeights } from "./consolidation/score.js";
 export { createMemoryFabric } from "./create.js";
-export type { FabricCoreScope } from "./delivery/core.js";
+export type { FabricRulesScope } from "./delivery/rules.js";
 export type { ResolvedFabricCuesOptions } from "./delivery/cues.js";
 export type { MemoryFabricDirectoryConfig, ResolvedFabricDirectoryOptions } from "./directory.js";
 export {

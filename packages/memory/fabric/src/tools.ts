@@ -3,6 +3,7 @@ import { relative } from "node:path";
 import type { JsonObject, ModelClient, ModelRef, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import type { Memory, MemoryVectorRecord } from "@arnilo/prism-memory-core";
 import { HARD_TOP_K_CAP, lexicalMatches, lexicalTerms, MemoryValidationError } from "@arnilo/prism-memory-core";
+import { EvidenceNotFoundError, LessonRequiresEvidenceError } from "./lessons.js";
 import { noteRelPath } from "@arnilo/prism-memory-core/fabric";
 import { appendFabricBlock, assertFabricBlockLabel, fabricBlockId, readFabricBlock } from "./blocks.js";
 import type { FabricCitationTracker } from "./context.js";
@@ -515,7 +516,7 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
         name: insertName,
         kind: "edit",
         description:
-          "Append to fabric memory. Pass `block` to append to a labeled working block, or `path` to append to a file under the memory root (which also refreshes that file's recallable note). Pass kind fact, preference, procedure, or decision to write a typed durable note; a decision is a proposed rule with a rationale and becomes active only after the user confirms it or it is used in two sessions. Exactly one target is required. For durable notes, `keywords` should include synonyms and aliases: they are indexed with extra weight. Scope rule: user-wide preferences go to `user`; anything learned in this repository goes to `project`; only a lesson proven across projects goes to `agent`; use `path` with appliesTo for a note that holds for one subtree only; when unsure, choose the narrower scope.",
+          'Append to fabric memory. Pass `block` to append to a labeled working block, or `path` to append to a file under the memory root (which also refreshes that file\'s recallable note). Pass kind fact, preference, procedure, or decision to write a typed durable note; a decision is a proposed rule with a rationale and becomes active only after the user confirms it or it is used in two sessions. A lesson (what you learned, what to do differently, a gotcha) is a procedure or fact with tags ["lesson"] and evidence: the ids of the exchanges or notes that show it; it is verified only when a later session uses it. Exactly one target is required. For durable notes, `keywords` should include synonyms and aliases: they are indexed with extra weight. Scope rule: user-wide preferences go to `user`; anything learned in this repository goes to `project`; only a lesson proven across projects goes to `agent`; use `path` with appliesTo for a note that holds for one subtree only; when unsure, choose the narrower scope.',
         parameters: {
           type: "object",
           properties: {
@@ -536,6 +537,14 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
             key: { type: "string", description: "Stable subject id ([a-z0-9.-]{1,64}) for shadowing and widening." },
             rationale: { type: "string", description: "Why the decision was chosen; kind decision only." },
             supersedes: { type: "string" },
+            evidence: {
+              type: "array",
+              items: { type: "string" },
+              minItems: 1,
+              maxItems: 8,
+              description:
+                'Ids of the notes this one is grounded in (an exchange id, whose steps show what happened, or another note). Required with tags ["lesson"].',
+            },
             tRef: { type: "string" },
             validFrom: { type: "string" },
             validTo: { type: "string" },
@@ -584,23 +593,31 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
                 "A decision is a user, project or path rule; agent scope is for cross-project lessons only.",
               );
             }
-            const note = await deps.remember(
-              {
-                kind: args.kind,
-                content: text,
-                ...(args.kind === "decision" ? { decisionStatus: "proposed" as const } : {}),
-                ...Object.fromEntries(
-                  ["rationale", "supersedes", "tRef", "validFrom", "validTo", "tags", "keywords", "scope", "appliesTo", "key"]
-                    .filter((key) => args[key] !== undefined)
-                    .map((key) => [key, args[key]]),
-                ),
-              },
-              {
-                signal: context.signal,
-                sessionId: context.sessionId,
-                ...(args.kind === "decision" ? { status: "candidate" as const } : {}),
-              },
-            );
+            let note: Awaited<ReturnType<typeof deps.remember>>;
+            try {
+              note = await deps.remember(
+                {
+                  kind: args.kind,
+                  content: text,
+                  ...(args.kind === "decision" ? { decisionStatus: "proposed" as const } : {}),
+                  ...Object.fromEntries(
+                    ["rationale", "supersedes", "evidence", "tRef", "validFrom", "validTo", "tags", "keywords", "scope", "appliesTo", "key"]
+                      .filter((key) => args[key] !== undefined)
+                      .map((key) => [key, args[key]]),
+                  ),
+                },
+                {
+                  signal: context.signal,
+                  sessionId: context.sessionId,
+                  ...(args.kind === "decision" ? { status: "candidate" as const } : {}),
+                },
+              );
+            } catch (error) {
+              // Lesson and evidence refusals are answers the model can act on, not tool failures.
+              if (error instanceof EvidenceNotFoundError || error instanceof LessonRequiresEvidenceError)
+                return fail(insertName, context, error.code, error.message);
+              throw error;
+            }
             return ok(insertName, context, { found: true, ...note }, `Remembered ${note.id} [${note.kind}].`);
           }
           if (!hasBlock && !hasPath) throw new MemoryValidationError("block or path must be a string");
@@ -855,10 +872,10 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
             });
           }
           const budget = typeof args.budget === "number" ? args.budget : gather ? GATHER_BUDGET_TOKENS : 1200;
-          const ranked = groupRecallHits([...fused.values()].sort((a, b) => b.score - a.score).map(({ hit }) => hit), deps.supersessionHint === undefined ? {} : { supersessionHint: deps.supersessionHint }).slice(
-            0,
-            HARD_TOP_K_CAP,
-          );
+          const ranked = groupRecallHits(
+            [...fused.values()].sort((a, b) => b.score - a.score).map(({ hit }) => hit),
+            deps.supersessionHint === undefined ? {} : { supersessionHint: deps.supersessionHint },
+          ).slice(0, HARD_TOP_K_CAP);
           const queryTerms = new Set<string>();
           for (const query of queries) for (const term of lexicalTerms(query)) queryTerms.add(term);
           const pageRanked = ranked.slice(pageStart, pageStart + pageSize);

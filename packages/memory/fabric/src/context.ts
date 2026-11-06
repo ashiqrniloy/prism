@@ -21,11 +21,12 @@ import {
 import { foldObservationalMemoryLedger } from "@arnilo/prism-memory-observational";
 import type { MemoryFabricInjectConfig } from "./config.js";
 import type { FabricDecisions } from "./decisions.js";
-import { coreCandidateRows, type FabricCore } from "./delivery/core.js";
+import { ruleCandidateRows, type FabricRules } from "./delivery/rules.js";
 import type { FabricCueDuplicate, FabricCues } from "./delivery/cues.js";
 import { type FabricDirectoryHandle, memoryRetractionVersion, renderFabricDirectory } from "./directory.js";
 import { fitInjection, PREAMBLE } from "./excerpt.js";
 import { conceptInPlay, conceptPointerLine } from "./ontology/pointer.js";
+import type { LessonNudges } from "./lessons.js";
 import { isActiveNote } from "./lifecycle/index.js";
 import { isMemoryDecisionDeliverable, type MemoryFabric, type MemoryFabricRecallOptions, type MemoryNoteHit } from "./types.js";
 
@@ -234,8 +235,8 @@ async function directoryBlock(directory: FabricDirectoryHandle, signal: AbortSig
  * The pinned core block and the ids it shows, or nothing when the fabric holds nothing: a store that
  * cannot scan or read never fails the turn. An abort still propagates.
  */
-async function coreBlock(
-  core: FabricCore,
+async function rulesBlock(
+  core: FabricRules,
   signal: AbortSignal | undefined,
 ): Promise<{ readonly block?: ContextBlock; readonly ids: readonly string[] }> {
   try {
@@ -244,9 +245,9 @@ async function coreBlock(
     return {
       ids: rendered.itemIds,
       block: {
-        title: "Core memory",
+        title: "Standing rules",
         content: rendered.content,
-        metadata: { source: "fabric-core", itemIds: rendered.itemIds, tokens: rendered.tokens, ...UNTRUSTED_ENVELOPE },
+        metadata: { source: "fabric-rules", itemIds: rendered.itemIds, tokens: rendered.tokens, ...UNTRUSTED_ENVELOPE },
       },
     };
   } catch (error) {
@@ -261,7 +262,7 @@ async function coreBlock(
  * store could not answer. One bounded `get` per scope, so additive writes never reach this check. An abort
  * still propagates.
  */
-async function coreStillShown(
+async function rulesStillShown(
   memories: readonly Memory[],
   ids: readonly string[],
   signal: AbortSignal | undefined,
@@ -272,7 +273,7 @@ async function coreStillShown(
       memories.map(async (memory) => {
         for (let offset = 0; offset < ids.length; offset += MAX_REVALIDATE_IDS) {
           const records = await memory.get(ids.slice(offset, offset + MAX_REVALIDATE_IDS), signal === undefined ? {} : { signal });
-          for (const row of coreCandidateRows(records.map((record) => ({ id: record.id, createdAt: "", metadata: record.metadata })))) {
+          for (const row of ruleCandidateRows(records.map((record) => ({ id: record.id, createdAt: "", metadata: record.metadata })))) {
             shown.add(row.id);
           }
         }
@@ -373,11 +374,12 @@ export function createFabricContext(
   directory?: FabricDirectoryHandle,
   tracker: FabricCitationTracker = createFabricCitationTracker(),
   touchedPaths?: (sessionId: string) => readonly string[],
-  core?: FabricCore,
+  core?: FabricRules,
   cues?: FabricCues,
   memories: readonly Memory[] = [memory],
   delivery?: FabricDeliveryStateStore,
   decisions?: FabricDecisions,
+  lessonNudges?: Pick<LessonNudges, "take" | "forget">,
 ) {
   const cache = new Map<string, SessionTail>();
   const snapshots = new Map<string, { version: number; blocks: readonly ContextBlock[]; ids: readonly string[] }>();
@@ -401,6 +403,7 @@ export function createFabricContext(
     forget(sessionId: string): void {
       snapshots.delete(sessionId);
       cache.delete(sessionId);
+      lessonNudges?.forget(sessionId);
     },
     async build(draft: ContextDraft, context: HookContext): Promise<ContextDraft> {
       const sessionId = context.session?.id ?? context.sessionId;
@@ -409,7 +412,7 @@ export function createFabricContext(
       let degraded = false;
       if (pinned !== undefined && pinned.version === version && pinned.ids.length > 0) {
         // Only what the frozen prefix displays is revalidated, so another process's additive writes keep it byte-stable.
-        const shown = await coreStillShown(memories, pinned.ids, context.signal);
+        const shown = await rulesStillShown(memories, pinned.ids, context.signal);
         if (shown === false) pinned = undefined;
         else degraded = shown === undefined;
       }
@@ -418,18 +421,22 @@ export function createFabricContext(
         invalidate();
         cache.delete(sessionId);
         const index = directory ? await directoryBlock(directory, context.signal) : undefined;
-        const coreResult = core ? await coreBlock(core, context.signal) : { ids: [] };
+        const coreResult = core ? await rulesBlock(core, context.signal) : { ids: [] };
         pinned = { version, blocks: [...(index ? [index] : []), ...(coreResult.block ? [coreResult.block] : [])], ids: coreResult.ids };
         snapshots.set(sessionId, pinned);
       }
       // A store that cannot confirm the core fails closed for this request: the snapshot stays, the block is not resent.
-      const blocks = degraded ? pinned.blocks.filter((block) => block.metadata?.source !== "fabric-core") : pinned.blocks;
+      const blocks = degraded ? pinned.blocks.filter((block) => block.metadata?.source !== "fabric-rules") : pinned.blocks;
       const prefix = (blocks.length ? withContextBlocks(draft, blocks) : undefined) ?? draft;
       const working = options.includeWorking === false ? undefined : await memory.renderWorking();
       const tailBlocks: ContextBlock[] = [];
       if (working && Math.ceil(working.length / 4) <= memory.limits.maxInjectedTokens) {
         tailBlocks.push({ title: "Working memory", content: working, metadata: { source: "fabric-working", ...UNTRUSTED_ENVELOPE } });
       }
+      // The lesson nudge (plan 209 Task 4) is per request, not per user turn: it sits outside the turn cache, is taken
+      // once, and is pushed before any early return. Fixed text and an exchange id only, so it carries no envelope.
+      const nudge = lessonNudges?.take(sessionId);
+      if (nudge !== undefined) tailBlocks.push({ title: "Memory nudge", content: nudge, metadata: { source: "fabric-lesson-nudge" } });
       // Path cues are a delivery tier on their own: they run whether or not topic injection is on.
       if (!inject && cues === undefined) return withTail(prefix, tailBlocks);
       const entries = (await context.session?.entries()) ?? [];

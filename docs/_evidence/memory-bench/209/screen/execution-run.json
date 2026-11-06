@@ -1,0 +1,347 @@
+{
+  "kind": "209-development-screen-run",
+  "journal": {
+    "campaignId": "campaign-5c1330553df3",
+    "status": "setup-failure",
+    "ceiling": 250000000,
+    "spend": 116438346,
+    "attempts": [
+      {
+        "attemptId": "209-screen.work.large.memory-off@1",
+        "jobId": "209-screen.work.large.memory-off",
+        "status": "failed",
+        "usageComplete": false,
+        "reservedInputTokens": 8500000,
+        "confirmedInputTokens": 1957980
+      },
+      {
+        "attemptId": "209-screen.work.large.P@1",
+        "jobId": "209-screen.work.large.P",
+        "status": "failed",
+        "usageComplete": false,
+        "reservedInputTokens": 8500000,
+        "confirmedInputTokens": 1638352
+      },
+      {
+        "attemptId": "209-screen.work.large.P+W@1",
+        "jobId": "209-screen.work.large.P+W",
+        "status": "completed",
+        "usageComplete": false,
+        "reservedInputTokens": 8500000,
+        "confirmedInputTokens": 1664119
+      },
+      {
+        "attemptId": "209-screen.work.large.P+W+O@1",
+        "jobId": "209-screen.work.large.P+W+O",
+        "status": "setup-failure",
+        "usageComplete": false,
+        "reservedInputTokens": 8500000,
+        "confirmedInputTokens": 8500000
+      },
+      {
+        "attemptId": "209-screen.work.large.coding@1",
+        "jobId": "209-screen.work.large.coding",
+        "status": "setup-failure",
+        "usageComplete": false,
+        "reservedInputTokens": 8500000,
+        "confirmedInputTokens": 8500000
+      },
+      {
+        "attemptId": "209-screen.work.large.coding+W@1",
+        "jobId": "209-screen.work.large.coding+W",
+        "status": "setup-failure",
+        "usageComplete": false,
+        "reservedInputTokens": 8500000,
+        "confirmedInputTokens": 8500000
+      },
+      {
+        "attemptId": "209-screen.work.large.P+W+O@2",
+        "jobId": "209-screen.work.large.P+W+O",
+        "status": "completed",
+        "usageComplete": false,
+        "reservedInputTokens": 8500000,
+        "confirmedInputTokens": 2180780
+      },
+      {
+        "attemptId": "209-screen.work.large.coding@2",
+        "jobId": "209-screen.work.large.coding",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 8500000,
+        "confirmedInputTokens": 1429968
+      },
+      {
+        "attemptId": "209-screen.work.large.coding+W@2",
+        "jobId": "209-screen.work.large.coding+W",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 8500000,
+        "confirmedInputTokens": 1369260
+      },
+      {
+        "attemptId": "209-screen.work.small.memory-off@1",
+        "jobId": "209-screen.work.small.memory-off",
+        "status": "failed",
+        "usageComplete": false,
+        "reservedInputTokens": 8500000,
+        "confirmedInputTokens": 551655
+      },
+      {
+        "attemptId": "209-screen.work.large.memory-off@2",
+        "jobId": "209-screen.work.large.memory-off",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 8500000,
+        "confirmedInputTokens": 471821
+      },
+      {
+        "attemptId": "209-screen.work.large.P@2",
+        "jobId": "209-screen.work.large.P",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 8500000,
+        "confirmedInputTokens": 170982
+      },
+      {
+        "attemptId": "209-screen.work.small.P@1",
+        "jobId": "209-screen.work.small.P",
+        "status": "completed",
+        "usageComplete": false,
+        "reservedInputTokens": 8500000,
+        "confirmedInputTokens": 1730467
+      },
+      {
+        "attemptId": "209-screen.work.small.P+W@1",
+        "jobId": "209-screen.work.small.P+W",
+        "status": "completed",
+        "usageComplete": false,
+        "reservedInputTokens": 8500000,
+        "confirmedInputTokens": 1136061
+      },
+      {
+        "attemptId": "209-screen.work.small.P+W+O@1",
+        "jobId": "209-screen.work.small.P+W+O",
+        "status": "completed",
+        "usageComplete": false,
+        "reservedInputTokens": 8500000,
+        "confirmedInputTokens": 1043077
+      },
+      {
+        "attemptId": "209-screen.work.small.coding@1",
+        "jobId": "209-screen.work.small.coding",
+        "status": "completed",
+        "usageComplete": false,
+        "reservedInputTokens": 8500000,
+        "confirmedInputTokens": 1177881
+      },
+      {
+        "attemptId": "209-screen.work.small.coding+W@1",
+        "jobId": "209-screen.work.small.coding+W",
+        "status": "failed",
+        "usageComplete": false,
+        "reservedInputTokens": 8500000,
+        "confirmedInputTokens": 1342063
+      },
+      {
+        "attemptId": "209-screen.noharm.large.P.memoryagentbench-cr@1",
+        "jobId": "209-screen.noharm.large.P.memoryagentbench-cr",
+        "status": "failed",
+        "usageComplete": true,
+        "reservedInputTokens": 3500000,
+        "confirmedInputTokens": 331613
+      },
+      {
+        "attemptId": "209-screen.noharm.large.P+W.memoryagentbench-cr@1",
+        "jobId": "209-screen.noharm.large.P+W.memoryagentbench-cr",
+        "status": "failed",
+        "usageComplete": true,
+        "reservedInputTokens": 3500000,
+        "confirmedInputTokens": 381452
+      },
+      {
+        "attemptId": "209-screen.noharm.large.P.beam-100k@1",
+        "jobId": "209-screen.noharm.large.P.beam-100k",
+        "status": "failed",
+        "usageComplete": true,
+        "reservedInputTokens": 3500000,
+        "confirmedInputTokens": 566836
+      },
+      {
+        "attemptId": "209-screen.noharm.large.P+W.beam-100k@1",
+        "jobId": "209-screen.noharm.large.P+W.beam-100k",
+        "status": "failed",
+        "usageComplete": true,
+        "reservedInputTokens": 3500000,
+        "confirmedInputTokens": 679578
+      },
+      {
+        "attemptId": "209-screen.noharm.large.P.locomo@1",
+        "jobId": "209-screen.noharm.large.P.locomo",
+        "status": "failed",
+        "usageComplete": true,
+        "reservedInputTokens": 3500000,
+        "confirmedInputTokens": 298312
+      },
+      {
+        "attemptId": "209-screen.noharm.large.P+W.locomo@1",
+        "jobId": "209-screen.noharm.large.P+W.locomo",
+        "status": "failed",
+        "usageComplete": true,
+        "reservedInputTokens": 3500000,
+        "confirmedInputTokens": 238524
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "209-screen.work.large.P+W",
+      "attemptId": "209-screen.work.large.P+W@1",
+      "status": "completed",
+      "usageComplete": false,
+      "reused": true,
+      "charged": 8500000
+    },
+    {
+      "id": "209-screen.work.large.P",
+      "attemptId": "209-screen.work.large.P@2",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 170982
+    },
+    {
+      "id": "209-screen.work.large.memory-off",
+      "attemptId": "209-screen.work.large.memory-off@2",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 8500000
+    },
+    {
+      "id": "209-screen.work.small.P",
+      "attemptId": "209-screen.work.small.P@1",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": false,
+      "charged": 8500000
+    },
+    {
+      "id": "209-screen.work.small.P+W+O",
+      "attemptId": "209-screen.work.small.P+W+O@1",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": false,
+      "charged": 8500000
+    },
+    {
+      "id": "209-screen.work.large.coding",
+      "attemptId": "209-screen.work.large.coding@2",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 8500000
+    },
+    {
+      "id": "209-screen.work.small.P+W",
+      "attemptId": "209-screen.work.small.P+W@1",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": false,
+      "charged": 8500000
+    },
+    {
+      "id": "209-screen.work.large.coding+W",
+      "attemptId": "209-screen.work.large.coding+W@2",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 3500000
+    },
+    {
+      "id": "209-screen.noharm.large.P.memoryagentbench-cr",
+      "attemptId": "209-screen.noharm.large.P.memoryagentbench-cr@1",
+      "answersDir": ".cache/memory-bench/209/noharm/P/answers",
+      "status": "partial",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 3500000
+    },
+    {
+      "id": "209-screen.noharm.large.P+W.memoryagentbench-cr",
+      "attemptId": "209-screen.noharm.large.P+W.memoryagentbench-cr@1",
+      "answersDir": ".cache/memory-bench/209/noharm/P+W/answers",
+      "status": "partial",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 3500000
+    },
+    {
+      "id": "209-screen.noharm.large.P.beam-100k",
+      "attemptId": "209-screen.noharm.large.P.beam-100k@1",
+      "answersDir": ".cache/memory-bench/209/noharm/P/answers",
+      "status": "partial",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 3500000
+    },
+    {
+      "id": "209-screen.noharm.large.P.locomo",
+      "attemptId": "209-screen.noharm.large.P.locomo@1",
+      "answersDir": ".cache/memory-bench/209/noharm/P/answers",
+      "status": "partial",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 298312
+    },
+    {
+      "id": "209-screen.noharm.large.P+W.beam-100k",
+      "attemptId": "209-screen.noharm.large.P+W.beam-100k@1",
+      "answersDir": ".cache/memory-bench/209/noharm/P+W/answers",
+      "status": "partial",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 3500000
+    },
+    {
+      "id": "209-screen.noharm.large.P+W.locomo",
+      "attemptId": "209-screen.noharm.large.P+W.locomo@1",
+      "answersDir": ".cache/memory-bench/209/noharm/P+W/answers",
+      "status": "partial",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 238524
+    },
+    {
+      "id": "209-screen.work.large.P+W+O",
+      "attemptId": "209-screen.work.large.P+W+O@2",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": false,
+      "charged": 238524
+    },
+    {
+      "id": "209-screen.work.small.coding",
+      "attemptId": "209-screen.work.small.coding@1",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": false,
+      "charged": 238524
+    },
+    {
+      "id": "209-screen.work.small.coding+W",
+      "attemptId": "209-screen.work.small.coding+W@1",
+      "status": "failed",
+      "cause": "failed sessions in 1 persona-arms: sse_event_overflow",
+      "usageComplete": false,
+      "charged": 238524
+    },
+    {
+      "id": "209-screen.work.small.memory-off",
+      "attemptId": "209-screen.work.small.memory-off@1",
+      "status": "failed",
+      "cause": "failed sessions in 4 persona-arms: ERR_PRISM_EVAL_USER_SIMULATOR, sse_event_overflow",
+      "usageComplete": false,
+      "charged": 238524
+    }
+  ]
+}

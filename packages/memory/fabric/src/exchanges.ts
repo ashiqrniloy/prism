@@ -3,6 +3,10 @@
  * text plus the assistant reply that follows it — so a later session can recall what was actually
  * said, not only what a later extractor made of it.
  *
+ * Tool payloads are never stored. With the opt-in `steps` option (plan 209 Task 2) an exchange also
+ * carries a bounded `## Steps` trace — tool, argument summary, outcome, first error line, result entry
+ * id — which is evidence for recall, never a candidate for extraction.
+ *
  * Two rules shape everything here. An exchange is **paired**, never a single message: a tool round
  * (an assistant message that carries a `tool_call`) is not a completed exchange, and tool payloads are
  * never stored. And the note's inputs are the **persisted** session entries, which the kernel writes
@@ -25,6 +29,8 @@ const PART_CONTEXT_OVERHEAD = 40;
 export interface ExchangePair {
   readonly user: SessionEntry;
   readonly assistant: SessionEntry;
+  /** The persisted entries between the two (tool rounds). Present only when there are some; the step trace reads them. */
+  readonly between?: readonly SessionEntry[];
 }
 
 /** Counts of one archive run. `parts` can exceed `archived` when a long exchange splits. */
@@ -37,6 +43,8 @@ export interface ExchangeArchiveReport {
   readonly parts: number;
   /** Refusals per gate, reported so a host can note them. */
   readonly refused: { readonly trust: number; readonly secret: number };
+  /** Steps whose text the trust scan or redactor dropped (only `outcome` kept); zero unless `steps` is on. */
+  readonly stepsDropped: number;
   /** The assistant entry id of the last pair the scan reached; the caller's back-fill cursor. */
   readonly cursor?: string;
 }
@@ -52,6 +60,17 @@ export interface ExchangeArchiveOptions {
   readonly consent?: MemoryConsentInput;
   /** Defense in depth: refuse a turn the redactor would rewrite instead of storing altered history. */
   readonly redactor?: SecretRedactor;
+  /** Opt-in condensed tool-step trace (plan 209 Task 2). Absent, an exchange stores dialogue only. */
+  readonly steps?: ExchangeStepsOptions;
+}
+
+export interface ExchangeStepsOptions {
+  /** Most tool rounds listed per exchange; further ones collapse into one "more" line. */
+  readonly maxSteps: number;
+  /** The argument names a tool declares (its `parameters.properties`), so the summary reads the schema, not the tool name. */
+  readonly argumentFields?: (tool: string) => ReadonlySet<string> | undefined;
+  /** Regex sources (`CONSOLIDATION_PATTERNS.outcomes`): a failed-then-passed run of a matching command tags the exchange `outcome:fixed`. */
+  readonly outcomePatterns?: readonly string[];
 }
 
 export interface ExchangeArchive {
@@ -85,16 +104,165 @@ export function isFinalAssistant(message: Message | undefined): boolean {
 export function exchangePairs(entries: readonly SessionEntry[]): readonly ExchangePair[] {
   const pairs: ExchangePair[] = [];
   let user: SessionEntry | undefined;
+  let between: SessionEntry[] = [];
   for (const entry of entries) {
     const message = entry.message;
     if (message === undefined) continue;
     if (message.role === "user") {
-      if (messageText(message).length > 0) user = entry;
+      if (messageText(message).length > 0) {
+        user = entry;
+        between = [];
+      }
       continue;
     }
-    if (user !== undefined && isFinalAssistant(message)) pairs.push({ user, assistant: entry });
+    if (user !== undefined && isFinalAssistant(message)) {
+      pairs.push({ user, assistant: entry, ...(between.length === 0 ? {} : { between }) });
+      between = [];
+    } else if (user !== undefined) between.push(entry);
   }
   return pairs;
+}
+
+/** Argument names tried in order when a tool declares them; the first scalar argument is the fallback. */
+const ARGUMENT_FIELDS: readonly string[] = ["command", "cmd", "path", "file_path", "filePath", "file", "query", "pattern", "url"];
+const MAX_ARGUMENT_CHARS = 120;
+const MAX_ERROR_CHARS = 200;
+const TOOL_NAME = /^[\w.:-]{1,64}$/;
+
+export interface ExchangeStep {
+  readonly tool: string;
+  /** Argument summary, at most 120 characters. Absent when the tool took no scalar argument. */
+  readonly argument?: string;
+  readonly outcome: "ok" | "error";
+  /** First line of the error text, at most 200 characters. */
+  readonly error?: string;
+  /** The session entry id of the tool result, so `memory.read { around }` can reach the full output. */
+  readonly entryId: string;
+}
+
+function flat(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+function clip(text: string, max: number): string {
+  return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
+}
+
+function summarizeArgument(args: Record<string, unknown>, declared: ReadonlySet<string> | undefined): string | undefined {
+  const scalar = (value: unknown): string | undefined =>
+    typeof value === "string" ? value : typeof value === "number" || typeof value === "boolean" ? String(value) : undefined;
+  for (const field of ARGUMENT_FIELDS) {
+    if (declared !== undefined && !declared.has(field)) continue;
+    const text = scalar(args[field]);
+    if (text !== undefined && flat(text).length > 0) return clip(flat(text).replace(/`/g, "'"), MAX_ARGUMENT_CHARS);
+  }
+  for (const value of Object.values(args)) {
+    const text = scalar(value);
+    if (text !== undefined && flat(text).length > 0) return clip(flat(text).replace(/`/g, "'"), MAX_ARGUMENT_CHARS);
+  }
+  return undefined;
+}
+
+/**
+ * One step per tool result among `entries`, in order: the tool, an argument summary, `ok`/`error`, the
+ * error's first line, and the result entry id. Result bodies are never read.
+ */
+export function summarizeSteps(
+  entries: readonly SessionEntry[],
+  options: Pick<ExchangeStepsOptions, "argumentFields"> = {},
+): readonly ExchangeStep[] {
+  const calls = new Map<string, { readonly name: string; readonly arguments: Record<string, unknown> }>();
+  const steps: ExchangeStep[] = [];
+  for (const entry of entries) {
+    for (const block of entry.message?.content ?? []) {
+      if (block.type === "tool_call") {
+        calls.set(block.id, { name: block.name, arguments: block.arguments });
+        continue;
+      }
+      if (block.type !== "tool_result") continue;
+      const call = calls.get(block.toolCallId);
+      const tool = call?.name ?? block.name;
+      const argument = call === undefined ? undefined : summarizeArgument(call.arguments, options.argumentFields?.(tool));
+      const firstLine =
+        block.error === undefined ? undefined : (block.error.message.split(/\r?\n/).find((line) => line.trim().length > 0) ?? "");
+      steps.push({
+        tool,
+        ...(argument === undefined ? {} : { argument }),
+        outcome: block.error === undefined ? "ok" : "error",
+        ...(firstLine === undefined || flat(firstLine).length === 0 ? {} : { error: clip(flat(firstLine), MAX_ERROR_CHARS) }),
+        entryId: entry.id,
+      });
+    }
+  }
+  return steps;
+}
+
+/** True when an `error` step is followed by an `ok` step of the same tool and argument, for a command the patterns match. */
+export function hasFailedThenPassed(steps: readonly ExchangeStep[], patterns: readonly string[]): boolean {
+  if (patterns.length === 0) return false;
+  const expressions = patterns.map((pattern) => new RegExp(pattern, "i"));
+  const failed = new Set<string>();
+  for (const step of steps) {
+    if (step.argument === undefined) continue;
+    const text = `${step.tool} ${step.argument}`;
+    if (!expressions.some((expression) => expression.test(text))) continue;
+    const key = `${step.tool}\0${step.argument}`;
+    if (step.outcome === "error") failed.add(key);
+    else if (failed.has(key)) return true;
+  }
+  return false;
+}
+
+const STEPS_HEADING = "\n\n## Steps\n";
+
+/**
+ * An archived exchange's dialogue without its step trace. Steps are evidence for recall; extraction
+ * reads only what was said (plan 188.3: tool output is never candidate text).
+ */
+export function exchangeDialogue(text: string): string {
+  const at = text.lastIndexOf(STEPS_HEADING);
+  if (at < 0) return text;
+  const rest = text.slice(at + STEPS_HEADING.length).split("\n");
+  return rest.every((line) => line.startsWith("- ")) ? text.slice(0, at) : text;
+}
+
+/**
+ * The `## Steps` block (with its leading blank line) and the counts the caller reports. A step whose text
+ * the trust scan flags, or the redactor would rewrite, keeps only its tool name and outcome. The block
+ * never exceeds `maxChars`: later steps collapse into one "more" line.
+ */
+export function renderSteps(
+  steps: readonly ExchangeStep[],
+  limits: { readonly maxSteps: number; readonly maxChars: number; readonly redactor?: SecretRedactor },
+): { readonly block: string; readonly dropped: number } {
+  const lines: string[] = [];
+  let dropped = 0;
+  let used = STEPS_HEADING.length - 1;
+  let listed = 0;
+  for (const step of steps.slice(0, limits.maxSteps)) {
+    const tool = TOOL_NAME.test(step.tool) ? step.tool : "tool";
+    const argument = step.argument === undefined ? undefined : normalizeScopedMemoryContent(step.argument);
+    const error = step.error === undefined ? undefined : normalizeScopedMemoryContent(step.error);
+    const text = [tool, argument ?? "", error ?? ""].join("\n");
+    const unsafe =
+      !TOOL_NAME.test(step.tool) ||
+      !scanScopedMemoryContent(text).ok ||
+      (limits.redactor !== undefined && limits.redactor.redact(text) !== text);
+    const line = unsafe
+      ? `- ${tool} → ${step.outcome} (entry ${step.entryId})`
+      : `- ${tool}${argument === undefined ? "" : ` \`${argument}\``} → ${step.outcome}${error === undefined ? "" : `: ${error}`} (entry ${step.entryId})`;
+    if (unsafe) dropped += 1;
+    const overflow = steps.length - listed - 1;
+    const reserve = overflow > 0 ? `\n- … ${overflow} more step(s)`.length : 0;
+    if (used + 1 + line.length + reserve > limits.maxChars) break;
+    lines.push(line);
+    used += 1 + line.length;
+    listed += 1;
+  }
+  if (lines.length === 0) return { block: "", dropped };
+  const more = steps.length - listed;
+  if (more > 0) lines.push(`- … ${more} more step(s)`);
+  return { block: `${STEPS_HEADING}${lines.join("\n")}`, dropped };
 }
 
 /**
@@ -185,7 +353,7 @@ export function exchangeKeywords(text: string): readonly string[] {
 }
 
 function emptyReport(): ExchangeArchiveReport {
-  return { archived: 0, skipped: 0, parts: 0, refused: { trust: 0, secret: 0 } };
+  return { archived: 0, skipped: 0, parts: 0, refused: { trust: 0, secret: 0 }, stepsDropped: 0 };
 }
 
 export function createExchangeArchive(options: ExchangeArchiveOptions): ExchangeArchive {
@@ -204,12 +372,26 @@ export function createExchangeArchive(options: ExchangeArchiveOptions): Exchange
       return { ...report, skipped: 1, refused: { trust: 0, secret: 1 } };
     }
     const sessionId = writeOptions.sessionId ?? "";
-    let contents = splitExchange(userText, assistantText, maxTextChars);
+    // The step trace is bounded to a quarter of the entry limit and appended to the last part, so the
+    // dialogue keeps at least three quarters and stays verbatim.
+    const steps = options.steps === undefined || input.between === undefined ? [] : summarizeSteps(input.between, options.steps);
+    const rendered =
+      steps.length === 0
+        ? { block: "", dropped: 0 }
+        : renderSteps(steps, {
+            maxSteps: options.steps!.maxSteps,
+            maxChars: Math.floor(maxTextChars / 4),
+            ...(options.redactor === undefined ? {} : { redactor: options.redactor }),
+          });
+    const fixed = rendered.block !== "" && hasFailedThenPassed(steps, options.steps?.outcomePatterns ?? []);
+    const room = maxTextChars - rendered.block.length;
+    let contents = splitExchange(userText, assistantText, room);
     // A split part also carries `context`, which the store indexes with the text: split again with
     // headroom so the part plus its context still fits the core limit.
-    if (contents.length > 1 && maxTextChars > 2 * PART_CONTEXT_OVERHEAD) {
-      contents = splitExchange(userText, assistantText, maxTextChars - PART_CONTEXT_OVERHEAD);
+    if (contents.length > 1 && room > 2 * PART_CONTEXT_OVERHEAD) {
+      contents = splitExchange(userText, assistantText, room - PART_CONTEXT_OVERHEAD);
     }
+    if (rendered.block !== "") contents = [...contents.slice(0, -1), `${contents[contents.length - 1]}${rendered.block}`];
     const ids = contents.map((_, part) => exchangeNoteId(sessionId, input.user.id, input.assistant.id, part));
     if (exists !== undefined) {
       const present = await Promise.all(ids.map((id) => exists(id)));
@@ -238,6 +420,7 @@ export function createExchangeArchive(options: ExchangeArchiveOptions): Exchange
           ...(dates.length === 0 ? {} : { dates }),
           sourceEntryIds: [input.user.id, input.assistant.id],
           keywords: exchangeKeywords(content),
+          ...(fixed ? { tags: ["outcome:fixed"] } : {}),
           ...(contents.length < 2 ? {} : { context: `part ${part + 1} of ${contents.length}` }),
           ...(links === undefined ? {} : { links }),
           ...(options.consent === undefined ? {} : { consent: options.consent }),
@@ -246,7 +429,7 @@ export function createExchangeArchive(options: ExchangeArchiveOptions): Exchange
       );
       written += 1;
     }
-    return { ...report, archived: 1, parts: written };
+    return { ...report, archived: 1, parts: written, stepsDropped: rendered.dropped };
   }
 
   async function entries(
@@ -263,6 +446,7 @@ export function createExchangeArchive(options: ExchangeArchiveOptions): Exchange
     let parts = 0;
     let trust = 0;
     let secret = 0;
+    let stepsDropped = 0;
     let cursor = priorCursor;
     for (const item of pairs.slice(start)) {
       const result = await pair(item, writeOptions);
@@ -271,9 +455,10 @@ export function createExchangeArchive(options: ExchangeArchiveOptions): Exchange
       parts += result.parts;
       trust += result.refused.trust;
       secret += result.refused.secret;
+      stepsDropped += result.stepsDropped;
       cursor = item.assistant.id;
     }
-    return { archived, skipped, parts, refused: { trust, secret }, ...(cursor === undefined ? {} : { cursor }) };
+    return { archived, skipped, parts, refused: { trust, secret }, stepsDropped, ...(cursor === undefined ? {} : { cursor }) };
   }
 
   return { pair, entries };

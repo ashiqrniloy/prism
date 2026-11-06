@@ -11,7 +11,7 @@ import type { MemoryFabricInjectConfig } from "../../config.js";
 import { createFabricCitationTracker, createFabricContext } from "../../context.js";
 import { createMemory, createMemoryFabric, createMemoryWorkingStore } from "../../index.js";
 import { type MemoryNoteHit, type MemoryNoteMetadata } from "../../types.js";
-import { createFabricCore, type ResolvedFabricCoreOptions, resolveFabricCoreOptions } from "../core.js";
+import { createFabricRules, type ResolvedFabricRulesOptions, resolveFabricRulesOptions } from "../rules.js";
 import {
   createFabricCues,
   type FabricCueSessionState,
@@ -42,7 +42,7 @@ interface HarnessOptions {
   readonly cues?: false | MemoryFabricCuesConfig;
   readonly inject?: false | MemoryFabricInjectConfig;
   readonly recall?: (query: string) => Promise<{ hits: readonly MemoryNoteHit[]; explain: readonly never[] }>;
-  readonly core?: boolean;
+  readonly rules?: boolean;
 }
 
 function sessionState(): FabricCueSessionState & { peek(): unknown } {
@@ -80,10 +80,10 @@ function harness(input: HarnessOptions = {}) {
         });
   const cues = makeCues();
   const core =
-    input.core === true
-      ? createFabricCore({
+    input.rules === true
+      ? createFabricRules({
           scopes: [{ level: "project", memory: project }],
-          options: resolveFabricCoreOptions({ maxTokens: 20 }, true) as ResolvedFabricCoreOptions,
+          options: resolveFabricRulesOptions({ maxTokens: 20 }, true) as ResolvedFabricRulesOptions,
           scanMetadata: (query) => {
             scans += 1;
             return scanMetadata(query);
@@ -194,9 +194,9 @@ describe("path cues (plan 188.5 Task 2)", () => {
     assert.doesNotMatch(tail(built).text, new RegExp(note.id));
   });
 
-  it("cue_dedups_against_core_topic_inject_and_visible_read", async () => {
-    const core = harness({ inject: { topK: 3, budgetTokens: 1200 }, core: true });
-    const inCore = await core.rememberPath("core note", { promotion: explicit(1) });
+  it("cue_dedups_against_topic_inject_and_visible_read_and_path_rules_stay_out_of_the_block", async () => {
+    const core = harness({ inject: { topK: 3, budgetTokens: 1200 }, rules: true });
+    const strong = await core.rememberPath("strong note", { promotion: explicit(1) });
     const topic = await core.rememberPath("topic note");
     const visible = await core.rememberPath("read note", { kind: "file", path: FILE });
     const cue = await core.rememberPath(`cue note ${"x".repeat(200)}`, { glob: "packages/memory/fabric/**" });
@@ -222,10 +222,10 @@ describe("path cues (plan 188.5 Task 2)", () => {
     );
     const built = await projection.build(readDraft, core.context);
     const rendered = tail(built);
-    // The core prefix shows A; topic injection shows B; the visible read hides C; only D cues.
-    assert.match(JSON.stringify(built.context), new RegExp(inCore.id));
-    assert.deepEqual([...rendered.ids].sort(), [topic.id, cue.id].sort(), "the block shows only the topic hit and the cue");
-    assert.doesNotMatch(rendered.text, new RegExp(`\\[${inCore.id}\\] path`), "already in the core");
+    // A path-scoped rule never rides in the always-loaded block (plan 209 Task 3): it loads as a cue when a
+    // touched path matches. Topic injection shows B; the visible read hides C; A and D cue.
+    assert.doesNotMatch(String(JSON.stringify(built.context)), new RegExp(strong.id), "a path rule is not in the rules block");
+    assert.deepEqual([...rendered.ids].sort(), [strong.id, topic.id, cue.id].sort(), "the block shows the topic hit and the cues");
     assert.doesNotMatch(rendered.text, new RegExp(`\\[${visible.id}\\] path`), "text is in a visible read");
     assert.match(rendered.text, new RegExp(`\\[${cue.id}\\] path fact \\(for packages/memory/fabric/\\*\\*\\)`));
   });

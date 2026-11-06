@@ -863,6 +863,7 @@
     "@arnilo/prism-tools-web": {
       ".": {
         "suites": [
+          "examples/package-skills.ts",
           "packages/tools/web/src/__tests__/live.test.ts",
           "packages/tools/web/src/__tests__/package.test.ts",
           "packages/tools/web/src/__tests__/web-tools.test.ts",

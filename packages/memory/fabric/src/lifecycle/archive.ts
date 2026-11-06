@@ -22,6 +22,11 @@ export interface ArchiveConfig {
   readonly storageBelow: number;
   /** Sessions a note lives before it can be archived at all. Default 10. */
   readonly graceSessions: number;
+  /**
+   * A note tagged `lesson` archives once it has gone this many scope sessions without a use, whatever its
+   * strengths (plan 209 Task 4: a lesson's retention follows use). Absent: lessons follow the general rule only.
+   */
+  readonly lessonSessions?: number;
 }
 
 /** Provisional thresholds (plan 188.6 fits them): both must be low, so an important note stays. */
@@ -53,7 +58,7 @@ export interface ArchiveDecisionOptions {
  * carries none and counts as ordinal 0, which grants it the grace window immediately.
  */
 export function shouldArchive(
-  metadata: Pick<MemoryNoteMetadata, "kind" | "uses" | "useSessions" | "helpful" | "harmful" | "promotion" | "pinned" | "created">,
+  metadata: Pick<MemoryNoteMetadata, "kind" | "uses" | "useSessions" | "helpful" | "harmful" | "promotion" | "pinned" | "created" | "tags">,
   clock: number,
   options: ArchiveDecisionOptions = {},
 ): boolean {
@@ -61,10 +66,26 @@ export function shouldArchive(
   // The ontology curator alone changes or retires a concept (plan 207 Task 2).
   if (metadata.kind === "concept") return false;
   const archive = options.archive ?? DEFAULT_ARCHIVE_CONFIG;
+  if (lessonUnused(metadata, clock, archive)) return true;
   const decay = options.decay ?? DEFAULT_DECAY;
   const d = decay[metadata.kind] ?? DEFAULT_DECAY.fact;
   if (retrievalStrength(metadata, clock, d) >= archive.retrievalBelow) return false;
   if (storageStrength(metadata, options.storageWeights ?? DEFAULT_STORAGE_WEIGHTS) >= archive.storageBelow) return false;
   const created = Number.isSafeInteger(metadata.created) && (metadata.created as number) > 0 ? (metadata.created as number) : 0;
   return clock - created >= archive.graceSessions;
+}
+
+/**
+ * The lesson rule: a `lesson`-tagged note unused for `archive.lessonSessions` scope sessions, counted from
+ * its last recorded use (or its creation when it was never used). Never a pinned note.
+ */
+export function lessonUnused(
+  metadata: Pick<MemoryNoteMetadata, "uses" | "pinned" | "created" | "tags">,
+  clock: number,
+  archive: ArchiveConfig,
+): boolean {
+  if (archive.lessonSessions === undefined || metadata.pinned === true || metadata.tags?.includes("lesson") !== true) return false;
+  const created = Number.isSafeInteger(metadata.created) && (metadata.created as number) > 0 ? (metadata.created as number) : 0;
+  const lastUse = (metadata.uses ?? []).reduce((latest, use) => Math.max(latest, use.s), created);
+  return clock - lastUse >= archive.lessonSessions;
 }

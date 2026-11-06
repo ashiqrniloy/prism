@@ -1,0 +1,169 @@
+{
+  "generatedAt": "2026-11-06T08:58:18.270Z",
+  "kind": "209-development-screen-manifest",
+  "schemaVersion": 1,
+  "plan": 209,
+  "task": 6,
+  "gateId": "W-1",
+  "partition": "dev",
+  "status": "approved",
+  "executable": true,
+  "workOutcomeCriteriaHash": "d30681ec13dfd1e9f01ce9fdfe8ad2caa674b97182210c12788bd0bc77717bd2",
+  "threeTierCriteriaHash": "3d5a5c10fddda0931d00003aad8f2fccf5bdef2a829fa0b09bfac004b2bd263f",
+  "partitionIdsHash": {
+    "coding": "0afe60bde67d5bd5a6e0c316a96d90f4e7a48033a7b6aa75a929b7565c82a016",
+    "assistant": "bfb4907b13aa27c2e1148a0939371f220550948de2f6f9ba9cec4ee962ea0984"
+  },
+  "productHash": "b33a7f901ae8bb335d54d3f2dcdd62fecbeca355967a2df65cf59f005bda07a1",
+  "tuning": {
+    "exchanges.maxSteps": 24,
+    "rules.maxTokens": 2000,
+    "lessons.minTurnsBetweenNudges": 5,
+    "lessons.archiveAfterSessions": 20
+  },
+  "provider": "kilo",
+  "model": "209-panel",
+  "ceiling": 250000000,
+  "journalPath": ".cache/memory-bench/209/journal-smoke-c79c623a.json",
+  "summaryPath": "docs/_evidence/memory-bench/209/screen/execution-smoke-c79c623a.json",
+  "models": {
+    "answers": [
+      "commandcode/meta/muse-spark-1.2-contributor",
+      "commandcode/Qwen/Qwen3.7-Flash"
+    ],
+    "small": [
+      "commandcode/Qwen/Qwen3.7-Flash"
+    ],
+    "simulator": "commandcode/Qwen/Qwen3.7-Flash",
+    "judges": [
+      "commandcode/stealth/glyph-cluster:free",
+      "commandcode/stealth/crouton-alpha"
+    ],
+    "curator": "agent-own (wiki model unset: each answer model curates its own concepts in P+W+O)",
+    "families": {
+      "answers": [
+        "meta",
+        "qwen"
+      ],
+      "judges": [
+        "stealth (glyph-cluster)",
+        "stealth (crouton-alpha)"
+      ]
+    },
+    "judgesDoNotAnswer": true
+  },
+  "billing": {
+    "mode": "free-plus-named-paid",
+    "paidAnswers": [
+      "commandcode/meta/muse-spark-1.2-contributor",
+      "commandcode/Qwen/Qwen3.7-Flash"
+    ],
+    "usdCap": 20,
+    "rates": {
+      "commandcode/meta/muse-spark-1.2-contributor": {
+        "input": 0.1,
+        "output": 0.2,
+        "cacheRead": 0.002
+      },
+      "commandcode/Qwen/Qwen3.7-Flash": {
+        "input": 0.03,
+        "output": 0.13,
+        "cacheRead": 0.006
+      }
+    },
+    "paidFallbacks": []
+  },
+  "arms": {
+    "work": [
+      "memory-off",
+      "P",
+      "P+W",
+      "P+W+O",
+      "coding",
+      "coding+W"
+    ],
+    "noHarm": [
+      "P",
+      "P+W"
+    ]
+  },
+  "caps": {
+    "work": {
+      "maxInputTokens": 8000000,
+      "concurrency": 2,
+      "judgeCalls": 400,
+      "wallTimeCapHours": 8
+    },
+    "noHarm": {
+      "maxInputTokens": 3000000,
+      "wallTimeCapHours": 6
+    },
+    "journalCeiling": 250000000
+  },
+  "cohort": {
+    "work": {
+      "partition": "dev",
+      "partitionIdsHash": {
+        "coding": "0afe60bde67d5bd5a6e0c316a96d90f4e7a48033a7b6aa75a929b7565c82a016",
+        "assistant": "bfb4907b13aa27c2e1148a0939371f220550948de2f6f9ba9cec4ee962ea0984"
+      }
+    },
+    "noHarm": {
+      "memoryagentbench-cr": {
+        "partition": "dev",
+        "partitionIdsHash": "b96dba43ea61072d4bb290df35f82a56800cb7052cd2b3347a45307f01c4b842",
+        "quickQuestions": 8
+      },
+      "beam-100k": {
+        "partition": "dev",
+        "partitionIdsHash": "8ead1f2d43bb523d25a0d7bea18e602b00122b2870e04ca0d7162928ac1d3567",
+        "quickQuestions": 10
+      },
+      "locomo": {
+        "partition": "dev",
+        "partitionIdsHash": "f8462784b7acf89a4b82a40d68369c2abf35f3e69d69e39b4b2b118b4c714dbf",
+        "quickQuestions": 10
+      }
+    }
+  },
+  "comparisons": {
+    "work": "P+W against P per answer model, pooled over both families (work row)",
+    "memory": "P against memory-off (memory row)",
+    "ontologyWork": "P+W+O against P+W (ontology-work row = plan 208 O8)",
+    "codingWork": "coding+W against coding (reported only)",
+    "noHarm": "P+W against P on plan 202's dev quick slices, paired per question, large model (advisory)"
+  },
+  "results": [],
+  "jobs": [
+    {
+      "id": "209-screen.work.large.coding+W",
+      "kind": "work-outcome",
+      "family": "209-screen.work.large",
+      "role": "coding+W",
+      "arm": "coding+W",
+      "suite": "work-outcome",
+      "config": "coding+W",
+      "subset": "dev",
+      "provider": "commandcode",
+      "model": "meta/muse-spark-1.2-contributor",
+      "simulator": "commandcode/Qwen/Qwen3.7-Flash",
+      "simulatorPaid": true,
+      "judges": "commandcode/stealth/glyph-cluster:free,commandcode/stealth/crouton-alpha",
+      "freeOnly": false,
+      "maxInputTokens": 8000000,
+      "concurrency": 2,
+      "judgeCalls": 400,
+      "wallTimeCapHours": 8,
+      "personaLimit": 1
+    }
+  ],
+  "manifestHash": "1a513107bcce1cd3f28cdb29e71f9e98096129ad77a20eb572cff7581b91d148",
+  "worker": "c79c623a",
+  "executionManifestPath": "docs/_evidence/memory-bench/209/screen/execution-manifest-smoke-c79c623a.json",
+  "outputPrefix": "smoke-209-task6",
+  "gate": {
+    "path": "docs/_evidence/memory-bench/209/gates/owner-gate-w1.json",
+    "manifestHash": "1a513107bcce1cd3f28cdb29e71f9e98096129ad77a20eb572cff7581b91d148",
+    "approvedAt": "2026-11-05"
+  }
+}

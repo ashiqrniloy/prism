@@ -28,6 +28,7 @@ import { dirname, join, relative, resolve, sep } from "node:path";
 import {
   definePackage,
   type JsonObject,
+  type Message,
   type JsonSchema,
   type PackageAPI,
   type PackageCommand,
@@ -35,6 +36,7 @@ import {
   type PackageInstance,
   type Secret,
   type SessionContext,
+  type SessionEntry,
   type SessionState,
 } from "@arnilo/prism";
 import {
@@ -55,16 +57,26 @@ import {
   resolveMemoryFabricConfig,
 } from "./config.js";
 import { ConsolidationExtractionError } from "./consolidation/extract.js";
+import { CONSOLIDATION_PATTERNS } from "./consolidation/gather.js";
 import { hasNewObservationalMaterial } from "./consolidation/pass.js";
 import { createFabricCitationTracker, createFabricContext, readFabricDeliveryState, resetFabricDeliveryState } from "./context.js";
 import { createMemoryFabric } from "./create.js";
 import { createFabricDecisions } from "./decisions.js";
-import { createFabricCore } from "./delivery/core.js";
 import { createFabricCues } from "./delivery/cues.js";
-import { captureDecision, confirmDecisionProposals, decisionNoteId } from "./delivery/rules.js";
+import { captureAndConfirmRule, createFabricRules, type FabricRules, reconcileRulesFile } from "./delivery/rules.js";
 import { createFabricTeam, type FabricTeam, type FabricTeamApproval } from "./delivery/team.js";
 import { createFabricDirectory } from "./directory.js";
-import { createExchangeArchive, type ExchangeArchive, exchangePairs, messageText } from "./exchanges.js";
+import {
+  createExchangeArchive,
+  type ExchangeArchive,
+  type ExchangePair,
+  exchangeNoteId,
+  exchangePairs,
+  hasFailedThenPassed,
+  messageText,
+  summarizeSteps,
+} from "./exchanges.js";
+import { createLessonNudges, lessonSignal } from "./lessons.js";
 import { createFabricFileJail } from "./files.js";
 import { createScopeClock, readScopeClockState, SCOPE_CLOCK_COUNTER } from "./lifecycle/clock.js";
 import { citationEvidence } from "./lifecycle/evidence.js";
@@ -95,7 +107,7 @@ export {
   CODING_PRESET_REVISION,
   CONVERSATIONAL_PRESET_REVISION,
   type MemoryFabricConfig,
-  type MemoryFabricCoreConfig,
+  type MemoryFabricRulesConfig,
   type MemoryFabricCuesConfig,
   type MemoryFabricExchangesConfig,
   type MemoryFabricInjectConfig,
@@ -111,7 +123,7 @@ export {
   type MemoryFabricTeamConfig,
   type MemoryFabricToolsConfig,
   memoryFabricConfigSchema,
-  type ResolvedFabricCoreOptions,
+  type ResolvedFabricRulesOptions,
   type ResolvedFabricExchangesOptions,
   type ResolvedFabricScope,
   type ResolvedFabricTeamOptions,
@@ -399,8 +411,8 @@ const definition = definePackage<MemoryFabricConfig>({
       cueTurns: 0,
       reason: "start",
     });
-    // Coding decisions capture only in the coding preset; the same rules module serves every preset later.
-    const decisionCapture = config.preset?.name === "coding";
+    // Confirmed rule capture is a config field (`rules.capture`); the coding preset turns it on.
+    const ruleCapture = config.rules !== false && config.rules.capture === "confirm";
     // Turns since the last background pass, per session. In memory: a restored session starts at 0,
     // and the `session.opened` catch-up covers whatever the previous process missed.
     const turnsSincePass = new Map<string, number>();
@@ -451,12 +463,12 @@ const definition = definePackage<MemoryFabricConfig>({
         }
       : undefined;
 
-    // The pinned core: top notes by storage strength, in the prefix and stable between rebuilds. It
-    // needs the store's metadata scan; without one it is off and says why once.
-    const core =
-      config.core && vectorStore.scanMetadata !== undefined
-        ? createFabricCore({
-            options: config.core,
+    // Standing rules: the always-loaded block, in the prefix and stable between rebuilds, and the
+    // editable `rules.md` per scope. They need the store's metadata scan; without one they are off.
+    const rules: FabricRules | undefined =
+      config.rules && vectorStore.scanMetadata !== undefined
+        ? createFabricRules({
+            options: config.rules,
             scanMetadata: vectorStore.scanMetadata.bind(vectorStore),
             scopes: memories.filter(
               (binding): binding is { readonly level: "user" | "project"; readonly memory: Memory } =>
@@ -465,12 +477,12 @@ const definition = definePackage<MemoryFabricConfig>({
             storageWeights: config.lifecycle.storageWeights,
             ...(stores.writeDerivedFile === undefined
               ? {}
-              : { writeFile: (scope, content) => stores.writeDerivedFile!(scope, "core.md", content) }),
+              : { writeFile: (scope, content, writeOptions) => stores.writeDerivedFile!(scope, "rules.md", content, writeOptions) }),
             notify: (message) => prism.status.note("warn", message),
           })
         : undefined;
-    if (config.core && vectorStore.scanMetadata === undefined) {
-      prism.status.note("info", "memory-fabric: the store has no scanMetadata; core memory is off");
+    if (config.rules && vectorStore.scanMetadata === undefined) {
+      prism.status.note("info", "memory-fabric: the store has no scanMetadata; standing rules are off");
     }
 
     // Path cues: a path-scoped note shows once, when a file tool touches a matching file. It needs
@@ -563,14 +575,43 @@ const definition = definePackage<MemoryFabricConfig>({
     // The exchange archive (plan 188.9 Task 7): verbatim turns in the scope resolved at setup. Off by
     // default; the write runs in the background and makes no model or embedding call.
     const exchangeState = prism.state.session<JsonObject>(EXCHANGE_STATE_KEY, { archived: 0 });
+    // A tool's declared argument names, read lazily from the effective registry (it is not readable during
+    // setup) and cached: the step summary reads the schema, not the tool's name.
+    const declaredFields = new Map<string, ReadonlySet<string> | undefined>();
+    const declaredArgumentFields = (tool: string): ReadonlySet<string> | undefined => {
+      if (declaredFields.has(tool)) return declaredFields.get(tool);
+      let fields: ReadonlySet<string> | undefined;
+      try {
+        const properties = prism.tools.list().find((candidate) => candidate.name === tool)?.parameters?.properties;
+        if (properties !== null && typeof properties === "object" && !Array.isArray(properties)) fields = new Set(Object.keys(properties));
+      } catch {
+        fields = undefined;
+      }
+      declaredFields.set(tool, fields);
+      return fields;
+    };
     const exchangeArchive = config.exchanges.enabled
       ? createExchangeArchive({
           remember: fabric.remember,
           exists: async (id) => (await readNotesAcrossScopes([id])).length > 0,
           maxTextChars: memory.limits.maxEntryTextChars,
           scope: config.exchanges.scope,
+          ...(config.exchanges.steps === false
+            ? {}
+            : {
+                steps: {
+                  maxSteps: config.exchanges.steps.maxSteps,
+                  argumentFields: declaredArgumentFields,
+                  outcomePatterns: CONSOLIDATION_PATTERNS.outcomes,
+                },
+              }),
         })
       : undefined;
+    let stepsDropped = 0;
+    const lessonNudges =
+      exchangeArchive !== undefined && config.lessons.nudge
+        ? createLessonNudges({ minTurnsBetween: config.lessons.minTurnsBetweenNudges })
+        : undefined;
 
     // --- tools: `when` gates visibility and callability per session (the kernel blocks hidden calls).
     // `memory.recall` additionally needs the embeddings service, which may arrive after this package.
@@ -609,12 +650,51 @@ const definition = definePackage<MemoryFabricConfig>({
       directory,
       tracker,
       touchedPathsFor,
-      core,
+      rules,
       cues,
       memories.map(({ memory }) => memory),
       deliveryState,
       decisions,
+      lessonNudges,
     );
+    // A person's edit of `rules.md` is folded into notes once per session, before the first block is built.
+    const rulesReconciled = new Set<string>();
+    let warnedRules = false;
+    const reconcileRulesOnce = async (session: SessionContext, signal: AbortSignal | undefined): Promise<void> => {
+      if (rules === undefined || stores.readDerivedFile === undefined || rulesReconciled.has(session.id)) return;
+      rulesReconciled.add(session.id);
+      try {
+        for (const binding of memories) {
+          if (binding.level !== "user" && binding.level !== "project") continue;
+          const level = binding.level;
+          if (!config.rules || !config.rules.scopes.includes(level)) continue;
+          const lifecycleForScope = createFabricLifecycle(binding.memory);
+          const report = await reconcileRulesFile({
+            binding: { level, memory: binding.memory },
+            kinds: config.rules.kinds,
+            read: (scope) => stores.readDerivedFile!(scope, "rules.md"),
+            redact: (text) => rules.redact(text),
+            remember: (input, options) =>
+              fabric.remember(input, { sessionId: session.id, ...options, ...(signal === undefined ? {} : { signal }) }),
+            pin: (id) => fabric.pin(id, true, signal === undefined ? {} : { signal }),
+            retire: (id) => lifecycleForScope.supersede(id, signal === undefined ? {} : { signal }),
+            rewrite: (rewriteSignal) => rules.rewrite(rewriteSignal),
+            ...(signal === undefined ? {} : { signal }),
+          });
+          if (report.edited) {
+            prism.status.note(
+              "info",
+              `memory-fabric: rules.md edit applied (${report.added} added, ${report.updated} changed, ${report.retired} retired${report.refused > 0 ? `, ${report.refused} refused by the trust scan or a write` : ""})`,
+            );
+          }
+        }
+      } catch (error) {
+        // A failed reconcile leaves the file as the person wrote it; the next session retries it whole.
+        if (warnedRules) return;
+        warnedRules = true;
+        prism.status.note("warn", `memory-fabric: reconciling rules.md failed (${error instanceof Error ? error.message : String(error)})`);
+      }
+    };
     let warnedFloor = false;
     prism.hooks.on(
       "context.build",
@@ -623,6 +703,7 @@ const definition = definePackage<MemoryFabricConfig>({
         if (!context.session || !enabled.get(context.session)) return undefined;
         // First context.build of the session ticks each active scope once; session state carries it across a restore.
         await tickScopeClock(context.session);
+        await reconcileRulesOnce(context.session, context.signal);
         if (config.inject && config.retrieval === "hybrid" && !warnedFloor) {
           warnedFloor = true;
           prism.status.note(
@@ -645,52 +726,84 @@ const definition = definePackage<MemoryFabricConfig>({
     // A completed turn is archived once the reply is on the branch (`message.completed` fires after
     // the append; `turn.completed` fires inside the provider round, before it). Tool rounds are not
     // exchanges, so an assistant message carrying a `tool_call` is skipped.
-    prism.hooks.on("message.completed", (event, context) => {
+    // The entry id is not in the event; match the persisted message by id, then by its text. A mock
+    // or provider that omits a message id still archives the reply that just completed.
+    const completedPair = (entries: readonly SessionEntry[], message: Message): ExchangePair | undefined => {
+      const text = message.content
+        .flatMap((block) => (block.type === "text" ? [block.text] : []))
+        .join("\n")
+        .trim();
+      const assistant =
+        (message.id === undefined ? undefined : entries.find((entry) => entry.message !== undefined && entry.message.id === message.id)) ??
+        [...entries].reverse().find((entry) => entry.message?.role === "assistant" && messageTextMatches(entry.message, text));
+      return assistant === undefined ? undefined : exchangePairs(entries).find((item) => item.assistant.id === assistant.id);
+    };
+    prism.hooks.on("message.completed", async (event, context) => {
       const session = context.session;
       if (exchangeArchive === undefined || !session || !enabled.get(session)) return;
       const message = event.message;
       if (message.role !== "assistant" || message.content.some((block) => block.type === "tool_call")) return;
       const replyText = message.content.some((block) => block.type === "text" && block.text.trim().length > 0);
       if (!replyText) return;
+      // The lesson signal is read before the hook returns, so the very next request can carry the nudge.
+      if (lessonNudges !== undefined) {
+        const entries = await session.entries();
+        const pair = completedPair(entries, message);
+        if (pair !== undefined) {
+          const fixed =
+            config.exchanges.steps !== false &&
+            hasFailedThenPassed(
+              summarizeSteps(pair.between ?? [], { argumentFields: declaredArgumentFields }),
+              CONSOLIDATION_PATTERNS.outcomes,
+            );
+          lessonNudges.completed(
+            session.id,
+            lessonSignal(entries, pair, { fixed }),
+            exchangeNoteId(session.id, pair.user.id, pair.assistant.id, 0),
+          );
+        }
+      }
       session.background("fabric.exchange", async (signal) => {
         const entries = await session.entries();
-        const text = message.content
-          .flatMap((block) => (block.type === "text" ? [block.text] : []))
-          .join("\n")
-          .trim();
-        // The entry id is not in the event; match the persisted message by id, then by its text. A mock
-        // or provider that omits a message id still archives the reply that just completed.
-        const assistant =
-          (message.id === undefined
-            ? undefined
-            : entries.find((entry) => entry.message !== undefined && entry.message.id === message.id)) ??
-          [...entries].reverse().find((entry) => entry.message?.role === "assistant" && messageTextMatches(entry.message, text));
-        const pair = assistant === undefined ? undefined : exchangePairs(entries).find((item) => item.assistant.id === assistant.id);
+        const pair = completedPair(entries, message);
         if (pair === undefined) return;
         const report = await exchangeArchive.pair(pair, { sessionId: session.id, signal });
+        stepsDropped += report.stepsDropped;
         if (report.refused.trust + report.refused.secret > 0) {
           prism.status.note(
             "warn",
             `memory-fabric: ${report.refused.trust + report.refused.secret} exchange(s) refused by the trust scan or redactor; not archived`,
           );
         }
-        if (report.archived > 0 && decisionCapture) {
+        if (report.archived > 0 && ruleCapture) {
           const turnText = messageText(pair.user.message);
-          const gate = decisions === undefined ? undefined : await decisions.evaluateTurn({ text: turnText });
-          // P1 gates capture; P7 is an extra refusal input and never removes the trust scan.
-          const proposal =
-            gate?.durable === false || gate?.instructionLike === true
-              ? undefined
-              : captureDecision(turnText, [pair.user.id, pair.assistant.id]);
-          if (proposal !== undefined) {
-            const note = await fabric.remember(
-              { ...proposal, id: decisionNoteId(session.id, pair.user.id), session: session.id },
-              { sessionId: session.id, status: "candidate", signal },
-            );
-            const approved = await confirmDecisionProposals(prism.host.ui, [
-              { id: note.id, text: note.content, ...(note.rationale === undefined ? {} : { rationale: note.rationale }) },
-            ]);
-            for (const id of approved) await lifecycle.verify(id, { signal });
+          const lifecycleFor = (level: "user" | "project") => {
+            const binding = memories.find((entry) => entry.level === level);
+            return binding === undefined ? undefined : createFabricLifecycle(binding.memory);
+          };
+          try {
+            await captureAndConfirmRule({
+              sessionId: session.id,
+              userText: turnText,
+              userEntryId: pair.user.id,
+              assistantEntryId: pair.assistant.id,
+              ui: prism.host.ui,
+              gate: decisions === undefined ? undefined : await decisions.evaluateTurn({ text: turnText }),
+              remember: (input, options) => fabric.remember(input, options),
+              verify: (id) => fabric.verify(id, { signal }),
+              pin: (id) => fabric.pin(id, true, { signal }),
+              supersede: async (id) => {
+                for (const level of ["project", "user"] as const) {
+                  if (await lifecycleFor(level)?.supersede(id, { signal })) return true;
+                }
+                return false;
+              },
+              activeRules: async (level) => rules?.activeRules(level, signal) ?? [],
+              signal,
+            });
+          } catch (error) {
+            if (signal.aborted) throw error;
+            prism.status.note("warn", `memory-fabric: rule capture failed (${error instanceof Error ? error.message : String(error)})`);
           }
         }
         if (report.archived > 0) {
@@ -705,6 +818,7 @@ const definition = definePackage<MemoryFabricConfig>({
       touchedTrackers.delete(context.sessionId);
       turnsSincePass.delete(context.sessionId);
       evidenceCursor.delete(context.sessionId);
+      rulesReconciled.delete(context.sessionId);
       helpedNotes.delete(context.sessionId);
       cues?.forget(context.sessionId);
       tracker.clear?.(context.sessionId);
@@ -783,7 +897,9 @@ const definition = definePackage<MemoryFabricConfig>({
     // --- command: toggle this session's fabric without touching another session's state.
     prism.commands.register(createMemoryCommand(enabled));
     prism.commands.register(createMemoryConsolidateCommand(fabric, promoteState));
-    prism.commands.register(createMemoryStatusCommand(lifecycle, promoteState, team, config.preset, stores.unreadable, deliveryState));
+    prism.commands.register(
+      createMemoryStatusCommand(lifecycle, promoteState, team, config.preset, stores.unreadable, deliveryState, () => stepsDropped, rules),
+    );
     if (team !== undefined) {
       const ui = () => prism.host.ui;
       prism.commands.register(createMemoryShareCommand(team, memory, ui));
@@ -857,6 +973,17 @@ function createServiceEmbedder(consume: () => Embedder | undefined): Embedder {
   };
 }
 
+/** The `memory:status` warning for rules that did not fit the always-loaded block (human rules are never dropped silently). */
+function rulesOverflowText(rules: FabricRules | undefined): string {
+  const overflow = rules?.overflow();
+  if (overflow === undefined || overflow.more === 0) return "";
+  const human =
+    overflow.humanDropped > 0
+      ? ` WARNING: ${overflow.humanDropped} human-written rule(s) do not fit rules.maxTokens; raise it or retire rules.`
+      : "";
+  return ` Standing rules: ${overflow.shown} shown, ${overflow.more} more (memory.recall).${human}`;
+}
+
 /** The stores `resolveStore` returns: always a vector and working store, optionally closable and reindexable. */
 interface ResolvedFabricStores {
   readonly vectorStore: VectorStore;
@@ -871,12 +998,18 @@ interface ResolvedFabricStores {
     name: string,
     update: (current: string | undefined) => string,
   ) => Promise<void>;
-  /** Present on the markdown store: writes a derived file, logging a human edit it overwrites. */
+  /** Present on the markdown store: writes a derived file; a person's unreconciled edit is kept (resolves `false`). */
   readonly writeDerivedFile?: (
     scope: { readonly tenantId: string; readonly resourceId: string },
     name: string,
     body: string,
-  ) => Promise<void>;
+    options?: { readonly replaceEdited?: boolean },
+  ) => Promise<boolean>;
+  /** Present on the markdown store: reads a derived file and whether a person edited it. */
+  readonly readDerivedFile?: (
+    scope: { readonly tenantId: string; readonly resourceId: string },
+    name: string,
+  ) => Promise<{ readonly body: string; readonly edited: boolean } | undefined>;
 }
 
 /** The configured vector store. Postgres resolves the connection ref and loads `pg` only when configured. */
@@ -906,7 +1039,8 @@ async function resolveStore(
       workingStore: stores.workingStore,
       close: () => stores.close(),
       updateResourceFile: (scope, name, update) => stores.updateResourceFile(scope, name, update),
-      writeDerivedFile: (scope, name, body) => stores.writeDerivedFile(scope, name, body),
+      writeDerivedFile: (scope, name, body, options) => stores.writeDerivedFile(scope, name, body, options),
+      readDerivedFile: (scope, name) => stores.readDerivedFile(scope, name),
       unreadable: () => stores.unreadable(),
       reindex: (options: FabricReindexOptions): Promise<MarkdownReconcileCounts> =>
         options.full ? stores.rebuild({ signal: options.signal }) : stores.reconcile({ signal: options.signal }),
@@ -1267,6 +1401,8 @@ function createMemoryStatusCommand(
   preset?: ResolvedMemoryFabricConfig["preset"],
   unreadable?: () => MarkdownUnreadableCounts,
   deliveryState?: SessionState<JsonObject>,
+  stepsDropped?: () => number,
+  rules?: FabricRules,
 ): PackageCommand {
   const args: JsonSchema = { type: "object", additionalProperties: false, properties: {} };
   return {
@@ -1291,10 +1427,11 @@ function createMemoryStatusCommand(
         ...(preset === undefined ? {} : { preset: preset.name, presetRevision: preset.revision }),
         ...(unreadableCounts === undefined || unreadableCounts.unreadable === 0 ? {} : { ...unreadableCounts }),
         refused,
+        ...(stepsDropped === undefined || stepsDropped() === 0 ? {} : { stepsDropped: stepsDropped() }),
         ...(teamCounts === undefined ? {} : { team: { ...teamCounts } }),
         ...(last === undefined ? {} : { last: last as unknown as JsonObject }),
         ...(delivery === undefined ? {} : { delivery: delivery.mode, reason: delivery.reason }),
-        text: `${preset === undefined ? "" : `Preset ${preset.name} (revision ${preset.revision}). `}Fabric notes: ${counts.candidate} candidate, ${counts.verified} verified, ${counts.archived} archived${counts.reconsolidate ? `, ${counts.reconsolidate} reconsolidate` : ""}${unreadableCounts?.unreadable ? `, ${unreadableCounts.unreadable} unreadable (${formatReasons(unreadableCounts.unreadableReasons)}; written by a newer version, kept as written)` : ""}; ${refused} note(s) refused.${teamText}${delivery === undefined ? "" : ` Delivery: ${delivery.mode} (${delivery.reason}).`}${last === undefined ? "" : ` Last pass: ${last.candidates} candidate(s), ${last.accepted} accepted, ${last.written} written, ${last.updated} updated, ${last.exceptions} exception(s), ${last.retired} retired, ${last.modelCalls} model call(s); rejected score ${last.rejected.score}, ephemeral ${last.rejected.ephemeral}, derivable ${last.rejected.derivable}, trust ${last.rejected.trust}, secret ${last.rejected.secret}.${failureText(last)}`}`,
+        text: `${preset === undefined ? "" : `Preset ${preset.name} (revision ${preset.revision}). `}Fabric notes: ${counts.candidate} candidate, ${counts.verified} verified, ${counts.archived} archived${counts.reconsolidate ? `, ${counts.reconsolidate} reconsolidate` : ""}${unreadableCounts?.unreadable ? `, ${unreadableCounts.unreadable} unreadable (${formatReasons(unreadableCounts.unreadableReasons)}; written by a newer version, kept as written)` : ""}; ${refused} note(s) refused.${stepsDropped === undefined || stepsDropped() === 0 ? "" : ` ${stepsDropped()} exchange step(s) kept outcome only (trust scan or redactor).`}${rulesOverflowText(rules)}${teamText}${delivery === undefined ? "" : ` Delivery: ${delivery.mode} (${delivery.reason}).`}${last === undefined ? "" : ` Last pass: ${last.candidates} candidate(s), ${last.accepted} accepted, ${last.written} written, ${last.updated} updated, ${last.exceptions} exception(s), ${last.retired} retired, ${last.modelCalls} model call(s); rejected score ${last.rejected.score}, ephemeral ${last.rejected.ephemeral}, derivable ${last.rejected.derivable}, trust ${last.rejected.trust}, secret ${last.rejected.secret}.${failureText(last)}`}`,
       };
     },
   };

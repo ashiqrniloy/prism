@@ -59,6 +59,10 @@ for await (const event of session.subscribe()) {
 }
 ```
 
+## No skill
+
+This package ships no skill. The plan 215 Task 5 ledger marked `advisor` "description only": `advise` is one call with one `question` argument, and its description says what it does (a second model's advice on the current approach, over the recent conversation) and to state the specific question. A skill would repeat that description in every catalog without teaching anything the tool does not already say. The two hooks are not model-visible, so there is nothing for the model to be taught about them. A later paired evaluation (plan 215 Task 11) can reopen this if the transcripts show the model misusing `advise`.
+
 ## Capabilities
 
 `models` (the two model engines) and `session-state` (reads the branch for the slice).

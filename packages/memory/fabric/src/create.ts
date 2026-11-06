@@ -34,7 +34,16 @@ import {
   type RecordUsesOptions,
 } from "./lifecycle/index.js";
 import { runMaintenance } from "./lifecycle/maintain.js";
+import {
+  assertEvidenceInput,
+  assertLessonInput,
+  EVIDENCE_RELATION,
+  EvidenceNotFoundError,
+  evidenceLevelsFor,
+  isLessonTagged,
+} from "./lessons.js";
 import { noteImportance, storageStrength, strengthPrior } from "./lifecycle/strength.js";
+import { exchangeDialogue } from "./exchanges.js";
 import { mergeNoteLinks, resolveNoteLinks } from "./links.js";
 import { registerMemoryFabricContext } from "./provider.js";
 import { createFabricRecall, type FabricCandidate, noteInWindow, noteTime } from "./recall.js";
@@ -162,6 +171,8 @@ function assertRememberInput(input: MemoryFabricRememberInput, maxTextChars: num
   if (input.supersedes !== undefined && !isMemoryId(input.supersedes)) {
     throw new MemoryValidationError("supersedes must be a 12-hex note id");
   }
+  assertEvidenceInput(input.evidence, isMemoryId);
+  assertLessonInput(input);
   if (input.overrides !== undefined && !isMemoryId(input.overrides)) {
     throw new MemoryValidationError("overrides must be a 12-hex note id");
   }
@@ -319,6 +330,40 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
     return undefined;
   }
 
+  /**
+   * `evidence` ids as links (plan 209 Task 4). Each id must name a note in an active scope that stays
+   * readable wherever a note at `level` is read: a user or agent note may not cite one project's note.
+   */
+  async function resolveEvidence(
+    level: MemoryNoteScope,
+    target: Memory,
+    ids: readonly string[],
+    signal: AbortSignal | undefined,
+  ): Promise<readonly MemoryNoteLink[]> {
+    const allowed = evidenceLevelsFor(level);
+    const candidates: readonly Memory[] =
+      options.scopes === undefined
+        ? [memory]
+        : options.scopes
+            .filter((binding) =>
+              binding.level === "project" ? allowed.has("project") || allowed.has("path") : allowed.has(binding.level as MemoryNoteScope),
+            )
+            .map((binding) => binding.memory);
+    const links: MemoryNoteLink[] = [];
+    for (const id of new Set(ids)) {
+      let found = false;
+      for (const candidate of candidates.includes(target) ? candidates : [target, ...candidates]) {
+        const row = await candidate.getEntry(id, signal === undefined ? {} : { signal });
+        if (row === undefined || parseMemoryNoteMetadata(row.metadata) === undefined) continue;
+        found = true;
+        break;
+      }
+      if (!found) throw new EvidenceNotFoundError(id);
+      links.push({ id, relation: EVIDENCE_RELATION });
+    }
+    return links;
+  }
+
   async function rememberEpisode(input: MemoryFabricRememberInput): Promise<MemoryNote> {
     if (observational === undefined) {
       throw new MemoryValidationError('kind "episode" requires createMemoryFabric({ observational }) with an attached session');
@@ -448,6 +493,8 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
     const signal = writeOptions.signal;
     const { level, memory: target } = writeTarget(kind, input);
     const incomingScope = noteScopeKey(level, input.appliesTo);
+    // Evidence is checked before any write: an unreadable or foreign id rejects the whole note.
+    const evidenceLinks = input.evidence === undefined ? undefined : await resolveEvidence(level, target, input.evidence, signal);
     const ingestedAt = new Date().toISOString();
     const generated = provenanceFor(writeOptions, promotedFrom, input.sourceEntryIds, ingestedAt);
     // Consolidation is part of the write path; linker/evolution are the opt-in workers. The per-session
@@ -586,7 +633,8 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
     let consent: MemoryConsentInput | undefined = input.consent;
     let importance = input.importance;
     let hostMetadata: JsonObject = {};
-    let status: MemoryNoteStatus | undefined = writeOptions.status;
+    // A lesson has to earn its place: it starts as a candidate and verifies by use like any candidate.
+    let status: MemoryNoteStatus | undefined = writeOptions.status ?? (isLessonTagged(input.tags) ? "candidate" : undefined);
     const decisionStatus: MemoryDecisionStatus | undefined =
       kind === "decision"
         ? (input.decisionStatus ??
@@ -643,12 +691,13 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
     const derivedLinks = linkerActive
       ? mergeNoteLinks(
           input.links,
+          evidenceLinks,
           resolveNoteLinks(
             candidates.map((item) => ({ id: item.hit.id, score: item.hit.score })),
             { topK: settings.linker.topK, exclude: [id, ...(supersedes === undefined ? [] : [supersedes])] },
           ),
         )
-      : input.links;
+      : mergeNoteLinks(input.links, evidenceLinks);
     const links = mergeNoteLinks(
       derivedLinks,
       plan.action === "insert" && plan.similar ? [{ id: plan.similar, relation: "similar" }] : undefined,
@@ -797,7 +846,7 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
         levels.set(hit.id, level);
         found.set(hit.id, {
           id: hit.id,
-          text: hit.text,
+          text: exchangeDialogue(hit.text),
           level,
           ...(metadata.tRef === undefined ? {} : { tRef: metadata.tRef }),
         });
@@ -1170,7 +1219,11 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
     const offset = (request.page ?? 0) * 8;
     return sorted.slice(offset, offset + 8).map((row) => row.id);
   }
-  const recall = createFabricRecall({ loadCandidates, limits, memory, getNotes: getNotesAcrossScopes,
+  const recall = createFabricRecall({
+    loadCandidates,
+    limits,
+    memory,
+    getNotes: getNotesAcrossScopes,
     priors,
     onRecall: options.onRecall,
     ...(options.supersessionHint === undefined ? {} : { supersessionHint: options.supersessionHint }),

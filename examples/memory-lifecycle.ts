@@ -29,7 +29,7 @@ import {
 //   3. A project exception that shadows the preference inside A only.
 //   4. An unused episode archived by the rule, then found through archive search and revived by citing it.
 //   5. A capacity budget that folds duplicate notes and evicts the weakest survivor.
-//   6. The three delivery tiers in one session: the pinned core in the prefix, a path cue in the tail
+//   6. The three delivery tiers in one session: the standing rules in the prefix, a path cue in the tail
 //      after a file read, and a team note a person approved with memory:share.
 //
 // The lifecycle is metadata-only: no model call, no network, no provider. Time is the per-resource
@@ -242,13 +242,13 @@ const deliveryAgent = await createAgent({
   tools: { add: [readTool] },
   packages: [
     mockProvider(memoryScript, { onRequest: (request) => requests.push(request) }),
-    // `core.scopes: ["user"]` keeps the project's path note out of the pinned core, so the same note
+    // `rules.scopes: ["user"]` keeps the project path note out of the standing rules, so the same note
     // reaches the model through the cue tail instead.
     memoryFabric({
       tools: { root: deliveryRoot },
       scopes: { project: { root: deliveryProject } },
       team: { dir: ".prism/memory" },
-      core: { scopes: ["user"] },
+      rules: { scopes: ["user"] },
     }),
   ],
 });
@@ -256,7 +256,7 @@ const deliverySession = await deliveryAgent.session({ id: "delivery-demo", creat
 try {
   await deliverySession.run("remember the package manager");
   await deliverySession.run("remember the suite command");
-  // The preference reaches pinned core at the next epoch; inserts leave the current prefix stable.
+  // The preference reaches the standing rules at the next epoch; inserts leave the current prefix stable.
   await deliverySession.compact();
   await deliverySession.run("read the memory plan");
   for (let turn = 0; turn < 10; turn += 1) await deliverySession.run(`turn ${turn}`);
@@ -273,7 +273,7 @@ try {
     session: deliverySession,
   })) as { ok: boolean; path: string };
 
-  if (!/Core memory \(user\): \[[0-9a-f]{12}\] Prefers bun over npm/.test(prefix(requests[4]!))) throw new Error("core block missing");
+  if (!/Standing rules \(user\): \[[0-9a-f]{12}\] Prefers bun over npm/.test(prefix(requests[4]!))) throw new Error("core block missing");
   if (quiet.length !== 10 || new Set(quiet.map(prefix)).size !== 1) throw new Error("prefix not byte-identical across quiet turns");
   if (!JSON.stringify(cueBlock).includes("path procedure (for packages/memory/**)")) throw new Error("path cue missing");
   if (requests.filter((request) => JSON.stringify(request).includes("path procedure (for packages/memory/**)")).length !== 1) {

@@ -358,6 +358,12 @@ export interface MemoryFabricRememberInput {
   readonly tags?: readonly string[];
   readonly context?: string;
   readonly links?: readonly MemoryNoteLink[];
+  /**
+   * 1-8 note ids the note is grounded in (exchanges, with their steps, or other notes), stored as links
+   * with relation `evidence`. Each must be readable wherever the note is read, or the write is rejected
+   * (`not_found`). Required on a note tagged `lesson` (plan 209 Task 4).
+   */
+  readonly evidence?: readonly string[];
   readonly sourceEntryIds?: readonly string[];
   readonly supersedes?: string;
   /** Why the decision was chosen; `kind: "decision"` only. */
@@ -389,7 +395,7 @@ export interface MemoryFabricWriteOptions {
    */
   readonly status?: "candidate";
   /** Overrides the inferred provenance actor (`agent` when a sessionId is present, else `host`). */
-  readonly generatedBy?: "agent" | "host" | "import" | "promotion";
+  readonly generatedBy?: "agent" | "host" | "import" | "promotion" | "human";
 }
 
 export interface MemoryFabricRecallOptions {

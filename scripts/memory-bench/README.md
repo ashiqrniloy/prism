@@ -2244,6 +2244,68 @@ not zero candidate gaps. Held-out partitions remain prohibited in these diagnost
 - Series mode: `run.mjs --ontology --warmup K` asks the first K questions of each cluster, unscored, before every scored question of that cluster (fresh sessions, passes settled, accounting kept apart); a cluster with K or fewer questions is dropped and counted.
 - Report: `acceptance-report.mjs --plan 208 --partition dev` (O1-O7, trigger-policy row, `concept` stage table, plan 210 ledger candidates). Ids, counts and rates only.
 
+## Work-outcome suite (plan 209 Task 5)
+
+Measures whether memory makes the agent work better, not whether it recalls facts. Code in `work-outcome/`.
+
+- **Personas** (`work-outcome/personas.mjs`): `coding` (12) and `assistant` (9), six sessions each over two projects
+  or contexts. Each has a convention set early (a user preference and a per-project convention), an action the user
+  corrects in session 1 that recurs in sessions 2 and 5, a per-project fact given on request and needed again, a
+  returning-project start in sessions 5 and 6, and a fixture `README.md` that plants the canary as tool output. The
+  assistant family's meeting day changes in session 2. Labels stay in the harness; the lifecycle persona is not
+  edited (frozen evidence).
+- **Partitions** (`work-outcome-coding.json`, `work-outcome-assistant.json`, written once by
+  `work-outcome/draw.mjs`): label-blind, `SHA-256(seed:id)` order, coding 4/4/4 and assistant 3/3/3 over
+  `dev`/`heldout-a`/`heldout-b`. Plan 209 reads `dev` only; the held-out partitions are plan 210 Task 9's.
+- **Criteria** (`work-outcome-criteria.json`, frozen 2026-11-05): arms `memory-off`, `P`, `P+W`, `P+W+O`, `coding`,
+  `coding+W`; metrics W1–W6 and safety; rows `work` (`P+W` vs `P`), `memory` (`P` vs `memory-off`),
+  `ontology-work` (plan 208's O8, copied unchanged and checked by a test) and `coding-work`. Check:
+  `timeout 60 bun scripts/memory-bench/work-outcome/metrics.mjs --verify-criteria`. Reports and manifests pin
+  `workOutcomeCriteriaHash`; `assertWorkOutcomeCriteriaPin` refuses drift.
+- **Runner** (`work-outcome/run.mjs`): each session is one `runScenario` over a fresh `createAgent`, driven by the
+  evals user simulator and graded by `createStateMatchScorer` plus the checks in `work-outcome/metrics.mjs`. A
+  persona's sessions share one SQLite fabric store per arm. Rule capture is confirmed by a scripted `host.ui`. W5
+  judges every lesson (cites: its `evidence` links) and captured rule (cites: the exchanges sharing its source
+  entries) with plan 208's claim panel. Paired statistics are `pairedClusterPermutation`, clustered by persona and
+  pooled over both families.
+- **Offline**: `timeout 600 bun scripts/memory-bench/work-outcome/run.mjs --offline [--partition dev] [--arms a,b]
+  [--personas N] [--output report.json]`. Request-driven mocks play the answer model and the user (neither sees a
+  label); plan 208's scripted judges label W5. It proves every metric computes; its numbers are not evidence that
+  memory helps. A live run without `--offline` is refused: live runs go through `campaign.mjs --plan 209` after gate
+  W-1 (next section) and `runWorkOutcome` refuses a live held-out partition.
+- Reports carry ids, counts, rates and scores only (`assertWorkReportHasNoText`).
+
+## Work-outcome development screen (plan 209 Task 6, gate W-1)
+
+The live, advisory screen of the work-outcome suite. Code in `work-outcome/{screen,live,argv}.mjs`; the campaign,
+journal, lock and retries are `campaign.mjs`'s.
+
+- **Manifest**: `timeout 120 bun scripts/memory-bench/campaign.mjs --plan 209 --manifest --partition dev` writes
+  `docs/_evidence/memory-bench/209/screen/development-screen-manifest.json`. It pins the work-outcome criteria
+  hash, the product hash (`ONTOLOGY_PRODUCT_PATHS`) and the tuning table, and lists 18 jobs:
+  - 12 work-outcome jobs, one per (answer model, arm) on the work-outcome `dev` partition, each a child of
+    `work-outcome/live.mjs`;
+  - 6 no-harm jobs, `P` and `P+W` on plan 202's development quick slices (plan 208's slices, large model), through
+    `run.mjs`. `P+W` is `fabric-x-tools` plus `--ablate fabric.exchanges.steps=true fabric.rules.capture=confirm
+    fabric.lessons.nudge=true`. The harness has no `host.ui`, so rule capture fails closed there.
+- **Gate**: `docs/_evidence/memory-bench/209/gates/owner-gate-w1.json`, bound to the manifest hash. Without it, or
+  with a different manifest, the campaign refuses before any journal or evidence file is written. The `--plan 209`
+  profile, every job and the live child refuse any partition but `dev`.
+- **Run**: `timeout 28800 bun scripts/memory-bench/campaign.mjs --plan 209 --partition dev [--parallel-arms N]`.
+  `PRISM_MEMORY_BENCH_209_JOBS=<id substrings>` runs a subset of the approved jobs in its own journal;
+  `PRISM_MEMORY_BENCH_209_SMOKE=1` also cuts each work job to one persona per family and each no-harm job to two
+  questions.
+- **Live child** (`work-outcome/live.mjs`): spends only the reservation its journal holds. Usage comes from the
+  wire proxy (answer and simulator routes; the claim panel accounts its own). The child resumes per persona-arm
+  from `.cache/memory-bench/209/checkpoints/` (keyed by the protocol), and writes ids, counts and scores only.
+- **Report**: `timeout 600 bun scripts/memory-bench/acceptance-report.mjs --plan 209 --partition dev` merges the
+  per-arm job reports into W1–W6 per answer model with every pre-registered row, plan 208's O8 (the
+  `ontology-work` row), `simulatorLeak` per arm (a non-zero count invalidates that model's W3), curator calls and
+  tokens for `P+W+O`, USD at the gate's rates, and the paired no-harm row.
+- **Revision**: `assertTuningRevision` allows the one revision to change only `exchanges.maxSteps`,
+  `rules.maxTokens`, `lessons.minTurnsBetweenNudges` and `lessons.archiveAfterSessions` (each a `tuning` field of
+  the fabric schema), and only with named evidence.
+
 ## Ceiling and power instruments (plan 210 Task 3.1)
 
 A score is only readable beside its ceiling and beside the smallest difference its sample can show.

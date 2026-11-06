@@ -51,6 +51,7 @@ node examples/provider-resolver.ts
 node examples/cache-aware-prompt-assembly.ts
 node examples/attention-compiler.ts
 node examples/skills-progressive-disclosure.ts
+node examples/package-skills.ts
 node examples/caveman-ponytail.ts
 node examples/hooks-json.ts
 node examples/external-app-db-backed.ts
@@ -174,7 +175,7 @@ Each demo prints a single JSON line with its result.
 - `validator.ts` — **demo**: completion validation with `validate`: the run's task is captured and pinned, the first validator review answers `incomplete` with what is missing (the run continues with that list as a steer), the second answers `complete`, and the host reads `verified` from the last `validator.verdict` event (network-free; the child engine variant uses a hidden `delegate` child with its own tools).
 - `working-semantic-memory.ts` — optional working memory + semantic recall with hash embedder, context injection, and processor update.
 - `long-term-memory.ts` — **demo**: `memory:consolidate` turns an explicit statement into a typed, scored candidate note (`memoryFabric({ promote: {...} })`), a second agent over the same markdown store recalls it, and a third agent rooted in another project at that store sees the shared user preference but not the first project's fact (network-free).
-- `memory-lifecycle.ts` — **demo** (plans 188.4, 188.5): one note's whole life in a single deterministic run — a user preference written in project A and cited in B, a procedure verified in both projects that `maintain()` widens to an `agent` candidate, a project exception that shadows the preference, an unused episode archived by the two strengths and revived through archive search, and a capacity budget that folds duplicates then evicts the weakest note; the scope clock is the store's session counter, so time is sessions, never calendar days. It then drives the three delivery tiers through a real agent: the pinned core in the prefix stays byte-identical across ten quiet turns, a `read` under a path note's glob injects that note in the tail exactly once, and `memory:share` writes a team note after a scripted `host.ui` confirm (network-free, no model call).
+- `memory-lifecycle.ts` — **demo** (plans 188.4, 188.5): one note's whole life in a single deterministic run — a user preference written in project A and cited in B, a procedure verified in both projects that `maintain()` widens to an `agent` candidate, a project exception that shadows the preference, an unused episode archived by the two strengths and revived through archive search, and a capacity budget that folds duplicates then evicts the weakest note; the scope clock is the store's session counter, so time is sessions, never calendar days. It then drives the three delivery tiers through a real agent: the standing rules in the prefix stay byte-identical across ten quiet turns, a `read` under a path note's glob injects that note in the tail exactly once, and `memory:share` writes a team note after a scripted `host.ui` confirm (network-free, no model call).
 - `rag.ts` — optional bounded Markdown chunk/index/retrieve/citation flow using Phase 7 in-memory vector primitives.
 - `drive-rag-sync.ts` — **demo**: fake Drive connector through `syncKnowledge` (checkpointed cursor, ACL grants, hash skip; network-free).
 - `scanned-document-rag.ts` — **demo**: fake Mistral OCR `fetch` through `createMistralOcrParser` into `replaceDocument` (no default parser, usage hook; network-free).
@@ -202,6 +203,7 @@ Each demo prints a single JSON line with its result.
 - `context.ts` — ordered context-provider pipeline.
 - `skills.ts` — skill registry + progressive disclosure activation.
 - `skills-progressive-disclosure.ts` — **demo**: many-skill catalog under budget + `load_skill` body load (network-free).
+- `package-skills.ts` — **demo** (plan 215 Task 12): package skills and availability. `@arnilo/prism-tools-web` ships `web-research`, which `requiresTools` `web_fetch`. `inspect().skills` shows its `package` and `requiresTools`; a run with `tools: { only: ["read"] }` drops it from the catalog and a scripted `load_skill("web-research")` returns `skill_unavailable` (network-free).
 - `caveman-ponytail.ts` — **demo**: host-owned persona extensions built from a `SKILL.md` directory (`loadSkillDirectory`), progressive catalog, injector mode slices, session-entry mode persistence, `load_skill` (network-free).
 - `hooks-json.ts` — **demo**: `@arnilo/prism-hooks-json` loads a Claude/Codex `hooks.json`. `SessionStart` is `session.opened`. `PreToolUse` denies a `.env` write. Commands are hash-pinned. The fixture spawns with no shell (network-free).
 - `system-prompts.ts` — layered system-prompt composition; disabling layers.

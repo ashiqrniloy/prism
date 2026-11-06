@@ -4,7 +4,7 @@
  * module only explains them, so an operator reads a note instead of `log.md` or a debug script.
  */
 import { type MemoryNoteMetadata, type MemoryNoteScope, type MemoryNoteStatus } from "../types.js";
-import { type ArchiveConfig, DEFAULT_ARCHIVE_CONFIG, shouldArchive } from "./archive.js";
+import { type ArchiveConfig, DEFAULT_ARCHIVE_CONFIG, lessonUnused, shouldArchive } from "./archive.js";
 import {
   type MemoryNoteDecay,
   type StorageWeights,
@@ -69,8 +69,8 @@ function archiveReasons(input: InspectNoteInput): readonly string[] {
   const weights = input.storageWeights ?? DEFAULT_STORAGE_WEIGHTS;
   const reasons: string[] = [];
   if (metadata.pinned === true) reasons.push("pinned");
-  if (retrievalStrength(metadata, clock, decay[metadata.kind] ?? DEFAULT_DECAY.fact) >= archive.retrievalBelow)
-    reasons.push("retrieval");
+  else if (lessonUnused(metadata, clock, archive)) return reasons;
+  if (retrievalStrength(metadata, clock, decay[metadata.kind] ?? DEFAULT_DECAY.fact) >= archive.retrievalBelow) reasons.push("retrieval");
   if (storageStrength(metadata, weights) >= archive.storageBelow) reasons.push("storage");
   const created = Number.isSafeInteger(metadata.created) && (metadata.created as number) > 0 ? (metadata.created as number) : 0;
   if (clock - created < archive.graceSessions) reasons.push("grace");

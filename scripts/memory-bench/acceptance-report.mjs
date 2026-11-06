@@ -546,7 +546,8 @@ async function main1888() {
 }
 
 if (import.meta.main) {
-  if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "208") await main208();
+  if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "209") await main209();
+  else if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "208") await main208();
   else if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "188.8") await main1888();
   else if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "188.9") await main1889();
   else if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "188.10") await main18810();
@@ -921,6 +922,35 @@ async function main208() {
         {
           jobsRead: report.jobsRead,
           rows: Object.fromEntries(Object.entries(report.rows).map(([k, v]) => [k, v.pass ?? v.status ?? null])),
+        },
+        null,
+        2,
+      ),
+    );
+  } catch (error) {
+    console.error(`${error.name}: ${error.message}`);
+    process.exitCode = 1;
+  }
+}
+
+/* Plan 209 Task 6: the work-outcome development report (W1-W6, plan 208's O8, the no-harm read), dev partition only. */
+async function main209() {
+  const { writeScreen209Report } = await import("./work-outcome/screen.mjs");
+  const partition = process.argv.includes("--partition") ? process.argv[process.argv.indexOf("--partition") + 1] : undefined;
+  try {
+    const report = await writeScreen209Report({ partition });
+    console.log(
+      JSON.stringify(
+        {
+          jobsRead: report.jobsRead.length,
+          models: report.models.map((model) => ({
+            model: model.model,
+            armsMissing: model.armsMissing,
+            w3Valid: model.w3Valid,
+            rows: Object.fromEntries(Object.entries(model.criteria).map(([k, v]) => [k, v.pass ?? v.skipped ?? null])),
+          })),
+          noHarm: report.noHarm,
+          usd: report.usd,
         },
         null,
         2,

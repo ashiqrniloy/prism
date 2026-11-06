@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runMemoryConformance } from "../../../../fabric/src/conformance.js";
@@ -405,4 +405,28 @@ test("markdown_resource_file_is_written_under_lock_and_not_indexed", async () =>
   const report = await store.reconcile();
   expect(report.indexed).toBe(0);
   expect(report.malformed).toBe(0);
+});
+
+test("markdown_derived_file_keeps_a_human_edit_until_the_caller_replaces_it", async () => {
+  const root = tempRoot();
+  const store = await open(root);
+  const target = { tenantId: "t", resourceId: "projects/demo--0123abcd" };
+  const path = join(root, "t/projects/demo--0123abcd/rules.md");
+  expect(await store.readDerivedFile(target, "rules.md")).toBeUndefined();
+  expect(await store.writeDerivedFile(target, "rules.md", "- [a] one\n")).toBe(true);
+  expect(await store.readDerivedFile(target, "rules.md")).toEqual({ body: "- [a] one\n", edited: false });
+  expect(await store.writeDerivedFile(target, "rules.md", "- [a] one\n")).toBe(true);
+
+  writeFileSync(path, readFileSync(path, "utf8").replace("one", "ONE"));
+  expect(await store.readDerivedFile(target, "rules.md")).toEqual({ body: "- [a] ONE\n", edited: true });
+  expect(await store.writeDerivedFile(target, "rules.md", "- [a] two\n")).toBe(false);
+  expect(readFileSync(path, "utf8")).toContain("ONE");
+  expect(existsSync(join(root, "log.md")) ? readFileSync(join(root, "log.md"), "utf8") : "").not.toContain("overwritten");
+
+  expect(await store.writeDerivedFile(target, "rules.md", "- [a] two\n", { replaceEdited: true })).toBe(true);
+  expect(await store.readDerivedFile(target, "rules.md")).toEqual({ body: "- [a] two\n", edited: false });
+
+  writeFileSync(path, "no marker at all\n");
+  expect(await store.readDerivedFile(target, "rules.md")).toEqual({ body: "no marker at all\n", edited: true });
+  await expect(store.readDerivedFile(target, "../escape.md")).rejects.toBeInstanceOf(MemoryValidationError);
 });

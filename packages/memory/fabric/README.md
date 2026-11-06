@@ -71,10 +71,10 @@ For the package, a host package may provide the optional `memory-fabric.diagnost
 - `retrieval: "hybrid"` adds the vector leg through the `embeddings` service: **one embedding call
   per write and per recall**. Without a service the fabric notes the fallback and stays lexical.
 - The memory directory (below) makes no model or embedding call: one aggregate query per session epoch, at most 500 tokens in the prefix (200 by default).
-- The pinned core (below) makes no model or embedding call either: one metadata `scanMetadata` page
-  per scope at session start, compaction, retraction or explicit refresh, at most `core.maxTokens`
-  in the prefix (600 by default, hard 1000). Turns between rebuilds reuse the cached block, so a
-  stable session sends byte-identical bytes.
+- The standing rules (below) make no model or embedding call either: one metadata `scanMetadata` page
+  per scope at session start, compaction, retraction or explicit refresh, at most `rules.maxTokens`
+  in the prefix (600 by default, 2,000 when `rules.capture` is on, hard 3,000). Turns between rebuilds
+  reuse the cached block, so a stable session sends byte-identical bytes.
 - Path cues (above) make no model or embedding call: after a new touched path, one metadata scan
   (cached until a write changes the index) plus one bounded `get` for the matched text, at most
   `cues.budgetTokens` in the tail (300 by default). A turn with no new path does no work.
@@ -87,6 +87,14 @@ For the package, a host package may provide the optional `memory-fabric.diagnost
   `session.background` after the reply is stored. Storage grows by about one turn's text per turn, so
   the default is off. `DEFAULT_RECALL_KINDS` includes `exchange`, so an opted-in archive makes passive
   delivery longer by the history it recalls (facts are delivered first, then exchanges).
+  `exchanges: { steps: true }` adds a bounded step trace to each exchange: at most `exchanges.maxSteps`
+  (24) lines, capped at a quarter of the entry limit (about 1.5 KB at 24 typical steps, so roughly
+  1.5 MB per 1,000 turns that each ran 24 tools; a turn with no tool round adds nothing). Same write,
+  no extra query, no model call.
+- Lessons (below) add no write path of their own: the agent writes one with `memory.insert` in its
+  turn, and each `evidence` id costs one `getEntry` per active scope. The opt-in nudge
+  (`lessons: { nudge: true }`) adds one branch read per completed turn, pattern matching with no
+  model call, and one tail line (about 50 tokens) on the request after a signal turn only.
 - Session consolidation (below) is off by default and costs **one model call per pass**, only when a
   pass runs; new notes embed once each in hybrid mode (plus one decider call when
   `consolidate.decider` is `"model"`). Verifying a candidate and archiving a stale one are metadata
@@ -344,7 +352,7 @@ memoryFabric({
   semantic: true, // default; whether indexed notes are available
   inject: false, // default; opt in with { query: "task" } → minSimilarity 0.2, minScore 0.2, fullTextScore 0.35, cardExcerpt "head", topK 12, budgetTokens 4000
   directory: true, // default when semantic or tools.root is set; or { maxTopics: 8, maxFiles: 10, maxTokens: 200, stopWords: false }
-  core: true, // default; or { maxTokens: 600, scopes: ["user", "project"], kinds: ["fact", "preference", "procedure", "decision"] }
+  rules: true, // default; or { capture: "off", maxTokens: 600, scopes: ["user", "project"], kinds: ["fact", "preference", "procedure", "decision"] }
   cues: true, // default; or { budgetTokens: 300, maxPerTurn: 2 }
   team: false, // default; or { dir: ".prism/memory", write: "ask" } — the checked-in team store
   scopes: {
@@ -367,7 +375,9 @@ memoryFabric({
   evolution: false | { enabled: true, maxPatches: 4 },
   passive: false,
   // The exchange archive: off by default; {} archives each completed user turn verbatim.
-  exchanges: false | { enabled: true },
+  exchanges: false | { enabled: true, steps: false, maxSteps: 24 },
+  // Cited lessons (plan 209 Task 4): the opt-in nudge needs the exchange archive.
+  lessons: { nudge: false, minTurnsBetweenNudges: 5, archiveAfterSessions: 20 },
   // The ontology tier's write-path knob (plan 207). Nothing here turns the tier on: concepts do.
   ontology: {
     bindThreshold: 2, // matched tokens of one subject name that bind a new note; in [1, 8]
@@ -551,67 +561,103 @@ always-present tier stays small:
 
 | Tier | Block | Where | Changes when | Cost per turn |
 | --- | --- | --- | --- | --- |
-| Pinned core | `fabric-core` | prompt prefix | session start, compaction, retraction, refresh | zero after the first cached turn |
+| Standing rules | `fabric-rules` | prompt prefix | session start, compaction, retraction, refresh | zero after the first cached turn |
 | Path cues | `fabric-semantic` tail | tail | a file tool touches a path for the first time in the session | tokens only on the turn a new path matches; none otherwise |
-| Directory | `fabric-directory` | prompt prefix | the same as the core | one aggregate query per rebuild |
+| Directory | `fabric-directory` | prompt prefix | the same as the rules | one aggregate query per rebuild |
 | On demand | — | `memory.recall` | — | normal recall plus one local lexical discovery query per active scope only when default kinds return zero hits |
 
 Two properties hold the cost down, and `packages/memory/fabric/src/__tests__/prefix-stability.test.ts`
-pins the first one: a quiet turn sends byte-identical prefix blocks (the directory and the core), so a
+pins the first one: a quiet turn sends byte-identical prefix blocks (the directory and the rules), so a
 provider's prompt cache hits instead of re-ingesting them; and path cues add no lines on a turn that touches no new path.
 
 The team store (below) is a scope, not a tier: it joins recall and injection like `project` and
 `agent`, and adds no block of its own.
 
-### Pinned core
+### Standing rules
 
-The core is a small, curated slice of long-term memory — the top notes by storage strength `S`
-(plan 188.4), pinned notes first — one line per note as `[id] text`, user-scope notes first:
+The standing rules are the small, human-editable centre of the memory: a slice of long-term memory
+that is always loaded, one line per rule as `[id] text`, user-scope rules first:
 
 ```text
-Core memory (user): [41aa…] Prefers bun over npm. [77b0…] Uses fish shell.
-Core memory (project prism): [9c1e…] Run memory suites with --timeout=0. …
+Standing rules (user): [41aa…] Prefers bun over npm. [77b0…] Uses fish shell.
+Standing rules (project prism): [9c1e…] Run memory suites with --timeout=0. …
+rules: 12 shown, 3 more — memory.recall
 ```
 
 Only `preference`, `fact`, `procedure`, and `decision` notes enter, and only when they are **verified**,
 not archived, not flagged, and still readable — a revoked or forgotten note never appears. A
 decision must also be `active`: proposed and superseded decisions stay readable through explicit
 recall but never reach the prefix. A decision line ends `— why: memory.read <id>`, so the rationale
-is one read away. The block sits after the directory block, stays inside the untrusted envelope, and
-its text passes the redactor.
+is one read away. A path-scoped rule (`scope: "path"`) is not in the block: it loads as a cue when a
+touched file matches (see Path cues). The block sits after the directory block, stays inside the
+untrusted envelope, and its text passes the redactor.
 
-`core: false` turns it off; `{ maxTokens, scopes, kinds }` configures it (default 600, hard 1000;
-scopes `["user", "project"]` by default, and `user` always renders first; kinds default to fact,
-preference, procedure and decision). The budget splits evenly and
-unused budget flows to the other scope. Ties break by note id, so the selection and its order are
-deterministic.
+**Budget and overflow.** `rules.maxTokens` is the fixed budget: 600 by default, **2,000 when
+`rules.capture` is `"confirm"`** (a captured rule set earns the larger block), hard 3,000. The
+budget splits evenly across scopes and unused budget flows to the other scope. Order is human-written
+rules first (a person's line in `rules.md`), then pinned, standing decisions, and descending storage
+strength `S`; ties break by note id, so the selection is deterministic. A rule that does not fit
+drops from the always-loaded block, stays recallable, and the block ends `rules: N shown, k more —
+memory.recall`. A human-written rule is never dropped for an agent's; when human rules alone exceed
+the budget, `memory:status` warns and names the count.
 
-**Cache stability.** Directory and core blocks are pinned per session epoch and reused byte for
+`rules: false` turns it off; `{ capture, maxTokens, scopes, kinds }` configures it (scopes
+`["user", "project"]` by default, and `user` always renders first; kinds default to fact, preference,
+procedure and decision).
+
+**Capture** (`rules: { capture: "confirm" }`, default `"off"`; the `coding` preset sets it). A user
+turn with a lasting cue becomes a **proposed** rule: a preference (`I prefer…`, `I'd rather…`) in the
+user scope, a procedure (`make sure to…`, `whenever you…`, `before you commit…`) in the project, or a
+decision (`from now on`, `always`, `never`, `we decided`, `use X instead of Y`, `no, do X`) with a
+lexical rationale. A path in the rule (`in src/payments`) makes it path-scoped. No model is called.
+The only capture input is the archived user turn: tool output and assistant text never become rules,
+and every proposal passes the trust scan. One batched `host.ui` confirmation per turn makes the
+proposal active and pinned; a host that answers `unavailable`, denies, dismisses or throws leaves it a
+`candidate`. A correction that names what it replaces (`use zod instead of yup`) retires the matching
+active rule: the old note keeps its history with `validTo` set and is never delivered again.
+
+**Cache stability.** Directory and rules blocks are pinned per session epoch and reused byte for
 byte across additive writes, including exchange archiving, inserts and lifecycle evidence updates.
 An epoch starts at the first context build (including restore), compaction, a retraction, or an
 explicit import/export/reindex refresh. Each start re-reads the stores and invalidates the directory,
-core and cue-index caches, so external additions appear at the next epoch boundary. Retractions
-through this memory instance (forget, revoke, correct, invalidation, retention, or metadata that
-retires/quarantines a note) rebuild on the next request. Retractions made by another process over
-the same store do the same: each build re-reads only the core notes the pinned prefix shows with one
-bounded `memory.get` per scope, so another process's additions never break the cache, while a
-forgotten, revoked or retired note leaves the next request. If that read fails, the core block is
-left out of that request rather than resent stale, and returns once the store answers. Notes written mid-session remain reachable
-through recall, passive tail injection and path cues until the next epoch. Working memory is read
-on every request and delivered at the head of the tail after the transcript, so its updates are
-visible on the next tool follow-up without changing the prefix.
+rules and cue-index caches, so external additions — and a person's `rules.md` edit — appear at the
+next epoch boundary. Retractions through this memory instance (forget, revoke, correct, invalidation,
+retention, or metadata that retires/quarantines a note) rebuild on the next request. Retractions made
+by another process over the same store do the same: each build re-reads only the rule notes the pinned
+prefix shows with one bounded `memory.get` per scope, so another process's additions never break the
+cache, while a forgotten, revoked or retired note leaves the next request. If that read fails, the
+rules block is left out of that request rather than resent stale, and returns once the store answers.
+Notes written mid-session remain reachable through recall, passive tail injection and path cues until
+the next epoch. Working memory is read on every request and delivered at the head of the tail after the
+transcript, so its updates are visible on the next tool follow-up without changing the prefix.
 
-The core carries no timestamp and makes no model call: one metadata `scanMetadata` page per scope,
-plus bounded reads for the text of the notes that fit. Without `scanMetadata` on the store, setup
-says so once and the core stays off. Session snapshots are removed on close.
+The rules carry no timestamp and make no model call: one metadata `scanMetadata` page per scope,
+plus bounded reads for the text of the rules that fit. Without `scanMetadata` on the store, setup
+says so once and the rules stay off. Session snapshots are removed on close.
 
-**`core.md`.** With the markdown store, each scope's slice is also written to `<scope>/core.md` under
-the notes tree — the same text the model sees, so a person can read exactly what the agent always
-reads. It is derived: the store regenerates it on every rebuild, and an edit made to it is
-overwritten with a `log.md` line that says so and points at `pinned: true`. Pin a note
-(`pinned: true`, `memory.replace { id, pin }`, `fabric.pin`) to keep it in the core: a pin moves it
-to the front and exempts it from archive and eviction. Stores with no file layout (in-memory,
-SQLite, Postgres) show the block only.
+**`rules.md`.** With the markdown store, each scope's rules are written to `<scope>/rules.md` under
+the notes tree, one rule per line, so a person can read and correct exactly what the agent always
+reads:
+
+```markdown
+- [d12] Validate inputs with zod, not yup. (why: memory.read d12)
+- [p03] Run memory suites with --timeout=0. (applies to packages/memory/**)
+```
+
+The file is **editable**. At the start of each session the fabric compares the file's marker hash
+with its body (one read and one hash per scope); if a person edited it, the edit is folded into notes
+and the file is regenerated:
+
+- an added line becomes an active, pinned rule with `generated.by: human` (`(applies to a/**)` makes
+  it path-scoped);
+- a deleted line retires its note;
+- a changed line writes a correcting note (history kept: the old note is retired with `validTo`) and
+  keeps the rule's scope and globs.
+
+Every added or changed line passes the trust scan; a line that trips it (or whose write fails) is
+refused, counted, and dropped from the regenerated file, so an instruction can never become a rule by
+editing. Until the edit is folded in, the store keeps the file as the person wrote it and does not
+overwrite it. Stores with no file layout (in-memory, SQLite, Postgres) show the block only.
 
 ### Path cues
 
@@ -632,7 +678,7 @@ then retrieval strength `R`. Paths come from the session's touched-path tracker 
 workspace-relative, so a path outside the project never matches. The lines join the semantic tail
 block and stay in the untrusted envelope; the text passes the redactor.
 
-Cross-source dedup drops a note already in the core, already injected by topic, already cued, or
+Cross-source dedup drops a note already in the rules block, already injected by topic, already cued, or
 whose text is verbatim in a visible file read. Injected cues join the citation tracker, so citing
 one counts as a use. The injected set lives in session state, so a restore never shows a cue again,
 and a turn with no new path runs no query. `cues: false` makes no index query and adds no lines. A path-scoped
@@ -669,7 +715,7 @@ cross-project guess. The storage level is the store the note lives in, so a team
 is passed through the trust scan (`prompt-injection`, `exfil`, `invisible-unicode`). A note that
 trips it is rewritten as a `candidate` carrying its `flags:` — quarantined like an imported bundle,
 never injected, and counted by `memory:status` (`Team store: … (1 quarantined)`). Setup warns once
-when anything was quarantined. Team notes never enter the pinned core, never count toward capacity,
+when anything was quarantined. Team notes never enter the standing rules, never count toward capacity,
 and never count toward widening: only private project notes prove a cross-project lesson.
 
 **Writing needs a person.** The agent has no write path: `memory.insert` refuses `scope: "team"`,
@@ -703,6 +749,31 @@ assistant: Noted; I will treat Monday as the launch date.
   appended (not `turn.completed`, which fires inside the provider round before it). Only an
   assistant message with **no `tool_call` block** ends a turn, so a tool round never becomes an
   exchange and tool arguments/results are never stored.
+- **Tool steps (opt-in).** `exchanges: { steps: true }` appends a `## Steps` section to the exchange:
+  one line per tool result of that turn, in order, up to `exchanges.maxSteps` (default 24, at most
+  64; further ones collapse into `- … N more step(s)`), and the whole section stays under a quarter
+  of `limits.maxEntryTextChars`.
+
+  ```markdown
+  ## Steps
+  - bash `bun test packages/memory` → error: ENOENT: no such file '.prism-memory.sqlite' (entry 01JD…)
+  - edit `packages/memory/fabric/src/config.ts` → ok (entry 01JE…)
+  - bash `bun test packages/memory` → ok (entry 01JF…)
+  ```
+
+  A line is the tool name, an argument summary (≤ 120 characters: `command`, `cmd`, `path`,
+  `file_path`, `file`, `query`, `pattern` or `url`, whichever the tool's declared `parameters`
+  include, otherwise the first scalar argument), `ok` or `error`, for an error the first line of its
+  message (≤ 200 characters), and the **session entry id of the tool result**, so `memory.read
+  { around }` or the host can reach the full output. Result bodies and the other arguments are never
+  stored. Step text is indexed with the exchange, so "the migration failed with ENOENT" finds the turn
+  where it happened. Steps are untrusted tool input and output: each passes the trust scan and the
+  redactor, and a step either flags keeps only its tool name and outcome (counted in `memory:status`
+  as `stepsDropped`); an unsafe step never refuses the dialogue. A step trace is evidence for recall,
+  not extraction input: consolidation reads the dialogue only. An exchange whose steps contain a
+  failed run followed by a passing run of the same command, where the command matches
+  `CONSOLIDATION_PATTERNS.outcomes` (`bun test`, `git commit`, …), is tagged `outcome:fixed`. Off by
+  default, so both presets and their revisions are unchanged.
 - **Dated and source-backed.** `tRef` is the user entry's timestamp. Relative dates in the turn
   ("yesterday", "last Tuesday", "two weeks ago", "in March") are resolved against it by a
   deterministic English resolver and stored as an additive `dates: [{ text, resolved, precision }]`
@@ -784,7 +855,7 @@ the archive off with `exchanges: false`, is allowed and emits one `prism.status.
 fields. An unknown preset name fails config validation (`MemoryValidationError` from
 `resolveMemoryFabricConfig`).
 
-**Traceability.** `memory:status` reports `preset: "conversational"` and `presetRevision: 1`
+**Traceability.** `memory:status` reports `preset: "conversational"` and `presetRevision: 2`
 (`CONVERSATIONAL_PRESET_REVISION`), and the same pair is written to a status note at setup, so
 `agent.inspect()` shows the revision next to the package config's `preset`.
 
@@ -829,13 +900,14 @@ stores decisions as well as exchanges. The preset expands to:
   inject: { query: "task", kinds: ["exchange"] },  // conversational history, by rank
   semantic: true,
   promote: false,
-  core: { kinds: ["decision", "preference"] },     // decisions first, then preferences, 600 tokens
+  rules: { kinds: ["decision", "preference", "procedure"], capture: "confirm" }, // decisions first; 2,000 tokens
   cues: { budgetTokens: 300, maxPerTurn: 3 },      // path rules, at most 3 per turn
 }
 ```
 
 A user turn with a lasting-rule cue (`from now on`, `always`, `never`, `we decided`, `use X instead
-of Y`, `no, do X`) becomes a **proposed** decision with a lexical rationale; no model is called.
+of Y`, `no, do X`) becomes a **proposed** decision with a lexical rationale; preference and procedure
+cues become those kinds (see Standing rules). No model is called.
 The user turn and assistant reply are already archived, and `sourceEntryIds` names both. An explicit
 `memory.insert { kind: "decision" }` is also proposed. The only capture inputs are user turns and the
 agent's own typed write: tool output is never captured. Every write runs the trust scan.
@@ -844,7 +916,7 @@ Activation is explicit: one batched `host.ui` confirmation per turn (a host that
 `unavailable` leaves the note proposed), or use in two sessions with no correction. A correction
 that writes a new decision with `supersedes` marks the old one `superseded`; it stays readable by
 id but is never delivered. Active path decisions arrive through the existing path cue when a touched
-file matches `appliesTo`; active project decisions take the core slice. A narrower scope shadows a
+file matches `appliesTo`; active project decisions take the rules block. A narrower scope shadows a
 wider one through the existing `key` shadowing. The preset makes **no write-path generative model
 call** and needs no embeddings service; a decision model is only used when the host names one
 (plan 202 Task 12). `memory:status` reports `preset: "coding"` and `presetRevision: 1`.
@@ -888,6 +960,40 @@ functional contract; the measured target stays with Plan 210 Task 9.
 - **The exchange archive gates refuse real history.** The offline audit measured 2.271 refusals per
   1,000 LongMemEval-S exchanges, touching 3 of 500 needed-session questions; adversarial detection
   was 33/34. Evidence: `docs/_evidence/memory-bench/188.11/trust-scan.md`.
+
+## Lessons
+
+A lesson is what the working agent learned: what to do differently, a gotcha, the fix that worked
+(plan 209 Task 4). It is a `procedure` or `fact` the agent writes itself with `memory.insert`, tagged
+`lesson` and citing at least one `evidence` id. There is no `lesson` kind and no background model call:
+the agent already has the context in its turn.
+
+```json
+{ "tool": "memory.insert", "input": { "kind": "procedure", "text": "Create the SQLite file's parent dir before running memory suites.", "tags": ["lesson"], "evidence": ["4f2a9c1e0b77"] } }
+```
+
+- **Evidence.** 1–8 note ids, usually the exchange of the turn where it happened (with `exchanges: { steps:
+  true }` its `## Steps` show the failed command and the fix). Each id must be a note in an active scope that
+  stays readable wherever the lesson is read: a project or path lesson may cite project, user or agent notes;
+  a user or agent lesson may cite only user or agent notes. Anything else, including another project's
+  note, rejects the write with `not_found`. Every writer holds the lesson rule, not only the tool.
+- **Lifecycle.** A lesson starts as a `candidate` and verifies by the existing use rule (cited in
+  `lifecycle.verifyAfterSessions` sessions without correction). A lesson with no use for
+  `lessons.archiveAfterSessions` (20) scope sessions since its last use is archived from default recall
+  whatever its strengths, never deleted, and a later citation revives it. A pinned lesson never archives.
+- **Nudge** (`lessons: { nudge: true }`, default off, needs the exchange archive). After a turn that carried a
+  signal, the next request's tail carries one line:
+
+  ```text
+  memory: this turn had a correction; if there is a reusable lesson, record it: memory.insert { kind: "procedure", tags: ["lesson"], evidence: ["<exchange id>"] }
+  ```
+
+  Signals, by the consolidation gatherer's patterns over the user turn plus the step trace: a correction
+  cue, an explicit "remember", an exchange tagged `outcome:fixed` (needs `exchanges.steps`), or an
+  approval denial (`decision.resolved` with `deny`) inside the turn. At most once per
+  `lessons.minTurnsBetweenNudges` (5) completed turns per session. The line holds the exchange id and fixed
+  text only, never note or turn text; it is never in the prefix and is taken by one request. When the trust
+  scan refused that exchange, the cited id is not a note and the insert answers `not_found`.
 
 ## Memory directory
 
@@ -1335,7 +1441,7 @@ second line behind the cascade, one batched read confirms that every note a clai
 with an unreadable citation is not delivered. A flagged concept renders `[flagged: <class>]` and no claim. A shared team
 concept cites private notes that never travelled with it, so its drill-down reads the concept itself.
 
-**Passive delivery is a pointer.** A concept never enters the pinned core. The passive tail carries at most one concept
+**Passive delivery is a pointer.** A concept never enters the standing rules. The passive tail carries at most one concept
 per turn, as one line (`- [id] concept payments — memory.read id`), and only when it is the top fused hit and its subject
 is in play: one of its names (slug, title, alias) is in the turn's words, or a touched path falls inside the concept's
 `appliesTo` globs. A path cue for a concept is the same pointer, and the tail and the cue share the one slot. Content is
@@ -1562,8 +1668,11 @@ proof that a term is absent from the whole archive. For aggregation questions, l
 and their ids before counting or totalling, and use two or three differently worded queries.
 
 `memory.insert` accepts exactly one of `block`, `path`, or `kind: "fact" | "preference" | "procedure" | "decision"`.
-Typed notes accept `supersedes`, `rationale` (decision only), `tRef`, `validFrom`, `validTo`, `tags`,
-`keywords`, `scope`, `appliesTo`, and `key`. A decision inserted by the agent is always `proposed`
+Typed notes accept `supersedes`, `evidence`, `rationale` (decision only), `tRef`, `validFrom`, `validTo`, `tags`,
+`keywords`, `scope`, `appliesTo`, and `key`. `evidence` is 1–8 note ids stored as links with relation
+`evidence`; an id that is not readable wherever the new note is read returns `not_found` and writes
+nothing (see `## Lessons`). A note tagged `lesson` without evidence, or of a kind other than procedure
+or fact, returns `lesson_requires_evidence`. A decision inserted by the agent is always `proposed`
 and a lifecycle candidate; it needs the user's confirmation or two sessions of use to become active. The scope rule in the description is precision-first: user-wide preferences
 → `user`; anything learned in this repository → `project`; only a lesson proven across projects →
 `agent`; `path` with `appliesTo` when the note holds for one subtree; when unsure, the narrower
@@ -1837,10 +1946,11 @@ version). `packages/memory/fabric/src/__tests__/stability.test.ts` checks this t
 | `recall.supersessionHint` | tuning |
 | `recall.expansion` | tuning |
 | `recall.gather` | tuning |
-| `core` | contract |
-| `core.maxTokens` | tuning |
-| `core.scopes` | contract |
-| `core.kinds` | contract |
+| `rules` | contract |
+| `rules.capture` | contract |
+| `rules.maxTokens` | tuning |
+| `rules.scopes` | contract |
+| `rules.kinds` | contract |
 | `cues` | contract |
 | `cues.budgetTokens` | tuning |
 | `cues.maxPerTurn` | tuning |
@@ -1906,6 +2016,12 @@ version). `packages/memory/fabric/src/__tests__/stability.test.ts` checks this t
 | `passive` | contract |
 | `exchanges` | contract |
 | `exchanges.enabled` | contract |
+| `exchanges.steps` | contract |
+| `exchanges.maxSteps` | tuning |
+| `lessons` | contract |
+| `lessons.nudge` | contract |
+| `lessons.minTurnsBetweenNudges` | tuning |
+| `lessons.archiveAfterSessions` | tuning |
 | `ontology` | contract |
 | `ontology.bindThreshold` | tuning |
 | `ontology.conceptPrior` | tuning |

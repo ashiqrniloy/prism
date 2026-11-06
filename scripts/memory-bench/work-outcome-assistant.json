@@ -1,0 +1,40 @@
+{
+  "seed": "prism-209-work-outcome-assistant",
+  "draw": "SHA-256(\"prism-209-work-outcome-assistant:\" + id), ascending inside the family stratum",
+  "source": "work-outcome/personas.mjs family=assistant (project-owned synthetic generator)",
+  "strata": {
+    "assistant-work": [
+      3,
+      3,
+      3
+    ]
+  },
+  "part": "dev | heldout-a | heldout-b; dev is plan 209 Task 6's; heldout-a and heldout-b are plan 210 Task 9's (heldout-b only for its single remediation round)",
+  "residualPool": {
+    "assistant-work": 0
+  },
+  "idsHash": "bfb4907b13aa27c2e1148a0939371f220550948de2f6f9ba9cec4ee962ea0984",
+  "abilities": {
+    "dev": {
+      "assistant-work": [
+        "wa5",
+        "wa3",
+        "wa7"
+      ]
+    },
+    "heldout-a": {
+      "assistant-work": [
+        "wa4",
+        "wa6",
+        "wa1"
+      ]
+    },
+    "heldout-b": {
+      "assistant-work": [
+        "wa8",
+        "wa0",
+        "wa2"
+      ]
+    }
+  }
+}

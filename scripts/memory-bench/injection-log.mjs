@@ -7,7 +7,7 @@ export const textOf = (content) =>
         .filter((part) => part.type === "text")
         .map((part) => part.text)
         .join("\n");
-const sources = new Set(["om", "fabric-working", "fabric-semantic", "fabric-directory", "fabric-core"]);
+const sources = new Set(["om", "fabric-working", "fabric-semantic", "fabric-directory", "fabric-rules"]);
 function sourceOf(block) {
   if (sources.has(block.metadata?.source)) return block.metadata.source;
   const name = block.title ?? block.id ?? "";

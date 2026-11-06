@@ -12,7 +12,7 @@ import { dirname, join } from "node:path";
 import { createSecretRedactor } from "@arnilo/prism";
 import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
 import { createMarkdownMemoryStores } from "@arnilo/prism-memory-core/fabric";
-import { createFabricCore, resolveFabricCoreOptions } from "../../../packages/memory/fabric/src/delivery/core.js";
+import { createFabricRules, resolveFabricRulesOptions } from "../../../packages/memory/fabric/src/delivery/rules.js";
 import { createExchangeArchive } from "../../../packages/memory/fabric/src/exchanges.js";
 import { createMemory, createMemoryFabric, createMemoryWorkingStore, exportMemoryOkf } from "../../../packages/memory/fabric/src/index.js";
 import { loadDataset, normalizeDataset } from "../datasets.mjs";
@@ -272,9 +272,9 @@ async function filesContain(root, suffix, marker, exclude = []) {
   return false;
 }
 
-/** Canonical notes only: derived index, log, core and resource files are checked separately. */
+/** Canonical notes only: derived index, log, rules and resource files are checked separately. */
 function noteFilesContain(root, marker) {
-  return filesContain(root, ".md", marker, ["core.md", "index.md", "log.md", "project.md"]);
+  return filesContain(root, ".md", marker, ["rules.md", "index.md", "log.md", "project.md"]);
 }
 
 /**
@@ -296,11 +296,11 @@ export async function runDeletion() {
     workingStore: stores.workingStore,
   });
   const fabric = createMemoryFabric({ memory, vectorStore: stores.vectorStore, consolidate: false });
-  const core = createFabricCore({
-    options: resolveFabricCoreOptions(true, true),
+  const core = createFabricRules({
+    options: resolveFabricRulesOptions(true, true),
     scopes: [{ level: "project", memory }],
     scanMetadata: stores.vectorStore.scanMetadata.bind(stores.vectorStore),
-    writeFile: (scope, content) => stores.writeDerivedFile(scope, "core.md", content),
+    writeFile: (scope, content) => stores.writeDerivedFile(scope, "rules.md", content),
   });
 
   const marker = "DELETE-CANARY-12345";

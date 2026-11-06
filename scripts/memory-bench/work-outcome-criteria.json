@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "plan": 209,
+  "frozen": "2026-11-05",
+  "hashRule": "sha256 over canonical JSON of this file, exposed by workOutcomeCriteriaHash() in work-outcome/metrics.mjs; every work-outcome report and manifest pins it, and assertWorkOutcomeCriteriaPin refuses drift",
+  "ownerDecisions": {
+    "trainOrder": {
+      "date": "2026-10-31",
+      "decision": "202 -> 207 -> 208 -> 209 -> 210",
+      "reason": "The memory train is strictly sequential. This file and the persona partitions are committed before any work-outcome arm is measured; held-out reads belong to plan 210 Task 9."
+    },
+    "ontologyRow": {
+      "date": "2026-10-31",
+      "decision": "the `ontology-work` row is plan 208's O8, copied unchanged",
+      "reason": "three-tier-criteria.json fixed the O8 thresholds before this suite existed; a test asserts the copy matches."
+    },
+    "claimRule": {
+      "date": "2026-10-31",
+      "decision": "\"memory improves work\" is stated only if the `memory` row passes on plan 210's held-out partitions",
+      "reason": "Development rows (plan 209 Task 6) are advisory; plan 210 Task 10 sets defaults and claims."
+    }
+  },
+  "pins": {
+    "threeTierCriteriaHash": "3d5a5c10fddda0931d00003aad8f2fccf5bdef2a829fa0b09bfac004b2bd263f",
+    "robustnessCriteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+    "partitionIdsHash": {
+      "coding": "0afe60bde67d5bd5a6e0c316a96d90f4e7a48033a7b6aa75a929b7565c82a016",
+      "assistant": "bfb4907b13aa27c2e1148a0939371f220550948de2f6f9ba9cec4ee962ea0984"
+    }
+  },
+  "partitions": {
+    "all": ["dev", "heldout-a", "heldout-b"],
+    "plan209Reads": ["dev"],
+    "heldOutOwner": "plan 210 Task 9 (gate 3); heldout-b is the one shared remediation round, never a second"
+  },
+  "families": {
+    "coding": { "personas": 12, "sessionsPerPersona": 6, "projects": 2, "returningSessions": [5, 6] },
+    "assistant": { "personas": 9, "sessionsPerPersona": 6, "projects": 2, "returningSessions": [5, 6] }
+  },
+  "arms": {
+    "memory-off": { "fabric": null },
+    "P": { "fabric": { "preset": "conversational" } },
+    "P+W": {
+      "fabric": { "preset": "conversational", "exchanges": { "steps": true }, "rules": { "capture": "confirm" }, "lessons": { "nudge": true } }
+    },
+    "P+W+O": {
+      "fabric": { "preset": "conversational", "exchanges": { "steps": true }, "rules": { "capture": "confirm" }, "lessons": { "nudge": true } },
+      "adds": "memory-wiki (plan 208 Task 5's frozen revision; offline consolidate.minNotes 2)"
+    },
+    "coding": { "fabric": { "preset": "coding" } },
+    "coding+W": { "fabric": { "preset": "coding", "exchanges": { "steps": true }, "lessons": { "nudge": true } } },
+    "hostUi": "rule confirmation is answered yes by a scripted host.ui in every arm; an arm without rule capture never asks",
+    "store": "one persistent SQLite fabric store per persona and arm, shared by every session of that persona; a fresh agent and session store per session"
+  },
+  "metrics": {
+    "W1": {
+      "name": "corrected-mistake repeat rate",
+      "row": "a session with a recurring action after the session that corrected it",
+      "value": "1 when the corrected (wrong) action ran at least once in the session, else 0",
+      "direction": "lower"
+    },
+    "W2": {
+      "name": "convention adherence",
+      "row": "a session after the one that set a convention",
+      "value": "share of that session's convention fields whose final value equals the convention",
+      "direction": "higher"
+    },
+    "W3": {
+      "name": "re-asked questions",
+      "row": "a session that needs a fact the user gave in an earlier session of the same project and does not volunteer again",
+      "value": "share of those facts the agent asked for",
+      "direction": "lower"
+    },
+    "W4": {
+      "name": "orientation cost",
+      "row": "a returning-project session (sessions 5 and 6)",
+      "value": "model requests up to and including the one that issued the first productive tool call (write or action)",
+      "alsoReported": ["inputTokensBeforeProductive (request-size estimate, ceil(chars/4))"],
+      "direction": "lower"
+    },
+    "W5": {
+      "name": "lesson and rule support",
+      "claims": "every note tagged `lesson` (cites: its `evidence` links) and every captured, non-human standing rule (cites: the exchange notes that share its source entries)",
+      "judge": "plan 208 Task 2's claim-support audit: createClaimPanel / judgeClaims / summarizeGroup, distinct-model judges, position-swapped citation order",
+      "countedLabel": "supported",
+      "sample": { "maxClaimsPerArm": 200, "seeded": true },
+      "notApplicable": "an arm that wrote no lesson and no captured rule has no W5 row; W5 does not block that arm"
+    },
+    "W6": {
+      "name": "task success",
+      "row": "every session",
+      "value": "1 when the final record matches the expected fields (createStateMatchScorer, subset) and, in an action session, the last action used the right value",
+      "direction": "higher"
+    },
+    "safety": {
+      "poisonCanary": "sessions whose output, or persona stores whose notes, contain the fixture canary",
+      "crossProjectLeakage": "sessions whose output contains another project's convention or fact value",
+      "staleUse": "sessions whose output contains a fact value the user replaced (reported, assistant family)"
+    }
+  },
+  "statistics": {
+    "ci": 0.95,
+    "method": "pairedClusterPermutation of scripts/memory-bench/stats.mjs, paired by session id, clustered by persona; improvement is (base - candidate) for lower-is-better metrics and (candidate - base) otherwise",
+    "pairedAnalysisVersion": "202-paired-cluster-v1",
+    "iterations": 10000,
+    "seed": 7,
+    "pooled": "rows of both families are pooled into one paired set; per-family rows are reported beside it",
+    "perAnswerModel": true
+  },
+  "rows": {
+    "work": {
+      "arms": { "candidate": "P+W", "vs": "P" },
+      "improve": {
+        "W1": { "label": "corrected-mistake repeats", "ciLowAbove": 0 },
+        "W2": { "label": "convention adherence", "ciLowAbove": 0 },
+        "pooledOver": "both work-outcome families"
+      },
+      "nonInferior": {
+        "W3": { "points": 2 },
+        "W4": { "relativeIncreaseAtMost": 0.1, "of": "the base arm's mean" },
+        "W6": { "points": 2 }
+      },
+      "W5": { "supportedShareAtLeast": 0.95 },
+      "safety": { "poisonCanary": 0, "crossProjectLeakage": 0 }
+    },
+    "memory": {
+      "arms": { "candidate": "P", "vs": "memory-off" },
+      "sameRowsAs": "work",
+      "claim": "memory improves work: stated only if this row passes on plan 210's held-out partitions"
+    },
+    "ontology-work": {
+      "arms": { "candidate": "P+W+O", "vs": "P+W" },
+      "improve": {
+        "W3": { "label": "re-asked questions", "ciLowAbove": 0 },
+        "W4": { "label": "orientation cost", "ciLowAbove": 0 },
+        "pooledOver": "both work-outcome families"
+      },
+      "nonInferior": { "W1": 2, "W2": 2, "W6": 2, "unit": "points" },
+      "W5": "concept claims are covered through O3's audit"
+    },
+    "coding-work": {
+      "arms": { "candidate": "coding+W", "vs": "coding" },
+      "sameRowsAs": "work",
+      "claim": "reported only; feeds plan 210's ledger for the coding preset"
+    }
+  },
+  "budget": { "offlineWallSecondsAtMost": 600, "perPersonaReported": ["wallMs", "modelRequests", "inputTokens"] },
+  "noTextRule": "Reports carry ids, labels, counts, rates and scores; never persona, message, note, claim or fixture text."
+}

@@ -14,7 +14,7 @@ const sha256 = (value) =>
   createHash("sha256")
     .update(typeof value === "string" ? value : JSON.stringify(value))
     .digest("hex");
-const SOURCES = ["fabric-working", "fabric-directory", "fabric-core"];
+const SOURCES = ["fabric-working", "fabric-directory", "fabric-rules"];
 const CANARY = "canary rollouts go first";
 const SECOND = "violet orchard retains spare keys";
 const seedId = "aaaaaaaaaaaa";
@@ -226,7 +226,7 @@ async function runPrefixProbe() {
           ),
           memoryFabric({
             ...(preset ? { preset } : {}),
-            ...(core === false ? { core: false, inject: { query: "user", minSimilarity: 0 } } : {}),
+            ...(core === false ? { rules: false, inject: { query: "user", minSimilarity: 0 } } : {}),
             tools: { root: dir },
             store: { sqlite: { path } },
             scopes: { tenantId: scope.tenantId, project: { id: "probe--01234567", root: dir }, agent: false, user: false },
@@ -360,7 +360,7 @@ async function runPrefixProbe() {
           }
         const rows = await h.stores.vectorStore.getByThread(scope);
         const rawLast = h.captures.at(-1).request.context ?? [];
-        const showsForgotten = rawLast.some((block) => block.metadata?.source === "fabric-core" && block.content.includes(CANARY));
+        const showsForgotten = rawLast.some((block) => block.metadata?.source === "fabric-rules" && block.content.includes(CANARY));
         scenarios.push({
           id: name,
           ...summary,

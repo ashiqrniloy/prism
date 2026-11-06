@@ -10,11 +10,11 @@ import type { JsonSchema } from "@arnilo/prism";
 import { HARD_TOP_K_CAP, MemoryValidationError } from "@arnilo/prism-memory-core";
 import type { MemoryWorkerLimitOptions } from "@arnilo/prism-memory-observational";
 import {
-  HARD_CORE_TOKENS,
-  type MemoryFabricCoreConfig,
-  type ResolvedFabricCoreOptions,
-  resolveFabricCoreOptions,
-} from "./delivery/core.js";
+  HARD_RULES_TOKENS,
+  type MemoryFabricRulesConfig,
+  type ResolvedFabricRulesOptions,
+  resolveFabricRulesOptions,
+} from "./delivery/rules.js";
 import {
   HARD_CUE_TOKENS,
   HARD_CUES_PER_TURN,
@@ -30,14 +30,20 @@ import {
   type ResolvedFabricDirectoryOptions,
   resolveFabricDirectoryOptions,
 } from "./directory.js";
+import {
+  DEFAULT_LESSON_ARCHIVE_SESSIONS,
+  DEFAULT_LESSON_NUDGE_TURNS,
+  MAX_LESSON_ARCHIVE_SESSIONS,
+  MAX_LESSON_NUDGE_TURNS,
+} from "./lessons.js";
 import { MAX_BIND_THRESHOLD, resolveBindThreshold } from "./ontology/bind.js";
 import { MAX_CLAIMS_RENDERED_LIMIT, MAX_CONCEPT_PRIOR, resolveConceptPrior, resolveMaxClaimsRendered } from "./ontology/render.js";
 
 export type {
-  MemoryFabricCoreConfig,
+  MemoryFabricRulesConfig,
   MemoryFabricCuesConfig,
   MemoryFabricTeamConfig,
-  ResolvedFabricCoreOptions,
+  ResolvedFabricRulesOptions,
   ResolvedFabricCuesOptions,
   ResolvedFabricTeamOptions,
 };
@@ -499,13 +505,45 @@ function resolveMergeConfig(value: MemoryFabricLifecycleConfig["merge"]): Resolv
 export interface MemoryFabricExchangesConfig {
   /** `false` keeps the archive off; absent in an object means on. Default off. */
   readonly enabled?: boolean;
+  /**
+   * Add a condensed `## Steps` trace of each turn's tool rounds to its exchange (plan 209 Task 2): tool,
+   * argument summary, outcome, first error line, result entry id; never result bodies. Default off.
+   */
+  readonly steps?: boolean;
+  /** Most tool rounds listed per exchange. Default 24, at most {@link MAX_EXCHANGE_STEPS}. */
+  readonly maxSteps?: number;
 }
+
+/** The cited lesson notebook (plan 209 Task 4). */
+export interface MemoryFabricLessonsConfig {
+  /**
+   * After a turn with a lesson signal (a correction, an explicit "remember", a failed-then-fixed command,
+   * an approval denial), the next request's tail carries one line asking the agent to record a cited
+   * lesson. Ids and fixed text only, never in the prefix, no model call. Needs the exchange archive. Default off.
+   */
+  readonly nudge?: boolean;
+  /** Turns a nudge waits after the last one in the same session. Default 5. */
+  readonly minTurnsBetweenNudges?: number;
+  /** Scope sessions without a use after which a lesson leaves default recall (archived, never deleted). Default 20. */
+  readonly archiveAfterSessions?: number;
+}
+
+export interface ResolvedFabricLessonsOptions {
+  readonly nudge: boolean;
+  readonly minTurnsBetweenNudges: number;
+  readonly archiveAfterSessions: number;
+}
+
+export const DEFAULT_EXCHANGE_STEPS = 24;
+export const MAX_EXCHANGE_STEPS = 64;
 
 /** {@link MemoryFabricExchangesConfig} with the write scope the archive resolved. */
 export interface ResolvedFabricExchangesOptions {
   readonly enabled: boolean;
   /** The scope an exchange is written to; never `path`. */
   readonly scope: "user" | "agent" | "project";
+  /** The step trace; `false` (the default) stores dialogue only. */
+  readonly steps: false | { readonly maxSteps: number };
 }
 
 /** The preset names. A later name is additive; each one is a written contract (README `## Conversational preset`). */
@@ -516,7 +554,7 @@ export type MemoryFabricPresetName = "conversational" | "coding";
  * `memory:status` and the setup status note report it, so a measurement is attributable to a revision.
  */
 export const CONVERSATIONAL_PRESET_REVISION = 1;
-export const CODING_PRESET_REVISION = 1;
+export const CODING_PRESET_REVISION = 2;
 
 /** Validated `packageConfig` for `@arnilo/prism-memory-fabric`. */
 export interface MemoryFabricConfig {
@@ -540,10 +578,11 @@ export interface MemoryFabricConfig {
   /** The long-term memory index in the prompt prefix. Default on when `semantic` or `tools.root` is set. */
   readonly directory?: boolean | MemoryFabricDirectoryConfig;
   /**
-   * The pinned core: a small top-S slice of long-term memory in the prompt prefix, stable between
-   * rebuilds. Default on; `false` computes and shows nothing.
+   * Standing rules (plan 209 Task 3): a small always-loaded slice of verified rules in the prompt prefix,
+   * stable between rebuilds, an editable `rules.md` per scope (markdown store), and opt-in confirmed capture
+   * of rules from user turns (`capture: "confirm"`). Default on, capture off; `false` computes and shows nothing.
    */
-  readonly core?: false | MemoryFabricCoreConfig;
+  readonly rules?: false | MemoryFabricRulesConfig;
   /**
    * Path cues: path-scoped notes shown once when a file tool touches a matching file. Default on;
    * `false` makes no index query and adds no tail lines.
@@ -583,6 +622,8 @@ export interface MemoryFabricConfig {
    * then the agent scope (plan 188.9 Task 1c).
    */
   readonly exchanges?: boolean | MemoryFabricExchangesConfig;
+  /** The cited lesson notebook: the opt-in nudge and the lesson archive rule (plan 209 Task 4). */
+  readonly lessons?: MemoryFabricLessonsConfig;
   /** The note lifecycle: verification by use across sessions. */
   readonly lifecycle?: MemoryFabricLifecycleConfig;
   /** The ontology tier's write-path knobs (plan 207). Nothing here turns the tier on: concepts do. */
@@ -656,7 +697,7 @@ export interface ResolvedMemoryFabricConfig {
   readonly semantic: boolean;
   readonly inject: false | MemoryFabricInjectConfig;
   readonly directory: false | ResolvedFabricDirectoryOptions;
-  readonly core: false | ResolvedFabricCoreOptions;
+  readonly rules: false | ResolvedFabricRulesOptions;
   readonly cues: false | ResolvedFabricCuesOptions;
   /** The team store, when configured and its directory exists on this checkout. */
   readonly team: false | ResolvedFabricTeamOptions;
@@ -690,9 +731,14 @@ export interface ResolvedMemoryFabricConfig {
   readonly passive?: boolean;
   /** The exchange archive, with its write scope resolved from the raw config. */
   readonly exchanges: ResolvedFabricExchangesOptions;
+  readonly lessons: ResolvedFabricLessonsOptions;
   readonly lifecycle: ResolvedLifecycleConfig;
   readonly ontology: { readonly bindThreshold: number; readonly conceptPrior: number; readonly maxClaimsRendered: number };
-  readonly recall: { readonly supersessionHint: import("./recall.js").SupersessionHintMode; readonly expansion: boolean; readonly gather: boolean };
+  readonly recall: {
+    readonly supersessionHint: import("./recall.js").SupersessionHintMode;
+    readonly expansion: boolean;
+    readonly gather: boolean;
+  };
   readonly promote: ResolvedPromoteConfig;
   /** Opt-in read-time state table; `false` keeps the read path model-free. */
   readonly state: false | ResolvedStateConfig;
@@ -754,8 +800,9 @@ const fabricConfigSchema: JsonSchema = {
       maxTokens: { type: "integer", minimum: 1, maximum: HARD_DIRECTORY_TOKENS },
       stopWords: { type: "boolean", default: false },
     }),
-    core: flagOrObject({
-      maxTokens: { type: "integer", minimum: 1, maximum: HARD_CORE_TOKENS },
+    rules: flagOrObject({
+      capture: { enum: ["off", "confirm"] },
+      maxTokens: { type: "integer", minimum: 1, maximum: HARD_RULES_TOKENS },
       scopes: { type: "array", minItems: 1, maxItems: 2, items: { enum: ["user", "project"] } },
       kinds: {
         type: "array",
@@ -931,7 +978,20 @@ const fabricConfigSchema: JsonSchema = {
       maxPatches: { type: "integer", minimum: 1, maximum: 32 },
     }),
     passive: { type: "boolean" },
-    exchanges: flagOrObject({ enabled: { type: "boolean" } }),
+    exchanges: flagOrObject({
+      enabled: { type: "boolean" },
+      steps: { type: "boolean" },
+      maxSteps: { type: "integer", minimum: 1, maximum: MAX_EXCHANGE_STEPS },
+    }),
+    lessons: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        nudge: { type: "boolean" },
+        minTurnsBetweenNudges: { type: "integer", minimum: 1, maximum: MAX_LESSON_NUDGE_TURNS },
+        archiveAfterSessions: { type: "integer", minimum: 1, maximum: MAX_LESSON_ARCHIVE_SESSIONS },
+      },
+    },
     ontology: {
       type: "object",
       additionalProperties: false,
@@ -944,7 +1004,11 @@ const fabricConfigSchema: JsonSchema = {
     recall: {
       type: "object",
       additionalProperties: false,
-      properties: { supersessionHint: { enum: ["all", "keyed-only"], default: "all" }, expansion: { type: "boolean", default: false }, gather: { type: "boolean", default: false } },
+      properties: {
+        supersessionHint: { enum: ["all", "keyed-only"], default: "all" },
+        expansion: { type: "boolean", default: false },
+        gather: { type: "boolean", default: false },
+      },
     },
     lifecycle: memoryFabricLifecycleSchema,
     promote: memoryFabricPromoteSchema,
@@ -998,7 +1062,10 @@ const TUNING_CONFIG_FIELDS: ReadonlySet<string> = new Set([
   "ontology.bindThreshold",
   "ontology.conceptPrior",
   "ontology.maxClaimsRendered",
-  "core.maxTokens",
+  "rules.maxTokens",
+  "exchanges.maxSteps",
+  "lessons.minTurnsBetweenNudges",
+  "lessons.archiveAfterSessions",
   "cues.budgetTokens",
   "cues.maxPerTurn",
   "scopes.priors",
@@ -1100,13 +1167,13 @@ const PRESETS: Readonly<Record<MemoryFabricPresetName, Readonly<MemoryFabricConf
     semantic: true,
     promote: false,
   }),
-  // Conversational history plus standing coding rules: decisions in the core, path rules as cues.
+  // Conversational history plus standing coding rules: confirmed capture, decisions first in the rules block, path rules as cues.
   coding: Object.freeze({
     exchanges: Object.freeze({}),
     inject: Object.freeze({ query: "task", kinds: Object.freeze(["exchange"] as const) }),
     semantic: true,
     promote: false,
-    core: Object.freeze({ kinds: Object.freeze(["decision", "preference"] as const) }),
+    rules: Object.freeze({ kinds: Object.freeze(["decision", "preference", "procedure"] as const), capture: "confirm" as const }),
     cues: Object.freeze({ budgetTokens: 300, maxPerTurn: 3 }),
   }),
 });
@@ -1192,6 +1259,9 @@ function resolveExpandedConfig(config: MemoryFabricConfig, preset: ResolvedMemor
   else if ("sqlite" in input) store = { sqlite: { path: insideRoot(input.sqlite.path, "store.sqlite.path") } };
   else store = input;
   const resolvedScopes = resolveScopes(config);
+  const exchanges = resolveExchangesConfig(config, resolvedScopes.scopes.active);
+  const lessons = resolveLessonsConfig(config.lessons, exchanges);
+  const lifecycle = resolveLifecycleConfig(config.lifecycle);
   return {
     ...(preset === undefined ? {} : { preset }),
     enabled: config.enabled !== false,
@@ -1199,9 +1269,9 @@ function resolveExpandedConfig(config: MemoryFabricConfig, preset: ResolvedMemor
     semantic: config.semantic !== false,
     inject: resolveInject(config.inject),
     directory: resolveFabricDirectoryOptions(config.directory, config.semantic !== false || Boolean(config.tools?.root)),
-    // The core is on by default: it is the always-present tier, and it costs nothing after the first
+    // The rules block is on by default: it is the always-present tier, and it costs nothing after the first
     // cached turn. A store without `scanMetadata` turns it off at setup instead.
-    core: resolveFabricCoreOptions(config.core, true),
+    rules: resolveFabricRulesOptions(config.rules, true),
     // Path cues are on by default: no model call, and a turn with no new touched path does no work.
     cues: resolveFabricCuesOptions(config.cues, true),
     // The team store is opt-in per checkout: its directory is a repository artefact, not a config default.
@@ -1217,19 +1287,40 @@ function resolveExpandedConfig(config: MemoryFabricConfig, preset: ResolvedMemor
     ...(config.linker === undefined ? {} : { linker: config.linker }),
     ...(config.evolution === undefined ? {} : { evolution: config.evolution }),
     ...(config.passive === undefined ? {} : { passive: config.passive }),
-    exchanges: resolveExchangesConfig(config, resolvedScopes.scopes.active),
-    lifecycle: resolveLifecycleConfig(config.lifecycle),
+    exchanges,
+    lessons,
+    lifecycle: { ...lifecycle, archive: { ...lifecycle.archive, lessonSessions: lessons.archiveAfterSessions } },
     ontology: {
       bindThreshold: resolveBindThreshold(config.ontology?.bindThreshold),
       conceptPrior: resolveConceptPrior(config.ontology?.conceptPrior),
       maxClaimsRendered: resolveMaxClaimsRendered(config.ontology?.maxClaimsRendered),
     },
-    recall: { supersessionHint: resolveSupersessionHint(config.recall?.supersessionHint), expansion: resolveExpansion(config.recall?.expansion), gather: resolveGather(config.recall?.gather) },
+    recall: {
+      supersessionHint: resolveSupersessionHint(config.recall?.supersessionHint),
+      expansion: resolveExpansion(config.recall?.expansion),
+      gather: resolveGather(config.recall?.gather),
+    },
     promote: resolvePromoteConfig(config.promote),
     state: resolveStateConfig(config.state),
     decisions: resolveDecisionsConfig(config.decisions),
     ...(config.workerLimits === undefined ? {} : { workerLimits: config.workerLimits }),
   };
+}
+
+/** The lesson knobs. A nudge cites the turn's exchange, so it needs the exchange archive. */
+function resolveLessonsConfig(
+  input: MemoryFabricLessonsConfig | undefined,
+  exchanges: ResolvedFabricExchangesOptions,
+): ResolvedFabricLessonsOptions {
+  const nudge = input?.nudge === true;
+  if (nudge && !exchanges.enabled) throw new MemoryValidationError("lessons.nudge requires the exchange archive (exchanges)");
+  const minTurnsBetweenNudges = input?.minTurnsBetweenNudges ?? DEFAULT_LESSON_NUDGE_TURNS;
+  if (!Number.isSafeInteger(minTurnsBetweenNudges) || minTurnsBetweenNudges < 1 || minTurnsBetweenNudges > MAX_LESSON_NUDGE_TURNS)
+    throw new MemoryValidationError(`lessons.minTurnsBetweenNudges must be an integer in [1,${MAX_LESSON_NUDGE_TURNS}]`);
+  const archiveAfterSessions = input?.archiveAfterSessions ?? DEFAULT_LESSON_ARCHIVE_SESSIONS;
+  if (!Number.isSafeInteger(archiveAfterSessions) || archiveAfterSessions < 1 || archiveAfterSessions > MAX_LESSON_ARCHIVE_SESSIONS)
+    throw new MemoryValidationError(`lessons.archiveAfterSessions must be an integer in [1,${MAX_LESSON_ARCHIVE_SESSIONS}]`);
+  return { nudge, minTurnsBetweenNudges, archiveAfterSessions };
 }
 
 /**
@@ -1251,7 +1342,9 @@ function resolveExchangesConfig(config: MemoryFabricConfig, active: readonly Res
         : activeLevels.has("agent")
           ? "agent"
           : "project";
-  return { enabled, scope };
+  const steps =
+    typeof input === "object" && input.steps === true ? { maxSteps: input.maxSteps ?? DEFAULT_EXCHANGE_STEPS } : (false as const);
+  return { enabled, scope, steps };
 }
 
 /**

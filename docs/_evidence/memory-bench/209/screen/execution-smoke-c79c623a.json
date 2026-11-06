@@ -1,0 +1,29 @@
+{
+  "kind": "209-development-screen-run",
+  "journal": {
+    "campaignId": "campaign-4983514faf8d",
+    "status": "finished",
+    "ceiling": 250000000,
+    "spend": 8500000,
+    "attempts": [
+      {
+        "attemptId": "209-screen.work.large.coding+W@1",
+        "jobId": "209-screen.work.large.coding+W",
+        "status": "completed",
+        "usageComplete": false,
+        "reservedInputTokens": 8500000,
+        "confirmedInputTokens": 627456
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "209-screen.work.large.coding+W",
+      "attemptId": "209-screen.work.large.coding+W@1",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": false,
+      "charged": 8500000
+    }
+  ]
+}

@@ -63,7 +63,7 @@ try {
 | `transport` | `"loopback-http"` or `"stdio-relay"`. |
 | `origin` | The bridge origin every served call is attributed to. |
 | `prefix` | Prepended to each served tool name in `tools/list` and `tools/call`. |
-| `resources` | Static `{ uri, name, mimeType?, text }` resources, each bounded to 256 KiB. |
+| `resources` | Static `{ uri, name, mimeType?, text }` resources, each bounded to 256 KiB. `skillResources` builds the entries for skills that go with the served tools ([below](#lending-skills-with-tools)). |
 | `limits` | `{ maxConcurrentCalls?, resultBytes? }`. Defaults 8 / 1 MiB; hard caps 64 / 8 MiB. Caps text, `structuredContent`, and the envelope body alike. |
 | `permissionTool` | `{ name, effects?, rewrite?, codec? }`: also serve a permission-prompt tool backed by `run.ask`. |
 | `relay` | `{ command }`, required for `stdio-relay`. |
@@ -101,6 +101,24 @@ validates nothing, so a bare array or primitive would be rejected by strict clie
 already reaches them as JSON text. An over-cap value is not structured either — the clipped text is
 the whole answer. Redaction happens in the kernel before the bridge, so both halves are the
 redacted ones.
+
+### Lending skills with tools
+
+`skillResources(skills, servedToolNames)` turns the skills that go with the served tools into `resources` entries, so a vendor agent that lists MCP resources can read how to use what it was lent. A driver passes its run context's skills and the same list it gives `serveTools` as `allow`:
+
+```ts
+import { serveTools, skillResources } from "@arnilo/prism-mcp-server";
+
+const lent = skillResources(context.skills.list(), allow);
+const served = await serveTools(run, { broker, tools: context.tools, allow, transport: "loopback-http", origin, resources: lent.resources });
+for (const skill of lent.skipped) log(`skill ${skill.name} not lent: ${skill.reason}`);
+```
+
+- **Only skills tied to the lent tools.** A skill is lent when its `requiresTools` is non-empty and every name is in `servedToolNames`. A skill with no `requiresTools` is not lent (nothing says it applies to these tools), and neither is one that needs a tool you did not serve, so guidance for a tool the vendor does not have never leaves the process.
+- **Standard Agent Skills markdown.** Each resource is `prism-skill://<name>`, `text/markdown`, and holds the skill as a `SKILL.md`: frontmatter (`name`, `description`, `metadata`) and the body. It is built from the loaded skill, never from the file path, and the path is not sent.
+- **Never truncated.** A skill whose rendered text is over the 256 KiB resource bound is left out and listed in `skipped` (`{ name, reason: "oversized", bytes }`).
+- **Pure.** It reads nothing and sends nothing; the resources travel only through the endpoint you serve. With `prefix` set, the vendor sees prefixed tool names while a skill names the registered ones; the helper does not rewrite skill text.
+- **Resource text is served verbatim.** Skills are package files and carry no secrets, but a host skill is whatever its author wrote: do not lend one that holds a secret.
 
 ### Permission tool
 

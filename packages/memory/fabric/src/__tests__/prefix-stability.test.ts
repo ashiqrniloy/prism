@@ -10,7 +10,7 @@ import { mockProvider, providerDone, providerTextDelta, providerToolCall, toolCa
 import { runPrefixStabilityConformance } from "@arnilo/prism/testing/prefix-stability-conformance";
 import { createMemoryVectorStore } from "@arnilo/prism-memory-core";
 import { createFabricContext } from "../context.js";
-import { createFabricCore, DEFAULT_CORE_OPTIONS } from "../delivery/core.js";
+import { createFabricRules, DEFAULT_RULES_OPTIONS } from "../delivery/rules.js";
 import { createFabricDirectory, DEFAULT_DIRECTORY_OPTIONS, memoryRetractionVersion } from "../directory.js";
 import memoryFabric, { createMemory, createMemoryFabric, exportMemoryOkf, importMemoryOkf } from "../index.js";
 import { MEMORY_NOTE_METADATA_KEY } from "../types.js";
@@ -56,7 +56,7 @@ describe("fabric prefix stability (plan 188.5 Task 4)", () => {
       assert.equal(new Set(prefixes).size, 1, "ten quiet turns send one identical prefix");
       assert.match(prefixes[0]!, /canary rollouts go first/, "the core block is in the prefix");
       assert.match(prefixes[0]!, /fabric-directory/, "the directory block is in the prefix");
-      assert.match(prefixes[0]!, /fabric-core/, "the core block carries its source");
+      assert.match(prefixes[0]!, /fabric-rules/, "the core block carries its source");
       // No tail block appears in a quiet turn: nothing new to inject.
       for (const request of requests.slice(2)) {
         assert.equal(
@@ -78,9 +78,9 @@ async function epochHarness() {
   const fabric = createMemoryFabric({ memory, consolidate: false });
   const seed = await fabric.remember({ id: "aaaaaaaaaaaa", kind: "fact", content: "violet orchard", scope: "project" });
   const directory = { source: createFabricDirectory({ memory }), options: DEFAULT_DIRECTORY_OPTIONS };
-  const core = createFabricCore({
+  const core = createFabricRules({
     scopes: [{ level: "project", memory }],
-    options: DEFAULT_CORE_OPTIONS,
+    options: DEFAULT_RULES_OPTIONS,
     scanMetadata: store.scanMetadata!,
   });
   const projection = createFabricContext(memory, fabric.recall, false, {}, directory, undefined, undefined, core);
@@ -210,6 +210,7 @@ it("compaction_completed_starts_a_new_epoch_with_new_notes", async () => {
 it("single_turn_answer_path_context_bytes_unchanged", async () => {
   const h = await epochHarness();
   // Pre-epoch serializer output for this empty-working-memory fixture; keys and envelopes are part of the bytes.
+  // Plan 209 Task 3 renamed the core block to "Standing rules", so its heading and token count were re-pinned once.
   const expected = [
     {
       title: "Long-term memory",
@@ -217,9 +218,9 @@ it("single_turn_answer_path_context_bytes_unchanged", async () => {
       metadata: { source: "fabric-directory", tokens: 9, untrusted: true, inert: true, injectionCapable: true },
     },
     {
-      title: "Core memory",
-      content: "Core memory (project): [aaaaaaaaaaaa] violet orchard",
-      metadata: { source: "fabric-core", itemIds: ["aaaaaaaaaaaa"], tokens: 13, untrusted: true, inert: true, injectionCapable: true },
+      title: "Standing rules",
+      content: "Standing rules (project): [aaaaaaaaaaaa] violet orchard",
+      metadata: { source: "fabric-rules", itemIds: ["aaaaaaaaaaaa"], tokens: 14, untrusted: true, inert: true, injectionCapable: true },
     },
   ];
   const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -314,9 +315,9 @@ function revalidationHarness(h: Awaited<ReturnType<typeof epochHarness>>, memory
     undefined,
     undefined,
     undefined,
-    createFabricCore({
+    createFabricRules({
       scopes: [{ level: "project", memory }],
-      options: DEFAULT_CORE_OPTIONS,
+      options: DEFAULT_RULES_OPTIONS,
       scanMetadata: h.scope.vectorStore.scanMetadata!,
     }),
     undefined,

@@ -95,6 +95,21 @@ bun add @arnilo/prism-memory-fabric@experimental
 
 Their API, config, preset contents and defaults may change or be removed in any release until they graduate. `@arnilo/prism-memory-compaction` is stable and is the only memory package the stable core and the reference host's default agents load.
 
+## Fabric: the pinned core is now the standing rules
+
+`@arnilo/prism-memory-fabric` renames its always-loaded core to **standing rules**. 0.13.0 is unpublished and there is no alias for a prerelease name.
+
+| Before | 0.13 |
+| --- | --- |
+| config `core: false \| { maxTokens, scopes, kinds }` | `rules: false \| { capture, maxTokens, scopes, kinds }`. `maxTokens` defaults to 600, or 2,000 when `capture` is `"confirm"`; hard limit 3,000 (was 1,000). |
+| per-scope `core.md`, derived and overwritten on every rebuild | per-scope `rules.md`, **editable**: an added line becomes a pinned human rule, a deleted line retires its note, a changed line supersedes it. Hosts and tools that read `core.md` read `rules.md`. |
+| prefix block source `fabric-core`, heading `Core memory (…)` | `fabric-rules`, heading `Standing rules (…)` |
+| `createFabricCore`, `resolveFabricCoreOptions`, `FabricCore*` (internal builders) | `createFabricRules`, `resolveFabricRulesOptions`, `FabricRules*` (not part of the stable root export set) |
+| decision capture only in the `coding` preset | `rules: { capture: "confirm" }` in any preset; it also captures preferences and procedures. The `coding` preset sets it, adds `procedure` to its kinds, and is revision 2. |
+| path-scoped notes could ride in the core | path-scoped rules are not in the block; they load as path cues |
+
+`@arnilo/prism-memory-core`'s markdown store: `writeDerivedFile` now keeps a file a person edited (it resolves `false`) instead of overwriting it, accepts `{ replaceEdited: true }`, and the store gains `readDerivedFile(scope, name)`. The `**overwritten**` `log.md` line is gone.
+
 ## Wiki → ontology tier
 
 `@arnilo/prism-memory-wiki` is no longer a second page store. It is the ontology tier over the fabric: concept notes in the fabric's own store, each claim citing the notes it rests on. It requires `@arnilo/prism-memory-fabric` (with `semantic` memory on) and fails closed with `missing_service` without it. There is no alias for any 0.12 name.

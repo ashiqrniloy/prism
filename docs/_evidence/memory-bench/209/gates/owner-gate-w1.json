@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 1,
+  "kind": "209-task6-owner-gate",
+  "plan": 209,
+  "task": 6,
+  "gate": "W-1",
+  "approved": true,
+  "approvedAt": "2026-11-05",
+  "approvedBy": "owner",
+  "text": "Budget: \"Free + named cheap paid (Recommended)\". Answers: \"Nemotron free + Qwen Flash (Recommended)\". No-harm: \"Quick slice only (Recommended)\" (owner answers to the gate W-1 questions, 2026-11-05).",
+  "manifestHash": "1a513107bcce1cd3f28cdb29e71f9e98096129ad77a20eb572cff7581b91d148",
+  "manifest": "docs/_evidence/memory-bench/209/screen/development-screen-manifest.json",
+  "criteria": {
+    "workOutcomeCriteriaHash": "see manifest (pinned and re-verified at every build)",
+    "threeTierCriteriaHash": "see manifest"
+  },
+  "product": {
+    "productHash": "b33a7f901ae8bb335d54d3f2dcdd62fecbeca355967a2df65cf59f005bda07a1",
+    "paths": "ONTOLOGY_PRODUCT_PATHS (kernel, memory core, fabric, observational, providers, wiki)"
+  },
+  "scope": {
+    "partition": "dev",
+    "work": {
+      "arms": [
+        "memory-off",
+        "P",
+        "P+W",
+        "P+W+O",
+        "coding",
+        "coding+W"
+      ],
+      "personas": "work-outcome dev: coding 4, assistant 3 (6 sessions each)",
+      "jobs": 12
+    },
+    "noHarm": {
+      "arms": [
+        "P",
+        "P+W"
+      ],
+      "suites": [
+        "memoryagentbench-cr",
+        "beam-100k",
+        "locomo"
+      ],
+      "slice": "plan 208's quick slices (8, 10, 10 questions), large model only (Muse Spark 1.2 after amendment 7)",
+      "jobs": 6
+    },
+    "answers": [
+      "commandcode/meta/muse-spark-1.2-contributor",
+      "commandcode/Qwen/Qwen3.7-Flash"
+    ],
+    "small": "commandcode/Qwen/Qwen3.7-Flash",
+    "simulator": "commandcode/Qwen/Qwen3.7-Flash",
+    "judges": [
+      "commandcode/stealth/glyph-cluster:free",
+      "commandcode/stealth/crouton-alpha"
+    ],
+    "curator": "agent-own in P+W+O"
+  },
+  "billing": {
+    "mode": "named-paid",
+    "paidAnswers": [
+      "commandcode/meta/muse-spark-1.2-contributor",
+      "commandcode/Qwen/Qwen3.7-Flash"
+    ],
+    "usdCap": 20,
+    "usdCapSource": "the USD 20 figure in the gate question; the owner gave no other",
+    "rates": {
+      "commandcode/Qwen/Qwen3.7-Flash": {
+        "input": 0.03,
+        "output": 0.13,
+        "cacheRead": 0.006,
+        "unit": "USD per million tokens"
+      },
+      "commandcode/meta/muse-spark-1.2-contributor": {
+        "input": 0.1,
+        "output": 0.2,
+        "cacheRead": 0.002,
+        "unit": "USD per million tokens"
+      }
+    },
+    "worstCaseUsd": "large: 6 work jobs x 8M input + 6 no-harm jobs x 3M input = 66M input tokens, about USD 6.6 plus output; small: 6 jobs x 8M = 48M input, about USD 1.5; the USD 20 cap holds",
+    "paidFallbacks": [],
+    "paidSimulator": "commandcode/Qwen/Qwen3.7-Flash"
+  },
+  "caps": {
+    "work": {
+      "maxInputTokens": 8000000,
+      "concurrency": 2,
+      "judgeCalls": 400,
+      "wallTimeCapHours": 8
+    },
+    "noHarm": {
+      "maxInputTokens": 3000000,
+      "wallTimeCapHours": 6
+    },
+    "journalCeiling": 250000000
+  },
+  "deviationsFromPlanText": [
+    "The no-harm read runs plan 208's quick slices (8-10 questions per suite) on the large model only, not the full plan 202 development partitions (owner answer).",
+    "The cache-stability pin (plan 202 Task 4.15) is not asserted for this advisory screen, as for plan 208's; plan 210 Task 9 pins it before any paid held-out read.",
+    "The no-harm P+W arm runs without host.ui (the harness has none), so confirmed rule capture fails closed and captures nothing there; the arm still adds tool-step archiving and the lesson nudge."
+  ],
+  "preservation": {
+    "heldOutAccess": false,
+    "credentialValues": false,
+    "keysAreRefs": true
+  },
+  "amendments": [
+    {
+      "date": "2026-11-05",
+      "by": "assistant (within the owner's free-route scope; reported to the owner)",
+      "text": "Simulator swap after the live smoke.",
+      "effect": "The simulated user moves from kilo/nvidia/nemotron-3.5-lightning:free to kilo/dots-studio/dots-3-note-preview:free (free, Kilo, a family distinct from both answer models) and the simulator timeout rises from the evals default 30 s to 120 s. Evidence: the two smoke jobs (209-screen.work.small.P+W, coding+W, one persona per family) failed 11 of 12 sessions with ERR_PRISM_EVAL_USER_SIMULATOR; a direct probe returned status completed with empty text after 16 s. dots-3-note-preview answered the same probe in 4.5 s. Answer models, judges, arms, caps and billing are unchanged. The smoke reports before this amendment are superseded and deleted. Manifest hash re-bound.",
+      "previousManifestHash": "d0aa8f04382c8af83cf2b4aed820e060a0af85bc764a0fd5fa19aafe6d79def8"
+    },
+    {
+      "date": "2026-11-05",
+      "by": "assistant (within the owner's free-route scope; reported to the owner)",
+      "text": "Instrument fixes after the second and third live smokes.",
+      "effect": "(1) Simulator: kilo/cohere/north-mini-code:free (dots-3-note-preview truncated an opening and took ~12 s). (2) The simulator's provider retries empty completions and transport faults up to 3 times (every probed free model returned empty completions now and then; evals runs the simulator with maxProviderAttempts 1). (3) Persona openings state the record format and path (`export default {...}` at src/<folder>/record.ts); the coding action tool says it runs test commands only (Qwen otherwise looped on `ls -la` to its run limit). (4) ERR_PRISM_RUN_LIMIT is a scored session outcome; other failure codes fail the job, and only clean persona-arms are checkpointed. (5) Usage split per route; journal ceiling 250M (an attempt with missing usage is charged its full reservation). Criteria, partitions, answer models, judges, arms and billing unchanged; no live measurement had been taken. Manifest hash re-bound.",
+      "previousManifestHash": "5ceb25b7f235cd3f2daefd751e6e8d7a820594dc79c62f62bc93518110bb83df"
+    },
+    {
+      "date": "2026-11-05",
+      "by": "owner",
+      "text": "I do not think it is a paid vs free model issue. But sure. Try with Muse spark",
+      "effect": "(1) The simulated user becomes commandcode/meta/muse-spark-1.2-contributor (paid, USD 0.10 input / 0.20 output / 0.002 cache read per million; inside the USD 20 cap). (2) Root cause of the simulator failures, confirmed by a per-call log: the harness capped the simulator route at 1024 output tokens; the reasoning simulators spent it thinking and stopped on max_output_tokens with empty text (and truncated some openings). The cap is now 4096, the evals simulator's own bound; free cohere then also completed 6 of 6 simulator turns, as the owner expected. (3) simulatorLeak counts an earlier assistant turn naming the field as asking (a live model asks without the QUESTION: prefix). (4) The coding action tool refuses and does not record non-test commands (Qwen's `ls -la` exploration counted as actions and broke W6's last-action check). Answer models, judges, arms, criteria and partitions unchanged. Manifest hash re-bound.",
+      "previousManifestHash": "848249587a989540c026069e45720822fca7cce7911e3df596da3d8c40883abe"
+    },
+    {
+      "date": "2026-11-05",
+      "by": "assistant (within amendment 3; reported to the owner)",
+      "text": "Simulator diagnostics.",
+      "effect": "The simulator timeout rises from 120 s to 300 s (the evals hard maximum), since Muse reasons before replying; empty or failed simulator completions are counted by stop reason or error code in the report (simulatorRetryCauses). The bench Python tooling (scripts/memory-bench/requirements.txt, pinned) was installed at .cache/memory-bench/python for the no-harm F1 scorer. Harness-only change: the manifest hash is unchanged."
+    },
+    {
+      "date": "2026-11-05",
+      "by": "assistant (evidence from amendment 3's trial; reported to the owner)",
+      "text": "Simulator back to free cohere; live agent fences.",
+      "effect": "(1) Muse (amendment 3) still ended simulator replies on max_output_tokens (3) or the timeout (2) in the two-job campaign smoke: it reasons before replying, declares no reasoning-effort levels to lower, and the evals simulator bounds a reply at 4096 tokens. cohere/north-mini-code:free (free, non-reasoning) completed 6 of 6 simulator turns once the 1024 cap was fixed, so the simulator returns to it, as the owner expected (not a paid-vs-free issue). (2) The live agent's run limits were the kernel defaults (40k input, 50k total tokens, 120 s), which caused ERR_PRISM_RUN_LIMIT in 5 of 12 smoke sessions; they are now explicit per session (400k input, 450k total, 40k output, 900 s, 16 turns), still under the job cap. Manifest hash re-bound.",
+      "previousManifestHash": "6fba01411de46a40f7cb1ca51241368078c7f47004044a58510450f8e0c7940b"
+    },
+    {
+      "date": "2026-11-06",
+      "by": "assistant (inside the owner's \"free + named cheap paid\" budget and the existing Qwen Flash rates; reported to the owner)",
+      "text": "Simulator moves to Qwen3.7-Flash after the full screen stalled on the free simulator route.",
+      "effect": "Evidence: in the full screen's first hour the four Nemotron jobs made 20-23 successful simulator calls each against 298-306 HTTP 429s on kilo/cohere/north-mini-code:free (93% refused), with 1 persona-arm checkpointed of 28; at that rate the screen would have exceeded its wall-time caps. The screen was stopped (no result had been written) and its journal and wire logs discarded. The simulated user is now commandcode/Qwen/Qwen3.7-Flash (paid, USD 0.03 input / 0.13 output / 0.006 cache read per million, the rate already in this gate; fast, non-reasoning; simulator tokens are about 3k a call, a few cents for the screen). Muse (amendment 3) reasons past the 4096-token reply bound and no other Command Code model has a priced rate here. Qwen Flash also answers the small-model jobs, so there it plays both roles; the simulator only follows its scripted goal and simulatorLeak guards it; the report states this. Answer models, judges, arms, criteria, partitions and caps unchanged. Manifest hash re-bound.",
+      "previousManifestHash": "848249587a989540c026069e45720822fca7cce7911e3df596da3d8c40883abe"
+    },
+    {
+      "date": "2026-11-06",
+      "by": "owner (answer to the question about the exhausted W-1 attempts: \"Swap the large model to a cheap paid one\"); the model choice by the assistant, reported to the owner",
+      "text": "Swap the large model to a cheap paid one.",
+      "effect": "Evidence: through both allowed attempts of every large job the free Kilo Nemotron route answered about 70% of requests with 429 (453 of 640 on P), leaving 1-2 of 7 persona-arms per job checkpointed; the no-harm jobs stopped at token-ceiling after ~10k tokens because rejected calls are charged the model's full context window under the free bounded wire. The large model is now commandcode/meta/muse-spark-1.2-contributor, the paid model plan 208 used (USD 0.10 input / 0.20 output / 0.002 cache read per million, gate amendment 3 rates), inside the USD 20 cap. The no-harm jobs follow the large model (paid, not free-only). The journal is re-created for the new manifest, so the Qwen Flash jobs get a fresh two attempts and resume from their saved persona-arm checkpoints (their protocol hash is unchanged); the large jobs start clean. Criteria, partitions, small model, simulator, judges and caps unchanged. Manifest hash re-bound.",
+      "previousManifestHash": "142773fdccb072efeb27f46051a86705db2e3c57b77a0442f4cf40bab5f681cd"
+    }
+  ]
+}
