@@ -86,3 +86,14 @@ every tool call of each trial). They showed that most failures were measurement 
 
 The evidence also records tool calls per run. `--preload` tells the skill arm to load the skill first, which measures
 what the skill's text is worth separately from whether the model finds it (the default, natural mode measures both).
+
+Ship rule in version 3 (owner, 2026-11-06): the decision is made on the **preload** run, because the question is whether
+the skill's text helps the model do the task. A skill ships when `task_success` or `tool_misuse` (the failed-call score)
+is significantly higher with the skill than without (paired, alpha 0.05, corrected across the two scorers) and neither
+is significantly lower. A skill with no measured benefit is rewritten once and then removed. The **natural** run reports
+trigger recall and precision (does the model load the skill on its own) and is not a gate. Run both:
+
+```bash
+timeout 3600 bun scripts/skill-evals/run.mjs --live --providers commandcode --skill web-research --preload
+timeout 3600 bun scripts/skill-evals/run.mjs --live --providers commandcode --skill web-research
+```

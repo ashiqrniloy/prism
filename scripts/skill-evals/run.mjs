@@ -352,7 +352,7 @@ export async function evaluateSkill({ entry, suite, mode, providers, options }) 
   for (const provider of providers) {
     const reports = {};
     for (const arm of ARMS) reports[arm] = await runArm({ skill: spec.name, arm, mode, provider, criteria, module, dataset, options, split });
-    const decision = decideShip({ skillReport: reports.skill, noSkillReport: reports["no-skill"], criteria });
+    const decision = decideShip({ skillReport: reports.skill, noSkillReport: reports["no-skill"], criteria, loading: mode === "offline" ? undefined : options.preload ? "preload" : "natural" });
     results.push({ provider, reports, decision });
   }
   return results;

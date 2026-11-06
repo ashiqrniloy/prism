@@ -154,9 +154,10 @@ export function toolMisuseTotal(report) {
  * experiment reports. Never throws on a statistical failure: an uncomputable comparison is
  * `inconclusive`, which is never a ship.
  */
-export function decideShip({ skillReport, noSkillReport, criteria }) {
+export function decideShip({ skillReport, noSkillReport, criteria, loading }) {
   const rule = criteria.shipRule;
   const trigger = triggerStats(skillReport);
+  if (loading === "preload" || loading === "natural") return decideByBenefit({ skillReport, noSkillReport, criteria, loading, trigger });
   let comparison;
   let regression = { significant: false, failed: false, message: undefined };
   try {
@@ -195,10 +196,38 @@ export function decideShip({ skillReport, noSkillReport, criteria }) {
   };
 }
 
+/**
+ * Protocol v3 rule. Preload evidence decides: the skill ships only when it measurably helps (a significant gain on
+ * `task_success` or on `tool_misuse`, the failed-call score) and significantly hurts neither. Natural evidence is
+ * observed, not a gate: it reports whether the model finds the skill on its own (trigger recall and precision).
+ */
+function decideByBenefit({ skillReport, noSkillReport, criteria, loading, trigger }) {
+  const rule = criteria.shipRule;
+  if (loading === "natural") {
+    return { verdict: "observed", reason: `natural loading: trigger recall ${fmt(trigger.recall)}, precision ${fmt(trigger.precision)}; reported, not a ship gate`, trigger, comparison: undefined };
+  }
+  const has = (report, id) => report.evaluations.some((record) => record.scorerId === id && record.status === "scored");
+  const scorers = [rule.comparedScorer, ...(rule.benefit?.alsoScorers ?? [])].filter((id) => has(skillReport, id) && has(noSkillReport, id));
+  let comparison;
+  try {
+    comparison = compareExperiments(noSkillReport, skillReport, { scorers, alpha: rule.regression.alpha, seed: criteria.seed });
+  } catch (error) {
+    return { verdict: "inconclusive", reason: `comparison failed: ${error instanceof Error ? error.message : String(error)}`, trigger, comparison: undefined };
+  }
+  const unscored = (skillReport.aggregate?.failedCount ?? 0) + (noSkillReport.aggregate?.failedCount ?? 0);
+  const main = comparison.scorers[rule.comparedScorer];
+  if (unscored > 0) return { verdict: "inconclusive", reason: `${unscored} unscored record(s) from provider or harness failures; rerun`, trigger, comparison: main };
+  const hurt = scorers.filter((id) => comparison.scorers[id]?.significant && comparison.scorers[id].difference < 0);
+  const helped = scorers.filter((id) => comparison.scorers[id]?.significant && comparison.scorers[id].difference > 0);
+  if (hurt.length > 0) return { verdict: "fail", reason: `significant regression on ${hurt.join(", ")}`, trigger, comparison: main, regression: { significant: true, failed: true, message: hurt.join(", ") } };
+  if (helped.length === 0) return { verdict: "fail", reason: `no measured benefit: no significant gain on ${scorers.join(" or ")}`, trigger, comparison: main };
+  return { verdict: "ship", reason: `significant gain on ${helped.join(", ")}, no significant regression`, trigger, comparison: main };
+}
+
 /** Apply the round rule: round 1 fail → rewrite; round 2 fail → remove. */
 export function applyRound(decision, round) {
   if (decision.verdict === "ship") return "ship";
-  if (decision.verdict === "inconclusive") return "inconclusive";
+  if (decision.verdict === "inconclusive" || decision.verdict === "observed") return decision.verdict;
   return round >= 2 ? "remove" : "rewrite";
 }
 
@@ -206,6 +235,7 @@ export function applyRound(decision, round) {
 export function combineProviders(decisions, round) {
   const verdicts = decisions.map(({ decision }) => applyRound(decision, round));
   if (verdicts.length === 0) return "inconclusive";
+  if (verdicts.every((verdict) => verdict === "observed")) return "observed";
   if (verdicts.every((verdict) => verdict === "ship")) return "ship";
   if (verdicts.includes("inconclusive")) return "inconclusive";
   return verdicts.includes("remove") ? "remove" : "rewrite";

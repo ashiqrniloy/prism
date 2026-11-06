@@ -188,6 +188,30 @@ test("skill_eval_ship_rule_ships_a_clean_skill", () => {
   assert.equal(applyRound(decision, 1), "ship");
 });
 
+test("skill_eval_v3_rule_ships_only_a_measured_benefit_on_the_preload_run", () => {
+  const noSkill = syntheticReport({ id: "n", pass: ten(false), loaded: ten(null) });
+  const helps = syntheticReport({ id: "s", pass: ten(true), loaded: ten(true) });
+  const shipped = decideShip({ skillReport: helps, noSkillReport: noSkill, criteria, loading: "preload" });
+  assert.equal(shipped.verdict, "ship", shipped.reason);
+  // Identical arms: nothing regressed, but nothing improved either, so it does not ship.
+  const same = decideShip({ skillReport: syntheticReport({ id: "s2", pass: ten(true), loaded: ten(true) }), noSkillReport: syntheticReport({ id: "n2", pass: ten(true), loaded: ten(null) }), criteria, loading: "preload" });
+  assert.equal(same.verdict, "fail");
+  assert.match(same.reason, /no measured benefit/);
+  assert.equal(applyRound(same, 1), "rewrite");
+  assert.equal(applyRound(same, 2), "remove");
+  const worse = decideShip({ skillReport: syntheticReport({ id: "s3", pass: ten(false), loaded: ten(true) }), noSkillReport: syntheticReport({ id: "n3", pass: ten(true), loaded: ten(null) }), criteria, loading: "preload" });
+  assert.match(worse.reason, /significant regression/);
+});
+
+test("skill_eval_v3_natural_run_is_observed_not_gated", () => {
+  const noSkill = syntheticReport({ id: "n", pass: ten(true), loaded: ten(null) });
+  const lazy = syntheticReport({ id: "s", pass: ten(true), loaded: ten(false) });
+  const decision = decideShip({ skillReport: lazy, noSkillReport: noSkill, criteria, loading: "natural" });
+  assert.equal(decision.verdict, "observed");
+  assert.match(decision.reason, /recall 0\.00/);
+  assert.equal(applyRound(decision, 1), "observed");
+});
+
 test("skill_eval_ship_rule_fails_a_significant_regression_then_removes", () => {
   const noSkill = syntheticReport({ id: "n", pass: ten(true), loaded: ten(null) });
   const skill = syntheticReport({ id: "s", pass: ten(false), loaded: ten(true) });
