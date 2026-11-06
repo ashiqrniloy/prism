@@ -284,6 +284,20 @@ describe("packaging guard", () => {
     }
   });
 
+  it("packed_tarball_includes_skills: web, browser and delegate ship their bundled skill", () => {
+    const shipped = [
+      ["@arnilo/prism-tools-web", "web-research"],
+            ["@arnilo/prism-tools-browser", "browser-automation"],
+      ["@arnilo/prism-delegate", "delegating-work"],
+    ] as const;
+    for (const [name, skill] of shipped) {
+      const pkg = packages.find((entry) => entry.name === name);
+      assert.ok(pkg, `${name} missing from packaging package list`);
+      assert.ok(getPackList(pkg.dir, pkg.name).includes(`skills/${skill}/SKILL.md`), `${name} tarball missing skills/${skill}/SKILL.md`);
+      assert.ok((readPkg(pkg.dir).files as string[] | undefined)?.includes("skills"), `${name} manifest files must include skills`);
+    }
+  });
+
   it("the computer-use package ships its local skill", () => {
     const desktop = packages.find((pkg) => pkg.name === "@arnilo/prism-tools-computer-use");
     assert.ok(desktop, "prism-tools-computer-use missing from packaging package list");

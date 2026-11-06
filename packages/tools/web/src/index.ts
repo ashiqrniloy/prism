@@ -26,6 +26,7 @@
  * });
  * ```
  */
+import { fileURLToPath } from "node:url";
 import manifest from "../package.json" with { type: "json" };
 import {
   assertSsrfAllowedUrl,
@@ -176,6 +177,8 @@ const definition = definePackage<ToolsWebConfig>({
   capabilities: ["credentials", "models"],
   config: toolsWebConfigSchema,
   setup: async (prism) => {
+    // Registered first: `requiresTools` hides the skill whenever this config leaves `web_fetch` unregistered.
+    prism.skills.addDir(fileURLToPath(new URL("../skills", import.meta.url)));
     const backend = prism.config.backend;
     if (backend === undefined || !BACKENDS.includes(backend)) {
       throw new Error("prism-tools-web: config needs backend (one of brave, exa, firecrawl, native, obscura)");

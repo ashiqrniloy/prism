@@ -13,7 +13,7 @@ items (the skill should help) and 3 non-trigger items (it should not load), in t
 | Skill | Package | Environment (all local) | `task_success` is graded on |
 | --- | --- | --- | --- |
 | `web-research` | `@arnilo/prism-tools-web` | a loopback SearXNG endpoint and a documentation site the native fetcher reaches through a request override | the final answer: the fact, no injected text, a cited URL where asked |
-| `coding-workflow` | `@arnilo/prism-tools-coding` | a scratch repository per trial | hidden tests the agent never saw, plus untouched protected tests and forbidden-pattern sweeps |
+| `coding-workflow` (removed after v3; text archived in `archive/`) | `@arnilo/prism-tools-coding` | a scratch repository per trial | hidden tests the agent never saw, plus untouched protected tests and forbidden-pattern sweeps |
 | `browser-automation` | `@arnilo/prism-tools-browser` (manager over a real Chromium) | a loopback site with forms, a wizard, tabs, a modal and a prompt-injection page | what the server recorded (submissions, settings, no `/evil` hit) and the final answer |
 | `delegating-work` | `@arnilo/prism-delegate` | an `analyst` child that sees only the brief and answers `MISSING DATA` otherwise | the final answer and a child answer that carries the result |
 
@@ -59,7 +59,7 @@ graders and the scorers are wired together, not that any skill helps. Paid runs 
 (owner decision 2026-11-05); the router aliases `openrouter/free` and `openrouter/auto` are refused. Models come from
 `PRISM_LIVE_SKILL_EVAL_{HYPER,OPENCODE,OPENROUTER,KILO,COMMANDCODE}_MODEL`.
 
-Evidence is `docs/_evidence/skill-evals/211/<skill>.json` and `.md` (round 2 adds `.round2`); each protocol's evidence is kept under `211/v1/`, `211/v2/` and so on (the current protocol writes to `211/`); a preload run adds `.preload`. It records the skill text
+Evidence is `docs/_evidence/skill-evals/211/<skill>.json` and `.md` (protocol v3, the last one run, is archived in `211/v3/`) (round 2 adds `.round2`); each protocol's evidence is kept under `211/v1/`, `211/v2/` and so on (the current protocol writes to `211/`); a preload run adds `.preload`. It records the skill text
 revision, dataset hash, criteria hash, per-arm task success with intervals, the paired comparison, trigger precision
 and recall, tool misuse, how many runs ended on a run limit (turns, tool calls or time), task success split by whether the skill was loaded, tokens (cached and uncached), cost and latency, and a per-item table.
 

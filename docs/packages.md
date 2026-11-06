@@ -243,7 +243,7 @@ Register a skill directory in `setup` and list it in `package.json` `files`:
 prism.skills.addDir(fileURLToPath(new URL("../skills", import.meta.url)));
 ```
 
-- **Name.** The package domain first, then the job: `web-research`, `coding-workflow`. Lowercase letters, digits and
+- **Name.** The package domain first, then the job: `web-research`, `delegating-work`. Lowercase letters, digits and
   hyphens, at most 64, and equal to the directory name (the [Agent Skills](https://agentskills.io/specification)
   rule; the kernel parser accepts more, the gate does not). No two packages ship the same name.
 - **Description.** When to use it, then what it covers, in at most 300 bytes. It is the skill's one catalog line.

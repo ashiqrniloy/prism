@@ -20,6 +20,7 @@
  * const agent = await createAgent({ model, packages: [toolsBrowser({ headless: true, allowOrigins: ["https://example.com"] })] });
  * ```
  */
+import { fileURLToPath } from "node:url";
 import manifest from "../package.json" with { type: "json" };
 import { definePackage, type PackageInstance, type ToolDefinition } from "@arnilo/prism";
 
@@ -76,6 +77,8 @@ const definition = definePackage<ToolsBrowserConfig>({
   requires: { api: 1 },
   config: toolsBrowserConfigSchema,
   setup: async (prism) => {
+    // Registered first: `requiresTools` hides the skill when playwright-core is missing or the launch fails.
+    prism.skills.addDir(fileURLToPath(new URL("../skills", import.meta.url)));
     let chromium: PlaywrightChromium;
     try {
       ({ chromium } = (await import("playwright-core")) as unknown as { chromium: PlaywrightChromium });

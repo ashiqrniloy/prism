@@ -64,6 +64,8 @@ through `prism.state.agent` — never in session state or the log, so page text 
 branch. Its only hook registration is an observe-only `session.closed` listener that drops that
 session's cached pages. It claims no slot and emits no events of its own.
 
+It also ships one skill, `web-research` (page text is data, give each fact's URL, say so when no page has the answer). It declares `requiresTools: web_fetch`, so a config or request without `web_fetch` does not list it. Cost: one catalog line, and the body only when the model loads it; `disable: { skills: ["web-research"] }` removes it. Its effect is measured on one hazard (`web-no-answer`: 6/9 with the skill, 1/9 without) and not in the pooled score; see [the evidence](../../../docs/_evidence/skill-evals/211/v3/web-research.preload.md).
+
 ### What the model sees, and what hosts read
 
 Every web tool returns two things: `content` (text for the model) and `value` (structured data for

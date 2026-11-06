@@ -41,6 +41,12 @@ Or in the manifest:
 
 All three declare `effects: ["external"]`, so `tool.call` gates (approval, governance) see them. An unknown child, an unknown or foreign `delegationId`, or too many running delegations is a tool error. A delegation id is only usable from the session that started it.
 
+## Skill
+
+The package ships one skill, `delegating-work` (a child sees only the brief, never put a secret in it, do a one- or two-call job yourself, check the answer before repeating it). It is loaded from `skills/delegating-work`, progressive by default, and declares `requiresTools: delegate delegate_wait delegate_cancel` (the three are always registered together), so a config with no visible child, or a request that narrows the tools away, does not list it. Cost: one catalog line (about 190 bytes). Turn it off with `disable.skills: ["delegating-work"]`. Its effect is measured on one hazard (`delegate-trivial-no-child`: 9/9 with the skill, 1/9 without) and not in the pooled score; see [the evidence](../../../docs/_evidence/skill-evals/211/v3/delegating-work.preload.md).
+
+It tells the model that a child holds only what the brief and any forwarded context carry, and never to put a secret or credential in a brief. A child never sees `delegate`, so `skills: "inherit"` leaves this skill out of the child (inheriting it would only add the `load_skill` bridge to a child that could never use it); name it in a `skills` list to hand it over anyway.
+
 ## Configuration
 
 | Field | Description |

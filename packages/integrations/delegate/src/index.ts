@@ -10,6 +10,7 @@
  * ```
  */
 
+import { fileURLToPath } from "node:url";
 import manifest from "../package.json" with { type: "json" };
 import { definePackage } from "@arnilo/prism";
 import { resolveAgentChildren } from "./agent-files.js";
@@ -36,6 +37,8 @@ const definition = definePackage<DelegateConfig>({
   capabilities: ["models", "background", "host-ui", "session-state"],
   config: delegateConfigSchema,
   setup(prism) {
+    // Registered first: `requiresTools` hides the skill whenever no `delegate` tool is registered (no visible child).
+    prism.skills.addDir(fileURLToPath(new URL("../skills", import.meta.url)));
     const config = prism.config;
     if (config.agentsRoot !== undefined && config.defaultInherit === undefined) {
       throw new DelegateError("defaultInherit is required when agentsRoot is set: an agent file cannot choose which packages its child inherits");

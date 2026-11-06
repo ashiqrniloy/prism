@@ -98,7 +98,9 @@ describe("package skills", () => {
     assert.equal(report.ok, true);
     const shipped = report.packages.flatMap((entry) => entry.skills).sort();
     assert.deepEqual(shipped, [
+      "browser-automation",
       "computer-use-linux",
+      "delegating-work",
       "docx",
       "pdf",
       "powerpoint",
@@ -106,6 +108,7 @@ describe("package skills", () => {
       "research-scoping",
       "research-synthesis",
       "source-triage",
+      "web-research",
       "xlsx",
     ]);
     // The gate builds every package once on the mock provider; the budget is wall-clock.

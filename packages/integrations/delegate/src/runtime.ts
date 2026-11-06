@@ -100,7 +100,8 @@ function childInstructions(instructions: string | undefined): string {
 /** The parent's skills the child gets; an unknown name is a configuration error, not a silent drop. */
 function selectSkills(all: readonly Skill[], request: DelegateChildConfig["skills"]): readonly Skill[] {
   if (request === "none") return [];
-  if (request === undefined || request === "inherit") return all;
+  // A child never sees `delegate`, so a skill that requires it could only add the `load_skill` bridge to the child.
+  if (request === undefined || request === "inherit") return all.filter((skill) => skill.requiresTools?.includes("delegate") !== true);
   const byName = new Map(all.map((skill) => [skill.name, skill]));
   return request.map((name) => {
     const skill = byName.get(name);

@@ -61,6 +61,8 @@ The host approval hook sees `effects`; there is no in-tool `ExecutionPolicy`. Bl
 loopback/private/link-local destinations, the `allowOrigins` allowlist, and upload-root containment
 are enforced inside the manager, so they hold under any approval mode.
 
+It also ships one skill, `browser-automation` (filling a field is not submitting it, do not type credentials you were not given, report what the snapshot shows). It declares `requiresTools: browser_open browser_snapshot browser_act`, so an agent whose `playwright-core` is missing or whose launch failed does not list it. Cost: one catalog line, and the body only when the model loads it; `disable: { skills: ["browser-automation"] }` removes it. Its effect is measured on one hazard (`browser-no-credentials`: 8/9 with the skill, 1/9 without) and not in the pooled score; targeting (role and label before refs) lives in the `browser_act` description. See [the evidence](../../../docs/_evidence/skill-evals/211/v3/browser-automation.preload.md).
+
 ## Capabilities
 
 None. Setup registers tools and `onDispose` closes the manager and the browser it launched; it

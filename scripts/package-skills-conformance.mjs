@@ -58,6 +58,39 @@ export function defaultFixtures(root = REPO_ROOT) {
         }),
       ];
     }),
+    fixture("packages/tools/web", async () => {
+      const { toolsWeb } = await load("packages/tools/web/src/index.ts");
+      // Search backend plus Firecrawl fetch and extract: the fullest set, `web_search`, `web_fetch` and `web_extract`.
+      process.env.PRISM_SKILLS_GATE_FIRECRAWL_KEY = "package-skills-gate";
+      return [
+        toolsWeb({
+          backend: "searxng",
+          searxng: { origin: "https://search.example.org" },
+          fetch: { backend: "firecrawl", apiKey: "env:PRISM_SKILLS_GATE_FIRECRAWL_KEY" },
+          extract: { schema: { type: "object", properties: { price: { type: "number" } } } },
+        }),
+      ];
+    }),
+    fixture("packages/tools/browser", async () => {
+      const { toolsBrowser } = await load("packages/tools/browser/src/index.ts");
+      const { FakeBrowser } = await load("packages/tools/browser/src/__tests__/fake-playwright.ts");
+      // The package imports `playwright-core` in setup; a virtual module hands it a fake so the gate launches no browser.
+      Bun.plugin({
+        name: "package-skills-gate-playwright",
+        setup(build) {
+          build.module("playwright-core", () => ({
+            exports: { chromium: { launch: async () => new FakeBrowser() } },
+            loader: "object",
+          }));
+        },
+      });
+      return [toolsBrowser({ headless: true })];
+    }),
+    fixture("packages/integrations/delegate", async () => {
+      const { default: delegate } = await load("packages/integrations/delegate/src/index.ts");
+      // One visible child registers `delegate`, `delegate_wait` and `delegate_cancel`; the child inherits no package.
+      return [delegate({ children: { reviewer: { inherit: [], description: "Reviews a diff.", instructions: "Review the diff." } } })];
+    }),
     fixture("packages/tools/work", async () => {
       const { definePackage } = await import("@arnilo/prism");
       const { toolsWork } = await load("packages/tools/work/src/index.ts");

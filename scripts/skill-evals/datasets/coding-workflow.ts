@@ -1,7 +1,7 @@
 // @ts-nocheck — evaluation script fixtures, not shipped; run by bun.
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, relative } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { gradeAnswer } from "../lib.mjs";
 
 export const skill = "coding-workflow";
@@ -236,7 +236,8 @@ export async function createEnvironment({ item }) {
   return {
     packages: [toolsCoding({ root, git: { enabled: false }, workspace: { enabled: false } })],
     tools: [],
-    skillDirs: [],
+    // The skill was removed from the package after the v3 evaluation; its text is archived beside the dataset.
+    skillDirs: [resolve(import.meta.dir, "../archive/coding/skills")],
     snapshot: async (result) => {
       const original = { "package.json": PACKAGE_JSON, ...files };
       const changed = readTree(root, ["."])

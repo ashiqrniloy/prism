@@ -9,6 +9,7 @@
   "files": [
     "src",
     "!src/**/__tests__",
+    "skills",
     "README.md",
     "CHANGELOG.md",
     "LICENSE"

@@ -73,6 +73,8 @@ effect classification is what recovery clears up after.
 
 The read subset (`readOnly: true`) registers the three read tools only. Git, checks, todo, and `ask_user` stay off in that mode.
 
+The package ships no skill. A `coding-workflow` skill was measured and removed (plan 215 Task 11): on the paired items it changed nothing (the one hazard it targeted, deleting a directory that code still reads, passed in 1 of 9 runs with it and 0 of 9 without), and Qwen never loaded it unprompted. See [the evidence](../../../docs/_evidence/skill-evals/211/v3/coding-workflow.preload.md).
+
 ## Hard denies and the `coding.targets` service
 
 One `tool.call` decide handler, id `@arnilo/prism-tools-coding:tool.call#hard-deny`, returns
