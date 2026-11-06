@@ -20,6 +20,7 @@ import { defineDataset, runExperiment } from "@arnilo/prism-evals";
 import { parseEnvFile } from "../live-matrix.mjs";
 import {
   ARM_INSTRUCTIONS,
+  preloadInstruction,
   ARMS,
   EVIDENCE_DIR,
   LOCK_PATH,
@@ -38,10 +39,10 @@ const SECRET_ENV = ["HYPER_API_KEY", "OPENCODE_GO_API_KEY", "OPENCODE_API_KEY", 
 
 export function parseArgs(argv) {
   const options = { providers: [] };
-  const flags = new Set(["providers", "skill", "round", "out-dir", "trials", "max-items"]);
+  const flags = new Set(["providers", "skill", "round", "out-dir", "trials", "max-items", "items", "dump-dir"]);
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (["--offline", "--live", "--dry-run", "--register", "--help"].includes(arg)) {
+    if (["--offline", "--live", "--dry-run", "--register", "--help", "--preload"].includes(arg)) {
       options[arg.slice(2).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())] = true;
       continue;
     }
@@ -187,9 +188,10 @@ export function allowedProviders(criteria, requested) {
  * Build the agent for one trial of one item in one arm. Both arms get the same packages, tools, skill
  * directories, model and instructions; the no-skill arm only adds `disable.skills`.
  */
-export async function buildAgent({ skill, arm, mode, item, provider, criteria, module }) {
+export async function buildAgent({ skill, arm, mode, item, provider, criteria, module, preload = false }) {
   const env = await module.createEnvironment({ mode, item });
-  const instructions = env.instructions ? `${ARM_INSTRUCTIONS}\n${env.instructions}` : ARM_INSTRUCTIONS;
+  const base = env.instructions ? `${ARM_INSTRUCTIONS}\n${env.instructions}` : ARM_INSTRUCTIONS;
+  const instructions = preload && arm === "skill" ? `${base}\n${preloadInstruction(skill)}` : base;
   const providerPackages = mode === "offline" ? [providerPackage("skill-eval-offline", [offlineProvider({ skill, item, env })])] : provider.packages;
   const model = mode === "offline" ? { provider: "skill-eval-offline", model: "oracle" } : { provider: provider.id, model: provider.model };
   const agent = await createAgent({
@@ -208,6 +210,17 @@ export async function buildAgent({ skill, arm, mode, item, provider, criteria, m
 
 // ── one skill, one provider, both arms ──────────────────────────────────────────
 
+/** Diagnostic only (`--dump-dir`): the tool-by-tool transcript of each trial, outside the evidence directory. */
+const dumpCounts = new Map();
+async function dumpTrial(directory, { skill, arm, item, result, timeline, snapshot }) {
+  const key = `${skill}.${arm}.${item.id}`;
+  const trial = (dumpCounts.get(key) ?? 0) + 1;
+  dumpCounts.set(key, trial);
+  await mkdir(resolve(directory), { recursive: true });
+  const body = { item: item.id, arm, trial, status: result?.status, stopReason: result?.stopReason, limit: result?.limit, error: result?.error?.message, answer: snapshot?.answer, steps: timeline?.steps };
+  await writeFile(join(resolve(directory), `${key}.${trial}.json`), `${JSON.stringify(body, null, 1)}\n`);
+}
+
 async function runArm({ skill, arm, mode, provider, criteria, module, dataset, options, split }) {
   const live = new Map();
   const cleanup = async (itemId) => {
@@ -222,7 +235,7 @@ async function runArm({ skill, arm, mode, provider, criteria, module, dataset, o
       dataset,
       agent: async ({ item }) => {
         await cleanup(item.id);
-        const built = await buildAgent({ skill, arm, mode, item, provider, criteria, module });
+        const built = await buildAgent({ skill, arm, mode, item, provider, criteria, module, preload: options.preload === true });
         live.set(item.id, built);
         return built.agent;
       },
@@ -234,6 +247,7 @@ async function runArm({ skill, arm, mode, provider, criteria, module, dataset, o
         if (!entry) return undefined;
         const snapshot = await entry.env.snapshot(result, timeline);
         await cleanup(item.id);
+        if (options.dumpDir) await dumpTrial(options.dumpDir, { skill, arm, item, result, timeline, snapshot });
         return { ...snapshot, __run: { status: result?.status, limited: result?.limit !== undefined || result?.stopReason === "turn_limit", stopReason: result?.stopReason, error: result?.error?.message?.slice(0, 200) } };
       },
       trials: options.trials ?? (mode === "dryRun" ? 1 : mode === "offline" ? 1 : criteria.trials),
@@ -285,7 +299,8 @@ const taskRecords = (report) => report.evaluations.filter((record) => record.sco
 /** How many scored runs ended on a run limit, and (skill arm) task success split by whether the skill was loaded. */
 function limitAndLoadStats(report, arm) {
   const records = taskRecords(report);
-  const stats = { limitedRuns: records.filter((record) => record.metadata?.limited).length, scoredRuns: records.length };
+  const sum = (key) => records.reduce((total, record) => total + Number(record.metadata?.[key] ?? 0), 0);
+  const stats = { limitedRuns: records.filter((record) => record.metadata?.limited).length, scoredRuns: records.length, toolCalls: sum("toolCalls"), failedCalls: sum("failedCalls") };
   if (arm === "skill") {
     const pass = (list) => list.filter((record) => record.score === 1).length;
     const loaded = records.filter((record) => record.metadata?.loaded === true);
@@ -364,7 +379,7 @@ export function fullRunEstimate(report, fullItems, trials) {
   };
 }
 
-export function evidenceFor({ spec, dataset, results, round, mode, suite, startedAt, lock, fullItems }) {
+export function evidenceFor({ spec, dataset, results, round, mode, suite, startedAt, lock, fullItems, loading = "natural" }) {
   const providers = results.map(({ provider, reports, decision }) => ({
     provider: provider.id,
     model: mode === "offline" ? "oracle" : provider.model,
@@ -388,6 +403,7 @@ export function evidenceFor({ spec, dataset, results, round, mode, suite, starte
     plan: "215 Task 11",
     round,
     mode,
+    loading,
     startedAt,
     finishedAt: new Date().toISOString(),
     criteriaHash: suite.criteriaHash,
@@ -406,7 +422,7 @@ export function evidenceMarkdown(evidence) {
   const lines = [
     `# Skill evaluation: ${evidence.skill}`,
     "",
-    `Round ${evidence.round}, ${evidence.mode} run, started ${evidence.startedAt}. Verdict: **${evidence.verdict}**.`,
+    `Round ${evidence.round}, ${evidence.mode} run, ${evidence.loading ?? "natural"} loading, started ${evidence.startedAt}. Verdict: **${evidence.verdict}**.`,
     "",
     `- Package: \`${evidence.package}\`; skills revision \`${evidence.skillsRevision.slice(0, 19)}…\`; dataset \`${evidence.datasetContentHash.slice(0, 19)}…\`.`,
     `- Pre-registered criteria hash \`${evidence.criteriaHash.slice(0, 16)}…\`, locked at ${evidence.criteriaLockedAt ?? "(not locked: offline wiring run)"}.`,
@@ -424,7 +440,9 @@ export function evidenceMarkdown(evidence) {
     }
     lines.push("");
     if (c) lines.push(`Paired difference (skill − no-skill) on task_success: ${num(c.difference)}, 95% CI [${num(c.ci95?.low)}, ${num(c.ci95?.high)}], q = ${num(c.qValue)}, ${c.significant ? "significant" : "not significant"}.`, "");
-    lines.push(`Runs that ended on a run limit (turns, tool calls or time): skill ${a.limitedRuns}/${a.scoredRuns}, no-skill ${b.limitedRuns}/${b.scoredRuns}.`, "");
+    lines.push(`Runs that ended on a run limit (turns, tool rounds, tool calls or time): skill ${a.limitedRuns}/${a.scoredRuns}, no-skill ${b.limitedRuns}/${b.scoredRuns}.`, "");
+    const mean = (arm) => (arm.scoredRuns ? (arm.toolCalls / arm.scoredRuns).toFixed(1) : "n/a");
+    lines.push(`Tool calls per run (load_skill excluded), mean: skill ${mean(a)}, no-skill ${mean(b)}.`, "");
     if (a.byLoading) lines.push(`Skill arm task success by loading: loaded ${a.byLoading.loaded.passed}/${a.byLoading.loaded.runs}, not loaded ${a.byLoading.notLoaded.passed}/${a.byLoading.notLoaded.runs}.`, "");
     lines.push(`Skill loading: recall ${pct(entry.decision.trigger.recall)} (${entry.decision.trigger.loadedOnTrigger}/${entry.decision.trigger.triggerTrials} trigger trials), precision ${pct(entry.decision.trigger.precision)}, loaded on ${entry.decision.trigger.loadedOnNonTrigger}/${entry.decision.trigger.nonTriggerTrials} non-trigger trials.`, "");
     if (entry.fullRunEstimate) {
@@ -513,6 +531,12 @@ export async function run(argv = process.argv.slice(2)) {
   for (const entry of suite.skills) {
     const startedAt = new Date().toISOString();
     let runEntry = entry;
+    if (options.items) {
+      const wanted = new Set(options.items.split(","));
+      const items = entry.module.items.filter((item) => wanted.has(item.id));
+      if (items.length === 0) throw new Error(`SkillEvalDataset: no item of ${entry.spec.name} matches --items ${options.items}`);
+      runEntry = { ...entry, dataset: defineDataset({ id: entry.dataset.id, version: entry.dataset.version, items }), dry: true };
+    }
     if (mode === "dryRun") {
       const limit = Math.min(suite.criteria.costGate.dryRunItems, options.maxItems ?? 99);
       const triggers = entry.module.items.filter((item) => item.expected.kind === "trigger");
@@ -521,11 +545,11 @@ export async function run(argv = process.argv.slice(2)) {
       runEntry = { ...entry, dataset: defineDataset({ id: entry.dataset.id, version: entry.dataset.version, items }), dry: true };
     }
     const results = await evaluateSkill({ entry: { ...runEntry, spec: entry.spec }, suite, mode: mode === "dryRun" ? "live" : mode, providers, options: { ...options, trials: mode === "dryRun" ? 1 : options.trials } });
-    const evidence = sealEvidence(evidenceFor({ spec: entry.spec, dataset: runEntry.dataset, results, round, mode, suite, startedAt, lock, fullItems: entry.dataset.items.length }), secrets);
+    const evidence = sealEvidence(evidenceFor({ spec: entry.spec, dataset: runEntry.dataset, results, round, mode, suite, startedAt, lock, fullItems: entry.dataset.items.length, loading: options.preload ? "preload" : "natural" }), secrets);
     summaries.push(evidence);
     if (outDir) {
       await mkdir(outDir, { recursive: true });
-      const suffix = mode === "dryRun" ? ".dry-run" : round > 1 ? `.round${round}` : "";
+      const suffix = `${mode === "dryRun" ? ".dry-run" : round > 1 ? `.round${round}` : ""}${options.preload ? ".preload" : ""}`;
       await writeFile(join(outDir, `${entry.spec.name}${suffix}.json`), `${JSON.stringify(evidence, null, 2)}\n`);
       const markdown = evidenceMarkdown(evidence);
       assertNoSecret(markdown, secrets);

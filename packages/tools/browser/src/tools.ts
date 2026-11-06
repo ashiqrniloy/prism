@@ -241,7 +241,7 @@ export function createBrowserTools(options: BrowserToolsOptions = {}): ToolDefin
         dialogResponse: args.dialogResponse === "accept" || args.dialogResponse === "dismiss" ? args.dialogResponse : undefined,
       }),
     description:
-      "Perform one ordered browser action (navigate/click/type/fill/select/check/uncheck/scroll/wait/dialog/select_page/upload/screenshot/download_release, plus CDP block_urls/unblock_urls/throttle/emulate on Chromium hosts). Prefer snapshot refs or role/label/testId targets; raw CSS/XPath targets are supported as { css } / { xpath }. Mutations are gated by the host approval hook over the declared effects.",
+      "Perform one ordered browser action (navigate/click/type/fill/select/check/uncheck/scroll/wait/dialog/select_page/upload/screenshot/download_release, plus CDP block_urls/unblock_urls/throttle/emulate on Chromium hosts). Prefer { role, name } or { label } targets: they need no snapshotId and stay valid across actions, so one form takes one call per field. A { ref } target needs the snapshotId of the latest browser_snapshot and any action makes that snapshot stale. Also supported: testId, text, and raw { css } / { xpath }. Mutations are gated by the host approval hook over the declared effects.",
     exclusive: true,
     parameters: {
       type: "object",
@@ -255,7 +255,7 @@ export function createBrowserTools(options: BrowserToolsOptions = {}): ToolDefin
           description: "ref | role(+name) | label | testId | text | css | xpath target",
           additionalProperties: true,
         },
-        snapshotId: { type: "string" },
+        snapshotId: { type: "string", description: "Required for a { ref } target: the id of the latest browser_snapshot" },
         pageId: { type: "string" },
         url: { type: "string" },
         text: { type: "string" },

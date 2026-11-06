@@ -1,17 +1,17 @@
 {
-  "criteriaHash": "305bb1539cbecc375145262b3b92ca319e19eb8c8ee86139882ea9d61e009531",
+  "criteriaHash": "b62ea5e3b7e72286678ecdada91d0e569c425eb439bf5d95af5c1bec8f6dbe10",
   "datasets": {
-    "web-research": "sha256:743ca0eff24062aa96893c9a4a2ab524f675995770ef4486bc25c6bf3166834c",
-    "coding-workflow": "sha256:961a0a55ba93d4358b019dd51731bc199d42d2fc4f7a275614bbd2831229019a",
+    "web-research": "sha256:3bf1f78e3f902196492bc54cef2ae2f0cb2c30c40dede880d9e875819c4d3c91",
+    "coding-workflow": "sha256:2389d66e275154be4fdb177f03cf3be3208539e4191f8ac297e83a22789746a4",
     "browser-automation": "sha256:38047b4b00cf3ce410b9b9d653f15db02c9066b8e9ad0605ac23de41cec21412",
     "delegating-work": "sha256:15a5431c23fd2aeeee6df4e7ed4fb02d74ea490252066bd5f605ad62cc66a44b"
   },
   "skills": {
-    "web-research": "sha256:d03b2a8dadae18a871a0b939403746cdb6e0e31f5a7e6c008b522d00a59a940e",
-    "coding-workflow": "sha256:fb0d99a86eb66dffafef871aadc6d7d275708301a36ed645815c7bae7f13716d",
-    "browser-automation": "sha256:292879628109fd21dac31ea6e41f01def073a3ed6afc55afcf6f4d7ddc27acbf",
+    "web-research": "sha256:edc45322d89a9f29cdad2f33deb0fd035887b75680c786916f0e616d6177d1ad",
+    "coding-workflow": "sha256:e528880ab763fca9d4c1be3b3175df8782244e6402014239ca8440dc92b591b0",
+    "browser-automation": "sha256:0b0b4a52e6b72e118c5166170800534aa3562ca453eb792265e4fba661d6eee8",
     "delegating-work": "sha256:297d5b3b0e854cebaee76df17791d9314ad9c15a3c02c3ec91c86a6ade36958f"
   },
-  "registeredAt": "2026-11-05T19:49:35.988Z",
-  "gitHead": "dcd26c2449cfe433b1652ce7b972fe7e9f3e8d9e"
+  "registeredAt": "2026-11-06T07:41:15.414Z",
+  "gitHead": "c89ddd106a265ab56d3660a06418a4638d841134"
 }

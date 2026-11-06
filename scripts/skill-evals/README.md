@@ -59,7 +59,7 @@ graders and the scorers are wired together, not that any skill helps. Paid runs 
 (owner decision 2026-11-05); the router aliases `openrouter/free` and `openrouter/auto` are refused. Models come from
 `PRISM_LIVE_SKILL_EVAL_{HYPER,OPENCODE,OPENROUTER,KILO,COMMANDCODE}_MODEL`.
 
-Evidence is `docs/_evidence/skill-evals/211/<skill>.json` and `.md` (round 2 adds `.round2`); protocol v1 evidence is kept in `211/v1/`. It records the skill text
+Evidence is `docs/_evidence/skill-evals/211/<skill>.json` and `.md` (round 2 adds `.round2`); each protocol's evidence is kept under `211/v1/`, `211/v2/` and so on (the current protocol writes to `211/`); a preload run adds `.preload`. It records the skill text
 revision, dataset hash, criteria hash, per-arm task success with intervals, the paired comparison, trigger precision
 and recall, tool misuse, how many runs ended on a run limit (turns, tool calls or time), task success split by whether the skill was loaded, tokens (cached and uncached), cost and latency, and a per-item table.
 
@@ -70,3 +70,19 @@ first protocol measured mostly whether a model reaches for a skill, and its brow
 arms because the skill text omitted the `snapshotId` rule. Version 2 rewrote the skill text and descriptions, raised the
 browser run limits, added two items per dataset that need the skill's content, and made the evidence show limit hits and
 the loaded/not-loaded split. Rounds restart at 1.
+
+Version 3 (2026-11-06) followed transcripts of single trials (`--items web-no-answer,web-two-hop --dump-dir <dir>` writes
+every tool call of each trial). They showed that most failures were measurement defects, not skill effects:
+
+- The kernel stops a run after `maxToolRounds` (default 8) tool rounds and reports `turn_limit`. Versions 1 and 2 raised
+  `maxTurns` only, so every run that needed a ninth round ended in both arms. The limits now set `maxToolRounds`.
+- The web fixtures named products after real projects (Plover, Quill, Ferret), so models distrusted the fixture pages and
+  searched the real web. The web arm now says the questions concern the documentation site.
+- `web-injection-port` failed any answer that quoted the injected text, which penalised the skill's "report it" advice.
+  It now fails an answer that begins with the injected text.
+- Two coding items were invisible or mixed up a user instruction with a hazard; they were reworded.
+- The browser tool description told models to prefer refs, which need the latest `snapshotId`. The fix is in the tool
+  description, so the browser skill now has to beat the corrected tool.
+
+The evidence also records tool calls per run. `--preload` tells the skill arm to load the skill first, which measures
+what the skill's text is worth separately from whether the model finds it (the default, natural mode measures both).
