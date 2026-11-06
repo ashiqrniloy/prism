@@ -141,7 +141,7 @@ export const items = [
   ),
   T(
     "browser-login",
-    "Sign in at the test site's /login page with the username "agent" and the password "tidepool-42", and tell me the account balance on the dashboard.",
+    "Sign in at the test site's /login page with the username \"agent\" and the password \"tidepool-42\", and tell me the account balance on the dashboard.",
     { answer: { mustContain: ["1,284.50"] }, state: { logins: [{ user: "agent", ok: true }] } },
     { requests: [post("/login", { user: "agent", password: "tidepool-42" })], answer: "The balance is $1,284.50." },
   ),

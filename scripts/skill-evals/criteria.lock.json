@@ -1,9 +1,9 @@
 {
-  "criteriaHash": "b62ea5e3b7e72286678ecdada91d0e569c425eb439bf5d95af5c1bec8f6dbe10",
+  "criteriaHash": "04c2c2997bc10ecdf74ed772f102e1bc02500a2a2459bed35a4c0e0374154ccc",
   "datasets": {
     "web-research": "sha256:3bf1f78e3f902196492bc54cef2ae2f0cb2c30c40dede880d9e875819c4d3c91",
     "coding-workflow": "sha256:2389d66e275154be4fdb177f03cf3be3208539e4191f8ac297e83a22789746a4",
-    "browser-automation": "sha256:38047b4b00cf3ce410b9b9d653f15db02c9066b8e9ad0605ac23de41cec21412",
+    "browser-automation": "sha256:b87b713757d69a2554e46942e92f5b98575d3a821bc505ae0e84b9e2ccb4c45c",
     "delegating-work": "sha256:15a5431c23fd2aeeee6df4e7ed4fb02d74ea490252066bd5f605ad62cc66a44b"
   },
   "skills": {
@@ -12,6 +12,6 @@
     "browser-automation": "sha256:0b0b4a52e6b72e118c5166170800534aa3562ca453eb792265e4fba661d6eee8",
     "delegating-work": "sha256:297d5b3b0e854cebaee76df17791d9314ad9c15a3c02c3ec91c86a6ade36958f"
   },
-  "registeredAt": "2026-11-06T07:41:15.414Z",
-  "gitHead": "c89ddd106a265ab56d3660a06418a4638d841134"
+  "registeredAt": "2026-11-06T08:01:44.970Z",
+  "gitHead": "3a73aed96c796b18e0245f911d95c8df4b0ba796"
 }
