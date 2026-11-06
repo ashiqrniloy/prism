@@ -1,0 +1,354 @@
+{
+  "skill": "coding-workflow",
+  "package": "@arnilo/prism-tools-coding",
+  "plan": "215 Task 11",
+  "round": 1,
+  "mode": "live",
+  "loading": "natural",
+  "startedAt": "2026-11-06T13:43:40.572Z",
+  "finishedAt": "2026-11-06T14:10:18.825Z",
+  "criteriaHash": "7b0c7ec5abf13871362f9abebc50840c386637beec59f3ccb15efb7e6f908f8c",
+  "criteriaLockedAt": "2026-11-06T08:53:15.019Z",
+  "datasetContentHash": "sha256:2389d66e275154be4fdb177f03cf3be3208539e4191f8ac297e83a22789746a4",
+  "datasetVersion": "2",
+  "skillsRevision": "sha256:e528880ab763fca9d4c1be3b3175df8782244e6402014239ca8440dc92b591b0",
+  "runtimeRevision": "1ea4b29062f78af69f1f626b9c4c11788942487f",
+  "trials": 3,
+  "providers": [
+    {
+      "provider": "commandcode",
+      "model": "Qwen/Qwen3.7-Flash",
+      "arms": {
+        "skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 0.888888888888889,
+            "ci95": {
+              "low": 0.7333333333333333,
+              "high": 1
+            },
+            "items": 15,
+            "records": 43
+          },
+          "failedCount": 2,
+          "limitedRuns": 0,
+          "scoredRuns": 43,
+          "toolCalls": 254,
+          "failedCalls": 3,
+          "byLoading": {
+            "loaded": {
+              "runs": 1,
+              "passed": 1
+            },
+            "notLoaded": {
+              "runs": 42,
+              "passed": 37
+            }
+          },
+          "toolMisuse": 3,
+          "inputTokens": 1324006,
+          "cacheReadTokens": 1263349,
+          "uncachedInputTokens": 60657,
+          "outputTokens": 32006,
+          "costComplete": false,
+          "meanDurationMs": 48076.131593666694,
+          "durationMs": {
+            "p50": 12961.434779000001,
+            "p95": 30166.62882099999
+          }
+        },
+        "no-skill": {
+          "status": "succeeded",
+          "taskSuccess": {
+            "mean": 0.8666666666666667,
+            "ci95": {
+              "low": 0.711111111111111,
+              "high": 1
+            },
+            "items": 15,
+            "records": 45
+          },
+          "failedCount": 0,
+          "limitedRuns": 1,
+          "scoredRuns": 45,
+          "toolCalls": 231,
+          "failedCalls": 3,
+          "toolMisuse": 3,
+          "inputTokens": 900706,
+          "cacheReadTokens": 868722,
+          "uncachedInputTokens": 31984,
+          "outputTokens": 28747,
+          "costComplete": false,
+          "meanDurationMs": 58094.47612013329,
+          "durationMs": {
+            "p50": 11424.312552999938,
+            "p95": 29850.043719999958
+          }
+        }
+      },
+      "decision": {
+        "verdict": "observed",
+        "roundVerdict": "observed",
+        "reason": "natural loading: trigger recall 0.03, precision 1.00; reported, not a ship gate",
+        "trigger": {
+          "triggerTrials": 36,
+          "nonTriggerTrials": 9,
+          "loaded": 1,
+          "loadedOnTrigger": 1,
+          "loadedOnNonTrigger": 0,
+          "recall": 0.027777777777777776,
+          "precision": 1
+        }
+      },
+      "items": [
+        {
+          "id": "code-off-by-one",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-add-slugify",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-rename-across-files",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-missing-price",
+          "kind": "trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 3,
+            "unscored": 2,
+            "firstError": "run failed: Upstream stream ended before terminal chunk"
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-rounding-two-files",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-config-page-size",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-add-chunk",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-remove-deprecated",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 1,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-missing-await",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-validate-qty",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 2,
+            "trials": 3,
+            "firstFailure": "tests failed (exit 1)",
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-preexisting-failure",
+          "kind": "trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-in-use-cleanup",
+          "kind": "trigger",
+          "skill": {
+            "pass": 0,
+            "trials": 3,
+            "firstFailure": "data/cache-2025.json was removed or changed, but code still reads it",
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 0,
+            "trials": 3,
+            "firstFailure": "data/cache-2025.json was removed or changed, but code still reads it",
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-none-capital",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-none-percent",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 3,
+            "trials": 3,
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        },
+        {
+          "id": "code-none-reverse",
+          "kind": "non_trigger",
+          "skill": {
+            "pass": 1,
+            "trials": 3,
+            "firstFailure": "missing \"yrassecen\"",
+            "unscored": 0
+          },
+          "noSkill": {
+            "pass": 1,
+            "trials": 3,
+            "firstFailure": "missing \"yrassecen\"",
+            "unscored": 0
+          },
+          "loaded": 0,
+          "loadTrials": 3
+        }
+      ]
+    }
+  ],
+  "verdict": "observed"
+}
