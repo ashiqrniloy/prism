@@ -75,11 +75,13 @@ const plainText = (content) =>
 const isContextMessage = (message) => Array.isArray(message.metadata?.contextBlocks);
 
 /** Arm configs exactly as work-outcome-criteria.json states them; `wiki` adds the ontology tier. */
-export function armConfig(arm, { offline = false } = {}) {
+export function armConfig(arm, { offline = false, fabricOverlay } = {}) {
   const declared = WORK_OUTCOME_CRITERIA.arms[arm];
   if (!declared || !WORK_OUTCOME_ARMS.includes(arm)) throw new Error(`WorkOutcomeArguments: unknown arm ${arm}`);
+  // Plan 210 Task 5: a leave-one-out or add-one overlay on the declared arm (top-level fabric fields replaced).
+  if (fabricOverlay !== undefined && !declared.fabric) throw new Error(`WorkOutcomeArguments: ${arm} has no fabric to overlay`);
   return {
-    fabric: declared.fabric ? structuredClone(declared.fabric) : null,
+    fabric: declared.fabric ? { ...structuredClone(declared.fabric), ...structuredClone(fabricOverlay ?? {}) } : null,
     wiki: arm === "P+W+O" ? { consolidate: offline ? { minNotes: 2 } : {} } : null,
   };
 }
@@ -439,8 +441,8 @@ export function retryEmptyCompletions(providers, { attempts = 3, stats = { retri
   );
 }
 
-export async function runPersonaArm({ persona, arm, providers, model, simulatorAgent, offline, temp, onSession }) {
-  const config = armConfig(arm, { offline });
+export async function runPersonaArm({ persona, arm, providers, model, simulatorAgent, offline, temp, onSession, fabricOverlay }) {
+  const config = armConfig(arm, { offline, fabricOverlay });
   const curator = config.wiki ? curatorStats({}) : null;
   if (curator) providers = measureCurator(providers, curator);
   const v = familyVocabulary(persona.family);
@@ -669,6 +671,7 @@ export async function runWorkOutcome({
   judges,
   concurrency = 4,
   checkpoint,
+  fabricOverlay,
   checkpointable = new Set(["ERR_PRISM_RUN_LIMIT"]),
 } = {}) {
   const pin = workOutcomeManifestPin();
@@ -711,7 +714,8 @@ export async function runWorkOutcome({
           const key = `${job.persona.id}|${job.arm}`;
           const saved = await checkpoint?.load(key);
           const out =
-            saved ?? (await runPersonaArm({ ...job, providers: answerProviders, model: answerModel, simulatorAgent, offline, temp }));
+            saved ??
+            (await runPersonaArm({ ...job, providers: answerProviders, model: answerModel, simulatorAgent, offline, temp, fabricOverlay }));
           // Only a persona-arm whose sessions all ran is kept; a failed one is re-run by the next attempt.
           if (!saved && out.rows.every((row) => !row.failureCode || checkpointable.has(row.failureCode))) await checkpoint?.save(key, out);
           results.push({

@@ -35,7 +35,10 @@ export function parseLiveArgs(argv) {
     else if (arg === "--output") options.output = next();
     else if (arg === "--free-only") options.answerFreeOnly = true;
     else if (arg === "--simulator-paid") options.simulatorPaid = true;
+    else if (arg === "--judges-paid") options.judgesPaid = true;
     else if (arg === "--personas") options.personaLimit = Number(next());
+    // Plan 210 Task 5: a JSON fabric overlay on the arm (leave-one-out or add-one), part of the protocol hash.
+    else if (arg === "--fabric-overlay") options.fabricOverlay = JSON.parse(next());
     // The campaign passes its previous attempt's report; this job resumes from its persona checkpoints instead.
     else if (arg === "--resume") next();
     else throw new Error(`MemoryBenchArguments: unknown flag ${arg}`);
@@ -128,6 +131,7 @@ export async function runLiveJob(options) {
     jobId: options.job,
     attemptId: reserved.attempt.attemptId,
     arm: options.arm,
+    ...(options.fabricOverlay ? { fabricOverlay: options.fabricOverlay } : {}),
     partition: options.partition,
     maxInputTokens: options.maxInputTokens,
     usageSource: "wire-proxy",
@@ -147,8 +151,20 @@ export async function runLiveJob(options) {
       beforeAttempt: account,
       maxOutputTokens: 4096,
     });
-    panel = await openClaimJudges({ refs: options.judges, calls: options.judgeCalls, root: join(wire, "judges"), freeOnly: true });
-    const protocol = stableHash({ pin: workOutcomeManifestPin(), model: options.model, simulator: options.simulator, arm: options.arm });
+    // Free-only unless the gate names paid judges (plan 210 gate C-1 amendment 4: Ollama Cloud).
+    panel = await openClaimJudges({
+      refs: options.judges,
+      calls: options.judgeCalls,
+      root: join(wire, "judges"),
+      freeOnly: options.judgesPaid !== true,
+    });
+    const protocol = stableHash({
+      pin: workOutcomeManifestPin(),
+      model: options.model,
+      simulator: options.simulator,
+      arm: options.arm,
+      ...(options.fabricOverlay ? { fabricOverlay: options.fabricOverlay } : {}),
+    });
     const report = await runWorkOutcome({
       offline: false,
       partition: options.partition,
@@ -161,6 +177,7 @@ export async function runLiveJob(options) {
       concurrency: options.concurrency,
       ...(options.personaLimit ? { personaLimit: options.personaLimit } : {}),
       checkpoint: personaCheckpoint({ job: options.job, protocol }),
+      ...(options.fabricOverlay ? { fabricOverlay: options.fabricOverlay } : {}),
     });
     await account().catch((error) => {
       if (error.message !== "WorkOutcomeTokenCeiling") throw error;

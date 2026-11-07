@@ -352,6 +352,7 @@ export function selectLexicalRounds(
 /** Comparator arms see only the rounds their rule chose; everything else never enters the session. */
 export function comparatorSessions(config, sessions, allRounds, evidence, question) {
   const keep = new Set();
+  if (config === "none") return [];
   if (config === "oracle") for (const id of evidence.allRoundIds) keep.add(id);
   else if (config === "lexical-topk") for (const round of selectLexicalRounds(question, allRounds)) keep.add(round.id);
   else return sessions;
@@ -1046,9 +1047,7 @@ async function factStoreSources() {
   if (factStoreSourceHash) return factStoreSourceHash;
   const digest = createHash("sha256");
   for (const base of ["packages/memory/core/src", "packages/memory/fabric/src"]) {
-    const files = (await readdir(base, { recursive: true }))
-      .filter((file) => file.endsWith(".ts") && !file.includes("__tests__"))
-      .sort();
+    const files = (await readdir(base, { recursive: true })).filter((file) => file.endsWith(".ts") && !file.includes("__tests__")).sort();
     for (const file of files) digest.update(`${base}/${file}\0`).update(await readFile(join(base, file)));
   }
   factStoreSourceHash = digest.digest("hex");
@@ -1111,9 +1110,7 @@ async function ontologySources() {
   if (ontologySourceHash) return ontologySourceHash;
   const digest = createHash("sha256");
   for (const base of ["packages/memory/core/src", "packages/memory/fabric/src", "packages/memory/wiki/src"]) {
-    const files = (await readdir(base, { recursive: true }))
-      .filter((file) => file.endsWith(".ts") && !file.includes("__tests__"))
-      .sort();
+    const files = (await readdir(base, { recursive: true })).filter((file) => file.endsWith(".ts") && !file.includes("__tests__")).sort();
     for (const file of files) digest.update(`${base}/${file}\0`).update(await readFile(join(base, file)));
   }
   ontologySourceHash = digest.digest("hex");
@@ -1122,7 +1119,17 @@ async function ontologySources() {
 
 export async function ontologyStoreKey({ sourceHash, model, config, settleMs, policy }) {
   return createHash("sha256")
-    .update(JSON.stringify({ v: 1, sourceHash, model: model ?? null, config: config ?? null, settleMs, policy, sources: await ontologySources() }))
+    .update(
+      JSON.stringify({
+        v: 1,
+        sourceHash,
+        model: model ?? null,
+        config: config ?? null,
+        settleMs,
+        policy,
+        sources: await ontologySources(),
+      }),
+    )
     .digest("hex");
 }
 
@@ -1234,7 +1241,7 @@ export async function replay(question, options, providers, state) {
     .digest("hex");
   const allRounds = causal.flatMap((s, idx) => sessionRounds(s, idx));
   const evidence = extractEvidence(question, allRounds);
-  const sessions = ["lexical-topk", "oracle"].includes(options.config)
+  const sessions = ["lexical-topk", "oracle", "none"].includes(options.config)
     ? comparatorSessions(options.config, causal, allRounds, evidence, question)
     : causal;
 
@@ -1619,7 +1626,7 @@ export async function replay(question, options, providers, state) {
     packages,
     slots: { store },
     ...(options.codingTools ? { tools: { add: options.codingTools } } : {}),
-    compaction: ["full", "full-truncated", "lexical-topk", "oracle"].includes(options.config) ? false : undefined,
+    compaction: ["full", "full-truncated", "lexical-topk", "oracle", "none"].includes(options.config) ? false : undefined,
     // Transient provider failures must not abort a whole measured arm; every attempt stays wire-accounted.
     retry: createDefaultRetryPolicy({ maxAttempts: 3, baseDelayMs: 500, maxDelayMs: 2000 }),
     limits: {
@@ -1682,6 +1689,16 @@ export async function replay(question, options, providers, state) {
     }
     session = await agent.session({ id: sessionId, create: true });
     parentId = session.leafId;
+    // Plan 210 Task 5: the maintain-then-answer arm runs one product maintenance pass before the answer.
+    if (options.maintainBeforeAnswer && usesFabric) {
+      const maintained = await agent.commands.run("memory:maintain", {}, { session });
+      if (maintained?.ok !== true) throw new Error(`MemoryBenchMaintain:${String(maintained?.reason ?? "failed")}`);
+      state.maintain = {
+        archived: Number(maintained.archived ?? 0),
+        evicted: Number(maintained.evicted ?? 0),
+        merged: Number(maintained.merged ?? 0),
+      };
+    }
     await session.close();
     state.phase = "ingest";
     if (ontologyArm) {

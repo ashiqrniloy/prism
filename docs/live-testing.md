@@ -334,13 +334,14 @@ claim rules: [README](../scripts/host-builder-evals/README.md).
 ```bash
 timeout 600 bun scripts/host-builder-evals/run.mjs --offline                       # scripted oracle, no key, runs in CI
 bun scripts/host-builder-evals/run.mjs --register                                  # lock the criteria and inputs, then commit
-timeout 1800 bun scripts/host-builder-evals/run.mjs --dry-run --providers kilo     # three tasks, one trial: the cost estimate
-timeout 3600 bun scripts/host-builder-evals/run.mjs --live --providers openrouter,kilo,commandcode [--preload]
+timeout 1800 bun scripts/host-builder-evals/run.mjs --dry-run --providers ollama-gemma4   # three tasks, one trial: the cost estimate
+timeout 14400 bun scripts/host-builder-evals/run.mjs --live --providers ollama-gemma4 [--preload]
 ```
 
-`--preload` tells the skill arms to load the skill first. The run uses the free models of OpenRouter, Kilo and Command
-Code (owner decision 2026-11-07), with Hyper, OpenCode Go and Command Code's paid `Qwen/Qwen3.7-Flash` as reserves; keys
-come from `~/.config/prism/live.env`. Models come from `PRISM_LIVE_HOST_BUILDER_EVAL_{HYPER,OPENCODE,OPENROUTER,KILO,COMMANDCODE}_MODEL`. A paid run needs the lock to match the criteria and every registered
+`--preload` tells the skill arms to load the skill first. The scored runs use three paid Ollama Cloud models
+(`gpt-oss:120b`, `beam`, `gemma4:31b`; owner decision 2026-11-08) with `OLLAMA_API_KEY` from `~/.config/prism/live.env`; the
+free tiers of OpenRouter, Kilo and Command Code are too small for a scored run. Models come from
+`PRISM_LIVE_HOST_BUILDER_EVAL_{HYPER,OPENCODE,OLLAMA_GPT_OSS,OLLAMA_BEAM,OLLAMA_GEMMA4}_MODEL`. A paid run needs the lock to match the criteria and every registered
 input; a scored run also needs them committed. The builder works in a temp copy of each fixture, its shell inherits no
 key, and the evidence passes `redactSecrets` and a no-secret assertion. Evidence: `docs/_evidence/host-builder/212/`.
 

@@ -11,6 +11,7 @@ import { parseEnvFile } from "../live-matrix.mjs";
 import { startWireProxy } from "../wire-proxy.mjs";
 import { historicalVariants, memoryConfigs, resolvedMemoryConfigs, writeGeneration } from "./ablations.mjs";
 import { fileFingerprint } from "./acceptance.mjs";
+import { rateLimitDisposition } from "./audit/zero-score.mjs";
 import {
   CODING_SUITES,
   codingAccess,
@@ -20,7 +21,6 @@ import {
   prepareCoding,
   summarizeCoding,
 } from "./coding.mjs";
-import { rateLimitDisposition } from "./audit/zero-score.mjs";
 import { BEAM_NORMALIZATION_VERSION, DATASETS, loadDataset, normalizeCodingItem, normalizeDataset, selectQuestions } from "./datasets.mjs";
 import fixture from "./fixtures/synthetic.json" with { type: "json" };
 import { createAdmission, requireAttemptReservation, stableHash } from "./journal.mjs";
@@ -47,17 +47,20 @@ import {
   BENCH_MAX_TURNS,
   BENCH_PROTOCOL_VERSION,
   BENCH_RETRY,
-  retryBudget,
   causeChainText,
   FACT_INGEST,
+  FINAL_TURN_ANSWER_VERSION,
   isProductIngest,
   LEGACY_INGEST,
-  suiteAnswerInstruction,
   mockProvider,
   PRODUCT_INGEST,
   replay,
   retryAfterMs,
-  stageFromCounts, FINAL_TURN_ANSWER_VERSION, STRIP_SUPERSESSION_VERSION } from "./replay.mjs";
+  retryBudget,
+  STRIP_SUPERSESSION_VERSION,
+  stageFromCounts,
+  suiteAnswerInstruction,
+} from "./replay.mjs";
 import { summarize, writeReport } from "./report.mjs";
 import { robustnessCriteriaHash, threeTierCriteriaHash } from "./robustness.mjs";
 import {
@@ -103,6 +106,8 @@ export const PROVIDERS = {
     secret: "LITELLM_API_KEY",
     url: process.env.PRISM_LIVE_LITELLM_BASE_URL ?? "http://127.0.0.1:4000",
   },
+  // Plan 210 Task 5 (owner, 2026-11-08): the paid C-1 campaign. Ollama Cloud's Pro allowance bills per token.
+  "ollama-cloud": { create: "createOllamaCloudProvider", list: "listOllamaCloudModels", secret: "OLLAMA_API_KEY", url: "https://ollama.com" },
 };
 export function parseArgs(argv) {
   const options = {};
@@ -186,6 +191,17 @@ export function parseArgs(argv) {
       options.finalTurnAnswer = true;
       continue;
     }
+    // Plan 210 Task 5: run `memory:maintain` once between ingest and the answer (the maintain-then-answer arm).
+    if (argv[i] === "--maintain-before-answer") {
+      options.maintainBeforeAnswer = true;
+      continue;
+    }
+    // Plan 210 Task 5 (free routes): a question that errors fails the job instead of being scored wrong, so the
+    // campaign re-runs it from the checkpoint and an interruption costs wall time only.
+    if (argv[i] === "--strict-questions") {
+      options.strictQuestions = true;
+      continue;
+    }
     const name = argv[i].replace(/^--/, "");
     if (!flags.has(name) || !argv[i + 1] || argv[i + 1].startsWith("--"))
       throw new Error("MemoryBenchArguments: unknown flag or missing value");
@@ -241,7 +257,8 @@ export function loadEnv() {
  */
 export const PATIENT_RETRY = Object.freeze({ delaysMs: [5_000, 15_000, 30_000, 60_000, 120_000], maxRetryAfterMs: 120_000 });
 const PATIENT_STATUSES = new Set([429, 500, 502, 503, 504, 529]);
-const TRANSPORT_ERROR = /ECONNRESET|ECONNREFUSED|EAI_AGAIN|ETIMEDOUT|EPIPE|ENOTFOUND|socket hang up|fetch failed|connection was closed|network/i;
+const TRANSPORT_ERROR =
+  /ECONNRESET|ECONNREFUSED|EAI_AGAIN|ETIMEDOUT|EPIPE|ENOTFOUND|socket hang up|fetch failed|connection was closed|network/i;
 /** A gateway 400 that names an upstream fault rather than the request (Kilo's "Provider returned error"). */
 const INVALID_REQUEST = /invalid_request_error|invalid_value|Validation:/i;
 const UPSTREAM_400 = /Provider returned error|upstream (request failed|error|validation error)|event: error\ndata: \{\}/i;
@@ -262,7 +279,10 @@ export function benchmarkFetch({
       const base = PATIENT_RETRY.delaysMs[waits];
       waits += 1;
       onRetry();
-      await sleep(retryAfter !== undefined && retryAfter <= PATIENT_RETRY.maxRetryAfterMs ? Math.max(base, retryAfter) : base, init?.signal);
+      await sleep(
+        retryAfter !== undefined && retryAfter <= PATIENT_RETRY.maxRetryAfterMs ? Math.max(base, retryAfter) : base,
+        init?.signal,
+      );
       return true;
     };
     for (let attempt = 1; ; attempt++) {
@@ -321,7 +341,8 @@ export function isFreeBenchmarkModel(model) {
   if (model.provider === "litellm") return model.model.startsWith("prism-free/") && model.cost?.input === 0 && model.cost?.output === 0;
   // OpenCode Go's `-free` rows (plan 208 Task 5, owner 2026-11-04): the plan bills Go models, so only the suffix the
   // catalog prices at exactly zero counts; the screen preflight reads that zero from the live catalog before a run.
-  if (model.provider === "opencode-go") return /-free$/.test(model.model) && (model.cost === undefined || (model.cost.input === 0 && model.cost.output === 0));
+  if (model.provider === "opencode-go")
+    return /-free$/.test(model.model) && (model.cost === undefined || (model.cost.input === 0 && model.cost.output === 0));
   if (model.provider !== "commandcode") return false;
   return /(?::free|-free)$/.test(model.model) || COMMAND_CODE_FREE_PREVIEW.has(model.model);
 }
@@ -332,6 +353,17 @@ export function isFreeBenchmarkModel(model) {
  * lasts", 1000 requests a day per account (plan 208 Task 5, checked 2026-11-04). Remove an id when its preview ends.
  */
 export const COMMAND_CODE_FREE_PREVIEW = new Set(["stealth/crouton-alpha"]);
+/**
+ * Ollama Cloud models with named thinking levels default high (beam: `max`), which would spend the bench's output bound
+ * thinking. Plan 210 Task 5 pins them to one effort (`medium`, or PRISM_MEMORY_BENCH_OLLAMA_EFFORT) for every arm alike.
+ */
+export function ollamaEffort(model) {
+  if (model.provider !== "ollama-cloud") return model;
+  const values = model.compat?.thinkingValues;
+  if (!Array.isArray(values) || !values.some((value) => typeof value === "string")) return model;
+  const effort = process.env.PRISM_MEMORY_BENCH_OLLAMA_EFFORT ?? "medium";
+  return { ...model, compat: { ...model.compat, reasoning_effort: effort } };
+}
 export async function liveProviders(refs, temp, fetchOptions) {
   const providers = [],
     proxies = [],
@@ -340,7 +372,7 @@ export async function liveProviders(refs, temp, fetchOptions) {
     for (const id of new Set(refs.map((ref) => ref.provider))) {
       const spec = PROVIDERS[id];
       if (!spec)
-        throw new Error("MemoryBenchProvider: supported providers are hyper, opencode-go, openrouter, commandcode, kilo and litellm");
+        throw new Error("MemoryBenchProvider: supported providers are hyper, opencode-go, openrouter, commandcode, kilo, litellm and ollama-cloud");
       const key = process.env[spec.secret] ?? (id === "opencode-go" ? process.env.OPENCODE_API_KEY : undefined);
       // Kilo serves its `:free` rows credentialless; the free-only check still runs on the catalog.
       if (!key && id !== "kilo") throw new Error("MemoryBenchCredentials: provider credential unavailable");
@@ -351,7 +383,7 @@ export async function liveProviders(refs, temp, fetchOptions) {
         if (!model) throw new Error("MemoryBenchModel: model not found in provider catalog");
         if (fetchOptions?.freeOnly && !isFreeBenchmarkModel(model)) throw new Error("MemoryBenchModel: free-only route refused");
         models.set(`${id}/${ref.model}`, {
-          ...model,
+          ...ollamaEffort(model),
           parameters: { ...model.parameters, maxTokens: fetchOptions?.maxOutputTokens ?? 4096, temperature: 0 },
         });
       }
@@ -363,7 +395,13 @@ export async function liveProviders(refs, temp, fetchOptions) {
         secretEnv: [spec.secret, "OPENCODE_API_KEY"],
       });
       proxies.push({ proxy, usageLog, provider: id });
-      providers.push(module[spec.create]({ apiKey: () => key, baseUrl: proxy.url, fetch: benchmarkFetch({ ...fetchOptions, patient: fetchOptions?.patient ?? fetchOptions?.freeOnly === true }) }));
+      providers.push(
+        module[spec.create]({
+          apiKey: () => key,
+          baseUrl: proxy.url,
+          fetch: benchmarkFetch({ ...fetchOptions, patient: fetchOptions?.patient ?? fetchOptions?.freeOnly === true }),
+        }),
+      );
     }
     return { providers, proxies, models };
   } catch (error) {
@@ -432,8 +470,10 @@ function terminalRetryCause(error) {
  */
 export const QUESTION_ERROR_MIN = 3;
 export const QUESTION_ERROR_FRACTION = 0.05;
-export function questionFailureDisposition({ error, budget = false, errored = 0, total = 0 } = {}) {
+export function questionFailureDisposition({ error, budget = false, errored = 0, total = 0, strict = false } = {}) {
   if (budget || [error?.message, error?.cause?.message, error?.cause?.code].includes("MemoryBenchTokenCeiling")) return "token-ceiling";
+  // Strict (plan 210 Task 5): an error is never a score; the job fails and the campaign resumes it.
+  if (strict) return "failed";
   if (/^MemoryBench(IngestUnsupported|WriteSideMismatch|Archive:)/.test(error?.message ?? "")) return "failed";
   if (error?.cause) return "failed";
   if (errored >= Math.max(QUESTION_ERROR_MIN, Math.ceil(total * QUESTION_ERROR_FRACTION))) return "failed";
@@ -767,6 +807,8 @@ export async function runBench(input = {}) {
     "lexical-topk",
     "full-truncated",
     "oracle",
+    // Plan 210 Task 5: the memory-off arm. No history, no memory product, no tools: the question alone.
+    "none",
   ];
   if (!validConfigs.includes(options.config)) throw new Error("MemoryBenchArguments: invalid config");
   if (options.config === "fabric-hybrid" && !options.embeddings) {
@@ -801,7 +843,7 @@ export async function runBench(input = {}) {
   )
     throw new Error("MemoryBenchArguments: invalid subset");
   const repeats = options.repeats ?? 1;
-  const comparator = ["full", "lexical-topk", "full-truncated", "oracle"].includes(options.config);
+  const comparator = ["full", "lexical-topk", "full-truncated", "oracle", "none"].includes(options.config);
   if (comparator && (options.ablate?.length || options.policy))
     throw new Error("MemoryBenchArguments: comparators take no ablations or policy");
   if (options.subset === "targeted" && (options.suite !== "longmemeval-s" || !options.ability))
@@ -899,6 +941,7 @@ export async function runBench(input = {}) {
       // Present only when set, so no other plan's protocol hash moves.
       ...(options.finalTurnAnswer && !coding ? { finalTurnAnswer: FINAL_TURN_ANSWER_VERSION } : {}),
       ...(options.stripSupersessionHints ? { stripSupersessionHints: STRIP_SUPERSESSION_VERSION } : {}),
+      ...(options.maintainBeforeAnswer ? { maintainBeforeAnswer: 1 } : {}),
     },
     memoryConfig: resolvedMemoryConfigs(options.memoryConfigs),
     inputTokens: 0,
@@ -1713,6 +1756,7 @@ export async function runBench(input = {}) {
           budget: state.ceilingReached() || questionState.budgetExceeded || error.message === "MemoryBenchTokenCeiling",
           errored: report.results.filter((row) => row.outcome === "error").length,
           total: selected.length,
+          strict: options.strictQuestions === true,
         });
         if (disposition === "scored" && report.results.some((row) => row.id === question.id && row.outcome === "answered"))
           disposition = "failed";

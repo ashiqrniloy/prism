@@ -61,19 +61,22 @@ Pre-registered in `criteria.json` and locked in `criteria.lock.json`. Per provid
 ```bash
 timeout 600 bun scripts/host-builder-evals/run.mjs --offline                       # scripted oracle, no key, about 15 s
 bun scripts/host-builder-evals/run.mjs --register                                  # lock the criteria and inputs, then commit
-timeout 1800 bun scripts/host-builder-evals/run.mjs --dry-run --providers kilo     # three tasks, one trial: the cost estimate
-timeout 3600 bun scripts/host-builder-evals/run.mjs --live --providers openrouter,kilo,commandcode
-timeout 3600 bun scripts/host-builder-evals/run.mjs --live --providers openrouter,kilo,commandcode --preload
+timeout 1800 bun scripts/host-builder-evals/run.mjs --dry-run --providers ollama-gemma4   # three tasks, one trial: the cost estimate
+timeout 14400 bun scripts/host-builder-evals/run.mjs --live --providers ollama-gemma4
+timeout 14400 bun scripts/host-builder-evals/run.mjs --live --providers ollama-gemma4 --preload
 ```
 
 Offline mode answers every task with its oracle solution through the real write tool. It proves the workspaces, the
 arms, the hidden tests and the scorers are wired together, not that the kit helps. A paid run (`--dry-run` or `--live`)
 needs the lock to match `criteria.json` and every registered input; a `--live` run also needs `scripts/host-builder-evals`,
-the skill and the indexes committed. Providers are those in `criteria.json`: Hyper, OpenCode Go and the free models of OpenRouter, Kilo and Command Code
-(owner decision 2026-11-07), with `Qwen/Qwen3.7-Flash` (paid) on Command Code as the reserve; router aliases are
+the skill and the indexes committed. Providers are those in `criteria.json`: three paid Ollama Cloud models, `ollama-gpt-oss` (`gpt-oss:120b`),
+`ollama-beam` (`beam`) and `ollama-gemma4` (`gemma4:31b`), which run on the `ollama-cloud` provider with
+`OLLAMA_API_KEY` (owner decision 2026-11-08), plus Hyper and OpenCode Go. The free tiers of OpenRouter, Kilo and Command
+Code were tried for the dry run and cannot carry a scored run (1,000 requests a day, 1,000 a day and 200 an hour against
+about 3,800 requests per mode); their dry-run evidence stays in `docs/_evidence/host-builder/212/`. Router aliases are
 refused. Keys come from `~/.config/prism/live.env`; the builder's shell inherits none of them
 (`host_builder_eval_builder_shell_never_sees_live_keys`). Models come from
-`PRISM_LIVE_HOST_BUILDER_EVAL_{HYPER,OPENCODE,OPENROUTER,KILO,COMMANDCODE}_MODEL`.
+`PRISM_LIVE_HOST_BUILDER_EVAL_{HYPER,OPENCODE,OLLAMA_GPT_OSS,OLLAMA_BEAM,OLLAMA_GEMMA4}_MODEL`.
 
 Evidence is written to `docs/_evidence/host-builder/212/<providers>.json` and `.md` (`.dry-run` and `.round2` suffixes).
 It passes `redactSecrets` and a no-secret assertion. `--dump-dir <dir>` writes each trial's tool-by-tool transcript and

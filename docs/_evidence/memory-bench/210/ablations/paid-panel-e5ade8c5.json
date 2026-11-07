@@ -1,0 +1,19 @@
+{
+  "kind": "210-c1-paid-panel",
+  "checkedAt": "2026-11-07T21:18:24.521Z",
+  "refs": [
+    "ollama-cloud/beam",
+    "ollama-cloud/gemma4:31b",
+    "ollama-cloud/gpt-oss:120b",
+    "ollama-cloud/gpt-oss:20b",
+    "ollama-cloud/nemotron-3-nano:30b"
+  ],
+  "balance": {
+    "includedUsd": 59.58317,
+    "allowanceUsd": 60,
+    "periodUntil": "2026-12-07T20:57:27Z",
+    "purchasedUsd": 0,
+    "session": null,
+    "weekly": null
+  }
+}

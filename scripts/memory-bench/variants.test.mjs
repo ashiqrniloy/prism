@@ -96,7 +96,8 @@ test("historical_combined_source_variants_keep_trust_checks_and_compile", async 
     }
     if (path.endsWith("/maintain.ts")) {
       assert.match(transformed, /if \(false && overCapacity\(usage, limits\)\)/);
-      assert.match(transformed, /if \(\s*shouldArchive\(row\.metadata, clock, decision\)/);
+      // Plan 210 Task 5's exchange exemption (lifecycle.exchangeExempt=on) may guard the archive rule; the rule stays.
+      assert.match(transformed, /if \(\s*(row\.metadata\.kind !== "exchange" &&\s*)?shouldArchive\(row\.metadata, clock, decision\)/);
       assert.match(transformed, /evictionOrder/);
     }
   }

@@ -455,6 +455,106 @@ describe("@arnilo/prism-provider-ollama-cloud discovery and balance", () => {
       (error: Error) => !error.message.includes(secret),
     );
   });
+
+  it("ollama_cloud_balance_reads_current_plan_included_credit", async () => {
+    const balance = await ollamaCloudBalance({
+      apiKey: secret,
+      fetch: (async () =>
+        Response.json({
+          included: {
+            balance_usd: 59.58,
+            allowance_usd: 60,
+            period: { from: "2026-11-07T20:57:27Z", until: "2026-12-07T20:57:27Z" },
+          },
+          purchased: { balance_usd: 0 },
+        })) as typeof fetch,
+    });
+    assert.deepEqual(balance, {
+      included: { balanceUsd: 59.58, allowanceUsd: 60, periodFrom: "2026-11-07T20:57:27Z", periodUntil: "2026-12-07T20:57:27Z" },
+      purchasedUsd: 0,
+    });
+  });
+});
+
+describe("@arnilo/prism-provider-ollama-cloud decision models", () => {
+  const clef = mapOllamaCloudModel(
+    { model: "clef:27b", capabilities: ["decision", "vision"] },
+    { capabilities: ["decision", "vision"], model_info: { "qwen35.context_length": 65_536 } },
+  );
+
+  it("ollama_cloud_decision_capability_maps_to_decisions", () => {
+    assert.equal(clef.capabilities?.decisions, true);
+    assert.equal(clef.capabilities?.tools, false);
+    assert.equal(clef.capabilities?.streaming, false);
+    assert.deepEqual(clef.capabilities?.input, ["text", "image"]);
+    assert.equal(clef.limits?.contextWindow, 65_536);
+    // A chat model never declares decisions.
+    assert.notEqual(mapOllamaCloudModel({ model: "gpt-oss:20b", capabilities: ["completion", "tools"] }).capabilities?.decisions, true);
+  });
+
+  it("ollama_cloud_decisions_post_systemone_with_bearer_and_hide_key", async () => {
+    const calls: { url: string; auth: string | null; body: JsonObject }[] = [];
+    const fetchImpl = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      calls.push({
+        url: String(input),
+        auth: new Headers(init?.headers).get("authorization"),
+        body: JSON.parse(String(init?.body)) as JsonObject,
+      });
+      return Response.json({
+        model: "clef:27b",
+        answers: { refund: { type: "noul", noul: 0.9948 } },
+        usage: { input_tokens: 155, output_tokens: 0 },
+      });
+    }) as typeof fetch;
+    const provider = createOllamaCloudProvider({ apiKey: secret, fetch: fetchImpl });
+    const result = await provider.decisions!().decide({
+      model: "clef:27b",
+      state: { ticket: "I was charged twice." },
+      questions: { refund: { type: "noul", instructions: "Is the customer requesting a refund?" } },
+    });
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0]!.url, "https://ollama.com/v1/systemone");
+    assert.equal(calls[0]!.auth, `Bearer ${secret}`);
+    assert.equal(calls[0]!.body.model, "clef:27b");
+    assert.deepEqual(result.answers.refund, { type: "noul", noul: 0.9948 });
+    assert.equal(result.usage?.inputTokens, 155);
+    await assert.rejects(
+      () =>
+        createOllamaCloudProvider({
+          apiKey: secret,
+          fetch: (async () => new Response(`{"error":"bad key ${secret}"}`, { status: 401 })) as typeof fetch,
+        }).decisions!().decide({ model: "clef:27b", questions: { q: { type: "noul", instructions: "x?" } } }),
+      (error: Error) => !error.message.includes(secret),
+    );
+  });
+
+  it("ollama_cloud_decision_model_generate_routes_structured_output_to_systemone", async () => {
+    const urls: string[] = [];
+    const fetchImpl = (async (input: RequestInfo | URL) => {
+      urls.push(String(input));
+      return Response.json({ model: "clef:27b", answers: { refund: { type: "noul", noul: 0.9 } }, usage: { input_tokens: 40 } });
+    }) as typeof fetch;
+    const provider = createOllamaCloudProvider({ apiKey: secret, fetch: fetchImpl });
+    const events = await collectProviderEvents(provider, {
+      model: clef,
+      messages: [{ role: "user", content: [{ type: "text", text: "I was charged twice." }] }],
+      options: {
+        structuredOutput: {
+          name: "verdict",
+          schema: {
+            type: "object",
+            properties: { refund: { type: "boolean", description: "Is a refund requested?" } },
+            required: ["refund"],
+          },
+        },
+      },
+    } as ProviderRequest);
+    assert.deepEqual(urls, ["https://ollama.com/v1/systemone"]);
+    const text = events
+      .flatMap((event) => (event.type === "content_delta" && event.content.type === "text" ? [event.content.text] : []))
+      .join("");
+    assert.deepEqual(JSON.parse(text), { refund: true });
+  });
 });
 
 function weatherTool() {

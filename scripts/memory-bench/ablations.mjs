@@ -43,6 +43,16 @@ const paths = new Set([
   "fabric.lifecycle.widen.minProjects",
   "fabric.lifecycle.widen.minSiblings",
   "fabric.lifecycle.widen.contradictionsToSupersede",
+  // Plan 210 Task 5 (gate C-1): the tuning-tier fields its arms set. Each is an existing product field.
+  "fabric.lifecycle.recall.retrieval",
+  "fabric.recall.supersessionHint",
+  "fabric.recall.expansion",
+  "fabric.recall.gather",
+  "fabric.inject.cardExcerpt",
+  "fabric.inject.minScore",
+  "fabric.decisions",
+  "fabric.ontology.conceptPrior",
+  "om.dropper.policy",
   // Plan 208 Task 3: the ontology arm's tuning, so Task 5 compares trigger policies without a code change.
   "wiki.consolidate.triggers",
   "wiki.consolidate.minNotes",

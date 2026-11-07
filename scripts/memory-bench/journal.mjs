@@ -206,11 +206,28 @@ export function validateJournal(journal) {
   return journal;
 }
 
+/**
+ * Saves to one path run one at a time, and each serializes the journal when its turn comes. Overlapping saves from
+ * parallel arms could otherwise rename out of order, so an older snapshot (without a just-reserved attempt) landed
+ * last and the child refused its own reservation (`unknown attempt`, plan 210 Task 5 smoke, 2026-11-08).
+ */
+const journalSaves = new Map();
 export async function saveJournal(path, journal) {
   validateJournal(journal);
-  const temp = `${path}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
-  await writeFile(temp, `${JSON.stringify(journal, null, 2)}\n`);
-  await rename(temp, path);
+  const previous = journalSaves.get(path) ?? Promise.resolve();
+  const next = previous
+    .catch(() => {})
+    .then(async () => {
+      const temp = `${path}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
+      await writeFile(temp, `${JSON.stringify(journal, null, 2)}\n`);
+      await rename(temp, path);
+    });
+  journalSaves.set(path, next);
+  try {
+    await next;
+  } finally {
+    if (journalSaves.get(path) === next) journalSaves.delete(path);
+  }
 }
 
 export async function loadJournal(path) {

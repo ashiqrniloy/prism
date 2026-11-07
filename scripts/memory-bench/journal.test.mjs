@@ -200,3 +200,17 @@ test("resumed_baseline_journal_identity_includes_frozen_execution_protocol", asy
   const base = { criteriaHash: "criteria", ceiling: 1000, jobs: [], resumeProtocolHash: "first" };
   assert.notEqual(manifestFingerprint(base), manifestFingerprint({ ...base, resumeProtocolHash: "changed" }));
 });
+
+test("overlapping_saves_land_in_order_and_keep_every_reservation", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "journal-order-"));
+  const path = join(dir, "journal.json");
+  const journal = await openJournal({ path, manifest: manifest() });
+  const saves = [];
+  for (const jobId of ["a", "b", "c"]) {
+    reserveAttempt(journal, { jobId, output: join(dir, `${jobId}.json`), maxInputTokens: 1000 });
+    saves.push(saveJournal(path, journal));
+  }
+  await Promise.all(saves);
+  const stored = await loadJournal(path);
+  for (const jobId of ["a", "b", "c"]) assert.ok(stored.attempts.some((attempt) => attempt.jobId === jobId));
+});

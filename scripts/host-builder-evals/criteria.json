@@ -145,29 +145,29 @@
       "defaultModel": "mimo-v2.5"
     },
     {
-      "id": "openrouter",
-      "modelEnv": "PRISM_LIVE_HOST_BUILDER_EVAL_OPENROUTER_MODEL",
-      "defaultModel": "nvidia/nemotron-3-ultra-550b-a55b:free"
+      "id": "ollama-gpt-oss",
+      "provider": "ollama-cloud",
+      "modelEnv": "PRISM_LIVE_HOST_BUILDER_EVAL_OLLAMA_GPT_OSS_MODEL",
+      "defaultModel": "gpt-oss:120b"
     },
     {
-      "id": "kilo",
-      "modelEnv": "PRISM_LIVE_HOST_BUILDER_EVAL_KILO_MODEL",
-      "defaultModel": "nvidia/nemotron-3.5-super-vl:free"
+      "id": "ollama-beam",
+      "provider": "ollama-cloud",
+      "modelEnv": "PRISM_LIVE_HOST_BUILDER_EVAL_OLLAMA_BEAM_MODEL",
+      "defaultModel": "beam"
     },
     {
-      "id": "commandcode",
-      "modelEnv": "PRISM_LIVE_HOST_BUILDER_EVAL_COMMANDCODE_MODEL",
-      "defaultModel": "stealth/glyph-cluster:free",
-      "reserveModels": [
-        "Qwen/Qwen3.7-Flash"
-      ]
+      "id": "ollama-gemma4",
+      "provider": "ollama-cloud",
+      "modelEnv": "PRISM_LIVE_HOST_BUILDER_EVAL_OLLAMA_GEMMA4_MODEL",
+      "defaultModel": "gemma4:31b"
     }
   ],
   "forbiddenProviders": [
     "openrouter/free",
     "openrouter/auto"
   ],
-  "providersNote": "Plan 215 Task 20 text: Hyper and OpenCode Go. Owner decision 2026-11-07: the dry run and the scored runs use the free models of OpenRouter (a specific :free id), Kilo and Command Code (stealth/glyph-cluster:free; the other free row, reflection/beam:free, fails multi-turn tool use with a 400 'Missing required parameter: messages[n].reasoning_content' because the model needs every earlier assistant message's reasoning replayed, so it is not used), and, only if those leave a comparison undecidable, Qwen/Qwen3.7-Flash (paid) on Command Code via PRISM_LIVE_HOST_BUILDER_EVAL_COMMANDCODE_MODEL. Hyper and OpenCode Go stay allowed. Router aliases (openrouter/free, openrouter/auto) stay refused: they pick a model per request, which breaks a paired comparison.",
+  "providersNote": "Plan 215 Task 20 text: Hyper and OpenCode Go. Owner decision 2026-11-07 (first): dry runs on the free models of OpenRouter, Kilo and Command Code, with Qwen/Qwen3.7-Flash as a paid reserve. Measured, those free tiers cannot carry a scored run of about 3,800 requests per mode: OpenRouter free allows 1,000 requests a day (20 a minute), Command Code's free Glyph Cluster 1,000 a day, Kilo free 200 an hour; reflection/beam:free on Command Code fails multi-turn tool use. Owner decision 2026-11-08 (supersedes the reserve): the scored runs use three paid Ollama Cloud models, gpt-oss:120b, beam and gemma4:31b (each a registered entry on the ollama-cloud provider); Qwen3.7-Flash is not used. Hyper and OpenCode Go stay allowed. Router aliases (openrouter/free, openrouter/auto) stay refused: they pick a model per request, which breaks a paired comparison. The dry-run evidence of the earlier free providers stays under docs/_evidence/host-builder/212 (*.dry-run.*).",
   "costGate": {
     "dryRunTaskIds": [
       "headless-host",

@@ -29,5 +29,7 @@ export function screen209WorkArgv(job, { output, maxInput }) {
     ...(job.personaLimit ? ["--personas", String(job.personaLimit)] : []),
     ...(job.freeOnly ? ["--free-only"] : []),
     ...(job.simulatorPaid ? ["--simulator-paid"] : []),
+    ...(job.judgesPaid ? ["--judges-paid"] : []),
+    ...(job.fabricOverlay ? ["--fabric-overlay", JSON.stringify(job.fabricOverlay)] : []),
   ];
 }

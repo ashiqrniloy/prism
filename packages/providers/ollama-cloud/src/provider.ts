@@ -2,6 +2,7 @@ import type { CredentialValueSource, ModelProvider, ProviderRequest } from "@arn
 import { trimTrailingSlashes } from "@arnilo/prism";
 import {
   createRoutedProvider,
+  createSystemOneDecisionProvider,
   DEFAULT_MAX_BUFFER_BYTES,
   ProviderRequirementError,
   type RoutedProviderRoute,
@@ -11,6 +12,9 @@ import { ollamaCloudNativeEvents, stripJsonFence } from "./native.js";
 
 /** Native NDJSON route; the default. */
 export const OLLAMA_CLOUD_NATIVE_ROUTE = { format: "native", path: "/api/chat" } as const;
+
+/** System One wire for decision models (`capabilities: ["decision"]`, e.g. `clef`): typed questions, calibrated answers. */
+export const OLLAMA_CLOUD_SYSTEMONE_PATH = "/v1/systemone";
 
 /** OpenAI-compatible route used by pi-ollama-cloud. */
 export const OLLAMA_CLOUD_CHAT_ROUTE: RoutedProviderRoute<"openai-chat"> = {
@@ -52,10 +56,24 @@ export function createOllamaCloudProvider(options: OllamaCloudProviderOptions = 
     routeFor: () => "openai",
     routes: { openai: OLLAMA_CLOUD_CHAT_ROUTE },
   });
+  // Decision models answer typed questions on the shared System One client; they never stream or call tools.
+  const decision = createSystemOneDecisionProvider({
+    id,
+    label: "Ollama Cloud",
+    baseUrl,
+    path: OLLAMA_CLOUD_SYSTEMONE_PATH,
+    apiKey: options.apiKey,
+    fetch: options.fetch,
+  });
 
   return {
     id,
+    decisions: () => decision.decisions!(),
     async *generate(request: ProviderRequest) {
+      if (request.model.capabilities?.decisions === true) {
+        yield* decision.generate(request);
+        return;
+      }
       const selected = routeForOllamaCloudRequest(request, route);
       if (selected === "native") {
         yield* ollamaCloudNativeEvents(request, { id, baseUrl, apiKey: options.apiKey, fetch: options.fetch });

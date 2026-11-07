@@ -1,0 +1,338 @@
+{
+  "plan": "215 Task 20",
+  "round": 1,
+  "mode": "dryRun",
+  "loading": "natural",
+  "startedAt": "2026-11-07T21:04:24.300Z",
+  "finishedAt": "2026-11-07T21:12:57.664Z",
+  "criteriaHash": "4eb996e7a34feed8f73fc8ecf6b5d8f5167fe3b0125086a0d05ba3a2e0a65794",
+  "criteriaLockedAt": "2026-11-07T21:01:17.547Z",
+  "datasetContentHash": "sha256:454a44e1fb013536af8c38bd6c9ed4234d0f16f794cdad68cb43cbfd78e51356",
+  "inputs": {
+    "workspaces": "sha256:01e6b6bd91ac9a3cacb7bf53dcede244af7cef486f41892139aea3c4bfdf0e5c",
+    "hidden": "sha256:b096d72e77abf7968097d14d70886604e0768a01c0b7a201d051b48c6512a47e",
+    "solutions": "sha256:810998b18afee3a8778287c312a19c9a25a50a46ec1b68f88b45c2e9ba99462b",
+    "skill": "sha256:d6f77d7615fbca2b917cba158564b59d44fb597e9a891be1751d8803dff44a33",
+    "indexes": "sha256:986940dc89d1e1b48ea5301ec8813d775e836fcd1999429cb0900c989742783e"
+  },
+  "runtimeRevision": "d9785f968725d2a0e8c73cc5c92ec4e02092398b",
+  "trials": 1,
+  "providers": [
+    {
+      "provider": "ollama-cloud",
+      "model": "gpt-oss:120b",
+      "arms": {
+        "none": {
+          "status": "succeeded",
+          "scorers": {
+            "typecheck_passes": {
+              "mean": 1,
+              "ci95": {
+                "low": 0.34238022714360744,
+                "high": 1
+              },
+              "records": 2
+            },
+            "acceptance_tests_pass": {
+              "mean": 0,
+              "ci95": {
+                "low": 0,
+                "high": 0.6576197728563925
+              },
+              "records": 2
+            },
+            "public_surface_only": {
+              "mean": 1,
+              "ci95": {
+                "low": 0.34238022714360744,
+                "high": 1
+              },
+              "records": 2
+            },
+            "no_retired_names": {
+              "mean": 1,
+              "ci95": {
+                "low": 0.34238022714360744,
+                "high": 1
+              },
+              "records": 2
+            }
+          },
+          "failedCount": 4,
+          "scoredRuns": 2,
+          "limitedRuns": 0,
+          "toolCalls": 38,
+          "skillLoadedRuns": 0,
+          "mcpUsedRuns": 0,
+          "acceptanceByLoading": {
+            "loaded": {
+              "runs": 0,
+              "passed": 0
+            },
+            "notLoaded": {
+              "runs": 2,
+              "passed": 0
+            }
+          },
+          "inputTokens": 2108794,
+          "cacheReadTokens": 1931952,
+          "uncachedInputTokens": 176842,
+          "outputTokens": 15183,
+          "costComplete": false,
+          "meanDurationMs": 63765.03383966667,
+          "durationMs": {
+            "p50": 85637.42921200002,
+            "p95": 92404.74913499999
+          }
+        },
+        "skill": {
+          "status": "succeeded",
+          "scorers": {
+            "typecheck_passes": {
+              "mean": 0.6666666666666666,
+              "ci95": {
+                "low": 0.20765960059822086,
+                "high": 0.9385080553510953
+              },
+              "records": 3
+            },
+            "acceptance_tests_pass": {
+              "mean": 0,
+              "ci95": {
+                "low": 0,
+                "high": 0.561497032152052
+              },
+              "records": 3
+            },
+            "public_surface_only": {
+              "mean": 0.6666666666666666,
+              "ci95": {
+                "low": 0.20765960059822086,
+                "high": 0.9385080553510953
+              },
+              "records": 3
+            },
+            "no_retired_names": {
+              "mean": 0.6666666666666666,
+              "ci95": {
+                "low": 0.20765960059822086,
+                "high": 0.9385080553510953
+              },
+              "records": 3
+            }
+          },
+          "failedCount": 0,
+          "scoredRuns": 3,
+          "limitedRuns": 0,
+          "toolCalls": 80,
+          "skillLoadedRuns": 0,
+          "mcpUsedRuns": 0,
+          "acceptanceByLoading": {
+            "loaded": {
+              "runs": 0,
+              "passed": 0
+            },
+            "notLoaded": {
+              "runs": 3,
+              "passed": 0
+            }
+          },
+          "inputTokens": 693709,
+          "cacheReadTokens": 655072,
+          "uncachedInputTokens": 38637,
+          "outputTokens": 9954,
+          "costComplete": false,
+          "meanDurationMs": 48361.234078,
+          "durationMs": {
+            "p50": 51252.209328999976,
+            "p95": 60117.706116999994
+          }
+        },
+        "skill+mcp": {
+          "status": "succeeded",
+          "scorers": {
+            "typecheck_passes": {
+              "mean": 0.6666666666666666,
+              "ci95": {
+                "low": 0.20765960059822086,
+                "high": 0.9385080553510953
+              },
+              "records": 3
+            },
+            "acceptance_tests_pass": {
+              "mean": 0,
+              "ci95": {
+                "low": 0,
+                "high": 0.561497032152052
+              },
+              "records": 3
+            },
+            "public_surface_only": {
+              "mean": 0.3333333333333333,
+              "ci95": {
+                "low": 0.061491944648904784,
+                "high": 0.7923403994017792
+              },
+              "records": 3
+            },
+            "no_retired_names": {
+              "mean": 0.6666666666666666,
+              "ci95": {
+                "low": 0.20765960059822086,
+                "high": 0.9385080553510953
+              },
+              "records": 3
+            }
+          },
+          "failedCount": 0,
+          "scoredRuns": 3,
+          "limitedRuns": 1,
+          "toolCalls": 81,
+          "skillLoadedRuns": 0,
+          "mcpUsedRuns": 1,
+          "acceptanceByLoading": {
+            "loaded": {
+              "runs": 0,
+              "passed": 0
+            },
+            "notLoaded": {
+              "runs": 3,
+              "passed": 0
+            }
+          },
+          "inputTokens": 2340122,
+          "cacheReadTokens": 2214128,
+          "uncachedInputTokens": 125994,
+          "outputTokens": 9474,
+          "costComplete": false,
+          "meanDurationMs": 57183.160866333325,
+          "durationMs": {
+            "p50": 40891.046328999975,
+            "p95": 105733.166172
+          }
+        }
+      },
+      "decision": {
+        "verdict": "inconclusive",
+        "roundVerdict": "inconclusive",
+        "reason": "comparison skill_vs_none failed: Missing scorer typecheck_passes on paired item acp-serve",
+        "comparisons": [],
+        "claims": [],
+        "regressions": []
+      },
+      "tasks": [
+        {
+          "id": "headless-host",
+          "arms": {
+            "none": {
+              "typecheck_passes": "1/1",
+              "acceptance_tests_pass": "0/1",
+              "public_surface_only": "1/1",
+              "no_retired_names": "1/1",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/headless-host.test.ts:\n\n# Unhandled error between tests\n-------------------------------\nerror: Cannot find module '../src/host.ts' from '/tmp/hbe-headless-host-XB3Wh0/__acceptance__/headless-host.test.ts'\n-------------------------------\n\n\n 0 pass\n 1 fail\n …",
+              "unscored": 0
+            },
+            "skill": {
+              "typecheck_passes": "1/1",
+              "acceptance_tests_pass": "0/1",
+              "public_surface_only": "1/1",
+              "no_retired_names": "1/1",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/headless-host.test.ts:\n\n# Unhandled error between tests\n-------------------------------\nerror: Cannot find module '../src/host.ts' from '/tmp/hbe-headless-host-kQIUrB/__acceptance__/headless-host.test.ts'\n-------------------------------\n\n\n 0 pass\n 1 fail\n …",
+              "unscored": 0
+            },
+            "skill+mcp": {
+              "typecheck_passes": "1/1",
+              "acceptance_tests_pass": "0/1",
+              "public_surface_only": "0/1",
+              "no_retired_names": "1/1",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/headless-host.test.ts:\n36 |     const result = await session.run(\"read the note and echo\");\n37 |     expect(result.status).toBe(\"completed\");\n38 |     const results = (last?.messages ?? []).flatMap((message) => message.content).filter((block) => block.type…",
+              "unscored": 0
+            }
+          }
+        },
+        {
+          "id": "acp-serve",
+          "arms": {
+            "none": {
+              "typecheck_passes": "0/0",
+              "acceptance_tests_pass": "0/0",
+              "public_surface_only": "0/0",
+              "no_retired_names": "0/0",
+              "unscored": 1,
+              "firstError": "run failed: Ollama Cloud stream error: Internal Server Error (ref: dd89e139-d9bb-4709-a840-2394b53c756e)"
+            },
+            "skill": {
+              "typecheck_passes": "1/1",
+              "acceptance_tests_pass": "0/1",
+              "public_surface_only": "1/1",
+              "no_retired_names": "1/1",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/acp-serve.test.ts:\n54 | test(\"an ACP client approves an edit through session/request_permission\", async () => {\n55 |   const { initialized, prompt, asked } = await session(\"allow_once\");\n56 |   expect(initialized.agentCapabilities?.loadSession).toBe(true);…",
+              "unscored": 0
+            },
+            "skill+mcp": {
+              "typecheck_passes": "1/1",
+              "acceptance_tests_pass": "0/1",
+              "public_surface_only": "1/1",
+              "no_retired_names": "1/1",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/acp-serve.test.ts:\n\n# Unhandled error between tests\n-------------------------------\nerror: Cannot find module '../src/acp.ts' from '/tmp/hbe-acp-serve-bW4lgv/__acceptance__/acp-serve.test.ts'\n-------------------------------\n\n\n 0 pass\n 1 fail\n 1 error\nRan 1…",
+              "unscored": 0
+            }
+          }
+        },
+        {
+          "id": "upgrade-0-12",
+          "arms": {
+            "none": {
+              "typecheck_passes": "1/1",
+              "acceptance_tests_pass": "0/1",
+              "public_surface_only": "1/1",
+              "no_retired_names": "1/1",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/upgrade-0-12.test.ts:\n33 |     expect(result.status).toBe(\"completed\");\n34 |     const text = JSON.stringify(\n35 |       (last?.messages ?? []).flatMap((message) => message.content).filter((block) => block.type === \"tool_result\"),\n36 |     );\n37 |     expe…",
+              "unscored": 0
+            },
+            "skill": {
+              "typecheck_passes": "0/1",
+              "acceptance_tests_pass": "0/1",
+              "public_surface_only": "0/1",
+              "no_retired_names": "0/1",
+              "firstFailure": "src/host.ts(3,29): error TS2307: Cannot find module '@arnilo/prism-coding-tools' or its corresponding type declarations.",
+              "unscored": 0
+            },
+            "skill+mcp": {
+              "typecheck_passes": "0/1",
+              "acceptance_tests_pass": "0/1",
+              "public_surface_only": "0/1",
+              "no_retired_names": "0/1",
+              "firstFailure": "src/host.ts(3,29): error TS2307: Cannot find module '@arnilo/prism-coding-tools' or its corresponding type declarations.",
+              "unscored": 0
+            }
+          }
+        }
+      ],
+      "fullRunEstimate": {
+        "none": {
+          "dryRuns": 3,
+          "fullRuns": 21,
+          "inputTokens": 14761558,
+          "uncachedInputTokens": 1237894,
+          "outputTokens": 106281
+        },
+        "skill": {
+          "dryRuns": 3,
+          "fullRuns": 21,
+          "inputTokens": 4855963,
+          "uncachedInputTokens": 270459,
+          "outputTokens": 69678
+        },
+        "skill+mcp": {
+          "dryRuns": 3,
+          "fullRuns": 21,
+          "inputTokens": 16380854,
+          "uncachedInputTokens": 881958,
+          "outputTokens": 66318
+        }
+      }
+    }
+  ],
+  "verdict": "inconclusive"
+}

@@ -530,10 +530,23 @@ export function assertNoCuratorJudge({ refs, bundles }) {
   return panel;
 }
 
+/**
+ * The gates that authorize a live claim audit: plan 208's O-1, and plan 210's C-1 (Task 5 opens with the panel
+ * calibration that moved there from Task 3.2). Anything else, or an unapproved record, is refused.
+ */
+export const CLAIM_AUDIT_GATES = Object.freeze([
+  { plan: 208, gate: "O-1" },
+  { plan: 210, gate: "C-1" },
+]);
+export function assertClaimAuditGate(approval) {
+  const known = CLAIM_AUDIT_GATES.some((entry) => entry.plan === approval?.plan && entry.gate === approval?.gate);
+  if (!known || approval.approved !== true || approval.approvedBy !== "owner")
+    throw new Error("MemoryBenchGate: live claim audit needs an approved gate O-1 (plan 208) or C-1 (plan 210) record (--gate)");
+  return approval;
+}
+
 async function liveJudges({ refs, bundles, calls, gate }) {
-  const approval = JSON.parse(await readFile(gate, "utf8").catch(() => "null"));
-  if (approval?.plan !== 208 || approval.gate !== "O-1" || approval.approved !== true)
-    throw new Error("MemoryBenchGate: live claim audit needs the approved gate O-1 record (--gate)");
+  assertClaimAuditGate(JSON.parse(await readFile(gate, "utf8").catch(() => "null")));
   const panel = assertNoCuratorJudge({ refs, bundles });
   return openClaimJudges({ refs: panel.refs, calls });
 }

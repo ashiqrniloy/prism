@@ -15,6 +15,12 @@
 - Wire recordings for both routes, including the measured overflow body and the fenced structured
   output reply.
 - Live scenarios for the native and compat routes.
+- Decision models (plan 210 Task 5): a model whose `/api/show` capabilities include `decision` (for
+  example `clef:27b`) maps to `capabilities.decisions: true`, and the provider serves
+  `decisions()` plus structured-output runs over the System One wire at `/v1/systemone`
+  (`OLLAMA_CLOUD_SYSTEMONE_PATH`, `defineOllamaCloudDecisionModel()`).
+- `ollamaCloudBalance()` reads the current plans' monthly included credit (`included.balanceUsd`,
+  `allowanceUsd`, `periodFrom`, `periodUntil`) besides the legacy session/weekly windows.
 
 ### Changed
 

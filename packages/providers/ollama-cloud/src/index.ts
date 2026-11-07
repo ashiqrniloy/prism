@@ -107,6 +107,7 @@ export function ollamaCloud(options: OllamaCloudProviderPackageOptions & OllamaC
 
 export {
   contextLength,
+  defineOllamaCloudDecisionModel,
   defineOllamaCloudModel,
   type ListOllamaCloudModelsOptions,
   listOllamaCloudModels,
@@ -115,6 +116,7 @@ export {
   type OllamaCloudBalance,
   type OllamaCloudBalanceOptions,
   type OllamaCloudBalanceWindow,
+  type OllamaCloudIncludedBalance,
   type OllamaCloudModelConfig,
   type OllamaCloudModelEntry,
   type OllamaCloudRoute,
@@ -138,6 +140,7 @@ export {
   createOllamaCloudProvider,
   OLLAMA_CLOUD_CHAT_ROUTE,
   OLLAMA_CLOUD_NATIVE_ROUTE,
+  OLLAMA_CLOUD_SYSTEMONE_PATH,
   type OllamaCloudProviderOptions,
   routeForOllamaCloudRequest,
 } from "./provider.js";

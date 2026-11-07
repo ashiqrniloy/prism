@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "suite": "dated-growth",
+  "source": "longmemeval-m (500 rows available)",
+  "metric": "offline lexical retrieval of the expected month-1 exchange",
+  "modelCalls": 0,
+  "months": 12,
+  "histories": [
+    {
+      "id": "7161e7e2",
+      "sessions": 482
+    },
+    {
+      "id": "c4f10528",
+      "sessions": 472
+    },
+    {
+      "id": "89527b6b",
+      "sessions": 473
+    }
+  ],
+  "exchanges": 1427,
+  "questions": 16,
+  "hotTokens": 200000,
+  "graceSessions": 10,
+  "clock": 1427,
+  "criterion": {
+    "month1": 0.5625,
+    "month12": 0.6875,
+    "tolerancePoints": 3,
+    "pass": true
+  },
+  "snapshots": {
+    "1": {
+      "archivedTotal": 68,
+      "archived": 68,
+      "demoted": 0,
+      "accuracy": 0.5625,
+      "archivedInclusiveAccuracy": 1,
+      "contentAccuracy": 0.5333,
+      "datasetQuestionAccuracy": 1
+    },
+    "6": {
+      "archivedTotal": 118,
+      "archived": 118,
+      "demoted": 0,
+      "accuracy": 0.4375,
+      "archivedInclusiveAccuracy": 1,
+      "contentAccuracy": 0.4,
+      "datasetQuestionAccuracy": 1
+    },
+    "12": {
+      "archivedTotal": 118,
+      "archived": 118,
+      "demoted": 0,
+      "accuracy": 0.6875,
+      "archivedInclusiveAccuracy": 1,
+      "contentAccuracy": 0.6667,
+      "datasetQuestionAccuracy": 1
+    }
+  }
+}

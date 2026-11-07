@@ -546,7 +546,8 @@ async function main1888() {
 }
 
 if (import.meta.main) {
-  if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "209") await main209();
+  if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "210") await main210();
+  else if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "209") await main209();
   else if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "208") await main208();
   else if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "188.8") await main1888();
   else if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "188.9") await main1889();
@@ -951,6 +952,30 @@ async function main209() {
           })),
           noHarm: report.noHarm,
           usd: report.usd,
+        },
+        null,
+        2,
+      ),
+    );
+  } catch (error) {
+    console.error(`${error.name}: ${error.message}`);
+    process.exitCode = 1;
+  }
+}
+
+/* Plan 210 Task 5: the C-1 ablation report. Every verdict comes from cleanupVerdict() (cleanup-criteria.json). */
+async function main210() {
+  const { writeC1Report } = await import("./cleanup-campaign.mjs");
+  const partition = process.argv.includes("--partition") ? process.argv[process.argv.indexOf("--partition") + 1] : "dev";
+  try {
+    const report = await writeC1Report({ partition });
+    console.log(
+      JSON.stringify(
+        {
+          jobsRead: report.jobs.read.length,
+          verdicts: Object.fromEntries(report.verdicts.filter((row) => row.measured).map((row) => [row.feature, row.verdict])),
+          predictions: Object.fromEntries(report.predictions.map((row) => [`${row.feature}/${row.arm}`, row.outcome])),
+          f4: report.f4.disposition,
         },
         null,
         2,

@@ -210,6 +210,53 @@ export function transientRetryLimit() {
   return Number.isSafeInteger(value) && value >= 0 ? value : 24;
 }
 
+/**
+ * Plan 210 Task 5 (owner, 2026-11-07: "interruptions are expected; handle and retry them, with no impact other than
+ * wall time"). On the C-1 campaign, a failed report that is not a classified permanent refusal is an interruption: the
+ * job re-runs from its answer/judge checkpoints after a cooldown, and the attempt never counts against its budget.
+ */
+export const FREE_ROUTE_RETRY_LIMIT = 200;
+/** The reports of a job's earlier attempts, oldest first (for the stall guard). */
+async function priorReports(journal, jobId, currentAttemptId) {
+  const rows = [];
+  for (const attempt of journal.attempts.filter((item) => item.jobId === jobId && item.attemptId !== currentAttemptId)) {
+    if (attempt.output && existsSync(attempt.output)) rows.push(JSON.parse(await readFile(attempt.output, "utf8")));
+  }
+  return rows;
+}
+export const SETUP_RETRIES = 3;
+export function freeRouteInterruption(report) {
+  if (!report || ["completed", "token-ceiling", "partial"].includes(report.status)) return false;
+  return !permanentFailure(report) && !dailyFreeQuotaFailure(report) && !deterministicFailure(report);
+}
+
+/**
+ * A harness or configuration fault fails the same way on every re-run (a package that refuses its config, a model
+ * without a capability the arm needs, a refused ablation or variant): it stops the job instead of looping.
+ */
+const DETERMINISTIC_TEXT =
+  /setup failed|does not declare the \w+ capability|MemoryBench(Arguments|Ablation|Variant|WriteSideMismatch|IngestUnsupported|Archive|Maintain)|MemoryValidationError|is not a function|Cannot find (module|package)|SyntaxError|ReferenceError|TypeError:/;
+export function deterministicFailure(report) {
+  if (!report || ["completed", "token-ceiling", "partial"].includes(report.status)) return null;
+  return DETERMINISTIC_TEXT.test(failureText(report)) ? "deterministic-harness-or-config" : null;
+}
+
+/**
+ * The stall guard: the last `window` attempts of a job all failed with the same failure text and the report never
+ * gained a scored question. Free-route waits stay unbounded; a job that makes no progress at all does not.
+ */
+export const STALL_WINDOW = 6;
+export function stalledJob(reports, window = STALL_WINDOW) {
+  if (reports.length < window) return false;
+  const last = reports.slice(-window);
+  const text = new Set(last.map((report) => failureText(report)));
+  const scored = new Set(last.map((report) => (report?.results ?? []).length));
+  return text.size === 1 && scored.size === 1 && last.every((report) => report?.status !== "completed");
+}
+export function freeRouteRetryCause(attempt) {
+  return attempt?.cause === "transient" || attempt?.cause === "quota-window" || attempt?.cause === "quota-daily";
+}
+
 /** A 4xx that names an input problem is deterministic: the same arm on the same question will be
  * refused again, so the campaign records it once and stops. `429` and transport errors stay retryable.
  */
@@ -262,9 +309,39 @@ export function incrementalAttemptUsage(report, prior) {
 
 /** Per-mode evidence, journal, manifest and gate rules. 188.8 reuses 188.7's journal machinery. */
 /** The owner-gated development screens: free routes plus named paid models, re-run from checkpoint on transient faults. */
-const SCREEN_MODES = new Set(["screen208", "screen209"]);
+const SCREEN_MODES = new Set(["screen208", "screen209", "campaign210"]);
 
 function runSpec(mode) {
+  // Plan 210 Task 5: the ablation campaign (gate C-1), free routes only. Loaded lazily, like plans 208 and 209.
+  if (mode === "campaign210") {
+    let built;
+    const c1 = () => import("./cleanup-campaign.mjs");
+    return {
+      evidence: "docs/_evidence/memory-bench/210/ablations",
+      logs: ".cache/memory-bench/210/logs",
+      outputPrefix: process.env.PRISM_MEMORY_BENCH_210_SMOKE === "1" ? "smoke-210-c1" : "run-210-c1",
+      summaryPath: "docs/_evidence/memory-bench/210/ablations/execution-run.json",
+      journalPath: ".cache/memory-bench/210/journal.json",
+      summaryKind: "210-c1-ablation-run",
+      timeout: "172800s",
+      maxAttempts: 3,
+      freeRouteRetries: true,
+      build: async () => {
+        built = await (await c1()).buildExecutableC1Manifest();
+        return built;
+      },
+      preflight: async (manifest) => (await c1()).preflightC1(manifest),
+      beforeJob: async (job) => (await c1()).c1BudgetGate(job),
+      write: async () => {
+        const { C1_EXECUTION_MANIFEST } = await c1();
+        await mkdir("docs/_evidence/memory-bench/210/ablations", { recursive: true });
+        await writeFile(
+          built.executionManifestPath ?? C1_EXECUTION_MANIFEST,
+          `${JSON.stringify({ generatedAt: new Date().toISOString(), ...built, results: [] }, null, 2)}\n`,
+        );
+      },
+    };
+  }
   // Plan 209 Task 6: the work-outcome development screen (gate W-1). Loaded lazily, like plan 208's.
   if (mode === "screen209") {
     let built;
@@ -962,7 +1039,8 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
     const writeSideDirs = new Map();
     for (const job of manifest.jobs)
       if (producers.has(job.id))
-        writeSideDirs.set(job.id, resolve(`${WRITE_SIDE_CACHE}/${await writeSideCacheDir({ config: job.config })}`));
+        // Plan 210: a producer may name its own key (suite, config, write-side switches, product bytes).
+        writeSideDirs.set(job.id, resolve(`${WRITE_SIDE_CACHE}/${job.snapshotKey ?? (await writeSideCacheDir({ config: job.config }))}`));
     const writeSideDir = (jobId) => writeSideDirs.get(jobId) ?? null;
     const pushResult = (row) => manifest.results.push(row);
     const jobArgv = (job, attempt, maxInput) => {
@@ -1002,6 +1080,8 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
       if (job.judgeText) argv.push("--judge-text");
       if (job.interleaveAbilities) argv.push("--interleave-abilities");
       if (job.finalTurnAnswer) argv.push("--final-turn-answer");
+      if (job.maintainBeforeAnswer) argv.push("--maintain-before-answer");
+      if (job.strictQuestions) argv.push("--strict-questions");
       const writeOnly = producers.has(job.id);
       if (profile && !writeOnly) {
         argv.push(
@@ -1077,7 +1157,12 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
         return;
       }
       // A spent quota window says nothing about the arm; those attempts are re-run, not counted.
-      if (journal.attempts.filter((attempt) => attempt.jobId === job.id && !isBudgetQuotaCause(attempt.cause)).length >= spec.maxAttempts) {
+      if (
+        journal.attempts.filter(
+          (attempt) =>
+            attempt.jobId === job.id && !isBudgetQuotaCause(attempt.cause) && !(spec.freeRouteRetries && freeRouteRetryCause(attempt)),
+        ).length >= spec.maxAttempts
+      ) {
         pushResult({ id: job.id, status: "attempts-exhausted" });
         return;
       }
@@ -1086,10 +1171,36 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
         const producer = latestAttempt(journal, job.writeSide);
         const directory = writeSideDir(job.writeSide);
         const snapshotPresent = Boolean(directory) && existsSync(directory) && (await readdir(directory)).length > 0;
+        // Plan 210: a reader started beside its producer waits for it (the producer is queued first) instead of skipping.
+        if (spec.freeRouteRetries && writeSideUnavailable(job, { producer, snapshotPresent })) {
+          const final =
+            producer?.status === "failed-permanent" ||
+            manifest.results.some(
+              (row) =>
+                row.id === job.writeSide &&
+                ["completed", "attempts-exhausted", "unsupported", "transient-exhausted", "setup-failure", "token-ceiling"].includes(
+                  row.status,
+                ),
+            );
+          if (!final) {
+            await new Promise((resolve) => setTimeout(resolve, Number(process.env.PRISM_MEMORY_BENCH_WRITE_SIDE_POLL_MS ?? 60_000)));
+            return runJob(job);
+          }
+        }
         if (writeSideUnavailable(job, { producer, snapshotPresent })) {
           pushResult({ id: job.id, status: "write-side-missing", writeSide: job.writeSide });
           console.error(`skip ${job.id}: write side ${job.writeSide} is not completed or not cached`);
           return;
+        }
+      }
+      // Plan 210 (paid C-1): the account balance gate. It waits out a closed usage window and halts on a spent allowance.
+      if (spec.beforeJob) {
+        const gate = await spec.beforeJob(job);
+        if (gate?.halt) {
+          journal.status = gate.status ?? "budget-exhausted";
+          await saveJournal(journalPath, journal);
+          console.error(`halt ${job.id}: ${gate.reason}`);
+          return { halt: true };
         }
       }
       const available = availableTokens(journal);
@@ -1157,13 +1268,24 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
       closeSync(log);
       if (existsSync(attempt.output)) {
         const report = JSON.parse(await readFile(attempt.output, "utf8"));
-        const permanent = permanentFailure(report);
+        const permanent =
+          permanentFailure(report) ??
+          (spec.freeRouteRetries
+            ? (deterministicFailure(report) ??
+              (stalledJob([...(await priorReports(journal, job.id, attempt.attemptId)), report]) ? "stalled-no-progress" : null))
+            : null);
         const dailyQuota = dailyFreeQuotaFailure(report);
         const quotaWindow =
           !dailyQuota &&
           (quotaWindowFailure(report) ||
             (mode === "baseline202" && /429|402|quota|free.models.per.day/i.test(report.failure?.message ?? "")));
-        const transient = SCREEN_MODES.has(mode) && !dailyQuota && !quotaWindow && transientFailure(report);
+        // Plan 210 (free routes, owner 2026-11-07): any non-deterministic failure is an interruption, retried from the
+        // checkpoint; only a classified permanent refusal stops a job.
+        const transient =
+          SCREEN_MODES.has(mode) &&
+          !dailyQuota &&
+          !quotaWindow &&
+          (transientFailure(report) || (spec.freeRouteRetries === true && freeRouteInterruption(report)));
         reconcileAttempt(journal, attempt.attemptId, {
           status: dailyQuota
             ? "quota-daily"
@@ -1174,7 +1296,9 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
                 : report.status === "completed" ||
                     (mode === "probe1889" && report.status === "partial") ||
                     // The quick first read stops at its slice on purpose: a slice answered in full is done.
-                    (mode === "screen208" && process.env.PRISM_MEMORY_BENCH_208_QUICK === "1" && report.status === "partial")
+                    (mode === "screen208" && process.env.PRISM_MEMORY_BENCH_208_QUICK === "1" && report.status === "partial") ||
+                    // A capped plan 210 job (a smoke or a bounded slice) that answered its cap is done.
+                    (spec.freeRouteRetries === true && Boolean(job.maxQuestions) && report.status === "partial")
                   ? "completed"
                   : report.status === "token-ceiling"
                     ? "token-ceiling"
@@ -1221,6 +1345,16 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
         });
         pushResult({ id: job.id, attemptId: attempt.attemptId, status: "setup-failure", exit });
         console.error(`failed ${attempt.attemptId}; no report (exit ${exit}); reserved ${attempt.reservedInputTokens}`);
+        // Plan 210: a child killed by the host (OOM, signal) before its first report write is retried a bounded number
+        // of times; repeated setup failures mean broken arguments and halt as before.
+        if (spec.freeRouteRetries) {
+          const setups = journal.attempts.filter((item) => item.jobId === job.id && item.status === "setup-failure").length;
+          if (setups <= SETUP_RETRIES) {
+            await saveJournal(journalPath, journal);
+            await new Promise((resolve) => setTimeout(resolve, transientCooldownMs(setups)));
+            return runJob(job);
+          }
+        }
         // No report means the harness or arguments are broken, not the arm: stop launching new
         // arms, but let the running siblings reconcile. A rerun resumes from the journal.
         journal.status = "setup-failure";
@@ -1233,6 +1367,15 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
         journal.status = "quota-daily";
         journal.resumeAfter = nextDailyReset().toISOString();
         await saveJournal(journalPath, journal);
+        // Plan 210 (free routes): wait for the reset in place and continue, so an unattended campaign loses wall time only.
+        if (spec.freeRouteRetries) {
+          const waitMs = Math.max(60_000, Date.parse(journal.resumeAfter) - Date.now() + 120_000);
+          console.error(`pause ${attempt.attemptId}: daily free-model cap; resuming after ${journal.resumeAfter}`);
+          await new Promise((resolve) => setTimeout(resolve, Number(process.env.PRISM_MEMORY_BENCH_DAILY_PAUSE_MS ?? waitMs)));
+          journal.status = "active";
+          await saveJournal(journalPath, journal);
+          return runJob(job);
+        }
         console.error(`halt ${attempt.attemptId}: daily free-model cap reached; resume after ${journal.resumeAfter}`);
         return { halt: true };
       }
@@ -1258,7 +1401,7 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
       }
       if (journal.attempts.at(-1)?.cause === "transient") {
         const count = journal.attempts.filter((item) => item.jobId === job.id && item.cause === "transient").length;
-        if (count > transientRetryLimit()) {
+        if (count > (spec.freeRouteRetries ? FREE_ROUTE_RETRY_LIMIT : transientRetryLimit())) {
           console.error(`give up ${attempt.attemptId}: ${count} transient failures`);
           pushResult({ id: job.id, attemptId: attempt.attemptId, status: "transient-exhausted" });
           await saveJournal(journalPath, journal);
@@ -1316,31 +1459,33 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
 if (import.meta.main) {
   const planArg = process.argv.includes("--plan") ? process.argv[process.argv.indexOf("--plan") + 1] : undefined;
   const mode =
-    planArg === "208"
-      ? "screen208"
-      : planArg === "209"
-        ? "screen209"
-        : process.argv.includes("--baseline-202")
-          ? "baseline202"
-          : process.argv.includes("--task5")
-            ? "task5"
-            : process.argv.includes("--task5-smoke")
-              ? "task5-smoke"
-              : process.argv.includes("--acceptance-188.10-screen-a")
-                ? "screenA18810"
-                : process.argv.includes("--acceptance-188.10")
-                  ? "acceptance18810"
-                  : process.argv.includes("--acceptance-188.9-probe")
-                    ? "probe1889"
-                    : process.argv.includes("--acceptance-188.9-screen")
-                      ? "screen1889"
-                      : process.argv.includes("--acceptance-188.9")
-                        ? "acceptance1889"
-                        : process.argv.includes("--acceptance-188.8")
-                          ? "acceptance1888"
-                          : process.argv.includes("--acceptance")
-                            ? "acceptance"
-                            : "task6";
+    planArg === "210"
+      ? "campaign210"
+      : planArg === "208"
+        ? "screen208"
+        : planArg === "209"
+          ? "screen209"
+          : process.argv.includes("--baseline-202")
+            ? "baseline202"
+            : process.argv.includes("--task5")
+              ? "task5"
+              : process.argv.includes("--task5-smoke")
+                ? "task5-smoke"
+                : process.argv.includes("--acceptance-188.10-screen-a")
+                  ? "screenA18810"
+                  : process.argv.includes("--acceptance-188.10")
+                    ? "acceptance18810"
+                    : process.argv.includes("--acceptance-188.9-probe")
+                      ? "probe1889"
+                      : process.argv.includes("--acceptance-188.9-screen")
+                        ? "screen1889"
+                        : process.argv.includes("--acceptance-188.9")
+                          ? "acceptance1889"
+                          : process.argv.includes("--acceptance-188.8")
+                            ? "acceptance1888"
+                            : process.argv.includes("--acceptance")
+                              ? "acceptance"
+                              : "task6";
   if (mode === "screen208") {
     // Plan 208 reads the development partition only; held-out reads belong to plan 210 Task 9's manifest.
     const { assertScreen208Partition, writeScreen208Manifest } = await import("./ontology-screen.mjs");
@@ -1372,6 +1517,22 @@ if (import.meta.main) {
     if (process.argv.includes("--manifest")) {
       const manifest = await writeScreen209Manifest();
       console.log(`manifest ${manifest.manifestHash}; ${manifest.jobs.length} jobs; ${SCREEN209_MANIFEST}`);
+      process.exit(0);
+    }
+  }
+  if (mode === "campaign210") {
+    // Plan 210 reads the development partitions only; held-out reads are Task 9's.
+    const { assertC1Partition, writeC1Manifest, C1_MANIFEST } = await import("./cleanup-campaign.mjs");
+    const partition = process.argv.includes("--partition") ? process.argv[process.argv.indexOf("--partition") + 1] : undefined;
+    try {
+      assertC1Partition(partition);
+    } catch (error) {
+      console.error(`${error.name}: ${error.message}`);
+      process.exit(1);
+    }
+    if (process.argv.includes("--manifest")) {
+      const manifest = await writeC1Manifest();
+      console.log(`manifest ${manifest.manifestHash}; ${manifest.jobs.length} jobs; ${C1_MANIFEST}`);
       process.exit(0);
     }
   }

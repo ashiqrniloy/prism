@@ -52,7 +52,7 @@ test("host_builder_eval_criteria_preregistered", () => {
   assert.equal(criteria.claims.alpha, 0.05);
   assert.deepEqual(
     criteria.providers.map((entry) => entry.id),
-    ["hyper", "opencode-go", "openrouter", "kilo", "commandcode"],
+    ["hyper", "opencode-go", "ollama-gpt-oss", "ollama-beam", "ollama-gemma4"],
     "the owner-approved provider set",
   );
   assert.ok(criteria.forbiddenProviders.includes("openrouter/free"), "router aliases stay refused");
@@ -97,6 +97,11 @@ test("host_builder_eval_criteria_preregistered", () => {
     assert.ok(lock, "evidence exists without a lock");
     const evidence = JSON.parse(readFileSync(join(EVIDENCE_DIR, name), "utf8"));
     if (evidence.mode === "offline") continue;
+    // A dry run only sizes the work and may predate a later registration; it still ran under a lock.
+    if (evidence.mode === "dryRun") {
+      assert.ok(evidence.criteriaLockedAt, `${name} ran without a lock`);
+      continue;
+    }
     assert.equal(evidence.criteriaHash, lock.criteriaHash, `${name} does not carry the locked criteria hash`);
     assert.ok(Date.parse(evidence.startedAt) >= Date.parse(lock.registeredAt), `${name} started before the lock`);
   }
@@ -442,14 +447,16 @@ test("host_builder_eval_preload_tells_only_the_skill_arms_to_load_the_skill", as
 
 test("host_builder_eval_provider_allowlist", () => {
   const ids = (list) => allowedProviders(criteria, list).map((entry) => entry.id);
-  assert.deepEqual(ids(["openrouter", "kilo", "commandcode"]), ["openrouter", "kilo", "commandcode"]);
+  assert.deepEqual(ids(["ollama-gpt-oss", "ollama-beam", "ollama-gemma4"]), ["ollama-gpt-oss", "ollama-beam", "ollama-gemma4"]);
   assert.throws(() => allowedProviders(criteria, ["litellm"]), /not allowed/);
-  const model = (id) => criteria.providers.find((entry) => entry.id === id).defaultModel;
-  assert.ok(
-    model("openrouter").endsWith(":free") && model("kilo").endsWith(":free") && model("commandcode").endsWith(":free"),
-    "the defaults are the free rows",
+  assert.throws(() => allowedProviders(criteria, ["qwen"]), /not allowed/);
+  // Three registered models run on one provider package.
+  const ollama = criteria.providers.filter((entry) => entry.provider === "ollama-cloud");
+  assert.deepEqual(
+    ollama.map((entry) => entry.defaultModel),
+    ["gpt-oss:120b", "beam", "gemma4:31b"],
   );
-  assert.deepEqual(criteria.providers.find((entry) => entry.id === "commandcode").reserveModels, ["Qwen/Qwen3.7-Flash"]);
+  assert.equal(new Set(ollama.map((entry) => entry.modelEnv)).size, 3, "each model has its own override variable");
 });
 
 // ── arguments ──────────────────────────────────────────────────────────────────

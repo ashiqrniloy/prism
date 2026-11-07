@@ -35,7 +35,14 @@ import {
 } from "./lib.mjs";
 
 const REPO = resolve(ROOT, "../..");
-const SECRET_ENV = ["HYPER_API_KEY", "OPENCODE_GO_API_KEY", "OPENCODE_API_KEY", "OPENROUTER_API_KEY", "KILO_API_KEY", "COMMAND_CODE_API_KEY"];
+const SECRET_ENV = [
+  "HYPER_API_KEY",
+  "OPENCODE_GO_API_KEY",
+  "OPENCODE_API_KEY",
+  "OPENROUTER_API_KEY",
+  "KILO_API_KEY",
+  "COMMAND_CODE_API_KEY",
+];
 
 export function parseArgs(argv) {
   const options = { providers: [] };
@@ -55,11 +62,14 @@ export function parseArgs(argv) {
   for (const key of ["round", "trials", "maxItems"]) {
     if (options[key] === undefined) continue;
     options[key] = Number(options[key]);
-    if (!Number.isSafeInteger(options[key]) || options[key] < 1) throw new TypeError(`SkillEvalArguments: ${key} must be a positive integer`);
+    if (!Number.isSafeInteger(options[key]) || options[key] < 1)
+      throw new TypeError(`SkillEvalArguments: ${key} must be a positive integer`);
   }
   const modes = ["offline", "live", "dryRun", "register"].filter((mode) => options[mode]);
-  if (!options.help && modes.length !== 1) throw new TypeError("SkillEvalArguments: pick exactly one of --offline, --live, --dry-run, --register");
-  if ((options.live || options.dryRun) && options.providers.length === 0) throw new TypeError("SkillEvalArguments: --providers is required for a paid run");
+  if (!options.help && modes.length !== 1)
+    throw new TypeError("SkillEvalArguments: pick exactly one of --offline, --live, --dry-run, --register");
+  if ((options.live || options.dryRun) && options.providers.length === 0)
+    throw new TypeError("SkillEvalArguments: --providers is required for a paid run");
   return options;
 }
 
@@ -71,7 +81,8 @@ export async function loadSuite(only) {
   for (const spec of criteria.skills) {
     if (only && spec.name !== only) continue;
     const module = await import(join(ROOT, spec.dataset));
-    if (module.skill !== spec.name) throw new Error(`SkillEvalDataset: ${spec.dataset} declares skill ${module.skill}, criteria says ${spec.name}`);
+    if (module.skill !== spec.name)
+      throw new Error(`SkillEvalDataset: ${spec.dataset} declares skill ${module.skill}, criteria says ${spec.name}`);
     const dataset = defineDataset({
       id: `skill-eval-${spec.name}`,
       version: String(module.version),
@@ -95,8 +106,12 @@ export function datasetShape(items) {
 export function assertShape(criteria, name, items) {
   const shape = datasetShape(items);
   const { triggerItems, nonTriggerItems } = criteria.dataset;
-  if (shape.trigger < triggerItems.min || shape.trigger > triggerItems.max) throw new Error(`SkillEvalDataset: ${name} has ${shape.trigger} trigger items, expected ${triggerItems.min}-${triggerItems.max}`);
-  if (shape.nonTrigger < nonTriggerItems.min || shape.nonTrigger > nonTriggerItems.max) throw new Error(`SkillEvalDataset: ${name} has ${shape.nonTrigger} non-trigger items, expected ${nonTriggerItems.min}-${nonTriggerItems.max}`);
+  if (shape.trigger < triggerItems.min || shape.trigger > triggerItems.max)
+    throw new Error(`SkillEvalDataset: ${name} has ${shape.trigger} trigger items, expected ${triggerItems.min}-${triggerItems.max}`);
+  if (shape.nonTrigger < nonTriggerItems.min || shape.nonTrigger > nonTriggerItems.max)
+    throw new Error(
+      `SkillEvalDataset: ${name} has ${shape.nonTrigger} non-trigger items, expected ${nonTriggerItems.min}-${nonTriggerItems.max}`,
+    );
 }
 
 /** A stable revision of the skill text under test: path and bytes of every file in its directory. */
@@ -111,13 +126,20 @@ export function skillsRevision(skillDir) {
     }
   };
   walk(root);
-  return `sha256:${sha256(files.sort().map((path) => `${relative(root, path)}\n${readFileSync(path, "utf8")}`).join("\n--\n"))}`;
+  return `sha256:${sha256(
+    files
+      .sort()
+      .map((path) => `${relative(root, path)}\n${readFileSync(path, "utf8")}`)
+      .join("\n--\n"),
+  )}`;
 }
 
 // ── agents ─────────────────────────────────────────────────────────────────────
 
 const hasCall = (request, name) =>
-  request.messages.some((message) => message.role === "assistant" && (message.content ?? []).some((block) => block.type === "tool_call" && block.name === name));
+  request.messages.some(
+    (message) => message.role === "assistant" && (message.content ?? []).some((block) => block.type === "tool_call" && block.name === name),
+  );
 
 /**
  * The scripted provider: per request it either loads the skill (trigger items, when the catalog offers
@@ -152,7 +174,8 @@ export async function loadEnv() {
   if (existsSync(path)) {
     for (const [name, value] of Object.entries(parseEnvFile(path))) if (process.env[name] === undefined) process.env[name] = value;
   } else if (process.env.PRISM_LIVE_ENV_FILE) throw new Error("SkillEvalCredentials: explicit live env file missing");
-  if (process.env.OPENCODE_GO_API_KEY === undefined && process.env.OPENCODE_API_KEY !== undefined) process.env.OPENCODE_GO_API_KEY = process.env.OPENCODE_API_KEY;
+  if (process.env.OPENCODE_GO_API_KEY === undefined && process.env.OPENCODE_API_KEY !== undefined)
+    process.env.OPENCODE_GO_API_KEY = process.env.OPENCODE_API_KEY;
 }
 
 const PROVIDER_TABLE = {
@@ -161,25 +184,32 @@ const PROVIDER_TABLE = {
   openrouter: { module: "@arnilo/prism-provider-openrouter", factory: "openrouter", key: "OPENROUTER_API_KEY" },
   kilo: { module: "@arnilo/prism-provider-kilo", factory: "kilo", key: "KILO_API_KEY" },
   commandcode: { module: "@arnilo/prism-provider-commandcode", factory: "commandcode", key: "COMMAND_CODE_API_KEY" },
+  "ollama-cloud": { module: "@arnilo/prism-provider-ollama-cloud", factory: "ollamaCloud", key: "OLLAMA_API_KEY" },
 };
 
 export async function liveProvider(entry) {
   await loadEnv();
-  const spec = PROVIDER_TABLE[entry.id];
-  if (!spec) throw new Error(`SkillEvalProvider: ${entry.id} has no provider wiring`);
+  // An entry may name the provider package it runs on (`provider`), so one provider can carry several registered models.
+  const providerId = entry.provider ?? entry.id;
+  const spec = PROVIDER_TABLE[providerId];
+  if (!spec) throw new Error(`SkillEvalProvider: ${providerId} has no provider wiring`);
   const model = process.env[entry.modelEnv] ?? entry.defaultModel;
   if (!process.env[spec.key]) throw new Error(`SkillEvalCredentials: ${spec.key} unavailable`);
   const module = await import(spec.module);
-  return { id: entry.id, model, packages: [module[spec.factory]({ apiKey: `env:${spec.key}` })] };
+  return { id: providerId, model, packages: [module[spec.factory]({ apiKey: `env:${spec.key}` })] };
 }
 
 /** The registered providers only; a router alias that picks a model per request is refused. */
 export function allowedProviders(criteria, requested) {
   return requested.map((id) => {
     const entry = criteria.providers.find((candidate) => candidate.id === id);
-    if (!entry) throw new Error(`SkillEvalProvider: ${id} is not allowed (allowed: ${criteria.providers.map((candidate) => candidate.id).join(", ")})`);
+    if (!entry)
+      throw new Error(
+        `SkillEvalProvider: ${id} is not allowed (allowed: ${criteria.providers.map((candidate) => candidate.id).join(", ")})`,
+      );
     const ref = `${id}/${process.env[entry.modelEnv] ?? entry.defaultModel}`;
-    for (const forbidden of criteria.forbiddenProviders) if (ref === forbidden || id === forbidden) throw new Error(`SkillEvalProvider: ${forbidden} is not allowed`);
+    for (const forbidden of criteria.forbiddenProviders)
+      if (ref === forbidden || id === forbidden) throw new Error(`SkillEvalProvider: ${forbidden} is not allowed`);
     return entry;
   });
 }
@@ -192,7 +222,8 @@ export async function buildAgent({ skill, arm, mode, item, provider, criteria, m
   const env = await module.createEnvironment({ mode, item });
   const base = env.instructions ? `${ARM_INSTRUCTIONS}\n${env.instructions}` : ARM_INSTRUCTIONS;
   const instructions = preload && arm === "skill" ? `${base}\n${preloadInstruction(skill)}` : base;
-  const providerPackages = mode === "offline" ? [providerPackage("skill-eval-offline", [offlineProvider({ skill, item, env })])] : provider.packages;
+  const providerPackages =
+    mode === "offline" ? [providerPackage("skill-eval-offline", [offlineProvider({ skill, item, env })])] : provider.packages;
   const model = mode === "offline" ? { provider: "skill-eval-offline", model: "oracle" } : { provider: provider.id, model: provider.model };
   const agent = await createAgent({
     model,
@@ -217,7 +248,17 @@ async function dumpTrial(directory, { skill, arm, item, result, timeline, snapsh
   const trial = (dumpCounts.get(key) ?? 0) + 1;
   dumpCounts.set(key, trial);
   await mkdir(resolve(directory), { recursive: true });
-  const body = { item: item.id, arm, trial, status: result?.status, stopReason: result?.stopReason, limit: result?.limit, error: result?.error?.message, answer: snapshot?.answer, steps: timeline?.steps };
+  const body = {
+    item: item.id,
+    arm,
+    trial,
+    status: result?.status,
+    stopReason: result?.stopReason,
+    limit: result?.limit,
+    error: result?.error?.message,
+    answer: snapshot?.answer,
+    steps: timeline?.steps,
+  };
   await writeFile(join(resolve(directory), `${key}.${trial}.json`), `${JSON.stringify(body, null, 1)}\n`);
 }
 
@@ -248,7 +289,15 @@ async function runArm({ skill, arm, mode, provider, criteria, module, dataset, o
         const snapshot = await entry.env.snapshot(result, timeline);
         await cleanup(item.id);
         if (options.dumpDir) await dumpTrial(options.dumpDir, { skill, arm, item, result, timeline, snapshot });
-        return { ...snapshot, __run: { status: result?.status, limited: result?.limit !== undefined || result?.stopReason === "turn_limit", stopReason: result?.stopReason, error: result?.error?.message?.slice(0, 200) } };
+        return {
+          ...snapshot,
+          __run: {
+            status: result?.status,
+            limited: result?.limit !== undefined || result?.stopReason === "turn_limit",
+            stopReason: result?.stopReason,
+            error: result?.error?.message?.slice(0, 200),
+          },
+        };
       },
       trials: options.trials ?? (mode === "dryRun" ? 1 : mode === "offline" ? 1 : criteria.trials),
       seed: criteria.seed,
@@ -300,12 +349,20 @@ const taskRecords = (report) => report.evaluations.filter((record) => record.sco
 function limitAndLoadStats(report, arm) {
   const records = taskRecords(report);
   const sum = (key) => records.reduce((total, record) => total + Number(record.metadata?.[key] ?? 0), 0);
-  const stats = { limitedRuns: records.filter((record) => record.metadata?.limited).length, scoredRuns: records.length, toolCalls: sum("toolCalls"), failedCalls: sum("failedCalls") };
+  const stats = {
+    limitedRuns: records.filter((record) => record.metadata?.limited).length,
+    scoredRuns: records.length,
+    toolCalls: sum("toolCalls"),
+    failedCalls: sum("failedCalls"),
+  };
   if (arm === "skill") {
     const pass = (list) => list.filter((record) => record.score === 1).length;
     const loaded = records.filter((record) => record.metadata?.loaded === true);
     const unloaded = records.filter((record) => record.metadata?.loaded !== true);
-    stats.byLoading = { loaded: { runs: loaded.length, passed: pass(loaded) }, notLoaded: { runs: unloaded.length, passed: pass(unloaded) } };
+    stats.byLoading = {
+      loaded: { runs: loaded.length, passed: pass(loaded) },
+      notLoaded: { runs: unloaded.length, passed: pass(unloaded) },
+    };
   }
   return stats;
 }
@@ -334,11 +391,20 @@ function itemTable(skillReport, noSkillReport) {
         trials: records.length,
         firstFailure: records.find((record) => record.score !== 1)?.reason,
         unscored: (item?.evaluations ?? []).filter((record) => record.scorerId === "task_success" && record.status !== "scored").length,
-        firstError: (item?.evaluations ?? []).find((record) => record.scorerId === "task_success" && record.status !== "scored")?.error?.message?.slice(0, 160),
+        firstError: (item?.evaluations ?? [])
+          .find((record) => record.scorerId === "task_success" && record.status !== "scored")
+          ?.error?.message?.slice(0, 160),
       };
     };
     const loads = (entry.evaluations ?? []).filter((record) => record.scorerId === "skill_triggered");
-    rows.push({ id: entry.item.id, kind: entry.item.expected.kind, skill: tally(entry), noSkill: tally(other), loaded: loads.filter((record) => record.metadata?.loaded).length, loadTrials: loads.length });
+    rows.push({
+      id: entry.item.id,
+      kind: entry.item.expected.kind,
+      skill: tally(entry),
+      noSkill: tally(other),
+      loaded: loads.filter((record) => record.metadata?.loaded).length,
+      loadTrials: loads.length,
+    });
   }
   return rows;
 }
@@ -351,8 +417,14 @@ export async function evaluateSkill({ entry, suite, mode, providers, options }) 
   const results = [];
   for (const provider of providers) {
     const reports = {};
-    for (const arm of ARMS) reports[arm] = await runArm({ skill: spec.name, arm, mode, provider, criteria, module, dataset, options, split });
-    const decision = decideShip({ skillReport: reports.skill, noSkillReport: reports["no-skill"], criteria, loading: mode === "offline" ? undefined : options.preload ? "preload" : "natural" });
+    for (const arm of ARMS)
+      reports[arm] = await runArm({ skill: spec.name, arm, mode, provider, criteria, module, dataset, options, split });
+    const decision = decideShip({
+      skillReport: reports.skill,
+      noSkillReport: reports["no-skill"],
+      criteria,
+      loading: mode === "offline" ? undefined : options.preload ? "preload" : "natural",
+    });
     results.push({ provider, reports, decision });
   }
   return results;
@@ -434,24 +506,57 @@ export function evidenceMarkdown(evidence) {
     const b = entry.arms["no-skill"];
     const c = entry.decision.comparison;
     lines.push(`## ${entry.provider} (${entry.model})`, "", `Decision: **${entry.decision.verdict}** (${entry.decision.reason}).`, "");
-    lines.push("| Arm | task_success | tool_misuse (failed calls) | Input tokens (uncached) | Output tokens | Cost | Mean latency |", "| --- | --- | --- | --- | --- | --- | --- |");
-    for (const [name, arm] of [["skill", a], ["no-skill", b]]) {
-      lines.push(`| ${name} | ${num(arm.taskSuccess?.mean)} | ${arm.toolMisuse} | ${arm.inputTokens} (${arm.uncachedInputTokens}) | ${arm.outputTokens} | ${arm.cost === undefined ? "n/a" : `${arm.cost.toFixed(4)} ${arm.currency ?? ""}${arm.costComplete ? "" : " (incomplete)"}`} | ${arm.meanDurationMs === undefined ? "n/a" : `${Math.round(arm.meanDurationMs)} ms`} |`);
+    lines.push(
+      "| Arm | task_success | tool_misuse (failed calls) | Input tokens (uncached) | Output tokens | Cost | Mean latency |",
+      "| --- | --- | --- | --- | --- | --- | --- |",
+    );
+    for (const [name, arm] of [
+      ["skill", a],
+      ["no-skill", b],
+    ]) {
+      lines.push(
+        `| ${name} | ${num(arm.taskSuccess?.mean)} | ${arm.toolMisuse} | ${arm.inputTokens} (${arm.uncachedInputTokens}) | ${arm.outputTokens} | ${arm.cost === undefined ? "n/a" : `${arm.cost.toFixed(4)} ${arm.currency ?? ""}${arm.costComplete ? "" : " (incomplete)"}`} | ${arm.meanDurationMs === undefined ? "n/a" : `${Math.round(arm.meanDurationMs)} ms`} |`,
+      );
     }
     lines.push("");
-    if (c) lines.push(`Paired difference (skill − no-skill) on task_success: ${num(c.difference)}, 95% CI [${num(c.ci95?.low)}, ${num(c.ci95?.high)}], q = ${num(c.qValue)}, ${c.significant ? "significant" : "not significant"}.`, "");
-    lines.push(`Runs that ended on a run limit (turns, tool rounds, tool calls or time): skill ${a.limitedRuns}/${a.scoredRuns}, no-skill ${b.limitedRuns}/${b.scoredRuns}.`, "");
+    if (c)
+      lines.push(
+        `Paired difference (skill − no-skill) on task_success: ${num(c.difference)}, 95% CI [${num(c.ci95?.low)}, ${num(c.ci95?.high)}], q = ${num(c.qValue)}, ${c.significant ? "significant" : "not significant"}.`,
+        "",
+      );
+    lines.push(
+      `Runs that ended on a run limit (turns, tool rounds, tool calls or time): skill ${a.limitedRuns}/${a.scoredRuns}, no-skill ${b.limitedRuns}/${b.scoredRuns}.`,
+      "",
+    );
     const mean = (arm) => (arm.scoredRuns ? (arm.toolCalls / arm.scoredRuns).toFixed(1) : "n/a");
     lines.push(`Tool calls per run (load_skill excluded), mean: skill ${mean(a)}, no-skill ${mean(b)}.`, "");
-    if (a.byLoading) lines.push(`Skill arm task success by loading: loaded ${a.byLoading.loaded.passed}/${a.byLoading.loaded.runs}, not loaded ${a.byLoading.notLoaded.passed}/${a.byLoading.notLoaded.runs}.`, "");
-    lines.push(`Skill loading: recall ${pct(entry.decision.trigger.recall)} (${entry.decision.trigger.loadedOnTrigger}/${entry.decision.trigger.triggerTrials} trigger trials), precision ${pct(entry.decision.trigger.precision)}, loaded on ${entry.decision.trigger.loadedOnNonTrigger}/${entry.decision.trigger.nonTriggerTrials} non-trigger trials.`, "");
+    if (a.byLoading)
+      lines.push(
+        `Skill arm task success by loading: loaded ${a.byLoading.loaded.passed}/${a.byLoading.loaded.runs}, not loaded ${a.byLoading.notLoaded.passed}/${a.byLoading.notLoaded.runs}.`,
+        "",
+      );
+    lines.push(
+      `Skill loading: recall ${pct(entry.decision.trigger.recall)} (${entry.decision.trigger.loadedOnTrigger}/${entry.decision.trigger.triggerTrials} trigger trials), precision ${pct(entry.decision.trigger.precision)}, loaded on ${entry.decision.trigger.loadedOnNonTrigger}/${entry.decision.trigger.nonTriggerTrials} non-trigger trials.`,
+      "",
+    );
     if (entry.fullRunEstimate) {
-      lines.push("Full-run estimate (items x trials x arm, scaled from this dry run):", "", "| Arm | Runs | Input tokens | Uncached input | Output tokens | Cost |", "| --- | --- | --- | --- | --- | --- |");
-      for (const [name, estimate] of Object.entries(entry.fullRunEstimate)) lines.push(`| ${name} | ${estimate.fullRuns} | ${estimate.inputTokens} | ${estimate.uncachedInputTokens} | ${estimate.outputTokens} | ${estimate.cost === undefined ? "n/a" : estimate.cost} |`);
+      lines.push(
+        "Full-run estimate (items x trials x arm, scaled from this dry run):",
+        "",
+        "| Arm | Runs | Input tokens | Uncached input | Output tokens | Cost |",
+        "| --- | --- | --- | --- | --- | --- |",
+      );
+      for (const [name, estimate] of Object.entries(entry.fullRunEstimate))
+        lines.push(
+          `| ${name} | ${estimate.fullRuns} | ${estimate.inputTokens} | ${estimate.uncachedInputTokens} | ${estimate.outputTokens} | ${estimate.cost === undefined ? "n/a" : estimate.cost} |`,
+        );
       lines.push("");
     }
     lines.push("| Item | Kind | Skill arm | No-skill arm | Loaded | First skill-arm failure |", "| --- | --- | --- | --- | --- | --- |");
-    for (const row of entry.items) lines.push(`| ${row.id} | ${row.kind} | ${row.skill.pass}/${row.skill.trials} | ${row.noSkill.pass}/${row.noSkill.trials} | ${row.loaded}/${row.loadTrials} | ${row.skill.firstFailure ?? row.skill.firstError ?? ""} |`);
+    for (const row of entry.items)
+      lines.push(
+        `| ${row.id} | ${row.kind} | ${row.skill.pass}/${row.skill.trials} | ${row.noSkill.pass}/${row.noSkill.trials} | ${row.loaded}/${row.loadTrials} | ${row.skill.firstFailure ?? row.skill.firstError ?? ""} |`,
+      );
     lines.push("");
   }
   return `${lines.join("\n")}\n`;
@@ -465,8 +570,10 @@ export function sealEvidence(evidence, secrets) {
 }
 
 export function assertNoSecret(text, secrets) {
-  for (const secret of secrets) if (secret && secret.length >= 8 && text.includes(secret)) throw new Error("SkillEvalEvidence: a secret value reached the evidence");
-  if (/\bsk-[A-Za-z0-9_-]{16,}/.test(text) || /\bBearer\s+[A-Za-z0-9._-]{20,}/.test(text)) throw new Error("SkillEvalEvidence: a key-shaped token reached the evidence");
+  for (const secret of secrets)
+    if (secret && secret.length >= 8 && text.includes(secret)) throw new Error("SkillEvalEvidence: a secret value reached the evidence");
+  if (/\bsk-[A-Za-z0-9_-]{16,}/.test(text) || /\bBearer\s+[A-Za-z0-9._-]{20,}/.test(text))
+    throw new Error("SkillEvalEvidence: a key-shaped token reached the evidence");
 }
 
 export function liveSecrets() {
@@ -497,9 +604,21 @@ export function assertPreregistered(suite, lock, { requireCommitted }) {
   if (!lock) throw new Error("SkillEvalPrereg: criteria.lock.json is missing; run --register first");
   if (lock.criteriaHash !== suite.criteriaHash) throw new Error("SkillEvalPrereg: criteria.json changed after it was locked");
   for (const entry of suite.skills)
-    if (lock.datasets[entry.spec.name] !== entry.dataset.contentHash) throw new Error(`SkillEvalPrereg: the ${entry.spec.name} dataset changed after the lock`);
+    if (lock.datasets[entry.spec.name] !== entry.dataset.contentHash)
+      throw new Error(`SkillEvalPrereg: the ${entry.spec.name} dataset changed after the lock`);
   if (requireCommitted) {
-    const status = execFileSync("git", ["status", "--porcelain", "--", "scripts/skill-evals/criteria.json", "scripts/skill-evals/criteria.lock.json", "scripts/skill-evals/datasets"], { cwd: REPO, encoding: "utf8", timeout: 10_000 });
+    const status = execFileSync(
+      "git",
+      [
+        "status",
+        "--porcelain",
+        "--",
+        "scripts/skill-evals/criteria.json",
+        "scripts/skill-evals/criteria.lock.json",
+        "scripts/skill-evals/datasets",
+      ],
+      { cwd: REPO, encoding: "utf8", timeout: 10_000 },
+    );
     if (status.trim() !== "") throw new Error("SkillEvalPrereg: criteria, lock and datasets must be committed before a scored run");
   }
 }
@@ -509,7 +628,9 @@ export function assertPreregistered(suite, lock, { requireCommitted }) {
 export async function run(argv = process.argv.slice(2)) {
   const options = Array.isArray(argv) ? parseArgs(argv) : argv;
   if (options.help) {
-    console.log("bun scripts/skill-evals/run.mjs --offline | --register | --dry-run --providers a,b | --live --providers a,b [--skill name] [--round 1|2]");
+    console.log(
+      "bun scripts/skill-evals/run.mjs --offline | --register | --dry-run --providers a,b | --live --providers a,b [--skill name] [--round 1|2]",
+    );
     return undefined;
   }
   const suite = await loadSuite(options.skill);
@@ -517,13 +638,18 @@ export async function run(argv = process.argv.slice(2)) {
   if (options.register) {
     const registration = await registrationFor(suite);
     await writeFile(LOCK_PATH, `${JSON.stringify(registration, null, 2)}\n`);
-    console.log(`locked criteria ${registration.criteriaHash.slice(0, 16)}… for ${suite.skills.length} skills; commit criteria.json, criteria.lock.json and datasets/ before a scored run`);
+    console.log(
+      `locked criteria ${registration.criteriaHash.slice(0, 16)}… for ${suite.skills.length} skills; commit criteria.json, criteria.lock.json and datasets/ before a scored run`,
+    );
     return registration;
   }
   const mode = options.offline ? "offline" : options.dryRun ? "dryRun" : "live";
   const lock = readLock();
   if (mode !== "offline") assertPreregistered(suite, lock, { requireCommitted: mode === "live" });
-  const providers = mode === "offline" ? [{ id: "offline", model: "oracle", packages: [] }] : await Promise.all(allowedProviders(suite.criteria, options.providers).map(liveProvider));
+  const providers =
+    mode === "offline"
+      ? [{ id: "offline", model: "oracle", packages: [] }]
+      : await Promise.all(allowedProviders(suite.criteria, options.providers).map(liveProvider));
   const round = options.round ?? 1;
   const outDir = options.outDir ? resolve(options.outDir) : mode === "offline" ? undefined : EVIDENCE_DIR;
   const secrets = liveSecrets();
@@ -544,8 +670,28 @@ export async function run(argv = process.argv.slice(2)) {
       const items = [...triggers.slice(0, Math.max(1, limit - 1)), ...others.slice(0, 1)].slice(0, limit);
       runEntry = { ...entry, dataset: defineDataset({ id: entry.dataset.id, version: entry.dataset.version, items }), dry: true };
     }
-    const results = await evaluateSkill({ entry: { ...runEntry, spec: entry.spec }, suite, mode: mode === "dryRun" ? "live" : mode, providers, options: { ...options, trials: mode === "dryRun" ? 1 : options.trials } });
-    const evidence = sealEvidence(evidenceFor({ spec: entry.spec, dataset: runEntry.dataset, results, round, mode, suite, startedAt, lock, fullItems: entry.dataset.items.length, loading: options.preload ? "preload" : "natural" }), secrets);
+    const results = await evaluateSkill({
+      entry: { ...runEntry, spec: entry.spec },
+      suite,
+      mode: mode === "dryRun" ? "live" : mode,
+      providers,
+      options: { ...options, trials: mode === "dryRun" ? 1 : options.trials },
+    });
+    const evidence = sealEvidence(
+      evidenceFor({
+        spec: entry.spec,
+        dataset: runEntry.dataset,
+        results,
+        round,
+        mode,
+        suite,
+        startedAt,
+        lock,
+        fullItems: entry.dataset.items.length,
+        loading: options.preload ? "preload" : "natural",
+      }),
+      secrets,
+    );
     summaries.push(evidence);
     if (outDir) {
       await mkdir(outDir, { recursive: true });
@@ -561,10 +707,19 @@ export async function run(argv = process.argv.slice(2)) {
 }
 
 if (import.meta.main) {
-  run().then((result) => {
-    if (result?.summaries) console.log(JSON.stringify(result.summaries.map((summary) => ({ skill: summary.skill, verdict: summary.verdict })), null, 2));
-  }).catch((error) => {
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exit(1);
-  });
+  run()
+    .then((result) => {
+      if (result?.summaries)
+        console.log(
+          JSON.stringify(
+            result.summaries.map((summary) => ({ skill: summary.skill, verdict: summary.verdict })),
+            null,
+            2,
+          ),
+        );
+    })
+    .catch((error) => {
+      console.error(error instanceof Error ? error.message : String(error));
+      process.exit(1);
+    });
 }

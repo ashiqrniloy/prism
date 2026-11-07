@@ -8,6 +8,7 @@ import {
   selectHumanAuditClaims,
 } from "./audit/claim-review.mjs";
 import {
+  assertClaimAuditGate,
   assertNoCuratorJudge,
   assertReportHasNoText,
   bundleFromConcepts,
@@ -266,4 +267,14 @@ test("a_mixed_case_judge_model_id_makes_a_valid_package_name", () => {
   const name = (model) => `claim-audit-${model.replaceAll(/[^a-zA-Z0-9-]/g, "-").toLowerCase()}`;
   assert.match(name("Qwen/Qwen3.7-Flash"), /^[a-z0-9-]+$/);
   assert.match(name("meta/muse-spark-1.2-contributor"), /^[a-z0-9-]+$/);
+});
+
+test("claim_audit_accepts_approved_gate_o1_or_c1_only", () => {
+  const ok = (plan, gate) => ({ plan, gate, approved: true, approvedBy: "owner" });
+  assert.equal(assertClaimAuditGate(ok(208, "O-1")).gate, "O-1");
+  assert.equal(assertClaimAuditGate(ok(210, "C-1")).gate, "C-1");
+  assert.throws(() => assertClaimAuditGate(ok(209, "W-1")), /O-1 \(plan 208\) or C-1 \(plan 210\)/);
+  assert.throws(() => assertClaimAuditGate({ ...ok(210, "C-1"), approved: false }), /MemoryBenchGate/);
+  assert.throws(() => assertClaimAuditGate({ ...ok(210, "C-1"), approvedBy: "assistant" }), /MemoryBenchGate/);
+  assert.throws(() => assertClaimAuditGate(null), /MemoryBenchGate/);
 });

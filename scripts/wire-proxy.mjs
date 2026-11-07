@@ -216,6 +216,27 @@ export function parseRawUpstreamUsage(responseBody, contentType = "") {
     return lastOpenAIUsage;
   }
 
+  // 3. Ollama native NDJSON (`/api/chat`): the terminal `done` line carries prompt_eval_count / eval_count.
+  for (const line of lines.toReversed()) {
+    if (!line.startsWith("{")) continue;
+    try {
+      const data = JSON.parse(line);
+      if (data?.done === true && (typeof data.prompt_eval_count === "number" || typeof data.eval_count === "number")) {
+        const prompt = Number(data.prompt_eval_count) || 0;
+        const completion = Number(data.eval_count) || 0;
+        const cached = Number(data.prompt_eval_cached_count) || 0;
+        return {
+          prompt_tokens: prompt,
+          completion_tokens: completion,
+          total_tokens: prompt + completion,
+          ...(cached ? { prompt_tokens_details: { cached_tokens: cached } } : {}),
+        };
+      }
+    } catch {
+      // not a JSON line
+    }
+  }
+
   return null;
 }
 

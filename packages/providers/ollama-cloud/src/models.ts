@@ -136,6 +136,29 @@ export function defineOllamaCloudModel(config: OllamaCloudModelConfig): ModelCon
   };
 }
 
+/**
+ * A decision model (`/api/show` capability `decision`): it answers typed questions over the System One wire at
+ * `/v1/systemone` in one pass, so it declares `decisions` and neither streams, reasons nor calls tools. Billed per input
+ * token; it produces no output tokens.
+ */
+export function defineOllamaCloudDecisionModel(config: OllamaCloudModelConfig): ModelConfig {
+  return {
+    ...config,
+    provider: "ollama-cloud",
+    capabilities: {
+      input: ["text"],
+      output: ["text"],
+      tools: false,
+      streaming: false,
+      reasoning: false,
+      structuredOutput: "json_schema",
+      ...config.capabilities,
+      decisions: true,
+    },
+    limits: { maxOutputTokens: 0, ...config.limits },
+  };
+}
+
 /** Task 1 (e) exemplars, with the measured windows and thinking values. */
 export const ollamaCloudModels: readonly ModelConfig[] = [
   defineOllamaCloudModel({
@@ -187,6 +210,14 @@ export function mapOllamaCloudModel(
   const thinking = show?.thinking;
   const values = thinking?.values;
   const contextWindow = contextLength(show?.model_info);
+  if (capabilities.includes("decision"))
+    return defineOllamaCloudDecisionModel({
+      provider: (options.provider as "ollama-cloud" | undefined) ?? "ollama-cloud",
+      model: id,
+      displayName: id,
+      ...(capabilities.includes("vision") ? { capabilities: { input: ["text", "image"] } } : {}),
+      ...(contextWindow !== undefined ? { limits: { contextWindow } } : {}),
+    });
   return defineOllamaCloudModel({
     provider: (options.provider as "ollama-cloud" | undefined) ?? "ollama-cloud",
     model: id,
@@ -261,7 +292,17 @@ export interface OllamaCloudBalanceWindow {
   readonly resetsAt: string;
 }
 
+/** The current plans' monthly included credit (`included.balance_usd` of `allowance_usd`, over `period`). */
+export interface OllamaCloudIncludedBalance {
+  readonly balanceUsd: number;
+  readonly allowanceUsd?: number;
+  readonly periodFrom?: string;
+  readonly periodUntil?: string;
+}
+
 export interface OllamaCloudBalance {
+  readonly included?: OllamaCloudIncludedBalance;
+  /** Legacy plans only: the 5-hour session window. */
   readonly session?: OllamaCloudBalanceWindow;
   readonly weekly?: OllamaCloudBalanceWindow;
   readonly purchasedUsd?: number;
@@ -282,7 +323,13 @@ export async function ollamaCloudBalance(options: OllamaCloudBalanceOptions = {}
   const baseUrl = trimTrailingSlashes(options.baseUrl ?? OLLAMA_CLOUD_DEFAULT_BASE_URL);
   const token = await resolveCredentialValue(options.apiKey, { provider, name: "apiKey" });
   const payload = await requestJson<{
-    readonly included?: { readonly session?: unknown; readonly weekly?: unknown };
+    readonly included?: {
+      readonly session?: unknown;
+      readonly weekly?: unknown;
+      readonly balance_usd?: unknown;
+      readonly allowance_usd?: unknown;
+      readonly period?: { readonly from?: unknown; readonly until?: unknown };
+    };
     readonly purchased?: { readonly balance_usd?: unknown };
   }>(options.fetch ?? fetch, `${baseUrl}/api/balance`, {
     provider,
@@ -291,6 +338,7 @@ export async function ollamaCloudBalance(options: OllamaCloudBalanceOptions = {}
     secrets: [token],
     signal: options.signal,
   });
+  const included = includedBalance(payload.included);
   const session = balanceWindow(payload.included?.session);
   const weekly = balanceWindow(payload.included?.weekly);
   const purchasedUsd =
@@ -298,9 +346,23 @@ export async function ollamaCloudBalance(options: OllamaCloudBalanceOptions = {}
       ? payload.purchased.balance_usd
       : undefined;
   return {
+    ...(included ? { included } : {}),
     ...(session ? { session } : {}),
     ...(weekly ? { weekly } : {}),
     ...(purchasedUsd !== undefined ? { purchasedUsd } : {}),
+  };
+}
+
+function includedBalance(value: unknown): OllamaCloudIncludedBalance | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  if (typeof record.balance_usd !== "number" || !Number.isFinite(record.balance_usd)) return undefined;
+  const period = record.period && typeof record.period === "object" ? (record.period as Record<string, unknown>) : {};
+  return {
+    balanceUsd: record.balance_usd,
+    ...(typeof record.allowance_usd === "number" && Number.isFinite(record.allowance_usd) ? { allowanceUsd: record.allowance_usd } : {}),
+    ...(typeof period.from === "string" ? { periodFrom: period.from } : {}),
+    ...(typeof period.until === "string" ? { periodUntil: period.until } : {}),
   };
 }
 

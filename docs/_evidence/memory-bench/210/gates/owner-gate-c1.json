@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "kind": "210-task5-owner-gate",
+  "plan": 210,
+  "task": 5,
+  "gate": "C-1",
+  "approved": true,
+  "approvedAt": "2026-11-07",
+  "approvedBy": "owner",
+  "text": "Budget/models: \"Try Crouton alpha free on both Command Code and Opencode go. also glyph cluster free on command code. iceman contributor free on opencode go\". Roles: \"Crouton+Iceman answer, Glyph+Kilo judge (Recommended)\". LongMemEval-M: \"Full cohort, shared ingest (Recommended)\". Labels: \"Assistant labels (Recommended)\". Interruptions: \"since these are all free models. interruptions are expected. Make sure those are handled, retried and have no other impact other than wall time\" (owner answers to the gate C-1 questions, 2026-11-07).",
+  "manifest": "docs/_evidence/memory-bench/210/ablations/c1-manifest.json",
+  "manifestHash": "10896739ac545dbb4a90c03cc9847f55f945bebfa9cd42e7e2065c210006b382",
+  "cleanupCriteriaHash": "eea138eb71d58408d09c331e55da419ad8caf8bdcc0a1e44536dda0cc55a7a51",
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "plan202Task5": {
+    "criteriaVersion": "202-task5-candidate-gap-v2",
+    "criteriaHash": "07383989252c65d72aecb828c08049e28ca59cd2248f2259bb26f88fc2efde51"
+  },
+  "productHash": "b47f8b8ea26d2b5023e89ca82a72d835a4ffcf3c85fa74e316d54e82c0304fd0",
+  "scope": {
+    "partition": "dev",
+    "jobs": 153,
+    "answers": {
+      "large": "ollama-cloud/beam",
+      "small": "ollama-cloud/nemotron-3-nano:30b"
+    },
+    "judges": [
+      "ollama-cloud/gpt-oss:120b",
+      "ollama-cloud/gemma4:31b"
+    ],
+    "simulators": {
+      "large": "ollama-cloud/gpt-oss:20b",
+      "small": "ollama-cloud/gpt-oss:20b"
+    },
+    "curator": "agent-own (wiki model unset: each answer model curates its own concepts)",
+    "decider": "ollama-cloud/clef:27b (phase B: P3-P5 arms after the ollama-cloud decisions endpoint lands; amendment 5)",
+    "calibration": {
+      "labels": "assistant, blind, before any panel verdict on the set is read (development evidence; Task 9 repeats O3 with a person)",
+      "claims": 60,
+      "curatorArm": "P+O.large (curated by beam, on no judge panel)"
+    },
+    "longmemevalM": "full 50-question development cohort, write side built once per write-side configuration and seeded",
+    "reservedForTask8": "the combined non-inferiority check runs under this gate on the same Ollama Cloud routes, as its own manifest",
+    "unmeasurable": {
+      "decisions.P3": "pending phase B: decider ollama-cloud/clef:27b needs the ollama-cloud package's decisions endpoint",
+      "decisions.P4": "pending phase B: decider ollama-cloud/clef:27b needs the ollama-cloud package's decisions endpoint",
+      "decisions.P5": "pending phase B: decider ollama-cloud/clef:27b needs the ollama-cloud package's decisions endpoint"
+    }
+  },
+  "billing": {
+    "mode": "paid-allowance",
+    "provider": "ollama-cloud",
+    "plan": "Ollama Cloud Pro ($60 included a month, 3 concurrent requests)",
+    "reserveUsd": 1.5,
+    "paidAnswers": [
+      "ollama-cloud/beam",
+      "ollama-cloud/nemotron-3-nano:30b"
+    ],
+    "paidJudges": [
+      "ollama-cloud/gpt-oss:120b",
+      "ollama-cloud/gemma4:31b"
+    ],
+    "paidSimulators": [
+      "ollama-cloud/gpt-oss:20b"
+    ],
+    "paidFallbacks": []
+  },
+  "caps": {
+    "maxInputTokens": {
+      "longmemeval-m": 60000000,
+      "beam-1m": 40000000,
+      "default": 25000000,
+      "work-outcome": 12000000,
+      "om": 30000000
+    },
+    "wallTimeCapHours": {
+      "longmemeval-m": 96,
+      "beam-1m": 48,
+      "default": 24,
+      "work-outcome": 24,
+      "write": 48,
+      "om": 48
+    },
+    "concurrency": 2,
+    "judgeCalls": 400,
+    "journalCeiling": 1000000000000
+  },
+  "interruptions": "429s, closed usage windows (waited out from /api/balance's resets_at), quota windows, daily caps, empty replies, timeouts and dropped sockets are re-run from the job's answer/judge checkpoints after a cooldown and never count against its attempts; a question that errors fails the job (--strict-questions) instead of being scored; only a classified permanent refusal stops a job, which is then reported incomplete, never as wrong answers",
+  "preservation": {
+    "heldOutAccess": false,
+    "credentialValues": false,
+    "keysAreRefs": true
+  },
+  "amendments": [
+    {
+      "date": "2026-11-07",
+      "by": "assistant (within the owner's free-route scope; reported to the owner)",
+      "text": "Decisions arms removed after the live smoke; deterministic-failure and stall guards added; readers wait for their write side.",
+      "effect": "decisions-p3, decisions-p5 and W.decisions-p4 are dropped: the fabric refuses a decider that does not declare the kernel decisions capability (smoke: \"Model commandcode/stealth/crouton-alpha does not declare the decisions capability\"), only the laya, liquid and typesafe providers declare it, none is free and no credential is configured. decisions.P3, P4 and P5 are recorded as unmeasurable under C-1 (manifest `unmeasurable`) for Task 6. Answer models, judges, routes, other arms, caps and billing are unchanged. Manifest hash re-bound.",
+      "previousManifestHash": "57cf3289c0a0b6184693fe0c77efe9ab1619ca894745b6eb63347a56f0a613df"
+    },
+    {
+      "date": "2026-11-08",
+      "by": "assistant (within the owner's free-route scope; reported to the owner)",
+      "text": "Write-side producers select questions in their readers' order (interleaveAbilities).",
+      "effect": "Smoke finding: a capped producer snapshotted the first two questions in dataset order while its reader answered the first two in ability-interleaved order (MemoryBenchWriteSideMissing: 1 of 2 snapshots missing). A full run snapshots every question either way. Arms, models, judges, routes, caps and billing unchanged. Manifest hash re-bound.",
+      "previousManifestHash": "31c99a891958056ddcb60c00dfd8fd2566715f6d54943b573f45f045ee436842"
+    },
+    {
+      "date": "2026-11-08",
+      "by": "owner",
+      "text": "Judge: \"try iceman contributor from opencode-go\". Small model: \"Kilo Nemotron nano 30B-A3B (Recommended)\" (owner answers, 2026-11-08).",
+      "effect": "Smoke finding: commandcode/stealth/glyph-cluster:free answered 429 \"You have used all 1000 free Glyph Cluster requests for today\"; the allowance is shared with other work on the account and the campaign needs about 6,300-10,000 judge calls. The panel becomes opencode-go/iceman-contributor-free + kilo/dots-studio/dots-3-note-preview:free (neither answers). The small answer model becomes kilo/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free (3B active); the large model, routes, arms, caps and billing are unchanged. Work-outcome simulators: large jobs simulate with the Nemotron nano, small jobs with crouton-alpha-free (never a job's own answer model). Manifest hash re-bound.",
+      "previousManifestHash": "647ed73226f76e4d30af1f67ba78a9e3a640605f62fcf7c78db6422f0c902c23"
+    },
+    {
+      "date": "2026-11-08",
+      "by": "owner",
+      "text": "\"You can use paid models for these. From ollama cloud, you can use beam, gpt-oss 20b and 120b, nemotron-3-nano, gemma4:31b, and lastly clef as the decision model. go ahead and finish the rest of the tasks. These are paid model so you do not need to throttle as hard. But there is a 5 hour rate limit which needs to be considered\" (owner, 2026-11-08).",
+      "effect": "Every route moves to Ollama Cloud (Pro: $60 included a month, 3 concurrent requests; prices from ollama.com/pricing, 2026-11-08, in rates.json). Roles (assistant's mapping): beam answers large, nemotron-3-nano:30b answers small, gpt-oss:120b + gemma4:31b judge (neither answers), gpt-oss:20b simulates the work-outcome user, clef:27b is the P3-P5 decider (phase B). Models with named thinking levels run at medium effort for every arm (beam defaults to max, which would spend the output bound). Billing becomes paid-allowance: before each job the campaign reads /api/balance; a closed session or weekly window (the owner's 5-hour window) is waited out until resets_at, and an allowance under the $1.50 reserve halts the campaign, resumable next period. OM jobs (about 5.7M input tokens a BEAM-1M question in the smoke) are capped at 30M input tokens each and run last, so the allowance reaches every other arm first. Free-route pacing is off (the jobs are no longer free-only). Arms, suites, partition, criteria and pairing are unchanged. Manifest hash re-bound. Bounded-wire accounting (a whole context window charged per request, for free routes that omit usage) is off: Ollama Cloud reports usage on every reply (native prompt_eval_count / eval_count, read by the wire proxy), and a 1M-window charge would end a beam job after about 23 requests (smoke 2026-11-08).",
+      "previousManifestHash": "57020d6cffebf39c8e2367d7e404e561c5342c1338645382465259bdd8aee4bb"
+    }
+  ]
+}

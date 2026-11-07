@@ -1,0 +1,488 @@
+{
+  "plan": "215 Task 20",
+  "round": 1,
+  "mode": "dryRun",
+  "loading": "natural",
+  "startedAt": "2026-11-07T21:04:24.300Z",
+  "finishedAt": "2026-11-07T21:11:25.884Z",
+  "criteriaHash": "4eb996e7a34feed8f73fc8ecf6b5d8f5167fe3b0125086a0d05ba3a2e0a65794",
+  "criteriaLockedAt": "2026-11-07T21:01:17.547Z",
+  "datasetContentHash": "sha256:454a44e1fb013536af8c38bd6c9ed4234d0f16f794cdad68cb43cbfd78e51356",
+  "inputs": {
+    "workspaces": "sha256:01e6b6bd91ac9a3cacb7bf53dcede244af7cef486f41892139aea3c4bfdf0e5c",
+    "hidden": "sha256:b096d72e77abf7968097d14d70886604e0768a01c0b7a201d051b48c6512a47e",
+    "solutions": "sha256:810998b18afee3a8778287c312a19c9a25a50a46ec1b68f88b45c2e9ba99462b",
+    "skill": "sha256:d6f77d7615fbca2b917cba158564b59d44fb597e9a891be1751d8803dff44a33",
+    "indexes": "sha256:986940dc89d1e1b48ea5301ec8813d775e836fcd1999429cb0900c989742783e"
+  },
+  "runtimeRevision": "d9785f968725d2a0e8c73cc5c92ec4e02092398b",
+  "trials": 1,
+  "providers": [
+    {
+      "provider": "ollama-cloud",
+      "model": "gemma4:31b",
+      "arms": {
+        "none": {
+          "status": "succeeded",
+          "scorers": {
+            "typecheck_passes": {
+              "mean": 1,
+              "ci95": {
+                "low": 0.43850296784794796,
+                "high": 1
+              },
+              "records": 3
+            },
+            "acceptance_tests_pass": {
+              "mean": 0,
+              "ci95": {
+                "low": 0,
+                "high": 0.561497032152052
+              },
+              "records": 3
+            },
+            "public_surface_only": {
+              "mean": 0.6666666666666666,
+              "ci95": {
+                "low": 0.20765960059822086,
+                "high": 0.9385080553510953
+              },
+              "records": 3
+            },
+            "no_retired_names": {
+              "mean": 0.6666666666666666,
+              "ci95": {
+                "low": 0.20765960059822086,
+                "high": 0.9385080553510953
+              },
+              "records": 3
+            }
+          },
+          "failedCount": 0,
+          "scoredRuns": 3,
+          "limitedRuns": 0,
+          "toolCalls": 77,
+          "skillLoadedRuns": 0,
+          "mcpUsedRuns": 0,
+          "acceptanceByLoading": {
+            "loaded": {
+              "runs": 0,
+              "passed": 0
+            },
+            "notLoaded": {
+              "runs": 3,
+              "passed": 0
+            }
+          },
+          "inputTokens": 2595255,
+          "cacheReadTokens": 2423488,
+          "uncachedInputTokens": 171767,
+          "outputTokens": 7953,
+          "costComplete": false,
+          "meanDurationMs": 61688.636052999995,
+          "durationMs": {
+            "p50": 57659.474514,
+            "p95": 81843.046789
+          }
+        },
+        "skill": {
+          "status": "succeeded",
+          "scorers": {
+            "typecheck_passes": {
+              "mean": 1,
+              "ci95": {
+                "low": 0.43850296784794796,
+                "high": 1
+              },
+              "records": 3
+            },
+            "acceptance_tests_pass": {
+              "mean": 0.6666666666666666,
+              "ci95": {
+                "low": 0.20765960059822086,
+                "high": 0.9385080553510953
+              },
+              "records": 3
+            },
+            "public_surface_only": {
+              "mean": 1,
+              "ci95": {
+                "low": 0.43850296784794796,
+                "high": 1
+              },
+              "records": 3
+            },
+            "no_retired_names": {
+              "mean": 1,
+              "ci95": {
+                "low": 0.43850296784794796,
+                "high": 1
+              },
+              "records": 3
+            }
+          },
+          "failedCount": 0,
+          "scoredRuns": 3,
+          "limitedRuns": 0,
+          "toolCalls": 57,
+          "skillLoadedRuns": 3,
+          "mcpUsedRuns": 0,
+          "acceptanceByLoading": {
+            "loaded": {
+              "runs": 3,
+              "passed": 2
+            },
+            "notLoaded": {
+              "runs": 0,
+              "passed": 0
+            }
+          },
+          "inputTokens": 1317541,
+          "cacheReadTokens": 1239072,
+          "uncachedInputTokens": 78469,
+          "outputTokens": 5883,
+          "costComplete": false,
+          "meanDurationMs": 38765.370478666686,
+          "durationMs": {
+            "p50": 34074.83007200004,
+            "p95": 55510.721476000006
+          }
+        },
+        "skill+mcp": {
+          "status": "succeeded",
+          "scorers": {
+            "typecheck_passes": {
+              "mean": 1,
+              "ci95": {
+                "low": 0.43850296784794796,
+                "high": 1
+              },
+              "records": 3
+            },
+            "acceptance_tests_pass": {
+              "mean": 0.6666666666666666,
+              "ci95": {
+                "low": 0.20765960059822086,
+                "high": 0.9385080553510953
+              },
+              "records": 3
+            },
+            "public_surface_only": {
+              "mean": 0.6666666666666666,
+              "ci95": {
+                "low": 0.20765960059822086,
+                "high": 0.9385080553510953
+              },
+              "records": 3
+            },
+            "no_retired_names": {
+              "mean": 1,
+              "ci95": {
+                "low": 0.43850296784794796,
+                "high": 1
+              },
+              "records": 3
+            }
+          },
+          "failedCount": 0,
+          "scoredRuns": 3,
+          "limitedRuns": 0,
+          "toolCalls": 60,
+          "skillLoadedRuns": 3,
+          "mcpUsedRuns": 3,
+          "acceptanceByLoading": {
+            "loaded": {
+              "runs": 3,
+              "passed": 2
+            },
+            "notLoaded": {
+              "runs": 0,
+              "passed": 0
+            }
+          },
+          "inputTokens": 960498,
+          "cacheReadTokens": 910112,
+          "uncachedInputTokens": 50386,
+          "outputTokens": 5227,
+          "costComplete": false,
+          "meanDurationMs": 37574.7939206667,
+          "durationMs": {
+            "p50": 39960.54811000003,
+            "p95": 40760.06847400003
+          }
+        }
+      },
+      "decision": {
+        "verdict": "no-claims",
+        "roundVerdict": "no-claims",
+        "reason": "no significant improvement; nothing to claim",
+        "comparisons": [
+          {
+            "id": "skill_vs_none",
+            "baseline": "none",
+            "candidate": "skill",
+            "scorers": {
+              "typecheck_passes": {
+                "difference": 0,
+                "ci95": {
+                  "low": 0,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "acceptance_tests_pass": {
+                "difference": 0.6666666666666666,
+                "ci95": {
+                  "low": 0,
+                  "high": 1
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "public_surface_only": {
+                "difference": 0.3333333333333333,
+                "ci95": {
+                  "low": 0,
+                  "high": 1
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "no_retired_names": {
+                "difference": 0.3333333333333333,
+                "ci95": {
+                  "low": 0,
+                  "high": 1
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              }
+            }
+          },
+          {
+            "id": "skill_mcp_vs_none",
+            "baseline": "none",
+            "candidate": "skill+mcp",
+            "scorers": {
+              "typecheck_passes": {
+                "difference": 0,
+                "ci95": {
+                  "low": 0,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "acceptance_tests_pass": {
+                "difference": 0.6666666666666666,
+                "ci95": {
+                  "low": 0,
+                  "high": 1
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "public_surface_only": {
+                "difference": 0,
+                "ci95": {
+                  "low": -1,
+                  "high": 1
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "no_retired_names": {
+                "difference": 0.3333333333333333,
+                "ci95": {
+                  "low": 0,
+                  "high": 1
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              }
+            }
+          },
+          {
+            "id": "skill_mcp_vs_skill",
+            "baseline": "skill",
+            "candidate": "skill+mcp",
+            "scorers": {
+              "typecheck_passes": {
+                "difference": 0,
+                "ci95": {
+                  "low": 0,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "acceptance_tests_pass": {
+                "difference": 0,
+                "ci95": {
+                  "low": -1,
+                  "high": 1
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "public_surface_only": {
+                "difference": -0.3333333333333333,
+                "ci95": {
+                  "low": -1,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "no_retired_names": {
+                "difference": 0,
+                "ci95": {
+                  "low": 0,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              }
+            }
+          }
+        ],
+        "claims": [],
+        "regressions": []
+      },
+      "tasks": [
+        {
+          "id": "headless-host",
+          "arms": {
+            "none": {
+              "typecheck_passes": "1/1",
+              "acceptance_tests_pass": "0/1",
+              "public_surface_only": "0/1",
+              "no_retired_names": "1/1",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/headless-host.test.ts:\n35 |     const session = await agent.session();\n36 |     const result = await session.run(\"read the note and echo\");\n37 |     expect(result.status).toBe(\"completed\");\n38 |     const results = (last?.messages ?? []).flatMap((message) …",
+              "unscored": 0
+            },
+            "skill": {
+              "typecheck_passes": "1/1",
+              "acceptance_tests_pass": "0/1",
+              "public_surface_only": "1/1",
+              "no_retired_names": "1/1",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/headless-host.test.ts:\n36 |     const result = await session.run(\"read the note and echo\");\n37 |     expect(result.status).toBe(\"completed\");\n38 |     const results = (last?.messages ?? []).flatMap((message) => message.content).filter((block) => block.type…",
+              "unscored": 0
+            },
+            "skill+mcp": {
+              "typecheck_passes": "1/1",
+              "acceptance_tests_pass": "1/1",
+              "public_surface_only": "1/1",
+              "no_retired_names": "1/1",
+              "unscored": 0
+            }
+          }
+        },
+        {
+          "id": "acp-serve",
+          "arms": {
+            "none": {
+              "typecheck_passes": "1/1",
+              "acceptance_tests_pass": "0/1",
+              "public_surface_only": "1/1",
+              "no_retired_names": "1/1",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/acp-serve.test.ts:\n53 | \n54 | test(\"an ACP client approves an edit through session/request_permission\", async () => {\n55 |   const { initialized, prompt, asked } = await session(\"allow_once\");\n56 |   expect(initialized.agentCapabilities?.loadSession).toBe(…",
+              "unscored": 0
+            },
+            "skill": {
+              "typecheck_passes": "1/1",
+              "acceptance_tests_pass": "1/1",
+              "public_surface_only": "1/1",
+              "no_retired_names": "1/1",
+              "unscored": 0
+            },
+            "skill+mcp": {
+              "typecheck_passes": "1/1",
+              "acceptance_tests_pass": "1/1",
+              "public_surface_only": "1/1",
+              "no_retired_names": "1/1",
+              "unscored": 0
+            }
+          }
+        },
+        {
+          "id": "upgrade-0-12",
+          "arms": {
+            "none": {
+              "typecheck_passes": "1/1",
+              "acceptance_tests_pass": "0/1",
+              "public_surface_only": "1/1",
+              "no_retired_names": "0/1",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/upgrade-0-12.test.ts:\n54 |   function pick(name: SlotName, assigned: unknown): { readonly owner: string; readonly impl: unknown } {\n55 |     assertSlot(name);\n56 |     const list = providers.get(name) ?? [];\n57 |     if (typeof assigned === \"string\") {\n58 …",
+              "unscored": 0
+            },
+            "skill": {
+              "typecheck_passes": "1/1",
+              "acceptance_tests_pass": "1/1",
+              "public_surface_only": "1/1",
+              "no_retired_names": "1/1",
+              "unscored": 0
+            },
+            "skill+mcp": {
+              "typecheck_passes": "1/1",
+              "acceptance_tests_pass": "0/1",
+              "public_surface_only": "0/1",
+              "no_retired_names": "1/1",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/upgrade-0-12.test.ts:\n254 |   // 1. Resolve inputs.\n255 |   const normalized = options.inputs.map((input) => normalizePackageInput(input));\n256 |   const seen = new Set<string>();\n257 |   for (const item of normalized) {\n258 |     const name = item.definit…",
+              "unscored": 0
+            }
+          }
+        }
+      ],
+      "fullRunEstimate": {
+        "none": {
+          "dryRuns": 3,
+          "fullRuns": 21,
+          "inputTokens": 18166785,
+          "uncachedInputTokens": 1202369,
+          "outputTokens": 55671
+        },
+        "skill": {
+          "dryRuns": 3,
+          "fullRuns": 21,
+          "inputTokens": 9222787,
+          "uncachedInputTokens": 549283,
+          "outputTokens": 41181
+        },
+        "skill+mcp": {
+          "dryRuns": 3,
+          "fullRuns": 21,
+          "inputTokens": 6723486,
+          "uncachedInputTokens": 352702,
+          "outputTokens": 36589
+        }
+      }
+    }
+  ],
+  "verdict": "no-claims"
+}

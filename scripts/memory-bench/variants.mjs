@@ -27,7 +27,20 @@ export const VARIANT_PATHS = {
   "lifecycle.clock=calendar": [`${fabric}lifecycle/clock.ts`, `${fabric}lifecycle/maintain.ts`, `${fabric}index.ts`],
   "lifecycle.decayMode=exponential": [`${fabric}lifecycle/strength.ts`],
   ...Object.fromEntries(signals.map((name) => [`promote.signal.${name}=off`, [`${fabric}consolidation/score.ts`]])),
+  // Plan 210 Task 5: test-only switches for the candidates that have no config field (never a product field).
+  "fabric.unmatchedTerms=off": [`${fabric}tools.ts`],
+  "fabric.enrichment=off": [`${fabric}exchanges.ts`],
+  "fabric.navigation=off": [`${fabric}tools.ts`],
+  "fabric.timeline=off": [`${fabric}exchanges.ts`, `${fabric}tools.ts`],
+  "fabric.grouping=off": [`${fabric}recall.ts`],
+  "fabric.aggregation=off": [`${fabric}tools.ts`],
+  "ontology.pointer=off": [`${fabric}context.ts`],
+  "om.reflector=off": [`${om}flush.ts`],
+  "lifecycle.exchangeExempt=on": [`${fabric}lifecycle/maintain.ts`],
 };
+
+/** Plan 210 Task 5: the switches that change what the write side stores (a snapshot keyed by config must include them). */
+export const WRITE_SIDE_VARIANTS = Object.freeze(["fabric.enrichment=off", "fabric.timeline=off"]);
 
 export function parseVariantSpecs(value = []) {
   if (!Array.isArray(value)) throw new Error("MemoryBenchVariant: expected array");
@@ -277,6 +290,83 @@ export function benchmarkCalendarClock(): number {
     if (active(`promote.signal.${name}=off`))
       replace("  const score = (Object.keys(signals)", `  signals.${name} = 0;\n  const score = (Object.keys(signals)`);
   }
+  // Plan 210 Task 5 leave-one-out switches. Each removes one feature's effect and nothing else.
+  if (active("fabric.unmatchedTerms=off")) {
+    replace(
+      'if (unmatchedTerms.length && hits.length > 0)\n            lines.push(`Unmatched terms in returned notes: ${unmatchedTerms.join(", ")}. Try another phrasing.`);',
+      "",
+    );
+    replace("              unmatchedTerms,\n              page,", "              page,");
+  }
+  if (active("fabric.enrichment=off")) replace("          keywords: exchangeKeywords(content),\n", "");
+  if (active("fabric.timeline=off")) {
+    if (path === `${fabric}exchanges.ts`)
+      replace(
+        'const dates = resolveDates(contents.join("\\n"), input.user.timestamp);',
+        "const dates: ReturnType<typeof resolveDates> = [];",
+      );
+    else {
+      replace(
+        `            from: { type: "string", description: "ISO date/time; only notes dated on or after it. A date covers that whole UTC day." },
+            to: { type: "string", description: "ISO date/time; only notes dated on or before it. A date covers that whole UTC day." },
+            order: {
+              type: "string",
+              enum: ["relevance", "time"],
+              description: "relevance (default) keeps the ranked order; time orders resolved dates oldest first.",
+            },
+`,
+        "",
+      );
+      replace(
+        `            ...(typeof args.from === "string" ? { from: args.from } : {}),
+            ...(typeof args.to === "string" ? { to: args.to } : {}),
+            ...(args.order === "time" || (gather && args.order === undefined) ? { order: "time" as const } : {}),`,
+        `            ...(gather ? { order: "time" as const } : {}),`,
+      );
+    }
+  }
+  if (active("fabric.navigation=off")) {
+    replace(
+      "Pass exactly one of `path`, `id`, `ids` (1-8), `around` (same-session ±2 exchanges), or `session` (8 exchanges per zero-based page).",
+      "Pass exactly one of `path`, `id` or `ids` (1-8).",
+    );
+    replace(
+      `            around: { type: "string", minLength: 1, description: "Exchange id whose same-session neighbours to read (±2)." },
+            session: { type: "string", minLength: 1, description: "Session id to page in reference-time order." },
+            page: { type: "integer", minimum: 0, description: "Zero-based session page (8 notes); defaults to 0." },
+`,
+      "",
+    );
+    replace(
+      "          if ([args.path, args.id, args.ids, args.around, args.session].filter((value) => value !== undefined).length !== 1)",
+      '          if (args.around !== undefined || args.session !== undefined || args.page !== undefined)\n            throw new MemoryValidationError("navigation is disabled in this benchmark arm");\n          if ([args.path, args.id, args.ids, args.around, args.session].filter((value) => value !== undefined).length !== 1)',
+    );
+  }
+  if (active("fabric.grouping=off")) replace("  if (hits.length < 2) return [...hits];", "  if (hits.length >= 0) return [...hits];");
+  if (active("fabric.aggregation=off")) {
+    replace(
+      " For aggregation questions, list the instances and their ids before counting or totalling, and issue two or three differently-worded queries.",
+      "",
+    );
+    replace(
+      ", preceded by a grouped summary: matches, distinct sessions, per-session counts and dates, and how many more are not shown.",
+      ".",
+    );
+    replace(
+      'const summaryReserve = Math.ceil((renderRecallSummary(summaryInput).join("\\n").length || 0) / 4);',
+      "const summaryReserve = 0;",
+    );
+    replace("if (hits.length > 0 && top >= RECALL_NO_MATCH_CONFIDENCE) {", "if (hits.length < 0) {");
+    replace("          if (top < RECALL_NO_MATCH_CONFIDENCE) {", "          if (hits.length < 0) {");
+  }
+  if (active("ontology.pointer=off")) replace("            conceptPointer = top;\n", "");
+  if (active("om.reflector=off"))
+    replace("if (uncovered.length && uncoveredTokens >= config.reflector.observationTokens) {", "if (uncovered.length < 0) {");
+  if (active("lifecycle.exchangeExempt=on"))
+    replace(
+      "        shouldArchive(row.metadata, clock, decision) &&",
+      '        row.metadata.kind !== "exchange" &&\n        shouldArchive(row.metadata, clock, decision) &&',
+    );
   return source;
 }
 

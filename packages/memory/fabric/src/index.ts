@@ -371,6 +371,14 @@ const definition = definePackage<MemoryFabricConfig>({
       );
     }
     const lifecycle = createFabricLifecycle(memory);
+    // Plan 210 Task 5 (a): a use is recorded on the lifecycle of the scope that owns the note, against that scope's own
+    // clock. Each scope's `get` returns only its own notes, so routing every event to every scope touches each note once.
+    const scopeLifecycles = memories.map((binding, index) => ({
+      resourceId: config.scopes.active[index]!.resourceId,
+      memory: binding.memory,
+      lifecycle: index === 0 ? lifecycle : createFabricLifecycle(binding.memory),
+    }));
+    const scopeClocks = new Map<string, number>();
     // The scope clock measures decay and archival in sessions worked, not calendar days (plan 188.4).
     const scopeClock =
       vectorStore.scopeCounter === undefined ? undefined : createScopeClock(vectorStore.scopeCounter, config.scopes.tenantId);
@@ -393,6 +401,8 @@ const definition = definePackage<MemoryFabricConfig>({
           await scopeClockState.set(session, { counted: [...ticked.counted] });
         }
         sessionClock = await scopeClock.read(clockResourceId, options);
+        scopeClocks.set(clockResourceId, sessionClock);
+        for (const resourceId of activeResourceIds.slice(1)) scopeClocks.set(resourceId, await scopeClock.read(resourceId, options));
       } catch (error) {
         // A failed counter write never blocks the turn: recall and writes stay unaffected.
         if (!warnedClock) {
@@ -898,17 +908,20 @@ const definition = definePackage<MemoryFabricConfig>({
       for (const id of evidence.helpful) helped.add(id);
       if (evidence.cursor !== undefined) evidenceCursor.set(session.id, evidence.cursor);
       session.background("fabric.lifecycle", async (signal) => {
-        if (ids.length) await memory.touch(ids, { signal });
-        await lifecycle.recordUses(session.id, ids, {
-          clock: sessionClock,
-          verifyAfterSessions: config.lifecycle.verifyAfterSessions,
-          signal,
-        });
+        for (const scope of scopeLifecycles) {
+          const clock = scopeClocks.get(scope.resourceId) ?? sessionClock;
+          if (ids.length) await scope.memory.touch(ids, { signal });
+          await scope.lifecycle.recordUses(session.id, ids, {
+            clock,
+            verifyAfterSessions: config.lifecycle.verifyAfterSessions,
+            signal,
+          });
+          if (coRead !== undefined) await scope.lifecycle.recordCoReads([coRead], { clock, signal });
+          await scope.lifecycle.recordRetrievals(retrievals, { signal });
+          await scope.lifecycle.recordEvidence(evidence, { signal });
+        }
         // A concept's recorded uses order the directory's subject list: keep its index row current.
         if (ids.length) await ontology?.refresh(ids, { signal });
-        if (coRead !== undefined) await lifecycle.recordCoReads([coRead], { clock: sessionClock, signal });
-        await lifecycle.recordRetrievals(retrievals, { signal });
-        await lifecycle.recordEvidence(evidence, { signal });
       });
     });
 

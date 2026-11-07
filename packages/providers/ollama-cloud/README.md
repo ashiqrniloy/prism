@@ -77,16 +77,32 @@ so obedience there is unmeasured on a key without credits. Evidence:
 
 ## Plan limits
 
-`ollamaCloudBalance()` reads `/api/balance` and returns the remaining session/weekly percentages and
-reset times, plus the purchased balance. It is an explicit helper for hosts and preflight checks and
-is never called during a run. It never returns or logs the key.
+`ollamaCloudBalance()` reads `/api/balance`. Current plans report the monthly included credit
+(`included`: USD left, allowance and period); legacy plans report session/weekly percentages and
+reset times instead. Both carry the purchased balance. It is an explicit helper for hosts and
+preflight checks and is never called during a run. It never returns or logs the key.
 
 ```ts
 import { ollamaCloudBalance } from "@arnilo/prism-provider-ollama-cloud";
 
 const balance = await ollamaCloudBalance({ apiKey: "env:OLLAMA_API_KEY" });
-// { session: { remainingPercent, resetsAt }, weekly: { remainingPercent, resetsAt }, purchasedUsd }
+// current: { included: { balanceUsd, allowanceUsd, periodFrom, periodUntil }, purchasedUsd }
+// legacy:  { session: { remainingPercent, resetsAt }, weekly: { remainingPercent, resetsAt }, purchasedUsd }
 ```
+
+## Decision models
+
+Models whose `/api/show` capabilities include `decision` (for example `clef:27b`) answer typed
+questions in one pass over the System One wire at `/v1/systemone`, with the same key. Discovery maps
+them to `capabilities.decisions: true` (no tools, no streaming, no reasoning), and the provider
+serves them two ways:
+
+- `prism.models.decisions("ollama-cloud/clef:27b")` (or `provider.decisions().decide(...)`) sends
+  `noul`, `choice` and `score` questions and returns calibrated probabilities.
+- A run on a decision model with JSON-schema structured output compiles the schema to questions on
+  the same endpoint; without a schema the request is refused, as for every decision provider.
+
+`defineOllamaCloudDecisionModel()` declares one statically. Decision models bill input tokens only.
 
 ## Discovery
 

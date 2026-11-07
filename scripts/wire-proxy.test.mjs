@@ -455,3 +455,17 @@ it("wire_usage_log_retains_the_prompt_cache_key", async () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+it("ollama_native_ndjson_done_line_reports_usage", () => {
+  const body = [
+    '{"model":"beam","message":{"role":"assistant","content":"hi"},"done":false}',
+    '{"model":"beam","message":{"role":"assistant","content":""},"done":true,"done_reason":"stop","prompt_eval_count":1200,"eval_count":34}',
+  ].join("\n");
+  const raw = parseRawUpstreamUsage(body, "application/x-ndjson");
+  assert.deepEqual(raw, { prompt_tokens: 1200, completion_tokens: 34, total_tokens: 1234 });
+  assert.equal(normalizeUsageMetrics(raw).inputTokens, 1200);
+  // The cached prefix count is a cache read inside the inclusive prompt count.
+  const cached = parseRawUpstreamUsage('{"done":true,"prompt_eval_count":1200,"prompt_eval_cached_count":1000,"eval_count":3}');
+  assert.equal(normalizeUsageMetrics(cached).cacheReadTokens, 1000);
+  assert.equal(normalizeUsageMetrics(cached).inputTokens, 1200);
+});
