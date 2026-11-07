@@ -153,8 +153,9 @@ test("real repo: manifest covers every exports surface in baseline mode", () => 
   // regeneration also picked up the OpenRouter package plan 203 added without a row, so the live
   // total is 80. Plan 205 Task 2 adds `@arnilo/prism-provider-commandcode`, so 81. Plan 213 Task 2 adds
   // `@arnilo/prism-provider-kilo` and plan 214 Task 2 adds `@arnilo/prism-provider-litellm`, so 83.
-  // Plan 206 Task 2 adds `@arnilo/prism-provider-ollama-cloud`, so 84.
-  assert.equal(summary.total, 84);
+  // Plan 206 Task 2 adds `@arnilo/prism-provider-ollama-cloud`, so 84. Plan 215 Task 14 adds
+  // `@arnilo/prism-host-builder`, so 85.
+  assert.equal(summary.total, 85);
   assert.equal(summary.pending, 4, "four surfaces are unannotated after the 0.13 regeneration");
 });
 

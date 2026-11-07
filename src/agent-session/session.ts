@@ -80,7 +80,14 @@ import { bindSessionState, type PackageStateData, SessionStateStore } from "../s
 import type { SessionContext } from "../session-context.js";
 import type { SessionContextSnapshot } from "../session-stores.js";
 import { narrowScope } from "../agent/sessions.js";
-import { createSessionEntry, entriesInScope, getSessionBranchEntries, rebuildSessionContext } from "../session-stores.js";
+import {
+  createSessionEntry,
+  entriesInScope,
+  extendSnapshot,
+  getSessionBranchEntries,
+  OWNERSHIP_SCOPE_KEYS,
+  rebuildSessionContext,
+} from "../session-stores.js";
 import { createLoadedSkillSet } from "../skill-disclosure.js";
 import type { LoadedSkillBodiesEntry } from "../skill-load.js";
 import { validateLoadedSkillBodies } from "../skill-load.js";
@@ -1169,13 +1176,29 @@ export class RuntimeAgentSession implements Session {
     }
     const owned = Object.keys(stamp).length > 0 ? { ...entry, metadata: { ...entry.metadata, ...stamp } } : entry;
     const redacted = redactSessionEntry(owned, this.activeRedactor);
-    await this.store.append(redacted, {
-      expectedParentId: this.currentLeafId,
-      idempotencyKey: this.activeIdempotencyKey,
-    });
+    const previousLeafId = this.currentLeafId;
+    const cached = this.snapshotCache;
+    try {
+      await this.store.append(redacted, {
+        expectedParentId: previousLeafId,
+        idempotencyKey: this.activeIdempotencyKey,
+      });
+    } catch (error) {
+      this.invalidateSnapshot();
+      throw error;
+    }
     this.currentLeafId = redacted.id;
     if (redacted.kind === "message" && redacted.message && this.activeRunId !== undefined) this.activeRunMessages.push(redacted.message);
+    // Plan 210 Task 0.3: an append the store accepted on the cached tip extends the cache with one
+    // detached copy instead of a branch re-read. It keeps its `expiresAt`, so `snapshot()` still
+    // revalidates against the store at least once per TTL. Every other append invalidates.
+    const extended =
+      cached && this.snapshotCacheTtlMs > 0 && cached.generation === this.snapshotGeneration && cached.leafId === previousLeafId
+        ? extendSnapshot(cached.value, structuredClone(redacted))
+        : undefined;
     this.invalidateSnapshot();
+    if (cached && extended)
+      this.snapshotCache = { leafId: redacted.id, generation: this.snapshotGeneration, expiresAt: cached.expiresAt, value: extended };
   }
 
   invalidateSnapshot(): void {
@@ -1213,8 +1236,14 @@ export class RuntimeAgentSession implements Session {
   async snapshot(): Promise<SessionContextSnapshot> {
     const now = performance.now();
     const cached = this.snapshotCache;
-    if (cached && cached.leafId === this.currentLeafId && cached.generation === this.snapshotGeneration && cached.expiresAt > now)
-      return cached.value;
+    if (cached && cached.leafId === this.currentLeafId && cached.generation === this.snapshotGeneration) {
+      if (cached.expiresAt > now) return cached.value;
+      // An append or checkout during the `get` replaces the cache; that snapshot then rebuilds below.
+      if ((await this.revalidateSnapshot(cached.value)) && this.snapshotCache === cached) {
+        this.snapshotCache = { ...cached, expiresAt: now + this.snapshotCacheTtlMs };
+        return cached.value;
+      }
+    }
     const reader = this.branchReader();
     const value = reader
       ? await rebuildSessionContext(reader, { sessionId: this.id, leafId: this.currentLeafId })
@@ -1226,6 +1255,26 @@ export class RuntimeAgentSession implements Session {
       value,
     };
     return value;
+  }
+
+  /**
+   * Plan 210 Task 0.3: an expired cache is renewed by one `store.get` of its tip instead of a branch
+   * re-read. Entries are append-only and a session is deleted whole, so the branch under a tip that is
+   * still stored, in this session, with the same parent and ownership stamps, cannot have changed.
+   * TTL `0`, a store without `get`, or any mismatch answers `false`, and the caller rebuilds.
+   */
+  private async revalidateSnapshot(cached: SessionContextSnapshot): Promise<boolean> {
+    const tip = cached.entries.at(-1);
+    if (this.snapshotCacheTtlMs === 0 || !this.store.get || !tip || tip.id !== this.currentLeafId) return false;
+    const stored = await this.store.get(tip.id);
+    return (
+      stored !== undefined &&
+      stored.id === tip.id &&
+      stored.sessionId === this.id &&
+      stored.parentId === tip.parentId &&
+      OWNERSHIP_SCOPE_KEYS.every((key) => stored.metadata?.[key] === tip.metadata?.[key]) &&
+      entriesInScope([stored], this.scope)
+    );
   }
 }
 

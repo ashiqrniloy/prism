@@ -326,40 +326,48 @@ test("task5_unknown_is_not_zero", async () => {
 test("task5_development_screen_verdict_matches_criteria_schema_and_recorded_evidence", async () => {
   const jsonPath = TASK5_SCREEN_VERDICT_JSON;
   const mdPath = TASK5_SCREEN_VERDICT_MD;
-  const verdict = await writeTask5ScreenVerdict();
+  // The writer targets the committed evidence; restore its bytes so a test run never restamps `generatedAt`
+  // (plan 210 Task 1: the feature ledger pins this file's sha256).
+  const originals = await Promise.all([jsonPath, mdPath].map((path) => readFile(path)));
+  try {
+    const verdict = await writeTask5ScreenVerdict();
 
-  const written = JSON.parse(await readFile(jsonPath, "utf8"));
-  assert.equal(written.manifestHash, verdict.manifestHash);
-  assert.equal(verdict.schemaVersion, 1);
-  assert.equal(verdict.criteriaVersion, TASK5_SCREEN_VERSION);
-  assert.equal(verdict.mode, "development-screen");
-  assert.equal(verdict.screenVerdict, "miss");
-  assert.equal(verdict.handOff.plan, 210);
-  assert.equal(verdict.handOff.reason, TASK5_SCREEN_HANDOFF_REASON);
+    const written = JSON.parse(await readFile(jsonPath, "utf8"));
+    assert.equal(written.manifestHash, verdict.manifestHash);
+    assert.equal(verdict.schemaVersion, 1);
+    assert.equal(verdict.criteriaVersion, TASK5_SCREEN_VERSION);
+    assert.equal(verdict.mode, "development-screen");
+    assert.equal(verdict.screenVerdict, "miss");
+    assert.equal(verdict.handOff.plan, 210);
+    assert.equal(verdict.handOff.reason, TASK5_SCREEN_HANDOFF_REASON);
 
-  // All 4 screen suites are present
-  for (const suite of TASK5_SCREEN_SUITES) {
-    assert.ok(suite in verdict.suites);
-    assert.ok("candidateGap" in verdict.suites[suite]);
-    assert.ok("abilityGuard" in verdict.suites[suite]);
-    assert.ok("suiteVerdict" in verdict.suites[suite]);
+    // All 4 screen suites are present
+    for (const suite of TASK5_SCREEN_SUITES) {
+      assert.ok(suite in verdict.suites);
+      assert.ok("candidateGap" in verdict.suites[suite]);
+      assert.ok("abilityGuard" in verdict.suites[suite]);
+      assert.ok("suiteVerdict" in verdict.suites[suite]);
+    }
+
+    // All 8 screen cells are recorded in sourceReports
+    const screen = reduce();
+    for (const cell of screen.cells) {
+      assert.ok(cell.id in verdict.sourceReports, `sourceReports missing ${cell.id}`);
+      const rep = verdict.sourceReports[cell.id];
+      assert.ok(typeof rep.sha256 === "string" && rep.sha256.length === 64);
+      assert.ok(rep.questionsScored > 0);
+    }
+
+    // Verify markdown formatting
+    const md = await readFile(mdPath, "utf8");
+    assert.ok(md.includes("# Task 5 Development Screen Verdict: miss"));
+    assert.ok(md.includes("## Summary by Suite"));
+    assert.ok(md.includes("## Candidate-Gap Detail"));
+    assert.ok(md.includes("## Ability-Guard Detail (Descriptive)"));
+    assert.ok(md.includes("## Plan 210 Hand-Off"));
+    assert.ok(md.includes("## Source Reports"));
+  } finally {
+    await writeFile(jsonPath, originals[0]);
+    await writeFile(mdPath, originals[1]);
   }
-
-  // All 8 screen cells are recorded in sourceReports
-  const screen = reduce();
-  for (const cell of screen.cells) {
-    assert.ok(cell.id in verdict.sourceReports, `sourceReports missing ${cell.id}`);
-    const rep = verdict.sourceReports[cell.id];
-    assert.ok(typeof rep.sha256 === "string" && rep.sha256.length === 64);
-    assert.ok(rep.questionsScored > 0);
-  }
-
-  // Verify markdown formatting
-  const md = await readFile(mdPath, "utf8");
-  assert.ok(md.includes("# Task 5 Development Screen Verdict: miss"));
-  assert.ok(md.includes("## Summary by Suite"));
-  assert.ok(md.includes("## Candidate-Gap Detail"));
-  assert.ok(md.includes("## Ability-Guard Detail (Descriptive)"));
-  assert.ok(md.includes("## Plan 210 Hand-Off"));
-  assert.ok(md.includes("## Source Reports"));
 });

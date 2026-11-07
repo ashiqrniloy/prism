@@ -32,7 +32,9 @@ test("conversational_memory_scenario_recalls_across_sessions_and_forgets", async
     assert.match(result.recalled, new RegExp(MEMORY_FACT), "session B's recall must return the archived exchange");
     assert.equal(result.forgetFound, true, "memory.forget must delete the exchange note");
     // The abstention line names the searched terms by contract (`no matching memory for: <terms>; scopes: <levels>`),
-    // so the query term appears in it. What must be absent is the forgotten note: no hit, none of its text.
+    // so the query term appears in its text. Leakage is judged from the structured hits, not the echoed query.
+    assert.deepEqual(result.afterForgetHitIds, [], "the fourth session's recall returns zero hits");
+    assert.notEqual(result.forgottenId, "", "session B recalled a structured hit to forget");
     assert.match(result.afterForget, new RegExp(`^no matching memory for: ${MEMORY_FACT}; scopes: `), "the fourth session abstains");
     assert.doesNotMatch(result.afterForget, /favourite colour is/, "the forgotten exchange's text is not recalled");
   } finally {

@@ -205,6 +205,26 @@
         "@arnilo/prism": ">=0.13.0 <1.0.0",
       },
     },
+    "packages/hosts/host-builder": {
+      "name": "@arnilo/prism-host-builder",
+      "version": "0.13.0",
+      "bin": {
+        "prism-host-builder": "./bin/prism-host-builder.ts",
+      },
+      "dependencies": {
+        "@arnilo/prism-mcp-server": "^0.13.0",
+        "@modelcontextprotocol/server": "2.0.0",
+        "zod": "^4.6.2",
+      },
+      "devDependencies": {
+        "@modelcontextprotocol/client": "2.0.0",
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": ">=0.13.0 <1.0.0",
+      },
+    },
     "packages/hosts/mcp-server": {
       "name": "@arnilo/prism-mcp-server",
       "version": "0.13.0",
@@ -831,6 +851,8 @@
     "@arnilo/prism-headless": ["@arnilo/prism-headless@workspace:packages/hosts/headless"],
 
     "@arnilo/prism-hooks-json": ["@arnilo/prism-hooks-json@workspace:packages/integrations/hooks-json"],
+
+    "@arnilo/prism-host-builder": ["@arnilo/prism-host-builder@workspace:packages/hosts/host-builder"],
 
     "@arnilo/prism-mcp": ["@arnilo/prism-mcp@workspace:packages/integrations/mcp"],
 

@@ -2,7 +2,7 @@
   "kind": "202-cache-stability-record",
   "version": 1,
   "status": "passed",
-  "productHash": "f82ed5c9eb1a27c4db5b6ec3f6b9c79a593c28f988b80205656ad75df99396e7",
+  "productHash": "5458aea6b28163e68ecf6322ac083b9c44cd949c333d81daf66aecbc6eb2af74",
   "suite": {
     "files": [
       "packages/memory/fabric/src/__tests__/prefix-stability.test.ts",
@@ -45,7 +45,7 @@
   },
   "equivalence": {
     "file": "equivalence.json",
-    "sha256": "7b9c53f25eeb3d132bb544cf196892e9bfd6ab5fac7749516581f4d588e93659",
-    "status": "different"
+    "sha256": "d28793ac8be39fe7e30e89b97a2912cfd9016ff0e279b13b8a1a486e84a95761",
+    "status": "identical"
   }
 }

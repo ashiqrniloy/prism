@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "turns": [
+    {
+      "input": [
+        "{\"jsonrpc\":\"2.0\",\"id\":0,\"method\":\"turn/start\",\"params\":{\"text\":\"Review the file\"}}"
+      ],
+      "output": [
+        "{\"jsonrpc\":\"2.0\",\"method\":\"item/agentMessage/delta\",\"params\":{\"threadId\":\"recorded-thread\",\"turnId\":\"recorded-turn\",\"delta\":\"Checking.\"}}",
+        "{\"jsonrpc\":\"2.0\",\"method\":\"item/reasoning/delta\",\"params\":{\"threadId\":\"recorded-thread\",\"turnId\":\"recorded-turn\",\"delta\":\"Read first.\"}}",
+        "{\"jsonrpc\":\"2.0\",\"method\":\"item/started\",\"params\":{\"threadId\":\"recorded-thread\",\"turnId\":\"recorded-turn\",\"item\":{\"type\":\"toolCall\",\"id\":\"read-1\",\"name\":\"read\",\"args\":{\"path\":\"README.md\"}}}}",
+        "{\"jsonrpc\":\"2.0\",\"method\":\"item/toolCall/progress\",\"params\":{\"threadId\":\"recorded-thread\",\"turnId\":\"recorded-turn\",\"toolCallId\":\"read-1\",\"progress\":{\"percent\":50}}}",
+        "{\"jsonrpc\":\"2.0\",\"method\":\"item/completed\",\"params\":{\"threadId\":\"recorded-thread\",\"turnId\":\"recorded-turn\",\"item\":{\"type\":\"toolResult\",\"id\":\"read-1\",\"status\":\"finished\",\"result\":\"contents\"}}}",
+        "{\"jsonrpc\":\"2.0\",\"method\":\"item/completed\",\"params\":{\"threadId\":\"recorded-thread\",\"turnId\":\"recorded-turn\",\"item\":{\"type\":\"agentMessage\",\"text\":\"Done.\"}}}",
+        "{\"jsonrpc\":\"2.0\",\"method\":\"item/completed\",\"params\":{\"threadId\":\"recorded-thread\",\"turnId\":\"recorded-turn\",\"item\":{\"type\":\"skill\",\"name\":\"review\",\"source\":\"explicit\",\"resolved\":true}}}",
+        "{\"jsonrpc\":\"2.0\",\"method\":\"item/fileChange\",\"params\":{\"threadId\":\"recorded-thread\",\"turnId\":\"recorded-turn\",\"path\":\"note.md\",\"change\":\"modified\",\"source\":\"agent\",\"diff\":\"+reviewed\"}}",
+        "{\"jsonrpc\":\"2.0\",\"method\":\"turn/plan/updated\",\"params\":{\"threadId\":\"recorded-thread\",\"turnId\":\"recorded-turn\",\"entries\":[{\"title\":\"review\",\"status\":\"complete\"}]}}",
+        "{\"jsonrpc\":\"2.0\",\"method\":\"item/subagent\",\"params\":{\"threadId\":\"recorded-thread\",\"turnId\":\"recorded-turn\",\"phase\":\"started\",\"id\":\"sub-1\",\"name\":\"review\"}}",
+        "{\"jsonrpc\":\"2.0\",\"method\":\"thread/compacted\",\"params\":{\"threadId\":\"recorded-thread\",\"turnId\":\"recorded-turn\",\"phase\":\"completed\",\"summary\":\"reviewed\"}}",
+        "{\"jsonrpc\":\"2.0\",\"method\":\"notice\",\"params\":{\"threadId\":\"recorded-thread\",\"turnId\":\"recorded-turn\",\"level\":\"warn\",\"code\":\"retry\",\"message\":\"retrying\"}}",
+        "{\"jsonrpc\":\"2.0\",\"method\":\"thread/tokenUsage/updated\",\"params\":{\"threadId\":\"recorded-thread\",\"turnId\":\"recorded-turn\",\"usage\":{\"inputTokens\":10,\"outputTokens\":5}}}",
+        "{\"jsonrpc\":\"2.0\",\"method\":\"turn/completed\",\"params\":{\"threadId\":\"recorded-thread\",\"turnId\":\"recorded-turn\"}}"
+      ]
+    }
+  ]
+}

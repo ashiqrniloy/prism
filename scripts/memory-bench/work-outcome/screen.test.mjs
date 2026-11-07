@@ -122,14 +122,14 @@ test("gate_w1_binds_the_manifest_hash", async () => {
   assert.throws(() => assertScreen209Gate({ ...gate, approved: false }, manifest), /not approved/);
   assert.throws(() => assertScreen209Gate({ ...gate, gate: "O-1" }, manifest), /not plan 209 gate W-1/);
   assert.throws(() => assertScreen209Gate({ ...gate, billing: { usdCap: 0 } }, manifest), /no USD cap/);
-  // Two answer models from two providers, one small; 6 arms each, plus P and P+W on three suites.
-  assert.equal(new Set(SCREEN209_MODELS.map((model) => model.provider)).size, 2);
+  // Two answer models (both Command Code after amendment 7), one small; 6 arms each, plus P and P+W on three suites.
+  assert.equal(new Set(SCREEN209_MODELS.map((model) => model.model)).size, 2);
   assert.equal(SCREEN209_MODELS.filter((model) => model.small).length, 1);
   assert.equal(manifest.jobs.filter((job) => job.kind === "work-outcome").length, SCREEN209_MODELS.length * WORK_OUTCOME_ARMS.length);
   assert.equal(manifest.jobs.filter((job) => job.id.includes(".noharm.")).length, 6);
   assert.equal(manifest.workOutcomeCriteriaHash.length, 64);
-  // Only the paid model is not free-only; the free jobs are on Kilo.
-  for (const job of manifest.jobs) assert.equal(job.freeOnly, !(job.provider === "commandcode" && job.model === "Qwen/Qwen3.7-Flash"));
+  // Both answer models are named paid models (amendment 7), so no job is free-only; the gate names no free answer route.
+  for (const job of manifest.jobs) assert.equal(job.freeOnly, false, job.id);
 });
 
 test("no_harm_pw_arm_resolves_to_the_work_outcome_settings", () => {
@@ -191,7 +191,8 @@ test("screen_report_merges_per_arm_jobs_and_reports_o8", () => {
   assert.equal(large.w3Valid, true);
   assert.ok(large.curator["P+W+O"].calls > 0, "the ontology arm counts its curator calls");
   assert.equal(report.noHarm.status, "not-computable");
-  assert.equal(report.usd, 0);
+  // The large model is paid (amendment 7), so its tokens cost; the figure is small and positive.
+  assert.ok(report.usd > 0);
 });
 
 test("persona_checkpoint_round_trips_by_protocol", async () => {
@@ -246,11 +247,11 @@ test("action_tool_records_test_commands_only", async () => {
   for (const explore of ["ls -la", "cat package.json", "find . -name '*.ts'", "echo hello"]) assert.equal(isTestCommand(explore, v), false);
 });
 
-test("work_job_names_the_paid_simulator_and_keeps_free_answers_free", () => {
+test("work_job_names_the_paid_simulator_and_paid_answers", () => {
   const large = screen209Jobs().find((item) => item.id === "209-screen.work.large.P");
   const argv = screen209WorkArgv(large, { output: "/x.json", maxInput: 1 });
   assert.ok(argv.includes("--simulator-paid"), "the gate names Qwen Flash as the paid simulator");
-  assert.ok(argv.includes("--free-only"), "the free answer model stays free-only");
+  assert.ok(!argv.includes("--free-only"), "the large answer model is a named paid model (amendment 7)");
   assert.equal(large.simulator, "commandcode/Qwen/Qwen3.7-Flash");
   assert.ok(!screen209WorkArgv({ ...large, simulatorPaid: false }, { output: "/x.json", maxInput: 1 }).includes("--simulator-paid"));
   assert.equal(parseLiveArgs([...liveArgs(), "--simulator-paid"]).simulatorPaid, true);

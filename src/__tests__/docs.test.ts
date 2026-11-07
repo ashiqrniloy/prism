@@ -1498,6 +1498,7 @@ describe("docs", () => {
         "examples/coding-compaction.ts",
         "examples/acp.ts",
         "examples/connected-slack-mcp.ts",
+        "examples/host-builder-agent.ts",
         "examples/open-connector-sidecar.ts",
         "examples/scoped-memory.ts",
         "examples/memory-lifecycle.ts",
@@ -1579,6 +1580,21 @@ describe("docs", () => {
             writeEffect: "external_mutation",
             tools: ["mcp:slack:list_channels", "mcp:slack:get_channel", "mcp:slack:search_messages", "mcp:slack:post_message"],
           });
+        }
+        if (file === "examples/host-builder-agent.ts") {
+          const builder = JSON.parse(out) as {
+            skillDiscovered: boolean;
+            mcpTools: string[];
+            skillLoaded: boolean;
+            createAgent: string[];
+            inspectedPackages: string[];
+          };
+          assert.equal(builder.skillDiscovered, true, "contextFiles discovered the installed skill");
+          assert.equal(builder.skillLoaded, true);
+          assert.ok(builder.mcpTools.includes("mcp:host-builder:prism_api"));
+          assert.ok(builder.mcpTools.includes("mcp:host-builder:prism_inspect_host"));
+          assert.ok(builder.createAgent.some((line) => line.includes("createAgent")));
+          assert.ok(builder.inspectedPackages.length > 0);
         }
         if (file === "examples/approval.ts") {
           const approval = JSON.parse(out) as {

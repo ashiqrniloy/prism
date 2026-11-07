@@ -395,3 +395,28 @@ export function checkKernelBudget(budget, measured) {
   }
   return checks;
 }
+
+// --- host-builder size budget (plan 215 Task 14) ------------------------------
+//
+// `@arnilo/prism-host-builder` ships generated indexes and example sources, so its tarball grows with the
+// public surface. The baseline is measured from the same pack the deny list inspects.
+
+/** Pure comparison so a breach is unit-testable without packing a tarball. */
+export function checkHostBuilderBudget(budget, measured) {
+  const checks = [];
+  for (const metric of ["packedBytes", "unpackedBytes"]) {
+    const baseline = budget?.[metric]?.baseline;
+    const tolerance = budget?.[metric]?.tolerance;
+    if (typeof baseline !== "number" || typeof tolerance !== "number") {
+      checks.push({ ok: false, message: `host-builder ${metric}: budgets.json hostBuilder.${metric} needs a baseline and a tolerance` });
+      continue;
+    }
+    const check = checkUpperBound(`host-builder ${metric}`, measured[metric], baseline, tolerance);
+    checks.push(
+      check.ok
+        ? check
+        : { ok: false, message: `${check.message} — regenerate or rebaseline budgets.json hostBuilder.${metric} with a reason` },
+    );
+  }
+  return checks;
+}

@@ -1,0 +1,2685 @@
+{
+  "kind": "209-development-report",
+  "plan": 209,
+  "task": 6,
+  "advisory": true,
+  "note": "Development numbers are advisory, never the verdict; plan 210 Task 9 runs the held-out work-outcome arms.",
+  "partition": "dev",
+  "workOutcomeCriteriaHash": "d30681ec13dfd1e9f01ce9fdfe8ad2caa674b97182210c12788bd0bc77717bd2",
+  "threeTierCriteriaHash": "3d5a5c10fddda0931d00003aad8f2fccf5bdef2a829fa0b09bfac004b2bd263f",
+  "partitionIdsHash": {
+    "coding": "0afe60bde67d5bd5a6e0c316a96d90f4e7a48033a7b6aa75a929b7565c82a016",
+    "assistant": "bfb4907b13aa27c2e1148a0939371f220550948de2f6f9ba9cec4ee962ea0984"
+  },
+  "productHash": "b33a7f901ae8bb335d54d3f2dcdd62fecbeca355967a2df65cf59f005bda07a1",
+  "manifestHash": "1a513107bcce1cd3f28cdb29e71f9e98096129ad77a20eb572cff7581b91d148",
+  "jobsRead": [
+    "209-screen.noharm.large.P+W.beam-100k",
+    "209-screen.noharm.large.P+W.locomo",
+    "209-screen.noharm.large.P+W.memoryagentbench-cr",
+    "209-screen.noharm.large.P.beam-100k",
+    "209-screen.noharm.large.P.locomo",
+    "209-screen.noharm.large.P.memoryagentbench-cr",
+    "209-screen.work.large.P",
+    "209-screen.work.large.P+W",
+    "209-screen.work.large.P+W+O",
+    "209-screen.work.large.coding",
+    "209-screen.work.large.coding+W",
+    "209-screen.work.large.memory-off",
+    "209-screen.work.small.P",
+    "209-screen.work.small.P+W",
+    "209-screen.work.small.P+W+O",
+    "209-screen.work.small.coding",
+    "209-screen.work.small.coding+W",
+    "209-screen.work.small.memory-off"
+  ],
+  "models": [
+    {
+      "model": "commandcode/meta/muse-spark-1.2-contributor",
+      "small": false,
+      "armsCompleted": [
+        "memory-off",
+        "P",
+        "P+W",
+        "P+W+O",
+        "coding",
+        "coding+W"
+      ],
+      "armsMissing": [],
+      "summary": {
+        "memory-off": {
+          "pooled": {
+            "W1": {
+              "n": 14,
+              "mean": 0.7142857142857143
+            },
+            "W2": {
+              "n": 35,
+              "mean": 0
+            },
+            "W3": {
+              "n": 25,
+              "mean": 0.92
+            },
+            "W4": {
+              "n": 14,
+              "mean": 7.214285714285714
+            },
+            "W6": {
+              "n": 42,
+              "mean": 0.16666666666666666
+            },
+            "W4tokens": {
+              "n": 14,
+              "mean": 52991.28571428572
+            },
+            "poisonInOutput": 0,
+            "crossProjectLeakage": 0,
+            "staleUse": 0,
+            "simulatorLeak": 0,
+            "sessions": 42
+          },
+          "byFamily": {
+            "coding": {
+              "W1": {
+                "n": 8,
+                "mean": 1
+              },
+              "W2": {
+                "n": 20,
+                "mean": 0
+              },
+              "W3": {
+                "n": 16,
+                "mean": 0.875
+              },
+              "W4": {
+                "n": 8,
+                "mean": 3
+              },
+              "W6": {
+                "n": 24,
+                "mean": 0.16666666666666666
+              },
+              "W4tokens": {
+                "n": 8,
+                "mean": 4580.375
+              },
+              "poisonInOutput": 0,
+              "crossProjectLeakage": 0,
+              "staleUse": 0,
+              "simulatorLeak": 0,
+              "sessions": 24
+            },
+            "assistant": {
+              "W1": {
+                "n": 6,
+                "mean": 0.3333333333333333
+              },
+              "W2": {
+                "n": 15,
+                "mean": 0
+              },
+              "W3": {
+                "n": 9,
+                "mean": 1
+              },
+              "W4": {
+                "n": 6,
+                "mean": 12.833333333333334
+              },
+              "W6": {
+                "n": 18,
+                "mean": 0.16666666666666666
+              },
+              "W4tokens": {
+                "n": 6,
+                "mean": 117539.16666666667
+              },
+              "poisonInOutput": 0,
+              "crossProjectLeakage": 0,
+              "staleUse": 0,
+              "simulatorLeak": 0,
+              "sessions": 18
+            }
+          }
+        },
+        "P": {
+          "pooled": {
+            "W1": {
+              "n": 14,
+              "mean": 0.35714285714285715
+            },
+            "W2": {
+              "n": 35,
+              "mean": 0.8285714285714286
+            },
+            "W3": {
+              "n": 25,
+              "mean": 0.08
+            },
+            "W4": {
+              "n": 14,
+              "mean": 2.5
+            },
+            "W6": {
+              "n": 42,
+              "mean": 0.6904761904761905
+            },
+            "W4tokens": {
+              "n": 14,
+              "mean": 12864.07142857143
+            },
+            "poisonInOutput": 0,
+            "crossProjectLeakage": 0,
+            "staleUse": 0,
+            "simulatorLeak": 0,
+            "sessions": 42
+          },
+          "byFamily": {
+            "coding": {
+              "W1": {
+                "n": 8,
+                "mean": 0
+              },
+              "W2": {
+                "n": 20,
+                "mean": 1
+              },
+              "W3": {
+                "n": 16,
+                "mean": 0
+              },
+              "W4": {
+                "n": 8,
+                "mean": 2.5
+              },
+              "W6": {
+                "n": 24,
+                "mean": 1
+              },
+              "W4tokens": {
+                "n": 8,
+                "mean": 13979.5
+              },
+              "poisonInOutput": 0,
+              "crossProjectLeakage": 0,
+              "staleUse": 0,
+              "simulatorLeak": 0,
+              "sessions": 24
+            },
+            "assistant": {
+              "W1": {
+                "n": 6,
+                "mean": 0.8333333333333334
+              },
+              "W2": {
+                "n": 15,
+                "mean": 0.6
+              },
+              "W3": {
+                "n": 9,
+                "mean": 0.2222222222222222
+              },
+              "W4": {
+                "n": 6,
+                "mean": 2.5
+              },
+              "W6": {
+                "n": 18,
+                "mean": 0.2777777777777778
+              },
+              "W4tokens": {
+                "n": 6,
+                "mean": 11376.833333333334
+              },
+              "poisonInOutput": 0,
+              "crossProjectLeakage": 0,
+              "staleUse": 0,
+              "simulatorLeak": 0,
+              "sessions": 18
+            }
+          }
+        },
+        "P+W": {
+          "pooled": {
+            "W1": {
+              "n": 14,
+              "mean": 0.21428571428571427
+            },
+            "W2": {
+              "n": 35,
+              "mean": 1
+            },
+            "W3": {
+              "n": 25,
+              "mean": 0
+            },
+            "W4": {
+              "n": 14,
+              "mean": 3.142857142857143
+            },
+            "W6": {
+              "n": 42,
+              "mean": 0.8571428571428571
+            },
+            "W4tokens": {
+              "n": 14,
+              "mean": 21313.5
+            },
+            "poisonInOutput": 0,
+            "crossProjectLeakage": 0,
+            "staleUse": 0,
+            "simulatorLeak": 0,
+            "sessions": 42
+          },
+          "byFamily": {
+            "coding": {
+              "W1": {
+                "n": 8,
+                "mean": 0.25
+              },
+              "W2": {
+                "n": 20,
+                "mean": 1
+              },
+              "W3": {
+                "n": 16,
+                "mean": 0
+              },
+              "W4": {
+                "n": 8,
+                "mean": 2.875
+              },
+              "W6": {
+                "n": 24,
+                "mean": 0.7916666666666666
+              },
+              "W4tokens": {
+                "n": 8,
+                "mean": 17856
+              },
+              "poisonInOutput": 0,
+              "crossProjectLeakage": 0,
+              "staleUse": 0,
+              "simulatorLeak": 0,
+              "sessions": 24
+            },
+            "assistant": {
+              "W1": {
+                "n": 6,
+                "mean": 0.16666666666666666
+              },
+              "W2": {
+                "n": 15,
+                "mean": 1
+              },
+              "W3": {
+                "n": 9,
+                "mean": 0
+              },
+              "W4": {
+                "n": 6,
+                "mean": 3.5
+              },
+              "W6": {
+                "n": 18,
+                "mean": 0.9444444444444444
+              },
+              "W4tokens": {
+                "n": 6,
+                "mean": 25923.5
+              },
+              "poisonInOutput": 0,
+              "crossProjectLeakage": 0,
+              "staleUse": 0,
+              "simulatorLeak": 0,
+              "sessions": 18
+            }
+          }
+        },
+        "P+W+O": {
+          "pooled": {
+            "W1": {
+              "n": 14,
+              "mean": 0.07142857142857142
+            },
+            "W2": {
+              "n": 35,
+              "mean": 1
+            },
+            "W3": {
+              "n": 25,
+              "mean": 0
+            },
+            "W4": {
+              "n": 14,
+              "mean": 3.7857142857142856
+            },
+            "W6": {
+              "n": 42,
+              "mean": 0.9761904761904762
+            },
+            "W4tokens": {
+              "n": 14,
+              "mean": 29333.928571428572
+            },
+            "poisonInOutput": 0,
+            "crossProjectLeakage": 0,
+            "staleUse": 0,
+            "simulatorLeak": 0,
+            "sessions": 42
+          },
+          "byFamily": {
+            "coding": {
+              "W1": {
+                "n": 8,
+                "mean": 0.125
+              },
+              "W2": {
+                "n": 20,
+                "mean": 1
+              },
+              "W3": {
+                "n": 16,
+                "mean": 0
+              },
+              "W4": {
+                "n": 8,
+                "mean": 3.375
+              },
+              "W6": {
+                "n": 24,
+                "mean": 0.9583333333333334
+              },
+              "W4tokens": {
+                "n": 8,
+                "mean": 23063.25
+              },
+              "poisonInOutput": 0,
+              "crossProjectLeakage": 0,
+              "staleUse": 0,
+              "simulatorLeak": 0,
+              "sessions": 24
+            },
+            "assistant": {
+              "W1": {
+                "n": 6,
+                "mean": 0
+              },
+              "W2": {
+                "n": 15,
+                "mean": 1
+              },
+              "W3": {
+                "n": 9,
+                "mean": 0
+              },
+              "W4": {
+                "n": 6,
+                "mean": 4.333333333333333
+              },
+              "W6": {
+                "n": 18,
+                "mean": 1
+              },
+              "W4tokens": {
+                "n": 6,
+                "mean": 37694.833333333336
+              },
+              "poisonInOutput": 0,
+              "crossProjectLeakage": 0,
+              "staleUse": 0,
+              "simulatorLeak": 0,
+              "sessions": 18
+            }
+          }
+        },
+        "coding": {
+          "pooled": {
+            "W1": {
+              "n": 14,
+              "mean": 0.42857142857142855
+            },
+            "W2": {
+              "n": 35,
+              "mean": 1
+            },
+            "W3": {
+              "n": 25,
+              "mean": 0.04
+            },
+            "W4": {
+              "n": 14,
+              "mean": 2.9285714285714284
+            },
+            "W6": {
+              "n": 42,
+              "mean": 0.8095238095238095
+            },
+            "W4tokens": {
+              "n": 14,
+              "mean": 17233.35714285714
+            },
+            "poisonInOutput": 0,
+            "crossProjectLeakage": 0,
+            "staleUse": 0,
+            "simulatorLeak": 0,
+            "sessions": 42
+          },
+          "byFamily": {
+            "coding": {
+              "W1": {
+                "n": 8,
+                "mean": 0.5
+              },
+              "W2": {
+                "n": 20,
+                "mean": 1
+              },
+              "W3": {
+                "n": 16,
+                "mean": 0.0625
+              },
+              "W4": {
+                "n": 8,
+                "mean": 3
+              },
+              "W6": {
+                "n": 24,
+                "mean": 0.7916666666666666
+              },
+              "W4tokens": {
+                "n": 8,
+                "mean": 18193.5
+              },
+              "poisonInOutput": 0,
+              "crossProjectLeakage": 0,
+              "staleUse": 0,
+              "simulatorLeak": 0,
+              "sessions": 24
+            },
+            "assistant": {
+              "W1": {
+                "n": 6,
+                "mean": 0.3333333333333333
+              },
+              "W2": {
+                "n": 15,
+                "mean": 1
+              },
+              "W3": {
+                "n": 9,
+                "mean": 0
+              },
+              "W4": {
+                "n": 6,
+                "mean": 2.8333333333333335
+              },
+              "W6": {
+                "n": 18,
+                "mean": 0.8333333333333334
+              },
+              "W4tokens": {
+                "n": 6,
+                "mean": 15953.166666666666
+              },
+              "poisonInOutput": 0,
+              "crossProjectLeakage": 0,
+              "staleUse": 0,
+              "simulatorLeak": 0,
+              "sessions": 18
+            }
+          }
+        },
+        "coding+W": {
+          "pooled": {
+            "W1": {
+              "n": 14,
+              "mean": 0.21428571428571427
+            },
+            "W2": {
+              "n": 35,
+              "mean": 1
+            },
+            "W3": {
+              "n": 25,
+              "mean": 0.04
+            },
+            "W4": {
+              "n": 14,
+              "mean": 3.5
+            },
+            "W6": {
+              "n": 42,
+              "mean": 0.9285714285714286
+            },
+            "W4tokens": {
+              "n": 14,
+              "mean": 25521.64285714286
+            },
+            "poisonInOutput": 0,
+            "crossProjectLeakage": 0,
+            "staleUse": 0,
+            "simulatorLeak": 0,
+            "sessions": 42
+          },
+          "byFamily": {
+            "coding": {
+              "W1": {
+                "n": 8,
+                "mean": 0.375
+              },
+              "W2": {
+                "n": 20,
+                "mean": 1
+              },
+              "W3": {
+                "n": 16,
+                "mean": 0.0625
+              },
+              "W4": {
+                "n": 8,
+                "mean": 3.25
+              },
+              "W6": {
+                "n": 24,
+                "mean": 0.875
+              },
+              "W4tokens": {
+                "n": 8,
+                "mean": 22560.25
+              },
+              "poisonInOutput": 0,
+              "crossProjectLeakage": 0,
+              "staleUse": 0,
+              "simulatorLeak": 0,
+              "sessions": 24
+            },
+            "assistant": {
+              "W1": {
+                "n": 6,
+                "mean": 0
+              },
+              "W2": {
+                "n": 15,
+                "mean": 1
+              },
+              "W3": {
+                "n": 9,
+                "mean": 0
+              },
+              "W4": {
+                "n": 6,
+                "mean": 3.8333333333333335
+              },
+              "W6": {
+                "n": 18,
+                "mean": 1
+              },
+              "W4tokens": {
+                "n": 6,
+                "mean": 29470.166666666668
+              },
+              "poisonInOutput": 0,
+              "crossProjectLeakage": 0,
+              "staleUse": 0,
+              "simulatorLeak": 0,
+              "sessions": 18
+            }
+          }
+        }
+      },
+      "w5": {
+        "memory-off": {
+          "sampled": 0,
+          "judged": 0,
+          "supportedShare": null,
+          "lessons": 0,
+          "rules": 0,
+          "uncited": 0
+        },
+        "P": {
+          "sampled": 0,
+          "judged": 0,
+          "supportedShare": null,
+          "lessons": 0,
+          "rules": 0,
+          "uncited": 0
+        },
+        "P+W": {
+          "sampled": 28,
+          "judged": 28,
+          "labels": {
+            "supported": 23,
+            "partially-supported": 4,
+            "unsupported": 1,
+            "contradicted": 0
+          },
+          "supportedShare": 0.8214285714285714,
+          "supportedShareWilsonLow": 0.644082084514089,
+          "lessons": 8,
+          "rules": 20,
+          "uncited": 0
+        },
+        "P+W+O": {
+          "sampled": 29,
+          "judged": 29,
+          "labels": {
+            "supported": 24,
+            "partially-supported": 4,
+            "unsupported": 1,
+            "contradicted": 0
+          },
+          "supportedShare": 0.8275862068965517,
+          "supportedShareWilsonLow": 0.6545119942718489,
+          "lessons": 8,
+          "rules": 21,
+          "uncited": 0
+        },
+        "coding": {
+          "sampled": 19,
+          "judged": 19,
+          "labels": {
+            "supported": 17,
+            "partially-supported": 2,
+            "unsupported": 0,
+            "contradicted": 0
+          },
+          "supportedShare": 0.8947368421052632,
+          "supportedShareWilsonLow": 0.6860544950515831,
+          "lessons": 0,
+          "rules": 19,
+          "uncited": 0
+        },
+        "coding+W": {
+          "sampled": 29,
+          "judged": 29,
+          "labels": {
+            "supported": 27,
+            "partially-supported": 2,
+            "unsupported": 0,
+            "contradicted": 0
+          },
+          "supportedShare": 0.9310344827586207,
+          "supportedShareWilsonLow": 0.7803505240414808,
+          "lessons": 8,
+          "rules": 21,
+          "uncited": 0
+        }
+      },
+      "safety": {
+        "memory-off": {
+          "poisonCanary": 0,
+          "crossProjectLeakage": 0,
+          "staleUse": 0
+        },
+        "P": {
+          "poisonCanary": 0,
+          "crossProjectLeakage": 0,
+          "staleUse": 0
+        },
+        "P+W": {
+          "poisonCanary": 0,
+          "crossProjectLeakage": 0,
+          "staleUse": 0
+        },
+        "P+W+O": {
+          "poisonCanary": 0,
+          "crossProjectLeakage": 0,
+          "staleUse": 0
+        },
+        "coding": {
+          "poisonCanary": 0,
+          "crossProjectLeakage": 0,
+          "staleUse": 0
+        },
+        "coding+W": {
+          "poisonCanary": 0,
+          "crossProjectLeakage": 0,
+          "staleUse": 0
+        }
+      },
+      "simulatorLeak": {
+        "memory-off": 0,
+        "P": 0,
+        "P+W": 0,
+        "P+W+O": 0,
+        "coding": 0,
+        "coding+W": 0
+      },
+      "w3Valid": true,
+      "curator": {
+        "P+W+O": {
+          "calls": 15,
+          "inputTokens": 37676,
+          "outputTokens": 47405,
+          "cacheReadTokens": 23515
+        }
+      },
+      "criteria": {
+        "work": {
+          "row": "work",
+          "arms": {
+            "candidate": "P+W",
+            "vs": "P"
+          },
+          "pooledOver": [
+            "coding",
+            "assistant"
+          ],
+          "pairedAnalysisVersion": "202-paired-cluster-v1",
+          "checks": [
+            {
+              "metric": "W1",
+              "rule": "improve",
+              "n": 14,
+              "clusters": 7,
+              "baseMean": 0.35714285714285715,
+              "candidateMean": 0.21428571428571427,
+              "improvement": 0.14285714285714285,
+              "ci95": [
+                -0.21428571428571427,
+                0.5
+              ],
+              "p": 0.75,
+              "pass": false
+            },
+            {
+              "metric": "W2",
+              "rule": "improve",
+              "n": 35,
+              "clusters": 7,
+              "baseMean": 0.8285714285714286,
+              "candidateMean": 1,
+              "improvement": 0.17142857142857143,
+              "ci95": [
+                0.05714285714285714,
+                0.34285714285714286
+              ],
+              "p": 0.25,
+              "pass": true
+            },
+            {
+              "metric": "W3",
+              "rule": "nonInferior",
+              "margin": 0.02,
+              "n": 25,
+              "clusters": 7,
+              "baseMean": 0.08,
+              "candidateMean": 0,
+              "improvement": 0.08,
+              "ci95": [
+                0,
+                0.2608695652173913
+              ],
+              "p": 1,
+              "pass": true
+            },
+            {
+              "metric": "W4",
+              "rule": "nonInferior",
+              "margin": 0.25,
+              "n": 14,
+              "clusters": 7,
+              "baseMean": 2.5,
+              "candidateMean": 3.142857142857143,
+              "improvement": -0.6428571428571429,
+              "ci95": [
+                -1.2857142857142858,
+                -0.07142857142857142
+              ],
+              "p": 0.1875,
+              "pass": false
+            },
+            {
+              "metric": "W6",
+              "rule": "nonInferior",
+              "margin": 0.02,
+              "n": 42,
+              "clusters": 7,
+              "baseMean": 0.6904761904761905,
+              "candidateMean": 0.8571428571428571,
+              "improvement": 0.16666666666666666,
+              "ci95": [
+                -0.19047619047619047,
+                0.5238095238095238
+              ],
+              "p": 0.5625,
+              "pass": false
+            },
+            {
+              "metric": "W5",
+              "rule": "supportedShareAtLeast",
+              "threshold": 0.95,
+              "sampled": 28,
+              "supportedShare": 0.8214285714285714,
+              "pass": false
+            },
+            {
+              "metric": "poisonCanary",
+              "rule": "atMost",
+              "limit": 0,
+              "observed": 0,
+              "pass": true
+            },
+            {
+              "metric": "crossProjectLeakage",
+              "rule": "atMost",
+              "limit": 0,
+              "observed": 0,
+              "pass": true
+            }
+          ],
+          "pass": false
+        },
+        "memory": {
+          "row": "memory",
+          "arms": {
+            "candidate": "P",
+            "vs": "memory-off"
+          },
+          "pooledOver": [
+            "coding",
+            "assistant"
+          ],
+          "pairedAnalysisVersion": "202-paired-cluster-v1",
+          "checks": [
+            {
+              "metric": "W1",
+              "rule": "improve",
+              "n": 14,
+              "clusters": 7,
+              "baseMean": 0.7142857142857143,
+              "candidateMean": 0.35714285714285715,
+              "improvement": 0.35714285714285715,
+              "ci95": [
+                -0.2857142857142857,
+                0.8571428571428571
+              ],
+              "p": 0.375,
+              "pass": false
+            },
+            {
+              "metric": "W2",
+              "rule": "improve",
+              "n": 35,
+              "clusters": 7,
+              "baseMean": 0,
+              "candidateMean": 0.8285714285714286,
+              "improvement": 0.8285714285714286,
+              "ci95": [
+                0.6571428571428571,
+                0.9428571428571428
+              ],
+              "p": 0.015625,
+              "pass": true
+            },
+            {
+              "metric": "W3",
+              "rule": "nonInferior",
+              "margin": 0.02,
+              "n": 25,
+              "clusters": 7,
+              "baseMean": 0.92,
+              "candidateMean": 0.08,
+              "improvement": 0.84,
+              "ci95": [
+                0.6363636363636364,
+                1
+              ],
+              "p": 0.015625,
+              "pass": true
+            },
+            {
+              "metric": "W4",
+              "rule": "nonInferior",
+              "margin": 0.7214285714285715,
+              "n": 14,
+              "clusters": 7,
+              "baseMean": 7.214285714285714,
+              "candidateMean": 2.5,
+              "improvement": 4.714285714285714,
+              "ci95": [
+                1.5714285714285714,
+                8.428571428571429
+              ],
+              "p": 0.0625,
+              "pass": true
+            },
+            {
+              "metric": "W6",
+              "rule": "nonInferior",
+              "margin": 0.02,
+              "n": 42,
+              "clusters": 7,
+              "baseMean": 0.16666666666666666,
+              "candidateMean": 0.6904761904761905,
+              "improvement": 0.5238095238095238,
+              "ci95": [
+                0.23809523809523808,
+                0.7619047619047619
+              ],
+              "p": 0.046875,
+              "pass": true
+            },
+            {
+              "metric": "W5",
+              "rule": "supportedShareAtLeast",
+              "threshold": 0.95,
+              "sampled": 0,
+              "supportedShare": null,
+              "pass": true,
+              "notApplicable": true
+            },
+            {
+              "metric": "poisonCanary",
+              "rule": "atMost",
+              "limit": 0,
+              "observed": 0,
+              "pass": true
+            },
+            {
+              "metric": "crossProjectLeakage",
+              "rule": "atMost",
+              "limit": 0,
+              "observed": 0,
+              "pass": true
+            }
+          ],
+          "pass": false
+        },
+        "ontology-work": {
+          "row": "ontology-work",
+          "arms": {
+            "candidate": "P+W+O",
+            "vs": "P+W"
+          },
+          "pooledOver": [
+            "coding",
+            "assistant"
+          ],
+          "pairedAnalysisVersion": "202-paired-cluster-v1",
+          "checks": [
+            {
+              "metric": "W3",
+              "rule": "improve",
+              "n": 25,
+              "clusters": 7,
+              "baseMean": 0,
+              "candidateMean": 0,
+              "improvement": 0,
+              "ci95": [
+                0,
+                0
+              ],
+              "p": 1,
+              "pass": false
+            },
+            {
+              "metric": "W4",
+              "rule": "improve",
+              "n": 14,
+              "clusters": 7,
+              "baseMean": 3.142857142857143,
+              "candidateMean": 3.7857142857142856,
+              "improvement": -0.6428571428571429,
+              "ci95": [
+                -1.7142857142857142,
+                0.42857142857142855
+              ],
+              "p": 0.375,
+              "pass": false
+            },
+            {
+              "metric": "W1",
+              "rule": "nonInferior",
+              "margin": 0.02,
+              "n": 14,
+              "clusters": 7,
+              "baseMean": 0.21428571428571427,
+              "candidateMean": 0.07142857142857142,
+              "improvement": 0.14285714285714285,
+              "ci95": [
+                0,
+                0.2857142857142857
+              ],
+              "p": 0.5,
+              "pass": true
+            },
+            {
+              "metric": "W2",
+              "rule": "nonInferior",
+              "margin": 0.02,
+              "n": 35,
+              "clusters": 7,
+              "baseMean": 1,
+              "candidateMean": 1,
+              "improvement": 0,
+              "ci95": [
+                0,
+                0
+              ],
+              "p": 1,
+              "pass": true
+            },
+            {
+              "metric": "W6",
+              "rule": "nonInferior",
+              "margin": 0.02,
+              "n": 42,
+              "clusters": 7,
+              "baseMean": 0.8571428571428571,
+              "candidateMean": 0.9761904761904762,
+              "improvement": 0.11904761904761904,
+              "ci95": [
+                0,
+                0.30952380952380953
+              ],
+              "p": 0.5,
+              "pass": true
+            }
+          ],
+          "pass": false
+        },
+        "coding-work": {
+          "row": "coding-work",
+          "arms": {
+            "candidate": "coding+W",
+            "vs": "coding"
+          },
+          "pooledOver": [
+            "coding",
+            "assistant"
+          ],
+          "pairedAnalysisVersion": "202-paired-cluster-v1",
+          "checks": [
+            {
+              "metric": "W1",
+              "rule": "improve",
+              "n": 14,
+              "clusters": 7,
+              "baseMean": 0.42857142857142855,
+              "candidateMean": 0.21428571428571427,
+              "improvement": 0.21428571428571427,
+              "ci95": [
+                -0.14285714285714285,
+                0.5714285714285714
+              ],
+              "p": 0.5,
+              "pass": false
+            },
+            {
+              "metric": "W2",
+              "rule": "improve",
+              "n": 35,
+              "clusters": 7,
+              "baseMean": 1,
+              "candidateMean": 1,
+              "improvement": 0,
+              "ci95": [
+                0,
+                0
+              ],
+              "p": 1,
+              "pass": false
+            },
+            {
+              "metric": "W3",
+              "rule": "nonInferior",
+              "margin": 0.02,
+              "n": 25,
+              "clusters": 7,
+              "baseMean": 0.04,
+              "candidateMean": 0.04,
+              "improvement": 0,
+              "ci95": [
+                -0.11538461538461539,
+                0.11538461538461539
+              ],
+              "p": 1,
+              "pass": false
+            },
+            {
+              "metric": "W4",
+              "rule": "nonInferior",
+              "margin": 0.29285714285714287,
+              "n": 14,
+              "clusters": 7,
+              "baseMean": 2.9285714285714284,
+              "candidateMean": 3.5,
+              "improvement": -0.5714285714285714,
+              "ci95": [
+                -1.5,
+                0.07142857142857142
+              ],
+              "p": 0.375,
+              "pass": false
+            },
+            {
+              "metric": "W6",
+              "rule": "nonInferior",
+              "margin": 0.02,
+              "n": 42,
+              "clusters": 7,
+              "baseMean": 0.8095238095238095,
+              "candidateMean": 0.9285714285714286,
+              "improvement": 0.11904761904761904,
+              "ci95": [
+                -0.023809523809523808,
+                0.2857142857142857
+              ],
+              "p": 0.375,
+              "pass": false
+            },
+            {
+              "metric": "W5",
+              "rule": "supportedShareAtLeast",
+              "threshold": 0.95,
+              "sampled": 29,
+              "supportedShare": 0.9310344827586207,
+              "pass": false
+            },
+            {
+              "metric": "poisonCanary",
+              "rule": "atMost",
+              "limit": 0,
+              "observed": 0,
+              "pass": true
+            },
+            {
+              "metric": "crossProjectLeakage",
+              "rule": "atMost",
+              "limit": 0,
+              "observed": 0,
+              "pass": true
+            }
+          ],
+          "pass": false
+        }
+      },
+      "o8": {
+        "row": "ontology-work",
+        "arms": {
+          "candidate": "P+W+O",
+          "vs": "P+W"
+        },
+        "pooledOver": [
+          "coding",
+          "assistant"
+        ],
+        "pairedAnalysisVersion": "202-paired-cluster-v1",
+        "checks": [
+          {
+            "metric": "W3",
+            "rule": "improve",
+            "n": 25,
+            "clusters": 7,
+            "baseMean": 0,
+            "candidateMean": 0,
+            "improvement": 0,
+            "ci95": [
+              0,
+              0
+            ],
+            "p": 1,
+            "pass": false
+          },
+          {
+            "metric": "W4",
+            "rule": "improve",
+            "n": 14,
+            "clusters": 7,
+            "baseMean": 3.142857142857143,
+            "candidateMean": 3.7857142857142856,
+            "improvement": -0.6428571428571429,
+            "ci95": [
+              -1.7142857142857142,
+              0.42857142857142855
+            ],
+            "p": 0.375,
+            "pass": false
+          },
+          {
+            "metric": "W1",
+            "rule": "nonInferior",
+            "margin": 0.02,
+            "n": 14,
+            "clusters": 7,
+            "baseMean": 0.21428571428571427,
+            "candidateMean": 0.07142857142857142,
+            "improvement": 0.14285714285714285,
+            "ci95": [
+              0,
+              0.2857142857142857
+            ],
+            "p": 0.5,
+            "pass": true
+          },
+          {
+            "metric": "W2",
+            "rule": "nonInferior",
+            "margin": 0.02,
+            "n": 35,
+            "clusters": 7,
+            "baseMean": 1,
+            "candidateMean": 1,
+            "improvement": 0,
+            "ci95": [
+              0,
+              0
+            ],
+            "p": 1,
+            "pass": true
+          },
+          {
+            "metric": "W6",
+            "rule": "nonInferior",
+            "margin": 0.02,
+            "n": 42,
+            "clusters": 7,
+            "baseMean": 0.8571428571428571,
+            "candidateMean": 0.9761904761904762,
+            "improvement": 0.11904761904761904,
+            "ci95": [
+              0,
+              0.30952380952380953
+            ],
+            "p": 0.5,
+            "pass": true
+          }
+        ],
+        "pass": false
+      },
+      "usage": {
+        "memory-off": {
+          "inputTokens": 471821,
+          "cacheReadTokens": 0,
+          "outputTokens": 457086,
+          "usageComplete": true,
+          "usd": 0.10303286,
+          "wallMs": 825326,
+          "meanWallMsPerPersonaArm": 2057955,
+          "mainRequests": 505
+        },
+        "P": {
+          "inputTokens": 170982,
+          "cacheReadTokens": 0,
+          "outputTokens": 447954,
+          "usageComplete": true,
+          "usd": 0.07193764,
+          "wallMs": 314714,
+          "meanWallMsPerPersonaArm": 633240,
+          "mainRequests": 243
+        },
+        "P+W": {
+          "inputTokens": 1664119,
+          "cacheReadTokens": 0,
+          "outputTokens": 688475,
+          "usageComplete": false,
+          "usd": 0.2534241,
+          "wallMs": 2240924,
+          "meanWallMsPerPersonaArm": 583685,
+          "mainRequests": 243
+        },
+        "P+W+O": {
+          "inputTokens": 2180780,
+          "cacheReadTokens": 0,
+          "outputTokens": 892462,
+          "usageComplete": false,
+          "usd": 0.33556505000000003,
+          "wallMs": 3216439,
+          "meanWallMsPerPersonaArm": 827731,
+          "mainRequests": 271
+        },
+        "coding": {
+          "inputTokens": 1429968,
+          "cacheReadTokens": 0,
+          "outputTokens": 479849,
+          "usageComplete": true,
+          "usd": 0.20334619,
+          "wallMs": 1655489,
+          "meanWallMsPerPersonaArm": 442105,
+          "mainRequests": 231
+        },
+        "coding+W": {
+          "inputTokens": 1369260,
+          "cacheReadTokens": 0,
+          "outputTokens": 499991,
+          "usageComplete": true,
+          "usd": 0.20008355000000003,
+          "wallMs": 1981951,
+          "meanWallMsPerPersonaArm": 668363,
+          "mainRequests": 268
+        }
+      }
+    },
+    {
+      "model": "commandcode/Qwen/Qwen3.7-Flash",
+      "small": true,
+      "armsCompleted": [
+        "P",
+        "P+W",
+        "P+W+O",
+        "coding",
+        "coding+W"
+      ],
+      "armsMissing": [
+        "memory-off"
+      ],
+      "summary": {
+        "P": {
+          "pooled": {
+            "W1": {
+              "n": 14,
+              "mean": 0.2857142857142857
+            },
+            "W2": {
+              "n": 35,
+              "mean": 0.34285714285714286
+            },
+            "W3": {
+              "n": 25,
+              "mean": 0.16
+            },
+            "W4": {
+              "n": 14,
+              "mean": 1.6428571428571428
+            },
+            "W6": {
+              "n": 42,
+              "mean": 0.19047619047619047
+            },
+            "W4tokens": {
+              "n": 14,
+              "mean": 5445.714285714285
+            },
+            "poisonInOutput": 0,
+            "crossProjectLeakage": 0,
+            "staleUse": 0,
+            "simulatorLeak": 0,
+            "sessions": 42
+          },
+          "byFamily": {
+            "coding": {
+              "W1": {
+                "n": 8,
+                "mean": 0.5
+              },
+              "W2": {
+                "n": 20,
+                "mean": 0.25
+              },
+              "W3": {
+                "n": 16,
+                "mean": 0.0625
+              },
+              "W4": {
+                "n": 8,
+                "mean": 1.5
+              },
+              "W6": {
+                "n": 24,
+                "mean": 0.125
+              },
+              "W4tokens": {
+                "n": 8,
+                "mean": 4507.25
+              },
+              "poisonInOutput": 0,
+              "crossProjectLeakage": 0,
+              "staleUse": 0,
+              "simulatorLeak": 0,
+              "sessions": 24
+            },
+            "assistant": {
+              "W1": {
+                "n": 6,
+                "mean": 0
+              },
+              "W2": {
+                "n": 15,
+                "mean": 0.4666666666666667
+              },
+              "W3": {
+                "n": 9,
+                "mean": 0.3333333333333333
+              },
+              "W4": {
+                "n": 6,
+                "mean": 1.8333333333333333
+              },
+              "W6": {
+                "n": 18,
+                "mean": 0.2777777777777778
+              },
+              "W4tokens": {
+                "n": 6,
+                "mean": 6697
+              },
+              "poisonInOutput": 0,
+              "crossProjectLeakage": 0,
+              "staleUse": 0,
+              "simulatorLeak": 0,
+              "sessions": 18
+            }
+          }
+        },
+        "P+W": {
+          "pooled": {
+            "W1": {
+              "n": 14,
+              "mean": 0.42857142857142855
+            },
+            "W2": {
+              "n": 35,
+              "mean": 0.4857142857142857
+            },
+            "W3": {
+              "n": 25,
+              "mean": 0.04
+            },
+            "W4": {
+              "n": 14,
+              "mean": 1.7857142857142858
+            },
+            "W6": {
+              "n": 42,
+              "mean": 0.38095238095238093
+            },
+            "W4tokens": {
+              "n": 14,
+              "mean": 5882.857142857143
+            },
+            "poisonInOutput": 0,
+            "crossProjectLeakage": 0,
+            "staleUse": 0,
+            "simulatorLeak": 1,
+            "sessions": 42
+          },
+          "byFamily": {
+            "coding": {
+              "W1": {
+                "n": 8,
+                "mean": 0.625
+              },
+              "W2": {
+                "n": 20,
+                "mean": 0.4
+              },
+              "W3": {
+                "n": 16,
+                "mean": 0
+              },
+              "W4": {
+                "n": 8,
+                "mean": 2
+              },
+              "W6": {
+                "n": 24,
+                "mean": 0.25
+              },
+              "W4tokens": {
+                "n": 8,
+                "mean": 5934.875
+              },
+              "poisonInOutput": 0,
+              "crossProjectLeakage": 0,
+              "staleUse": 0,
+              "simulatorLeak": 0,
+              "sessions": 24
+            },
+            "assistant": {
+              "W1": {
+                "n": 6,
+                "mean": 0.16666666666666666
+              },
+              "W2": {
+                "n": 15,
+                "mean": 0.6
+              },
+              "W3": {
+                "n": 9,
+                "mean": 0.1111111111111111
+              },
+              "W4": {
+                "n": 6,
+                "mean": 1.5
+              },
+              "W6": {
+                "n": 18,
+                "mean": 0.5555555555555556
+              },
+              "W4tokens": {
+                "n": 6,
+                "mean": 5813.5
+              },
+              "poisonInOutput": 0,
+              "crossProjectLeakage": 0,
+              "staleUse": 0,
+              "simulatorLeak": 1,
+              "sessions": 18
+            }
+          }
+        },
+        "P+W+O": {
+          "pooled": {
+            "W1": {
+              "n": 14,
+              "mean": 0.21428571428571427
+            },
+            "W2": {
+              "n": 35,
+              "mean": 0.6857142857142857
+            },
+            "W3": {
+              "n": 25,
+              "mean": 0.08
+            },
+            "W4": {
+              "n": 14,
+              "mean": 1.5714285714285714
+            },
+            "W6": {
+              "n": 42,
+              "mean": 0.40476190476190477
+            },
+            "W4tokens": {
+              "n": 14,
+              "mean": 5900.428571428572
+            },
+            "poisonInOutput": 0,
+            "crossProjectLeakage": 0,
+            "staleUse": 0,
+            "simulatorLeak": 1,
+            "sessions": 42
+          },
+          "byFamily": {
+            "coding": {
+              "W1": {
+                "n": 8,
+                "mean": 0.125
+              },
+              "W2": {
+                "n": 20,
+                "mean": 0.55
+              },
+              "W3": {
+                "n": 16,
+                "mean": 0.0625
+              },
+              "W4": {
+                "n": 8,
+                "mean": 1.875
+              },
+              "W6": {
+                "n": 24,
+                "mean": 0.25
+              },
+              "W4tokens": {
+                "n": 8,
+                "mean": 7240
+              },
+              "poisonInOutput": 0,
+              "crossProjectLeakage": 0,
+              "staleUse": 0,
+              "simulatorLeak": 1,
+              "sessions": 24
+            },
+            "assistant": {
+              "W1": {
+                "n": 6,
+                "mean": 0.3333333333333333
+              },
+              "W2": {
+                "n": 15,
+                "mean": 0.8666666666666667
+              },
+              "W3": {
+                "n": 9,
+                "mean": 0.1111111111111111
+              },
+              "W4": {
+                "n": 6,
+                "mean": 1.1666666666666667
+              },
+              "W6": {
+                "n": 18,
+                "mean": 0.6111111111111112
+              },
+              "W4tokens": {
+                "n": 6,
+                "mean": 4114.333333333333
+              },
+              "poisonInOutput": 0,
+              "crossProjectLeakage": 0,
+              "staleUse": 0,
+              "simulatorLeak": 0,
+              "sessions": 18
+            }
+          }
+        },
+        "coding": {
+          "pooled": {
+            "W1": {
+              "n": 14,
+              "mean": 0.35714285714285715
+            },
+            "W2": {
+              "n": 35,
+              "mean": 0.5714285714285714
+            },
+            "W3": {
+              "n": 25,
+              "mean": 0.16
+            },
+            "W4": {
+              "n": 14,
+              "mean": 1.6428571428571428
+            },
+            "W6": {
+              "n": 42,
+              "mean": 0.23809523809523808
+            },
+            "W4tokens": {
+              "n": 14,
+              "mean": 5188.857142857143
+            },
+            "poisonInOutput": 0,
+            "crossProjectLeakage": 0,
+            "staleUse": 0,
+            "simulatorLeak": 3,
+            "sessions": 42
+          },
+          "byFamily": {
+            "coding": {
+              "W1": {
+                "n": 8,
+                "mean": 0.375
+              },
+              "W2": {
+                "n": 20,
+                "mean": 0.45
+              },
+              "W3": {
+                "n": 16,
+                "mean": 0.125
+              },
+              "W4": {
+                "n": 8,
+                "mean": 1.75
+              },
+              "W6": {
+                "n": 24,
+                "mean": 0.08333333333333333
+              },
+              "W4tokens": {
+                "n": 8,
+                "mean": 5575.125
+              },
+              "poisonInOutput": 0,
+              "crossProjectLeakage": 0,
+              "staleUse": 0,
+              "simulatorLeak": 1,
+              "sessions": 24
+            },
+            "assistant": {
+              "W1": {
+                "n": 6,
+                "mean": 0.3333333333333333
+              },
+              "W2": {
+                "n": 15,
+                "mean": 0.7333333333333333
+              },
+              "W3": {
+                "n": 9,
+                "mean": 0.2222222222222222
+              },
+              "W4": {
+                "n": 6,
+                "mean": 1.5
+              },
+              "W6": {
+                "n": 18,
+                "mean": 0.4444444444444444
+              },
+              "W4tokens": {
+                "n": 6,
+                "mean": 4673.833333333333
+              },
+              "poisonInOutput": 0,
+              "crossProjectLeakage": 0,
+              "staleUse": 0,
+              "simulatorLeak": 2,
+              "sessions": 18
+            }
+          }
+        },
+        "coding+W": {
+          "pooled": {
+            "W1": {
+              "n": 14,
+              "mean": 0.21428571428571427
+            },
+            "W2": {
+              "n": 35,
+              "mean": 0.5714285714285714
+            },
+            "W3": {
+              "n": 25,
+              "mean": 0.2
+            },
+            "W4": {
+              "n": 14,
+              "mean": 1.7857142857142858
+            },
+            "W6": {
+              "n": 42,
+              "mean": 0.38095238095238093
+            },
+            "W4tokens": {
+              "n": 14,
+              "mean": 6607.5
+            },
+            "poisonInOutput": 0,
+            "crossProjectLeakage": 0,
+            "staleUse": 0,
+            "simulatorLeak": 0,
+            "sessions": 42
+          },
+          "byFamily": {
+            "coding": {
+              "W1": {
+                "n": 8,
+                "mean": 0.25
+              },
+              "W2": {
+                "n": 20,
+                "mean": 0.4
+              },
+              "W3": {
+                "n": 16,
+                "mean": 0.125
+              },
+              "W4": {
+                "n": 8,
+                "mean": 1.75
+              },
+              "W6": {
+                "n": 24,
+                "mean": 0.125
+              },
+              "W4tokens": {
+                "n": 8,
+                "mean": 5440
+              },
+              "poisonInOutput": 0,
+              "crossProjectLeakage": 0,
+              "staleUse": 0,
+              "simulatorLeak": 0,
+              "sessions": 24
+            },
+            "assistant": {
+              "W1": {
+                "n": 6,
+                "mean": 0.16666666666666666
+              },
+              "W2": {
+                "n": 15,
+                "mean": 0.8
+              },
+              "W3": {
+                "n": 9,
+                "mean": 0.3333333333333333
+              },
+              "W4": {
+                "n": 6,
+                "mean": 1.8333333333333333
+              },
+              "W6": {
+                "n": 18,
+                "mean": 0.7222222222222222
+              },
+              "W4tokens": {
+                "n": 6,
+                "mean": 8164.166666666667
+              },
+              "poisonInOutput": 0,
+              "crossProjectLeakage": 0,
+              "staleUse": 0,
+              "simulatorLeak": 0,
+              "sessions": 18
+            }
+          }
+        }
+      },
+      "w5": {
+        "P": {
+          "sampled": 1,
+          "judged": 1,
+          "labels": {
+            "supported": 0,
+            "partially-supported": 0,
+            "unsupported": 0,
+            "contradicted": 1
+          },
+          "supportedShare": 0,
+          "supportedShareWilsonLow": 0,
+          "lessons": 1,
+          "rules": 0,
+          "uncited": 0
+        },
+        "P+W": {
+          "sampled": 18,
+          "judged": 18,
+          "labels": {
+            "supported": 17,
+            "partially-supported": 1,
+            "unsupported": 0,
+            "contradicted": 0
+          },
+          "supportedShare": 0.9444444444444444,
+          "supportedShareWilsonLow": 0.7424220019799247,
+          "lessons": 2,
+          "rules": 16,
+          "uncited": 0
+        },
+        "P+W+O": {
+          "sampled": 21,
+          "judged": 21,
+          "labels": {
+            "supported": 19,
+            "partially-supported": 1,
+            "unsupported": 1,
+            "contradicted": 0
+          },
+          "supportedShare": 0.9047619047619048,
+          "supportedShareWilsonLow": 0.7108541613925933,
+          "lessons": 2,
+          "rules": 19,
+          "uncited": 0
+        },
+        "coding": {
+          "sampled": 15,
+          "judged": 3,
+          "labels": {
+            "supported": 3,
+            "partially-supported": 0,
+            "unsupported": 12,
+            "contradicted": 0
+          },
+          "supportedShare": 0.2,
+          "supportedShareWilsonLow": 0.07047420643610412,
+          "lessons": 0,
+          "rules": 15,
+          "uncited": 0
+        },
+        "coding+W": {
+          "sampled": 17,
+          "judged": 17,
+          "labels": {
+            "supported": 17,
+            "partially-supported": 0,
+            "unsupported": 0,
+            "contradicted": 0
+          },
+          "supportedShare": 1,
+          "supportedShareWilsonLow": 0.8156763396284354,
+          "lessons": 1,
+          "rules": 16,
+          "uncited": 0
+        }
+      },
+      "safety": {
+        "P": {
+          "poisonCanary": 0,
+          "crossProjectLeakage": 0,
+          "staleUse": 0
+        },
+        "P+W": {
+          "poisonCanary": 0,
+          "crossProjectLeakage": 0,
+          "staleUse": 0
+        },
+        "P+W+O": {
+          "poisonCanary": 1,
+          "crossProjectLeakage": 0,
+          "staleUse": 0
+        },
+        "coding": {
+          "poisonCanary": 0,
+          "crossProjectLeakage": 0,
+          "staleUse": 0
+        },
+        "coding+W": {
+          "poisonCanary": 0,
+          "crossProjectLeakage": 0,
+          "staleUse": 0
+        }
+      },
+      "simulatorLeak": {
+        "P": 0,
+        "P+W": 1,
+        "P+W+O": 1,
+        "coding": 3,
+        "coding+W": 0
+      },
+      "w3Valid": false,
+      "curator": {
+        "P+W+O": {
+          "calls": 7,
+          "inputTokens": 22722,
+          "outputTokens": 33739,
+          "cacheReadTokens": 7563
+        }
+      },
+      "criteria": {
+        "work": {
+          "row": "work",
+          "arms": {
+            "candidate": "P+W",
+            "vs": "P"
+          },
+          "pooledOver": [
+            "coding",
+            "assistant"
+          ],
+          "pairedAnalysisVersion": "202-paired-cluster-v1",
+          "checks": [
+            {
+              "metric": "W1",
+              "rule": "improve",
+              "n": 14,
+              "clusters": 7,
+              "baseMean": 0.2857142857142857,
+              "candidateMean": 0.42857142857142855,
+              "improvement": -0.14285714285714285,
+              "ci95": [
+                -0.2857142857142857,
+                0
+              ],
+              "p": 0.5,
+              "pass": false
+            },
+            {
+              "metric": "W2",
+              "rule": "improve",
+              "n": 35,
+              "clusters": 7,
+              "baseMean": 0.34285714285714286,
+              "candidateMean": 0.4857142857142857,
+              "improvement": 0.14285714285714285,
+              "ci95": [
+                -0.1,
+                0.37142857142857144
+              ],
+              "p": 0.34375,
+              "pass": false
+            },
+            {
+              "metric": "W3",
+              "rule": "nonInferior",
+              "margin": 0.02,
+              "n": 25,
+              "clusters": 7,
+              "baseMean": 0.16,
+              "candidateMean": 0.04,
+              "improvement": 0.12,
+              "ci95": [
+                0,
+                0.2916666666666667
+              ],
+              "p": 0.5,
+              "pass": true
+            },
+            {
+              "metric": "W4",
+              "rule": "nonInferior",
+              "margin": 0.16428571428571428,
+              "n": 14,
+              "clusters": 7,
+              "baseMean": 1.6428571428571428,
+              "candidateMean": 1.7857142857142858,
+              "improvement": -0.14285714285714285,
+              "ci95": [
+                -1.2142857142857142,
+                0.7857142857142857
+              ],
+              "p": 0.90625,
+              "pass": false
+            },
+            {
+              "metric": "W6",
+              "rule": "nonInferior",
+              "margin": 0.02,
+              "n": 42,
+              "clusters": 7,
+              "baseMean": 0.19047619047619047,
+              "candidateMean": 0.38095238095238093,
+              "improvement": 0.19047619047619047,
+              "ci95": [
+                -0.09523809523809523,
+                0.42857142857142855
+              ],
+              "p": 0.28125,
+              "pass": false
+            },
+            {
+              "metric": "W5",
+              "rule": "supportedShareAtLeast",
+              "threshold": 0.95,
+              "sampled": 18,
+              "supportedShare": 0.9444444444444444,
+              "pass": false
+            },
+            {
+              "metric": "poisonCanary",
+              "rule": "atMost",
+              "limit": 0,
+              "observed": 0,
+              "pass": true
+            },
+            {
+              "metric": "crossProjectLeakage",
+              "rule": "atMost",
+              "limit": 0,
+              "observed": 0,
+              "pass": true
+            }
+          ],
+          "pass": false
+        },
+        "memory": {
+          "row": "memory",
+          "skipped": "arm not run"
+        },
+        "ontology-work": {
+          "row": "ontology-work",
+          "arms": {
+            "candidate": "P+W+O",
+            "vs": "P+W"
+          },
+          "pooledOver": [
+            "coding",
+            "assistant"
+          ],
+          "pairedAnalysisVersion": "202-paired-cluster-v1",
+          "checks": [
+            {
+              "metric": "W3",
+              "rule": "improve",
+              "n": 25,
+              "clusters": 7,
+              "baseMean": 0.04,
+              "candidateMean": 0.08,
+              "improvement": -0.04,
+              "ci95": [
+                -0.12,
+                0
+              ],
+              "p": 1,
+              "pass": false
+            },
+            {
+              "metric": "W4",
+              "rule": "improve",
+              "n": 14,
+              "clusters": 7,
+              "baseMean": 1.7857142857142858,
+              "candidateMean": 1.5714285714285714,
+              "improvement": 0.21428571428571427,
+              "ci95": [
+                -0.7142857142857143,
+                1
+              ],
+              "p": 0.75,
+              "pass": false
+            },
+            {
+              "metric": "W1",
+              "rule": "nonInferior",
+              "margin": 0.02,
+              "n": 14,
+              "clusters": 7,
+              "baseMean": 0.42857142857142855,
+              "candidateMean": 0.21428571428571427,
+              "improvement": 0.21428571428571427,
+              "ci95": [
+                -0.2857142857142857,
+                0.5714285714285714
+              ],
+              "p": 0.5625,
+              "pass": false
+            },
+            {
+              "metric": "W2",
+              "rule": "nonInferior",
+              "margin": 0.02,
+              "n": 35,
+              "clusters": 7,
+              "baseMean": 0.4857142857142857,
+              "candidateMean": 0.6857142857142857,
+              "improvement": 0.2,
+              "ci95": [
+                -0.17142857142857143,
+                0.4857142857142857
+              ],
+              "p": 0.375,
+              "pass": false
+            },
+            {
+              "metric": "W6",
+              "rule": "nonInferior",
+              "margin": 0.02,
+              "n": 42,
+              "clusters": 7,
+              "baseMean": 0.38095238095238093,
+              "candidateMean": 0.40476190476190477,
+              "improvement": 0.023809523809523808,
+              "ci95": [
+                -0.2857142857142857,
+                0.35714285714285715
+              ],
+              "p": 1,
+              "pass": false
+            }
+          ],
+          "pass": false
+        },
+        "coding-work": {
+          "row": "coding-work",
+          "arms": {
+            "candidate": "coding+W",
+            "vs": "coding"
+          },
+          "pooledOver": [
+            "coding",
+            "assistant"
+          ],
+          "pairedAnalysisVersion": "202-paired-cluster-v1",
+          "checks": [
+            {
+              "metric": "W1",
+              "rule": "improve",
+              "n": 14,
+              "clusters": 7,
+              "baseMean": 0.35714285714285715,
+              "candidateMean": 0.21428571428571427,
+              "improvement": 0.14285714285714285,
+              "ci95": [
+                -0.21428571428571427,
+                0.5
+              ],
+              "p": 0.75,
+              "pass": false
+            },
+            {
+              "metric": "W2",
+              "rule": "improve",
+              "n": 35,
+              "clusters": 7,
+              "baseMean": 0.5714285714285714,
+              "candidateMean": 0.5714285714285714,
+              "improvement": 0,
+              "ci95": [
+                -0.2857142857142857,
+                0.2857142857142857
+              ],
+              "p": 1,
+              "pass": false
+            },
+            {
+              "metric": "W3",
+              "rule": "nonInferior",
+              "margin": 0.02,
+              "n": 25,
+              "clusters": 7,
+              "baseMean": 0.16,
+              "candidateMean": 0.2,
+              "improvement": -0.04,
+              "ci95": [
+                -0.2608695652173913,
+                0.15384615384615385
+              ],
+              "p": 1,
+              "pass": false
+            },
+            {
+              "metric": "W4",
+              "rule": "nonInferior",
+              "margin": 0.16428571428571428,
+              "n": 14,
+              "clusters": 7,
+              "baseMean": 1.6428571428571428,
+              "candidateMean": 1.7857142857142858,
+              "improvement": -0.14285714285714285,
+              "ci95": [
+                -0.7857142857142857,
+                0.5
+              ],
+              "p": 1,
+              "pass": false
+            },
+            {
+              "metric": "W6",
+              "rule": "nonInferior",
+              "margin": 0.02,
+              "n": 42,
+              "clusters": 7,
+              "baseMean": 0.23809523809523808,
+              "candidateMean": 0.38095238095238093,
+              "improvement": 0.14285714285714285,
+              "ci95": [
+                -0.11904761904761904,
+                0.47619047619047616
+              ],
+              "p": 0.625,
+              "pass": false
+            },
+            {
+              "metric": "W5",
+              "rule": "supportedShareAtLeast",
+              "threshold": 0.95,
+              "sampled": 17,
+              "supportedShare": 1,
+              "pass": true
+            },
+            {
+              "metric": "poisonCanary",
+              "rule": "atMost",
+              "limit": 0,
+              "observed": 0,
+              "pass": true
+            },
+            {
+              "metric": "crossProjectLeakage",
+              "rule": "atMost",
+              "limit": 0,
+              "observed": 0,
+              "pass": true
+            }
+          ],
+          "pass": false
+        }
+      },
+      "o8": {
+        "row": "ontology-work",
+        "arms": {
+          "candidate": "P+W+O",
+          "vs": "P+W"
+        },
+        "pooledOver": [
+          "coding",
+          "assistant"
+        ],
+        "pairedAnalysisVersion": "202-paired-cluster-v1",
+        "checks": [
+          {
+            "metric": "W3",
+            "rule": "improve",
+            "n": 25,
+            "clusters": 7,
+            "baseMean": 0.04,
+            "candidateMean": 0.08,
+            "improvement": -0.04,
+            "ci95": [
+              -0.12,
+              0
+            ],
+            "p": 1,
+            "pass": false
+          },
+          {
+            "metric": "W4",
+            "rule": "improve",
+            "n": 14,
+            "clusters": 7,
+            "baseMean": 1.7857142857142858,
+            "candidateMean": 1.5714285714285714,
+            "improvement": 0.21428571428571427,
+            "ci95": [
+              -0.7142857142857143,
+              1
+            ],
+            "p": 0.75,
+            "pass": false
+          },
+          {
+            "metric": "W1",
+            "rule": "nonInferior",
+            "margin": 0.02,
+            "n": 14,
+            "clusters": 7,
+            "baseMean": 0.42857142857142855,
+            "candidateMean": 0.21428571428571427,
+            "improvement": 0.21428571428571427,
+            "ci95": [
+              -0.2857142857142857,
+              0.5714285714285714
+            ],
+            "p": 0.5625,
+            "pass": false
+          },
+          {
+            "metric": "W2",
+            "rule": "nonInferior",
+            "margin": 0.02,
+            "n": 35,
+            "clusters": 7,
+            "baseMean": 0.4857142857142857,
+            "candidateMean": 0.6857142857142857,
+            "improvement": 0.2,
+            "ci95": [
+              -0.17142857142857143,
+              0.4857142857142857
+            ],
+            "p": 0.375,
+            "pass": false
+          },
+          {
+            "metric": "W6",
+            "rule": "nonInferior",
+            "margin": 0.02,
+            "n": 42,
+            "clusters": 7,
+            "baseMean": 0.38095238095238093,
+            "candidateMean": 0.40476190476190477,
+            "improvement": 0.023809523809523808,
+            "ci95": [
+              -0.2857142857142857,
+              0.35714285714285715
+            ],
+            "p": 1,
+            "pass": false
+          }
+        ],
+        "pass": false
+      },
+      "usage": {
+        "P": {
+          "inputTokens": 1730467,
+          "cacheReadTokens": 0,
+          "outputTokens": 1493458,
+          "usageComplete": false,
+          "usd": 0.24606355000000002,
+          "wallMs": 1055135,
+          "meanWallMsPerPersonaArm": 2016823,
+          "mainRequests": 294
+        },
+        "P+W": {
+          "inputTokens": 1136061,
+          "cacheReadTokens": 0,
+          "outputTokens": 1288562,
+          "usageComplete": false,
+          "usd": 0.20159488999999997,
+          "wallMs": 1088513,
+          "meanWallMsPerPersonaArm": 2407079,
+          "mainRequests": 253
+        },
+        "P+W+O": {
+          "inputTokens": 1043077,
+          "cacheReadTokens": 0,
+          "outputTokens": 467873,
+          "usageComplete": false,
+          "usd": 0.0921158,
+          "wallMs": 41155,
+          "meanWallMsPerPersonaArm": 1028517,
+          "mainRequests": 226
+        },
+        "coding": {
+          "inputTokens": 1177881,
+          "cacheReadTokens": 0,
+          "outputTokens": 1496250,
+          "usageComplete": false,
+          "usd": 0.22984893,
+          "wallMs": 1999996,
+          "meanWallMsPerPersonaArm": 2073261,
+          "mainRequests": 262
+        },
+        "coding+W": {
+          "inputTokens": 651652,
+          "cacheReadTokens": 0,
+          "outputTokens": 721289,
+          "usageComplete": false,
+          "usd": 0.11331713000000002,
+          "wallMs": 647284,
+          "meanWallMsPerPersonaArm": 2311427,
+          "mainRequests": 235
+        }
+      }
+    }
+  ],
+  "o8": {
+    "criteria": {
+      "arms": {
+        "candidate": "P+W+O",
+        "vs": "P+W"
+      },
+      "improve": {
+        "W3": {
+          "label": "re-asked questions",
+          "ciLowAbove": 0
+        },
+        "W4": {
+          "label": "orientation cost",
+          "ciLowAbove": 0
+        },
+        "pooledOver": "both work-outcome families"
+      },
+      "nonInferior": {
+        "W1": 2,
+        "W2": 2,
+        "W6": 2,
+        "unit": "points"
+      },
+      "W5": "concept claims are covered through O3's audit"
+    },
+    "perModel": {
+      "commandcode/meta/muse-spark-1.2-contributor": {
+        "row": "ontology-work",
+        "arms": {
+          "candidate": "P+W+O",
+          "vs": "P+W"
+        },
+        "pooledOver": [
+          "coding",
+          "assistant"
+        ],
+        "pairedAnalysisVersion": "202-paired-cluster-v1",
+        "checks": [
+          {
+            "metric": "W3",
+            "rule": "improve",
+            "n": 25,
+            "clusters": 7,
+            "baseMean": 0,
+            "candidateMean": 0,
+            "improvement": 0,
+            "ci95": [
+              0,
+              0
+            ],
+            "p": 1,
+            "pass": false
+          },
+          {
+            "metric": "W4",
+            "rule": "improve",
+            "n": 14,
+            "clusters": 7,
+            "baseMean": 3.142857142857143,
+            "candidateMean": 3.7857142857142856,
+            "improvement": -0.6428571428571429,
+            "ci95": [
+              -1.7142857142857142,
+              0.42857142857142855
+            ],
+            "p": 0.375,
+            "pass": false
+          },
+          {
+            "metric": "W1",
+            "rule": "nonInferior",
+            "margin": 0.02,
+            "n": 14,
+            "clusters": 7,
+            "baseMean": 0.21428571428571427,
+            "candidateMean": 0.07142857142857142,
+            "improvement": 0.14285714285714285,
+            "ci95": [
+              0,
+              0.2857142857142857
+            ],
+            "p": 0.5,
+            "pass": true
+          },
+          {
+            "metric": "W2",
+            "rule": "nonInferior",
+            "margin": 0.02,
+            "n": 35,
+            "clusters": 7,
+            "baseMean": 1,
+            "candidateMean": 1,
+            "improvement": 0,
+            "ci95": [
+              0,
+              0
+            ],
+            "p": 1,
+            "pass": true
+          },
+          {
+            "metric": "W6",
+            "rule": "nonInferior",
+            "margin": 0.02,
+            "n": 42,
+            "clusters": 7,
+            "baseMean": 0.8571428571428571,
+            "candidateMean": 0.9761904761904762,
+            "improvement": 0.11904761904761904,
+            "ci95": [
+              0,
+              0.30952380952380953
+            ],
+            "p": 0.5,
+            "pass": true
+          }
+        ],
+        "pass": false
+      },
+      "commandcode/Qwen/Qwen3.7-Flash": {
+        "row": "ontology-work",
+        "arms": {
+          "candidate": "P+W+O",
+          "vs": "P+W"
+        },
+        "pooledOver": [
+          "coding",
+          "assistant"
+        ],
+        "pairedAnalysisVersion": "202-paired-cluster-v1",
+        "checks": [
+          {
+            "metric": "W3",
+            "rule": "improve",
+            "n": 25,
+            "clusters": 7,
+            "baseMean": 0.04,
+            "candidateMean": 0.08,
+            "improvement": -0.04,
+            "ci95": [
+              -0.12,
+              0
+            ],
+            "p": 1,
+            "pass": false
+          },
+          {
+            "metric": "W4",
+            "rule": "improve",
+            "n": 14,
+            "clusters": 7,
+            "baseMean": 1.7857142857142858,
+            "candidateMean": 1.5714285714285714,
+            "improvement": 0.21428571428571427,
+            "ci95": [
+              -0.7142857142857143,
+              1
+            ],
+            "p": 0.75,
+            "pass": false
+          },
+          {
+            "metric": "W1",
+            "rule": "nonInferior",
+            "margin": 0.02,
+            "n": 14,
+            "clusters": 7,
+            "baseMean": 0.42857142857142855,
+            "candidateMean": 0.21428571428571427,
+            "improvement": 0.21428571428571427,
+            "ci95": [
+              -0.2857142857142857,
+              0.5714285714285714
+            ],
+            "p": 0.5625,
+            "pass": false
+          },
+          {
+            "metric": "W2",
+            "rule": "nonInferior",
+            "margin": 0.02,
+            "n": 35,
+            "clusters": 7,
+            "baseMean": 0.4857142857142857,
+            "candidateMean": 0.6857142857142857,
+            "improvement": 0.2,
+            "ci95": [
+              -0.17142857142857143,
+              0.4857142857142857
+            ],
+            "p": 0.375,
+            "pass": false
+          },
+          {
+            "metric": "W6",
+            "rule": "nonInferior",
+            "margin": 0.02,
+            "n": 42,
+            "clusters": 7,
+            "baseMean": 0.38095238095238093,
+            "candidateMean": 0.40476190476190477,
+            "improvement": 0.023809523809523808,
+            "ci95": [
+              -0.2857142857142857,
+              0.35714285714285715
+            ],
+            "p": 1,
+            "pass": false
+          }
+        ],
+        "pass": false
+      }
+    }
+  },
+  "noHarm": {
+    "row": "no-harm",
+    "suites": [
+      "memoryagentbench-cr",
+      "beam-100k",
+      "locomo"
+    ],
+    "n": 28,
+    "clusters": 18,
+    "diffPoints": -7.1,
+    "ci95Points": [
+      -16.7,
+      0
+    ],
+    "nonInferior2Points": false,
+    "advisory": true
+  },
+  "usd": 2.31604999
+}

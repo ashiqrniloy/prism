@@ -1,0 +1,123 @@
+{
+  "$comment": "Pre-registered design and claim rules for the host-builder evaluation (plan 215 Task 20, ex-plan 212 Task 8). This file is committed and locked (criteria.lock.json) before any paid run. Changing it, a workspace, a hidden test, an oracle solution, the skill or the shipped indexes after the lock invalidates it, and a paid run refuses to start.",
+  "version": 1,
+  "plan": "215 Task 20",
+  "seed": 212,
+  "trials": 3,
+  "concurrency": 1,
+  "arms": {
+    "none": "A Prism builder agent with tools-coding (shell enabled inside the project), contextFiles, and the installed Prism docs under node_modules/@arnilo. The host-builder package is not installed and no skill is present.",
+    "skill": "The same agent. The host-builder package is installed under node_modules/@arnilo (its indexes and example sources), and `prism-host-builder install --target agents` copied the skill into .agents/skills, where contextFiles lists it. No MCP server.",
+    "skill+mcp": "The skill arm plus @arnilo/prism-mcp connected over stdio to `prism-host-builder mcp --root <project>` (server id prism-host-builder). The lookup tools and docs resources are offered; no --entry or --package flag is passed, so the check tools list but are unconfigured (a factory that needs arguments cannot be a fixed target)."
+  },
+  "builder": {
+    "packages": ["tools-coding (shell enabled, rooted at the project)", "context-files (rooted at the project)", "mcp (skill+mcp arm only)"],
+    "approval": "None. tools-coding's hard deny keeps every file tool inside the project root, and no network tool is loaded. The shell can still reach the network; the instructions forbid it and the evidence does not depend on it.",
+    "instructions": "You are a coding agent working in the project in your current directory. It is a TypeScript project on Bun that uses the Prism agent SDK (`@arnilo/prism`, version 0.13), installed under `node_modules/@arnilo`. Complete the task by editing files in this project. You can run shell commands here, for example `bun test` and `node_modules/.bin/tsc -p tsconfig.json`. Do not install packages and do not use the network. When the task is done, end with a short summary of what you changed and what you checked.",
+    "limits": {
+      "maxTurns": 60,
+      "maxToolRounds": 50,
+      "maxToolCalls": 150,
+      "maxInputTokens": 2000000,
+      "maxOutputTokens": 80000,
+      "maxTotalTokens": 2100000,
+      "maxWallTimeMs": 900000
+    },
+    "workspace": "A temp copy per trial: workspaces/_common, then workspaces/<task>, then a staged node_modules (real copies of @arnilo/prism and every published package as an install lays them out; symlinks to the other dependencies). The hidden test is copied in only after the run, and removed."
+  },
+  "tasks": [
+    {
+      "id": "headless-host",
+      "title": "Create a minimal headless host",
+      "failureEvidence": "plan 215 Task 13 (c): agents find the path slowly; a missing principal makes durable-effect tools fail",
+      "prompt": "Create `src/host.ts` exporting `async function createHost(options: { model: ModelSpec; providers: PackageInput[]; root: string }): Promise<Agent>`. It builds a minimal headless host with Prism: the caller's provider packages, the coding tools working in `options.root`, and project skills and instructions discovered from `options.root`. The host runs as a local user, so tools with durable effects such as shell can run. It has no UI, no approval and no store of its own. The caller chooses the model and the provider; do not pick one.",
+      "checks": {}
+    },
+    {
+      "id": "approval-ask",
+      "title": "Gate coding writes with approval",
+      "failureEvidence": "plan 215 Task 13 (c): fail-closed approval is the default an agent must still wire; docs/host-security.md",
+      "prompt": "`src/host.ts` builds a coding agent whose tools run without asking anyone. Change it so that every `write`, `edit` and `shell` call needs a person's yes through the host's UI before it runs, and `read`, `glob` and `grep` never ask. When nobody can answer (the `ui` option is missing, or the UI is unavailable), the call must be refused and never run. Keep the `createHost` signature.",
+      "checks": {}
+    },
+    {
+      "id": "sqlite-resume",
+      "title": "Add SQLite persistence with resume",
+      "failureEvidence": "plan 215 Task 13 (c): store: \"memory\" and other stale shapes; stores are packages in 0.13",
+      "prompt": "`src/host.ts` keeps sessions in memory. When `options.dbPath` is given, store sessions in a SQLite database file at that path, so that a new `createHost` over the same file can reopen a session with `agent.session({ id })`, see its earlier messages, and continue it. Without `dbPath` the host must keep working in memory.",
+      "checks": {}
+    },
+    {
+      "id": "acp-serve",
+      "title": "Serve the agent over ACP",
+      "failureEvidence": "plan 215 Task 13 (c): the host library and its permission routing are only found by reading the package READMEs",
+      "prompt": "`src/host.ts` is a local coding agent. Add `src/acp.ts` exporting `async function createAcpHost(options: { model: ModelSpec; providers: PackageInput[]; root: string; stream: Stream }): Promise<{ agent: Agent; close(): Promise<void> }>`, where `Stream` is the Agent Client Protocol stream type that the ACP SDK's `ndJsonStream` returns. The agent must be served over the Agent Client Protocol on `options.stream`, and every write, edit or shell call must be approved by the connected ACP client through the protocol's permission request; if the client refuses, the call must not run. `close()` stops serving and disposes the agent. Leave `src/host.ts` as it is.",
+      "checks": {}
+    },
+    {
+      "id": "compaction-slot",
+      "title": "Add memory-compaction with the compaction slot assigned",
+      "failureEvidence": "plan 215 Task 13 (c): two packages claiming the compaction slot fail closed unless the host assigns it (apps/prism-agent/README.md)",
+      "prompt": "Add LLM summarization compaction to the host in `src/host.ts`, using Prism's published compaction package. `src/local-compaction.ts` is a package the team already uses: keep it listed and working (its `local:ping` command must still answer). The host must load without error, and the LLM summarization package must be the one that does the compaction.",
+      "checks": {}
+    },
+    {
+      "id": "package-conformance",
+      "title": "Write a package with a conformance test",
+      "failureEvidence": "plan 215 Task 13 (c): hook payload field names and the conformance helper are not guessable",
+      "prompt": "Write a Prism package in `src/no-force-push.ts` with a default export. Its name is `@acme/no-force-push` and its version is `1.0.0`. It denies any `shell` tool call whose command force-pushes with git (`--force`, `--force-with-lease` or `-f` on `git push`), with a reason that mentions a force push, and it allows every other call. Also write `src/no-force-push.test.ts` (run with `bun test`) that runs the SDK's package conformance helper on it and checks both the deny and the allow behavior.",
+      "checks": {
+        "requireFiles": ["src/no-force-push.ts", "src/no-force-push.test.ts"],
+        "requireContains": { "src/no-force-push.test.ts": ["packageConformance"] },
+        "runOwnTests": ["src/no-force-push.test.ts"]
+      }
+    },
+    {
+      "id": "upgrade-0-12",
+      "title": "Upgrade a 0.12-shaped host to 0.13",
+      "failureEvidence": "docs/migrate-to-0.13.md: the retired-name tables an agent trained on 0.12 reaches for",
+      "prompt": "`src/host.ts` was written for Prism 0.12.1, and the project now has Prism 0.13 installed. Upgrade it so it type-checks and runs on 0.13 and keeps the behavior its comment describes. Keep the exported `createHost` name and its options. Callers will `await createHost(...)` and use the result as an agent.",
+      "checks": {}
+    }
+  ],
+  "scorers": {
+    "typecheck_passes": "1 when `tsc -p tsconfig.json` reports no error in the project's own files. Diagnostics inside node_modules (the installed TypeScript sources) are ignored.",
+    "acceptance_tests_pass": "1 when the task's hidden test passes (and, for package-conformance, the required files exist, mention packageConformance, and the builder's own test passes). The hidden test is copied in after the run, so the builder never sees it.",
+    "public_surface_only": "1 when no source file imports outside the public surface: a kernel subpath other than manifest, driver-kit, provider-kit or testing (testing only in tests), a retired or unpublished @arnilo package, a deep or undeclared package path, a path into node_modules, a relative import that leaves the project, or a non-literal dynamic import. The rules are those of the reference host's allow-list (src/__tests__/reference-host-allowlist.ts).",
+    "no_retired_names": "1 when no source file contains a 0.12 name from docs/migrate-to-0.13.md (retired packages, defineAgent, activateKernel, stopHooks, tools.use, store: \"memory\", identity.profile, extensions, and the removed interception options).",
+    "tool_calls": "Recorded for cost, not a claim scorer: 1 / (1 + the number of tool calls). Tokens, cost and latency come from the experiment report."
+  },
+  "claims": {
+    "scorers": ["typecheck_passes", "acceptance_tests_pass", "public_surface_only", "no_retired_names"],
+    "alpha": 0.05,
+    "comparisons": [
+      { "id": "skill_vs_none", "baseline": "none", "candidate": "skill" },
+      { "id": "skill_mcp_vs_none", "baseline": "none", "candidate": "skill+mcp" },
+      { "id": "skill_mcp_vs_skill", "baseline": "skill", "candidate": "skill+mcp" }
+    ],
+    "rules": [
+      "A claim (\"the skill improves X\", \"the MCP server improves X over the skill\") is published only when compareExperiments shows a significant improvement for scorer X at alpha .05 in that comparison, on every provider that ran.",
+      "A significant regression of the skill or skill+mcp arm against none on any claim scorer blocks the plan until that component is fixed and re-measured once (round 2, fresh trials). If it still regresses, the owner decides and the decision is recorded.",
+      "An unscored record (a provider or harness failure) makes the comparison inconclusive: rerun, never publish.",
+      "The README states only passed claims, each linked to its evidence file. Natural loading is reported (how often the skill was loaded and the MCP tools were used) and the evidence splits results by loading; the arms are compared as run."
+    ]
+  },
+  "providers": [
+    { "id": "hyper", "modelEnv": "PRISM_LIVE_HOST_BUILDER_EVAL_HYPER_MODEL", "defaultModel": "deepseek-v4-pro-0813" },
+    { "id": "opencode-go", "modelEnv": "PRISM_LIVE_HOST_BUILDER_EVAL_OPENCODE_MODEL", "defaultModel": "mimo-v2.5" }
+  ],
+  "forbiddenProviders": ["openrouter/free", "openrouter/auto"],
+  "providersNote": "Plan 215 Task 20 text: the live run uses Hyper and OpenCode Go only, after the owner approves a dry-run cost estimate recorded in the task note. Widening the set (the free models Task 11 allowed) needs a new owner decision.",
+  "costGate": {
+    "dryRunTaskIds": ["headless-host", "acp-serve", "upgrade-0-12"],
+    "dryRunTrials": 1,
+    "ownerApprovalRequired": true
+  },
+  "reporting": [
+    "per scorer and arm: mean with ci95",
+    "paired differences per comparison with ci95 and qValue",
+    "per task and arm: pass counts for every scorer and the first failure",
+    "per arm: tool calls per run, input/output/cache tokens, cost, wall time, runs that ended on a limit",
+    "skill loaded and MCP used per run, and acceptance_tests_pass split by loading"
+  ]
+}

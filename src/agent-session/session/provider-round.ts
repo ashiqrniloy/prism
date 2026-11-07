@@ -5,6 +5,7 @@ import { estimateMessageTokens, estimateRequestExtrasTokens, resolveInputCap } f
 import type {
   ContentBlock,
   CostCatalog,
+  Message,
   ModelConfig,
   ProviderEvent,
   ProviderRequest,
@@ -169,9 +170,35 @@ function estimateTurnUsage(session: SessionHost, model: ModelConfig, request: Pr
   // Omitted is the documented default (`"fallback"`), not a reason to skip estimation.
   const mode = session.agent.config.usageEstimation ?? "fallback";
   if (!request || mode !== "fallback") return undefined;
-  const estimate = estimateMessageTokens(request.messages, model.model);
+  const estimate = estimateMessagesMemoized(request.messages, model.model);
   const extras = estimateRequestExtrasTokens(request.tools, request.context, (text) => estimateTextTokensForFamily(text, model.model));
   return { inputTokens: estimate.tokens + extras, estimated: true, confidence: estimate.confidence };
+}
+
+/**
+ * Plan 210 Task 0.3: `estimateMessageTokens(messages, family)` with each message's share
+ * (per-message overhead plus its text estimate, all integers) memoized by message object and
+ * model, so a turn re-estimates only the messages it has not seen. The sum is the same value.
+ */
+const messageEstimateMemo = new Map<string, WeakMap<Message, number>>();
+
+function estimateMessagesMemoized(messages: readonly Message[], family: string): ReturnType<typeof estimateMessageTokens> {
+  const empty = estimateMessageTokens([], family);
+  let memo = messageEstimateMemo.get(family);
+  if (!memo) {
+    memo = new WeakMap();
+    messageEstimateMemo.set(family, memo);
+  }
+  let tokens = 0;
+  for (const message of messages) {
+    let share = memo.get(message);
+    if (share === undefined) {
+      share = estimateMessageTokens([message], family).tokens;
+      memo.set(message, share);
+    }
+    tokens += share;
+  }
+  return { ...empty, tokens };
 }
 
 /**

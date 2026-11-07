@@ -546,20 +546,21 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
       : "";
 
     // ponytail: no limit preserves full-chain reads; default paging needs the reader's 64-page cap revisited first.
+    // Each ancestor is found by primary key: the CTE carries parent_id, `+parent.session_id` keeps the planner off the
+    // (session_id, id) index, and CROSS JOIN drives the final select from the path. Otherwise each step scans the session.
     const rows = db
       .prepare(
-        `WITH RECURSIVE branch_path(id, depth) AS (
-           SELECT seed.id, 0 FROM prism_session_entries seed
+        `WITH RECURSIVE branch_path(id, parent_id, depth) AS (
+           SELECT seed.id, seed.parent_id, 0 FROM prism_session_entries seed
            WHERE seed.id = ? AND seed.session_id = ? ${ownerClause}
            UNION ALL
-           SELECT parent.id, bp.depth + 1
+           SELECT parent.id, parent.parent_id, bp.depth + 1
            FROM branch_path bp
-           INNER JOIN prism_session_entries current ON current.id = bp.id
-           INNER JOIN prism_session_entries parent ON parent.id = current.parent_id AND parent.session_id = current.session_id
-           WHERE current.session_id = ?
+           INNER JOIN prism_session_entries parent ON parent.id = bp.parent_id
+           WHERE +parent.session_id = ?
          )
-         SELECT e.* FROM prism_session_entries e
-         INNER JOIN branch_path bp ON e.id = bp.id
+         SELECT e.* FROM branch_path bp
+         CROSS JOIN prism_session_entries e ON e.id = bp.id
          ORDER BY bp.depth DESC, e.timestamp ASC, e.id ASC
          LIMIT ? OFFSET ?`,
       )
@@ -868,13 +869,13 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
         const ownerClause = ownerFilters.length
           ? `AND EXISTS (SELECT 1 FROM prism_sessions s WHERE s.id = seed.session_id AND ${ownerFilters.map((filter) => `s.${filter}`).join(" AND ")})`
           : "";
-        branchSql = `WITH RECURSIVE branch_path(id) AS (
-          SELECT seed.id FROM prism_session_entries seed WHERE seed.id = ? AND seed.session_id = ? ${ownerClause}
+        // Ancestors by primary key; see readEntryBranch.
+        branchSql = `WITH RECURSIVE branch_path(id, parent_id) AS (
+          SELECT seed.id, seed.parent_id FROM prism_session_entries seed WHERE seed.id = ? AND seed.session_id = ? ${ownerClause}
           UNION ALL
-          SELECT parent.id FROM branch_path bp
-          JOIN prism_session_entries current ON current.id = bp.id
-          JOIN prism_session_entries parent ON parent.id = current.parent_id AND parent.session_id = current.session_id
-          WHERE current.session_id = ?
+          SELECT parent.id, parent.parent_id FROM branch_path bp
+          JOIN prism_session_entries parent ON parent.id = bp.parent_id
+          WHERE +parent.session_id = ?
         )`;
         params.push(query.leafId, query.sessionId, ...ownershipParams(query), query.sessionId);
       }

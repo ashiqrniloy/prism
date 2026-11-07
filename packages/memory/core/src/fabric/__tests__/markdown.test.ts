@@ -8,7 +8,8 @@ import { createHashEmbedder } from "../../embedder.js";
 import { MemoryValidationError } from "../../errors.js";
 import type { MemoryVectorRecord } from "../../types.js";
 import { createMarkdownMemoryStores, type MarkdownMemoryStores } from "../index.js";
-import { parseNoteFile } from "../okf.js";
+import { type IndexEntry, parseLogFile, parseNoteFile, renderIndexFile, renderLogFile } from "../okf.js";
+import { FileIndex, type IndexedFile } from "../state.js";
 
 const dirs: string[] = [];
 const stores: MarkdownMemoryStores[] = [];
@@ -429,4 +430,255 @@ test("markdown_derived_file_keeps_a_human_edit_until_the_caller_replaces_it", as
   writeFileSync(path, "no marker at all\n");
   expect(await store.readDerivedFile(target, "rules.md")).toEqual({ body: "no marker at all\n", edited: true });
   await expect(store.readDerivedFile(target, "../escape.md")).rejects.toBeInstanceOf(MemoryValidationError);
+});
+
+// Plan 210 Task 0.2: the file map is a snapshot plus a journal; index.md and log.md bytes are unchanged.
+const SNAPSHOT = ".index-files.json";
+const JOURNAL = ".index-files.journal.jsonl";
+
+async function loadMap(root: string): Promise<Record<string, IndexedFile>> {
+  const loaded = await FileIndex.load(join(root, SNAPSHOT), join(root, JOURNAL));
+  expect(loaded.intact).toBe(true);
+  return Object.fromEntries(loaded.index.entries());
+}
+
+function seeded(seed: number): () => number {
+  let state = seed;
+  return () => {
+    state = (state * 1103515245 + 12345) % 2147483648;
+    return state / 2147483648;
+  };
+}
+
+test("file_map_journal_replays_to_the_same_map", async () => {
+  const root = tempRoot();
+  const store = await open(root);
+  const random = seeded(7);
+  const ids = Array.from({ length: 12 }, (_, i) => `${String(i).padStart(4, "0")}aaaabbbb`);
+  for (let step = 0; step < 60; step += 1) {
+    const id = ids[Math.floor(random() * ids.length)]!;
+    const roll = random();
+    if (roll < 0.55) {
+      // A new title moves the note to a new slug path.
+      await store.vectorStore.upsert([record(id, `note ${id} v${Math.floor(random() * 3)}`, { fabric: { v: 1, kind: "fact" } })]);
+    } else if (roll < 0.75) {
+      await store.vectorStore.delete({ tenantId: "t", resourceId: "r", ids: [id] });
+    } else {
+      await store.vectorStore.invalidate(scope, [{ id, reason: "revoked", at: "2026-10-19T00:00:00.000Z" }]);
+    }
+  }
+  expect(existsSync(join(root, JOURNAL))).toBe(true);
+  const replayed = await loadMap(root);
+  // Every entry names a file on disk, and every note file has exactly one entry.
+  expect(Object.keys(replayed).sort()).toEqual(listNoteFiles(root).sort());
+  // A full rebuild from the files compacts the journal into the snapshot and gives the same map.
+  await store.rebuild();
+  expect(existsSync(join(root, JOURNAL))).toBe(false);
+  expect(await loadMap(root)).toEqual(replayed);
+
+  // Past `max(1024, map size)` journal ops, a flush folds the journal into the snapshot.
+  const direct = await FileIndex.load(join(root, "direct.json"), join(root, "direct.jsonl"));
+  const entry = (i: number): IndexedFile => ({
+    ...(Object.values(replayed)[0] as IndexedFile),
+    path: `t/r/facts/n${i}.md`,
+    id: `n${i}`,
+  });
+  for (let i = 0; i < 1000; i += 1) direct.index.set(entry(i).path, entry(i));
+  await direct.index.flush();
+  expect(existsSync(join(root, "direct.jsonl"))).toBe(true);
+  for (let i = 1000; i < 1100; i += 1) direct.index.set(entry(i).path, entry(i));
+  direct.index.delete(entry(3).path);
+  await direct.index.flush();
+  expect(existsSync(join(root, "direct.jsonl"))).toBe(false);
+  const reloaded = await FileIndex.load(join(root, "direct.json"), join(root, "direct.jsonl"));
+  expect(reloaded.index.size).toBe(1099);
+  expect(reloaded.index.findById("n3")).toBeUndefined();
+  expect(reloaded.index.findById("n1050")?.path).toBe("t/r/facts/n1050.md");
+});
+
+test("torn_journal_tail_forces_full_reconcile", async () => {
+  for (const corrupt of [
+    (text: string) => text.slice(0, -7),
+    (text: string) => `${text}${JSON.stringify({ v: 2, op: "set", path: "t/r/facts/x.md", entry: {} })}\n`,
+  ]) {
+    const root = tempRoot();
+    const first = await open(root);
+    await first.vectorStore.upsert([record("aaaa11112222", "first note"), record("bbbb33334444", "second note")]);
+    await first.vectorStore.upsert([record("aaaa11112222", "first note renamed")]);
+    await first.close();
+    writeFileSync(join(root, JOURNAL), corrupt(readFileSync(join(root, JOURNAL), "utf8")));
+    const logBefore = readFileSync(join(root, "log.md"), "utf8");
+
+    const reopened = await open(root);
+    // The full pass re-indexed every file from disk and compacted a fresh snapshot.
+    expect(existsSync(join(root, JOURNAL))).toBe(false);
+    const map = await loadMap(root);
+    expect(Object.keys(map).sort()).toEqual(listNoteFiles(root).sort());
+    expect(
+      Object.values(map)
+        .map((e) => e.id)
+        .sort(),
+    ).toEqual(["aaaa11112222", "bbbb33334444"]);
+    const added = readFileSync(join(root, "log.md"), "utf8").length - logBefore.length;
+    expect(added).toBeGreaterThan(0);
+    expect(parseLogFile(readFileSync(join(root, "log.md"), "utf8")).filter((e) => e.verb === "indexed")).toHaveLength(2);
+    expect((await reopened.vectorStore.getByIds(scope, ["aaaa11112222"]))[0]?.text).toBe("first note renamed");
+    expect(await reopened.vectorStore.countByThread(scope)).toBe(2);
+  }
+});
+
+/** `renderIndexFile` as it was before the shared collator and line cache. */
+function previousRenderIndexFile(entries: readonly IndexEntry[]): string {
+  const groups = new Map<string, IndexEntry[]>();
+  for (const entry of entries) groups.set(entry.dir, [...(groups.get(entry.dir) ?? []), entry]);
+  const sections = [...groups.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([dir, list]) => {
+      const items = [...list]
+        .sort((a, b) => a.title.localeCompare(b.title) || a.path.localeCompare(b.path))
+        .map((entry) => `- [${entry.title}](${encodeURI(entry.path)}) - ${entry.description}`)
+        .join("\n");
+      return `## ${dir}\n\n${items}`;
+    })
+    .join("\n\n");
+  return `---\nokf_version: "0.2"\n---\n\n# Memory Index\n\nCatalog of durable memory notes.\n\n${sections}\n`;
+}
+
+test("index_md_and_log_md_bytes_unchanged", async () => {
+  const random = seeded(11);
+  const words = [
+    "Zoë",
+    "café",
+    "naïve",
+    "Ångström",
+    "日本語",
+    "émigré",
+    "apple",
+    "Apple",
+    "zebra",
+    "über",
+    "Œuvre",
+    "ß",
+    "résumé",
+    "10",
+    "9",
+  ];
+  const dirsList = ["facts", "decisions", "archive/facts", "procedures", "people"];
+  const entries: IndexEntry[] = Array.from({ length: 500 }, (_, i) => {
+    const title = `${words[Math.floor(random() * words.length)]} ${words[Math.floor(random() * words.length)]}`;
+    return {
+      dir: dirsList[i % dirsList.length]!,
+      path: `t/r/${dirsList[i % dirsList.length]}/${title.replace(/ /g, "-")}--${i}.md`,
+      title,
+      description: `d ${i} ${title}`,
+    };
+  });
+  const expected = previousRenderIndexFile(entries);
+  expect(expected).toContain('okf_version: "0.2"');
+  expect(renderIndexFile(entries)).toBe(expected);
+  const cache = new Map<IndexEntry, string>();
+  expect(renderIndexFile(entries, (e) => cache.get(e) ?? `- [${e.title}](${encodeURI(e.path)}) - ${e.description}`)).toBe(expected);
+
+  // log.md from one long-lived store (cached entries) equals log.md from a store reopened before each write (parsed).
+  const cachedRoot = tempRoot();
+  const parsedRoot = tempRoot();
+  const cachedStore = await open(cachedRoot);
+  for (let i = 0; i < 8; i += 1) {
+    const write = [record(`${i}000aaaabbbb`, `Ünïcode note ${i}`, { fabric: { v: 1, kind: i % 2 === 0 ? "fact" : "decision" } })];
+    await cachedStore.vectorStore.upsert(write);
+    const parsedStore = await open(parsedRoot);
+    await parsedStore.vectorStore.upsert(write);
+    await parsedStore.close();
+  }
+  const cachedLog = readFileSync(join(cachedRoot, "log.md"), "utf8");
+  expect(cachedLog).toBe(readFileSync(join(parsedRoot, "log.md"), "utf8"));
+  expect(renderLogFile(parseLogFile(cachedLog))).toBe(cachedLog);
+  expect(readFileSync(join(cachedRoot, "index.md"), "utf8")).toBe(readFileSync(join(parsedRoot, "index.md"), "utf8"));
+});
+
+test("external_log_edit_is_reparsed", async () => {
+  const root = tempRoot();
+  const store = await open(root);
+  await store.vectorStore.upsert([record("aaaa55556666", "first")]);
+  const logPath = join(root, "log.md");
+  const edited = renderLogFile([
+    ...parseLogFile(readFileSync(logPath, "utf8")),
+    { date: "2020-01-01", verb: "noted", id: "by-hand", by: "human" },
+  ]);
+  writeFileSync(logPath, edited);
+  await store.vectorStore.upsert([record("bbbb55556666", "second")]);
+  const log = parseLogFile(readFileSync(logPath, "utf8"));
+  expect(log.map((e) => e.id)).toEqual(["bbbb55556666", "aaaa55556666", "by-hand"]);
+});
+
+test("find_file_by_id_tracks_moves_archive_and_delete", async () => {
+  const root = tempRoot();
+  const store = await open(root);
+  const id = "ffff00001111";
+  const onlyFile = () => {
+    const files = listNoteFiles(root).filter((rel) => rel.includes(id.slice(0, 8)));
+    expect(files).toHaveLength(1);
+    return files[0]!;
+  };
+  await store.vectorStore.upsert([record(id, "coffee beans", { fabric: { v: 1, kind: "fact" } })]);
+  const first = onlyFile();
+  await store.vectorStore.upsert([record(id, "green tea leaves", { fabric: { v: 1, kind: "fact" } })]);
+  const moved = onlyFile();
+  expect(moved).not.toBe(first);
+  await store.vectorStore.invalidate(scope, [{ id, reason: "revoked", at: "2026-10-19T00:00:00.000Z" }]);
+  expect(onlyFile()).toContain("/archive/facts/");
+  await store.vectorStore.clearInvalidation(scope, [id]);
+  expect(onlyFile()).toBe(moved);
+  await store.vectorStore.delete({ tenantId: "t", resourceId: "r", ids: [id] });
+  expect(listNoteFiles(root).filter((rel) => rel.includes(id.slice(0, 8)))).toEqual([]);
+  await store.vectorStore.upsert([record(id, "coffee beans", { fabric: { v: 1, kind: "fact" } })]);
+  expect(onlyFile()).toBe(first);
+  const verbs = parseLogFile(readFileSync(join(root, "log.md"), "utf8"))
+    .filter((e) => e.id === id)
+    .map((e) => e.verb);
+  expect(verbs).toEqual(["created", "removed", "updated", "created"]);
+  // The journal carries every move, so a reopen sees no externally removed note.
+  await store.close();
+  await open(root);
+  expect(readFileSync(join(root, "log.md"), "utf8")).not.toContain("removed-externally");
+});
+
+/** Sidecar bytes one upsert writes: a replaced snapshot counts whole, the journal counts its growth. */
+async function sidecarBytesPerUpsert(notes: number): Promise<number> {
+  const root = tempRoot();
+  const store = await open(root);
+  await store.vectorStore.upsert(Array.from({ length: notes }, (_, i) => record(`seed${String(i).padStart(8, "0")}`, `seed note ${i}`)));
+  await store.reconcile();
+  const size = (name: string) => (existsSync(join(root, name)) ? statSync(join(root, name)) : undefined);
+  let total = 0;
+  const samples = 10;
+  for (let i = 0; i < samples; i += 1) {
+    const snapshotBefore = size(SNAPSHOT);
+    const journalBefore = size(JOURNAL)?.size ?? 0;
+    await store.vectorStore.upsert([record(`probe${String(i).padStart(7, "0")}`, `probe note ${i}`)]);
+    const snapshotAfter = size(SNAPSHOT);
+    if (snapshotAfter !== undefined && snapshotAfter.mtimeMs !== snapshotBefore?.mtimeMs) total += snapshotAfter.size;
+    total += Math.max(0, (size(JOURNAL)?.size ?? 0) - journalBefore);
+  }
+  return total / samples;
+}
+
+test("derived_bytes_per_upsert_do_not_scale_with_notes", async () => {
+  const small = await sidecarBytesPerUpsert(200);
+  const large = await sidecarBytesPerUpsert(2000);
+  expect(small).toBeGreaterThan(0);
+  // A whole-map rewrite would make the large store write ~10x the small one.
+  expect(large).toBeLessThan(small * 1.5);
+}, 60_000);
+
+test("archive_move_by_invalidate_survives_reopen", async () => {
+  const root = tempRoot();
+  const first = await open(root);
+  await first.vectorStore.upsert([record("abab00001111", "moved by a tombstone", { fabric: { v: 1, kind: "fact" } })]);
+  await first.vectorStore.invalidate(scope, [{ id: "abab00001111", reason: "revoked", at: "2026-10-19T00:00:00.000Z" }]);
+  await first.close();
+  const reopened = await open(root);
+  expect(findNoteFile(root, "abab00001111")).toContain("/archive/facts/");
+  expect(readFileSync(join(root, "log.md"), "utf8")).not.toContain("removed-externally");
+  expect(await reopened.vectorStore.getByIds(scope, ["abab00001111"])).toHaveLength(1);
 });

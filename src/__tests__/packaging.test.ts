@@ -54,6 +54,8 @@ const packages: Array<{
   sourceExport?: boolean;
   /** Also publishes a TypeScript `bin/` entrypoint (source package). */
   sourceBin?: boolean;
+  /** Ships generated reference data under `data/`, including verbatim example sources (plan 215 Task 14). */
+  shipsData?: boolean;
 }> = [
   { dir: ".", name: "@arnilo/prism", isCore: true, sourceExport: true },
   { dir: "packages/integrations/mcp", name: "@arnilo/prism-mcp", sourceExport: true },
@@ -88,6 +90,7 @@ const packages: Array<{
   { dir: "packages/hosts/channels", name: "@arnilo/prism-channels", sourceExport: true },
   { dir: "packages/hosts/evals", name: "@arnilo/prism-evals", sourceExport: true },
   { dir: "packages/hosts/devtools", name: "@arnilo/prism-devtools", sourceExport: true, sourceBin: true },
+  { dir: "packages/hosts/host-builder", name: "@arnilo/prism-host-builder", sourceExport: true, sourceBin: true, shipsData: true },
   { dir: "packages/integrations/hooks-json", name: "@arnilo/prism-hooks-json", sourceExport: true },
   { dir: "packages/credentials/keyring", name: "@arnilo/prism-credentials-keyring", sourceExport: true },
   { dir: "packages/stores/jsonl", name: "@arnilo/prism-store-jsonl", sourceExport: true },
@@ -180,6 +183,7 @@ describe("packaging guard", () => {
           if (f.startsWith("templates/")) return false;
           if (pkg.sourceExport && f.startsWith("src/") && f.endsWith(".ts") && !f.includes("__tests__")) return false;
           if (pkg.sourceBin && f.startsWith("bin/") && f.endsWith(".ts") && !f.includes("__tests__")) return false;
+          if (pkg.shipsData && f.startsWith("data/") && !deniedPatterns.some((d) => d.pattern.test(f))) return false;
           return deniedPatterns.some((d) => d.pattern.test(f)) || isSourceTs(f);
         });
         const labels = junk.map((f) => `${f} (${deniedPatterns.find((d) => d.pattern.test(f))?.label ?? "source .ts"})`);
@@ -210,6 +214,30 @@ describe("packaging guard", () => {
           }
         }
       });
+
+      if (pkg.shipsData) {
+        it("ships the generated indexes and example sources, and the bin", () => {
+          const files = getPackList(pkg.dir, pkg.name);
+          for (const file of [
+            "data/api.json",
+            "data/errors.json",
+            "data/examples.json",
+            "data/examples/define-package.ts",
+            "bin/prism-host-builder.ts",
+            "skills/prism-host-builder/SKILL.md",
+            ...["choosing", "layout", "recipes", "pitfalls", "security", "verification", "upgrading"].map(
+              (name) => `skills/prism-host-builder/references/${name}.md`,
+            ),
+          ]) {
+            assert.ok(files.includes(file), `${pkg.name} missing ${file} in pack`);
+          }
+          assert.equal(
+            files.some((file) => file.startsWith("data/examples/fixtures/") || file.startsWith("data/examples/example-workspace/")),
+            false,
+            "fixtures and workspaces stay out of the data",
+          );
+        });
+      }
 
       if (pkg.isCore) {
         it("ships the docs hub, CLI bin, and package scaffold", () => {
@@ -877,7 +905,7 @@ describe("packaging guard", () => {
   it("0.4 package set — 61 manifests in lockstep, no shims, family roots stay inert", () => {
     const root = readPkg(".");
     const names = packages.map((pkg) => pkg.name).sort();
-    assert.equal(names.length, 51, "51 active packages including root (Kilo, LiteLLM, then Ollama Cloud added)");
+    assert.equal(names.length, 52, "52 active packages including root (Kilo, LiteLLM, Ollama Cloud, then host-builder added)");
     assert.ok(names.includes("@arnilo/prism-tools-work"), "work package must be present");
     assert.ok(!names.includes("@arnilo/prism-office"), "office package must be absent");
     // Plan 140 Task 1: the SDK is on its own version line (0.1.x).

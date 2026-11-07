@@ -408,7 +408,17 @@ export function createFabricRecall(deps: {
       (recallOptions.minSimilarity ?? 0.35) * floorScale,
       recallOptions.touchedPaths,
     );
-    const candidates = loaded.candidates;
+    // Coverage is matched terms over the expanded query; report it over the caller's own terms, the scale the floor
+    // above already uses. Unscaled, a match found only through an alternate fell under `memory.recall`'s no-match
+    // confidence and the tool abstained, so expansion never reached the agent (plan 210 Task 2).
+    const candidates =
+      floorScale === 1
+        ? loaded.candidates
+        : loaded.candidates.map((candidate) =>
+            candidate.hit.coverage === undefined
+              ? candidate
+              : { ...candidate, hit: { ...candidate.hit, coverage: Math.min(1, candidate.hit.coverage / floorScale) } },
+          );
 
     const eligible = candidates.filter((candidate) => {
       if (!inWindow(candidate, from, to)) return false;

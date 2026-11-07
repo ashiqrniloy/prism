@@ -1,0 +1,12 @@
+{
+  "name": "eval-host",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@arnilo/prism": "0.13.0"
+  }
+}

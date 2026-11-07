@@ -1,5 +1,6 @@
 import { spyOn, test } from "bun:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -1162,7 +1163,15 @@ test("free_route_fetch_waits_out_transient_faults_and_hands_daily_caps_back", as
   const patient = benchmarkFetch({
     patient: true,
     sleep,
-    fetch: script([reset, hourly, hourly, hourly, hourly, () => new Response("Provider returned error", { status: 400 }), () => new Response("ok")]),
+    fetch: script([
+      reset,
+      hourly,
+      hourly,
+      hourly,
+      hourly,
+      () => new Response("Provider returned error", { status: 400 }),
+      () => new Response("ok"),
+    ]),
   });
   assert.equal((await patient("https://example.invalid")).status, 200);
   assert.ok(slept.length >= 3 && slept.every((ms) => ms <= PATIENT_RETRY.maxRetryAfterMs));
@@ -1237,10 +1246,49 @@ test("markdown_scale_smoke_reports_all_metrics", async () => {
     assert.ok(result.writeP95Ms >= result.writeP50Ms);
     assert.ok(result.recallP95Ms >= result.recallP50Ms);
     assert.ok(result.treeBytes > result.indexBytes);
+    // Plan 210 Task 0.1: derived-file write amplification per single-note upsert.
+    assert.ok(
+      Number.isFinite(result.derivedBytesRewrittenPerUpsert) && result.derivedBytesRewrittenPerUpsert > 0,
+      "derivedBytesRewrittenPerUpsert",
+    );
   } finally {
     clearTimeout(timer);
   }
 }, 65000);
+
+test("markdown_store_write_amplification_within_budget", async () => {
+  // Plan 210 Task 0.2: a single-note upsert appends to the file-map journal instead of rewriting the map.
+  const budget = JSON.parse(readFileSync(new URL("../budgets.json", import.meta.url), "utf8")).markdownStore;
+  const child = Bun.spawn(
+    [process.execPath, "scripts/memory-bench/markdown-scale.mjs", "--notes", `${budget.smallNotes},${budget.largeNotes}`],
+    { stdout: "pipe", stderr: "pipe" },
+  );
+  const timer = setTimeout(() => child.kill(), 110000);
+  try {
+    const output = await new Response(child.stdout).text();
+    const errors = await new Response(child.stderr).text();
+    assert.equal(await child.exited, 0, errors);
+    const [small, large] = output
+      .trim()
+      .split("\n")
+      .slice(-2)
+      .map((line) => JSON.parse(line));
+    assert.equal(small.notes, budget.smallNotes);
+    assert.equal(large.notes, budget.largeNotes);
+    const fileMapBytes = (row) =>
+      row.derivedBytesRewrittenPerUpsertByFile[".index-files.json"] +
+      row.derivedBytesRewrittenPerUpsertByFile[".index-files.journal.jsonl"];
+    assert.ok(fileMapBytes(large) > 0, "the journal records each upsert");
+    assert.ok(
+      fileMapBytes(large) <= budget.maxFileMapBytesPerUpsert,
+      `file-map bytes per upsert ${fileMapBytes(large)} > ${budget.maxFileMapBytesPerUpsert}`,
+    );
+    const ratio = large.writeP50Ms / small.writeP50Ms;
+    assert.ok(ratio <= budget.maxWriteP50Ratio, `write p50 ratio ${ratio.toFixed(2)} > ${budget.maxWriteP50Ratio}`);
+  } finally {
+    clearTimeout(timer);
+  }
+}, 120000);
 
 test("mock_agentic_question_converges_in_three_turns", async () => {
   // Plan 188.9 Task 6: recall returns snippets, so the mock reads the ids it was shown, then answers.
@@ -3042,9 +3090,22 @@ test("a_dropped_socket_is_retried_for_both_answers_and_judges", async () => {
   assert.equal(isTransportFailure(dropped), true);
   assert.equal(isTransportFailure({ status: "completed" }), false);
   // An intermittent content-filter refusal is re-asked like a dropped stream.
-  assert.equal(isTransportFailure({ status: "failed", error: { code: "400", message: "x", cause: { message: "400 InternalError.Algo.DataInspectionFailed: Input text data may contain inappropriate content." } } }), true);
+  assert.equal(
+    isTransportFailure({
+      status: "failed",
+      error: {
+        code: "400",
+        message: "x",
+        cause: { message: "400 InternalError.Algo.DataInspectionFailed: Input text data may contain inappropriate content." },
+      },
+    }),
+    true,
+  );
   // One oversized stream event loses the stream, not the question.
-  assert.equal(isTransportFailure({ status: "failed", error: { code: "sse_event_overflow", message: "SSE event exceeded 262144 bytes" } }), true);
+  assert.equal(
+    isTransportFailure({ status: "failed", error: { code: "sse_event_overflow", message: "SSE event exceeded 262144 bytes" } }),
+    true,
+  );
   assert.equal(isTransportFailure({ status: "failed", error: { code: "ERR_PRISM_RUN_LIMIT", message: "ECONNRESET" } }), false);
   assert.equal(isRetryableJudgeFailure(new Error("MemoryBenchJudgeError:ECONNRESET")), true);
   assert.equal(isRetryableJudgeFailure(new Error("MemoryBenchJudgeError:23", { cause: { name: "TimeoutError" } })), true);

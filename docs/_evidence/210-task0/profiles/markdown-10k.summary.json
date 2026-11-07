@@ -1,0 +1,207 @@
+{
+  "sampledMs": 7599.3,
+  "self": [
+    {
+      "name": "run",
+      "ms": 1990.3,
+      "pct": 26.2
+    },
+    {
+      "name": "stringify",
+      "ms": 1136.4,
+      "pct": 15
+    },
+    {
+      "name": "writeFile",
+      "ms": 532.5,
+      "pct": 7
+    },
+    {
+      "name": "parseLogFile (okf.ts:379)",
+      "ms": 380.5,
+      "pct": 5
+    },
+    {
+      "name": "parse",
+      "ms": 301.6,
+      "pct": 4
+    },
+    {
+      "name": "join",
+      "ms": 293.7,
+      "pct": 3.9
+    },
+    {
+      "name": "appendLog (index.ts:354)",
+      "ms": 210.2,
+      "pct": 2.8
+    },
+    {
+      "name": "encodeURI",
+      "ms": 189.2,
+      "pct": 2.5
+    },
+    {
+      "name": "stat",
+      "ms": 178.6,
+      "pct": 2.3
+    },
+    {
+      "name": "copyDataProperties",
+      "ms": 169.9,
+      "pct": 2.2
+    },
+    {
+      "name": "structuredClone",
+      "ms": 130.9,
+      "pct": 1.7
+    },
+    {
+      "name": "(anonymous) (okf.ts:336)",
+      "ms": 111.3,
+      "pct": 1.5
+    },
+    {
+      "name": "isNoteRelPath (layout.ts:157)",
+      "ms": 103.3,
+      "pct": 1.4
+    },
+    {
+      "name": "lexicalTerms (lexical.ts:43)",
+      "ms": 92.4,
+      "pct": 1.2
+    },
+    {
+      "name": "findFileById (index.ts:300)",
+      "ms": 90.9,
+      "pct": 1.2
+    },
+    {
+      "name": "values",
+      "ms": 86.8,
+      "pct": 1.1
+    },
+    {
+      "name": "slugify (layout.ts:72)",
+      "ms": 85.9,
+      "pct": 1.1
+    },
+    {
+      "name": "mkdir",
+      "ms": 82.6,
+      "pct": 1.1
+    },
+    {
+      "name": "(anonymous) (okf.ts:370)",
+      "ms": 73.2,
+      "pct": 1
+    },
+    {
+      "name": "(anonymous) (okf.ts:337)",
+      "ms": 66.2,
+      "pct": 0.9
+    }
+  ],
+  "inclusive": [
+    {
+      "name": "(root)",
+      "ms": 7599.3,
+      "pct": 100
+    },
+    {
+      "name": "(anonymous) (index.ts:474)",
+      "ms": 3361,
+      "pct": 44.2
+    },
+    {
+      "name": "transaction (bun:sqlite:439)",
+      "ms": 2275.7,
+      "pct": 29.9
+    },
+    {
+      "name": "upsert (index.ts:273)",
+      "ms": 2261.5,
+      "pct": 29.8
+    },
+    {
+      "name": "run",
+      "ms": 1990.3,
+      "pct": 26.2
+    },
+    {
+      "name": "(anonymous) (index.ts:572)",
+      "ms": 1238.1,
+      "pct": 16.3
+    },
+    {
+      "name": "#runNoArgs (bun:sqlite:162)",
+      "ms": 1215.2,
+      "pct": 16
+    },
+    {
+      "name": "stringify",
+      "ms": 1136.4,
+      "pct": 15
+    },
+    {
+      "name": "appendLog (index.ts:354)",
+      "ms": 1011.2,
+      "pct": 13.3
+    },
+    {
+      "name": "(anonymous) (index.ts:276)",
+      "ms": 991.4,
+      "pct": 13
+    },
+    {
+      "name": "writeFileMap (state.ts:76)",
+      "ms": 974.8,
+      "pct": 12.8
+    },
+    {
+      "name": "measureMarkdownScale (markdown-scale.mjs:54)",
+      "ms": 755.5,
+      "pct": 9.9
+    },
+    {
+      "name": "#run (bun:sqlite:194)",
+      "ms": 750.4,
+      "pct": 9.9
+    },
+    {
+      "name": "map",
+      "ms": 744.5,
+      "pct": 9.8
+    },
+    {
+      "name": "regenerateIndex (index.ts:342)",
+      "ms": 601.5,
+      "pct": 7.9
+    },
+    {
+      "name": "parseLogFile (okf.ts:379)",
+      "ms": 585.3,
+      "pct": 7.7
+    },
+    {
+      "name": "renderIndexFile (okf.ts:325)",
+      "ms": 543.2,
+      "pct": 7.1
+    },
+    {
+      "name": "bound writeFile",
+      "ms": 533.6,
+      "pct": 7
+    },
+    {
+      "name": "writeFile (promises:187)",
+      "ms": 533.6,
+      "pct": 7
+    },
+    {
+      "name": "writeFile",
+      "ms": 532.5,
+      "pct": 7
+    }
+  ]
+}

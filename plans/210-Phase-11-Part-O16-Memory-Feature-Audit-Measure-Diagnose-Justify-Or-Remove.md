@@ -30,7 +30,7 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
 - **Amended 2026-10-31 by plans 211–212 (host adoption ships in 0.13.0).** When this plan is complete, continue with plan 211 (module skills; its memory skills are written on the surface this plan leaves), then plan 212, then plan 184.
 - **Amended 2026-11-01 by plan 202 Task 5.4.6 (owner disposition).** Plan 202 Task 5 (agentic lexical navigation and write-time keyword enrichment) closes on a bounded development screen: `beam-100k`, `locomo`, `memoryagentbench-cr` and a 14-question `beam-1m` slice. The candidate-gap halving rule is the screen's gate and the ability guard is descriptive only. The rest of Task 5's frozen target is handed here: `longmemeval-m`, the full `beam-1m` development cohort and the ability non-regression veto. Tasks 1, 5 and 9 carry it, and none of it may be dropped from this plan without a new owner decision.
 - **Plan 202 closure handoff (owner, 2026-11-02).** Plan 202 is closed by disposition with unmet targets preserved, not accepted as passing. Its [complete closure ledger](../docs/_evidence/memory-bench/202/closure.md) is mandatory input to Tasks 1–5. This includes Task 17 residual diagnosis/F4, whether or not a facts preset ships. Development diagnosis precedes the freeze and held-out acceptance; this is not permission to restart a historical campaign.
-- **Amended 2026-11-03 (owner decision): hot-path performance fixes land first, as Tasks 0.1–0.3.** A compiled-language (Rust) evaluation on 2026-11-03 rejected a native port. The kernel adds 3–6 ms per run against seconds of model latency, most store CPU is already native (bun:sqlite, JSON, fs), and the measured costs are algorithmic. Two came out of it: the markdown store rewrites three whole files on every write, and the session snapshot re-reads and `structuredClone`s the whole branch on every provider turn. The owner wants both fixed, with a regression gate, before the memory evaluations. They are unrelated to the audit. They are numbered 0.x so every existing "plan 210 Task N" reference (plans 202, 208, 209, the plan index) stays valid. They add no kernel contract, hook, slot or export, so no review task is needed. Both change sources that plan 202's cache-stability pin fingerprints (`src`, `packages/memory/core/src`), so Task 0.3 ends by re-attesting the pin with byte-identical provider requests. Task 1 starts only after that.
+- **Amended 2026-11-03 (owner decision): hot-path performance fixes land first, as Tasks 0.1–0.3.** A compiled-language (Rust) evaluation on 2026-11-03 rejected a native port. The kernel adds 3–6 ms per run against seconds of model latency, most store CPU is already native (bun:sqlite, JSON, fs), and the measured costs are algorithmic. Two came out of it: the markdown store rewrites three whole files on every write, and the session snapshot re-reads and `structuredClone`s the whole branch on every provider turn. The owner wants both fixed, with a regression gate, before the memory evaluations. They are unrelated to the audit. They are numbered 0.x so every existing "plan 210 Task N" reference (plans 202, 208, 209, the plan index) stays valid. They add no kernel contract, hook, slot or export, so no review task is needed. Both change sources that plan 202's cache-stability pin fingerprints (`src`, `packages/memory/core/src`), so Task 0.3 ends by re-attesting the pin with byte-identical provider requests. Task 1 starts only after that. **Amended 2026-11-07 (Task 0.1 finding):** Task 0.4 was added for a third algorithmic cost, the SQLite (and possibly Postgres) branch read, which is O(depth × session size). It is a store-only change outside the pin's fingerprinted sources. Task 1 starts after Tasks 0.3 and 0.4.
 - **Amended 2026-11-04 (owner decision, plan 215): post-0.13.0 memory track.** 0.13.0 no longer waits for this plan. Plan 215 publishes the five memory packages as an experimental prerelease line (`0.13.0-experimental.N`, dist-tag `experimental`) and freezes only the stable surface. This plan runs after plan 209, after 0.13.0 ships. Wherever it says "before plan 184/185", "the freeze", "plan 186" or "plan 187", read: plan 215's cache-parity runner, plan 215's experimental compat classification, and this plan's own graduation (Task 10). Task 11 (memory skills) moved here from plan 211 Task 6.
 - **Amended 2026-11-05 (owner request, from plan 208 Task 5's accuracy investigation): recall-quality remediation, Task 3.1.** Plan 208's screen reported low accuracy, and the investigation (`docs/_evidence/memory-bench/208/accuracy-investigation-2026-11-04.json`, counts only) split it into harness defects (fixed in plan 208), small samples, a benchmark ceiling, and a modest memory gap. The memory gap is real and has named causes. They enter this plan as fixed variants the audit already knows how to handle: built behind opt-in tuning fields in Task 3.1, predicted in Task 3's `gap-predictions.json`, measured once in Task 5 (gate C-1), kept or removed in Task 6. No default changes before Task 6. The number 3.1 keeps every existing "plan 210 Task N" reference valid. **Sequencing exception (owner instruction, 2026-11-05):** Task 3.1 was started before plan 209 Task 6, against this plan's own start rule above, because the screen's evidence made the fixes the cheaper next step. Task 3.2 (panel calibration, from the same screen's O3 early read) is added the same day; both are development-only and change no default.
 - **Audit before acceptance.** Removals happen on development evidence only, before any held-out item is read. The held-out acceptance then measures the product that ships, so no claim has to be re-pointed and no removal needs a second held-out read.
@@ -47,7 +47,7 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
 
 ## Tasks
 
-- [ ] Task 0.1: Hot-path baselines — session turn-overhead scenario and markdown write amplification
+- [x] Task 0.1: Hot-path baselines — session turn-overhead scenario and markdown write amplification
   - Acceptance Criteria:
     - Functional: `bun scripts/benchmark.mjs --scenario session-turn-overhead` runs one session for 1,000 runs. Each run is 2 provider turns plus 1 tool call with a ~2 KB tool result and reply, on the mock provider. It runs once over `createMemorySessionStore` and once over the SQLite session store (`@arnilo/prism-store-sqlite`, temp file). Per variant it reports:
       - per-run p50/p95;
@@ -64,7 +64,7 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
       - **Kernel at 1,000 runs:** `structuredClone` 61.6% under `readBranchPath` → `rebuildSessionContextFromReader` → `snapshot` → `buildTurnRequest`; `estimateTextTokensForFamily` 9.3%; `indexEntries` 8.0%.
       - **Kernel growth:** per-run p50 grew from 2.84 ms (first 20 runs) to 11.19 ms (last 20).
       If a profile contradicts the Task 0.2 or 0.3 premise, record the finding and stop before those tasks.
-    - Performance: The scenario stays under 60 s on the reference machine. The new gate runs the scenario at a reduced 300 runs.
+    - Performance: The scenario stays under 60 s on the reference machine. The new gate runs the scenario at a reduced 300 runs. *(Amended 2026-11-07 by the Task 0.1 finding: before the fixes, the 1,000-run memory variant takes 87 s, and the SQLite variant is capped at 150 runs (60 in the gate) by `fixture.sqliteRuns`/`sqliteGateRuns`, because its branch read is O(depth × session size). The 60 s budget is re-checked after Tasks 0.3 and 0.4.)* *(Re-checked 2026-11-07 after Task 0.4: both stores run 1,000 runs in ~12–13 s each, ~25 s in total, and the gate runs 300 runs per store.)*
     - Code Quality: The scenario is a module under `scripts/benchmark-scenarios/` that emits the shared report shape and is registered in `SCENARIOS` (`phase: 210`, `protected: false`). The counting wrapper lives in the scenario; it is not a kernel export.
     - Security: Network-free and credential-free. The report carries `environment.network: false` and `environment.credentials: false`, and no message text.
   - Approach:
@@ -102,13 +102,50 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
       - `docs/performance.md`: a `## Session turn overhead (plan 210)` section with the command, fixture and gate file (ceilings added by Task 0.3).
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed 2026-11-07):
+    - What changed:
+      - `scripts/benchmark-scenarios/session-turn-overhead.mjs` (new): one session on a scripted network-free provider, with a counting `Proxy` over the store (scenario-local, not a kernel export).
+        - The agent sets `limits: { maxInputTokens: null, maxTotalTokens: null }`, because the default 40k input-token cap stops the session at about run 17. The byte caps are untouched.
+        - Env overrides: `PRISM_BENCH_RUNS`, `PRISM_BENCH_SQLITE_RUNS`, and `PRISM_BENCH_VARIANTS=memory|sqlite` (one store, for a CPU profile).
+      - Registered in `scripts/benchmark.mjs` `SCENARIOS` (`phase: 210`, `protected: false`).
+      - `scripts/benchmark-session-turn.test.mjs` (new; both named tests) was added to `GATE_FILES`. It runs about 8 s.
+      - `scripts/budgets.json#sessionTurnOverhead.fixture`: `runs` 1000, `gateRuns` 300, `sqliteRuns` 150, `sqliteGateRuns` 60, `window` 20, `warmupRuns` 20, `payloadBytes` 2048. No ceilings yet.
+      - `scripts/memory-bench/markdown-scale.mjs`: `derivedBytesRewrittenPerUpsert` added.
+        - Each of the 100 writes is bracketed by stats of `.index-files.json`, `log.md`, `index.md` and the future `.index-files.journal.jsonl`.
+        - A replaced file counts its whole size; an appended file counts its growth.
+        - The existing fields and assertions are unchanged. Its pre-existing compact style was left as is: Biome already flags the file at HEAD.
+      - The smoke assertion went into the existing `markdown_scale_smoke_reports_all_metrics` (`scripts/memory-bench/run.test.mjs`).
+      - `scripts/cpu-profile-summary.mjs` (new, small): turns a `.cpuprofile` into top self and inclusive rows. Used for the evidence, and reusable by Tasks 0.2 and 0.3 for the after-fix profiles.
+      - Evidence: `docs/_evidence/210-task0-hot-paths.md`, plus `docs/_evidence/210-task0/` (scenario JSON, markdown JSONL, three profiles with summaries).
+      - Docs: `docs/performance.md` `## Session turn overhead (plan 210)`.
+    - Results, before any fix:
+      - **Memory store, 1,000 runs:** p50 2.52 ms (first 20) → 163.1 ms (last 20), `growthRatio` 64.8, `storeEntriesReadPerRun` 6,118. All reads are `readBranchPath`.
+      - **SQLite, 150 runs:** 3.73 → 484.1 ms, `growthRatio` 129.7.
+      - **Markdown:** `derivedBytesRewrittenPerUpsert` is 1.1 MB, 11.4 MB and 57.1 MB at 1k, 10k and 50k notes (≈1.14 KB per stored note per write). Write p95 is 5.2, 35.2 and 247.4 ms.
+    - Profiles against the 2026-11-03 rows:
+      - **Kernel:** reproduced. `structuredClone` is 57.1% self under `readBranchPath` → `rebuildSessionContextFromReader` → `snapshot` → `buildTurnRequest`/`rebuildHistory`. `estimateTextTokensForFamily` is 16.0%, `indexEntries` 7.1%.
+      - **Markdown 10k:** reproduced. `writeFileMap` is 12.8%, `appendLog` 13.3% (`parseLogFile` 7.7%), `regenerateIndex` 7.9%, `findFileById` 1.2%.
+      - **Growth:** reproduced in direction, much steeper. The first window matches (2.52 against 2.84 ms), but the last window is 163 ms, not 11.19 ms, because this fixture's 2 KB payloads make each clone heavier. The 2026-11-03 payload was unrecorded.
+      - **Residual:** `stringify` (13%) is `jsonBytes` for `maxRequestBytes`, as Task 0.3 already keeps.
+    - Findings for later tasks:
+      - Neither the Task 0.2 nor the Task 0.3 premise is contradicted, so both proceed.
+      - **New defect, so Task 0.4 was added:** the SQLite `readEntryBranch` recursive CTE (`packages/stores/sqlite/src/persistence.ts:536`) steps `current` through `prism_session_entries_session_id_idx` instead of the primary key (`EXPLAIN QUERY PLAN` in the evidence). Each branch read is O(depth × session size): 94.6% of the SQLite profile is `Statement.all`, and per-run time is quadratic (368 ms at run 125).
+      - Task 0.3 hides it on a live session, but every cold rebuild still pays it. Postgres has the same CTE shape (`packages/stores/postgres/src/persistence.ts:461`).
+      - Task 0.3's "memory store ~4" reference is ~65 on this fixture. Its `growthRatio ≤ 1.5` target stands.
+      - Task 0.2's line references have moved: `findFileById` is now `index.ts:300`, `regenerateIndex` `:342`, `appendLog` `:354`, `writeFileMap` `state.ts:76`. Locate them with graft.
+    - Checks:
+      - `bun test scripts/benchmark-session-turn.test.mjs`: 2 pass.
+      - `bun test scripts/memory-bench/run.test.mjs -t markdown_scale`: 1 pass.
+      - `bun test scripts/run-all-tests.test.mjs`: pass.
+      - `scripts/budget-gate.test.mjs` has 4 failures (export-surface counts, non-null-assertion allowlist, kernel unpacked +46 B). They come from concurrent uncommitted work in the tree, not from this task: no `src/` or package file changed.
+      - No export moved, so no baseline diff. No sweep was needed.
 
-- [ ] Task 0.2: Markdown store — stop rewriting whole derived files on every write
+- [x] Task 0.2: Markdown store — stop rewriting whole derived files on every write
   - Acceptance Criteria:
     - Functional: A single-note `upsert` or `delete` no longer re-serializes the whole file map. It appends the changed entries to a journal next to the snapshot (`.index-files.journal.jsonl` beside `.index-files.json`). Loading reads the snapshot and replays the journal. The journal is compacted into the snapshot when its op count exceeds `max(1024, map size)`, and on every `reconcile()`/`rebuild()`, so each write is O(1) amortized.
     - Functional: `findFileById` (`packages/memory/core/src/fabric/index.ts:271`) uses an id→path map kept in step with every `fileMap` mutation at `index.ts:360-441`, `:447-496` and `:546-561`. It no longer scans the map.
     - Functional: `appendLog` (`index.ts:325`) keeps the parsed entries in memory, keyed by `log.md`'s `(mtimeMs, size)` after its own write. If the file changed (an external edit or another process), it re-parses as it does today. Rendered `log.md` bytes are unchanged.
-    - Functional: `regenerateIndex` (`index.ts:313`) caches each entry's rendered line (the `encodeURI` work) and sorts with one shared `Intl.Collator` instead of per-call `localeCompare`. `index.md` stays byte-identical to the current `renderIndexFile` (`okf.ts:~325`) for the same entries. The remaining O(n) join and write is recorded as the residual cost.
+    - Functional: `regenerateIndex` (`index.ts:313`) caches each entry's rendered line (the `encodeURI` work). *(Amended 2026-11-07 by the execution finding: the plan also asked to sort with one shared `Intl.Collator` instead of per-call `localeCompare`. In Bun 1.4.4 the collator is ~50% slower, so the sort keeps `localeCompare`.)* `index.md` stays byte-identical to the current `renderIndexFile` (`okf.ts:~325`) for the same entries. The remaining O(n) join and write is recorded as the residual cost.
     - Functional: Fail closed. A torn or unparsable journal line drops the derived map, and the next open does the full reconcile it does today when the index is missing (`index.ts:194-205`). It never trusts a partial map. A journal from a newer format version gets the same treatment.
     - Functional: `packages/memory/fabric/src/okf-bundle.ts:72` `DERIVED_FILES` gains the journal name. Export, import and the OKF bundle never ship it.
     - Performance: Against the same-session Task 0.1 baseline:
@@ -116,7 +153,7 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
       - `derivedBytesRewrittenPerUpsert` no longer scales with the file map;
       - cold open, warm open and recall p95 stay within 10% (three-run median).
       `docs/_evidence/memory-markdown-scale-0.13.0.md` is refreshed. Its supported operating envelope changes only if the measurements support the change.
-    - Code Quality: All changes stay in `packages/memory/core/src/fabric/{state,index}.ts` (plus `okf.ts` only if a pure render helper is extracted). No new export, config field or dependency.
+    - Code Quality: All changes stay in `packages/memory/core/src/fabric/{state,index}.ts` (plus `okf.ts` only if a pure render helper is extracted, and the journal file-name constant in `layout.ts` beside `FILE_MAP_FILE`). No new package export, config field or dependency.
     - Security: The journal is written with the same modes as the map (`0o600` file, `0o700` dir) under the existing write lock, through `assertInsideRoot`. It holds paths, ids, hashes and titles, as the map does today, and never note text.
   - Approach:
     - Documentation Reviewed:
@@ -164,10 +201,48 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
       - evidence files above.
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed 2026-11-07):
+    - What changed:
+      - `state.ts`: `readFileMap`/`writeFileMap` and the `FileMap` type are replaced by a `FileIndex` class (module-internal; not exported from any package entry).
+        - It holds the path → entry `Map`, an id → paths index and a dirty set.
+        - `flush()` appends one `{"v":1,"op":"set"|"del",...}` line per dirty path to `.index-files.journal.jsonl`, with `appendFile` at mode `0o600`.
+        - `flush({ compact: true })`, or a journal past `max(1024, size)` ops, rewrites the snapshot atomically and then removes the journal. Ops are whole entries, so a crash between the two replays harmlessly.
+        - `load()` returns `intact: false` for a torn tail (no final newline), an unparsable line, a bad op or `v ≠ 1`. The map is then empty and the open sets `force`, so it runs the full reconcile.
+      - `layout.ts`: the `FILE_MAP_JOURNAL_FILE` constant.
+      - `index.ts`:
+        - Every `fileMap` mutation goes through `FileIndex`, and `findFileById` uses the id index.
+        - Upsert and delete flush; reconcile and rebuild compact.
+        - `assertInsideRoot` checks the snapshot and journal paths at open.
+        - `appendLog` reuses its last-written entries while `log.md`'s `(mtimeMs, size)` matches its own write, and re-parses otherwise.
+        - `regenerateIndex` caches each rendered line in a `WeakMap` keyed by the (immutable) entry object.
+      - `okf.ts`: a `renderIndexLine` helper, plus an optional line renderer argument to `renderIndexFile`. The output is byte-identical (tested against the old renderer).
+      - `packages/memory/fabric/src/okf-bundle.ts`: `DERIVED_FILES` gains the journal.
+      - Measurement: `scripts/memory-bench/markdown-scale.mjs` gains `derivedBytesRewrittenPerUpsertByFile` (additive). `scripts/budgets.json#markdownStore` sets `maxFileMapBytesPerUpsert` 4096 at 2,000 notes and `maxWriteP50Ratio` 2.75 (2,000 vs 200 notes). It is enforced by the new `markdown_store_write_amplification_within_budget` in `scripts/memory-bench/run.test.mjs`, already in `GATE_FILES`.
+      - Docs: `packages/memory/core/README.md` (markdown stores, derived files), `docs/performance.md`, `CHANGELOG.md`, `docs/_evidence/memory-markdown-scale-0.13.0.md` (refreshed), `docs/_evidence/210-task0-hot-paths.md` ("Task 0.2" section), and `docs/_evidence/210-task0/` (`markdown-scale.after.jsonl`, `task0.2-paired/`, the after-fix warm-open profile summary).
+    - Tests: the seven planned tests, plus `archive_move_by_invalidate_survives_reopen`:
+      - in `packages/memory/core/src/fabric/__tests__/markdown.test.ts`: `file_map_journal_replays_to_the_same_map`, `torn_journal_tail_forces_full_reconcile` (torn tail and `v: 2`), `index_md_and_log_md_bytes_unchanged`, `external_log_edit_is_reparsed`, `find_file_by_id_tracks_moves_archive_and_delete`, `derived_bytes_per_upsert_do_not_scale_with_notes`, `archive_move_by_invalidate_survives_reopen`;
+      - in `packages/memory/fabric/src/__tests__/okf-bundle.test.ts`: `okf_bundle_excludes_journal`.
+    - Results (paired medians, three runs each side, same session; details in the evidence):
+      - **Write p95:** 0.46× the baseline at 10k (33.0 → 15.3 ms) and 0.39× at 50k (226 → 89 ms), so ≤ 50% is met. The single final-code run (load average 30) gave 0.42× at 10k and 0.56× at 50k.
+      - **File-map bytes per upsert:** a constant 729 B at 1k, 10k and 50k (was ~1.14 KB per stored note), so they no longer scale with the map.
+      - **`derivedBytesRewrittenPerUpsert`:** 0.31× in total. It still grows with note count through the whole `index.md` rewrite (~345 B per note), the planned residual. `log.md` stops growing at its 2,000-entry cap.
+      - **Cold, warm and recall within 10%: not demonstrated.** The paired runs show warm open +17% at 10k, 50k cold +36% (2 extra passes against 1) and recall p95 +7–19%. Every after-fix run was on a machine at load average 14–30 (concurrent `tsc` and a QEMU VM), and recall does not touch the changed code. An interleaved A/B with HEAD and new sources side by side gave warm open at 1k of 88.5 against 91.3 ms (+3%). At 10k the within-side spread (479–899 ms) swamped any difference. The after-side warm-open profile puts all `FileIndex` work at ≤ 3% of samples. To settle it, re-run the paired command on an idle machine (see Further Actions).
+    - Findings for later tasks:
+      - **Collator:** `Intl.Collator.compare` is ~50% slower than argument-less `localeCompare` in Bun 1.4.4 (10k strings: 14–17 against 9–13 ms). The criterion is amended above.
+      - **Bug fixed on the way:** `invalidate`/`clearInvalidation` moved note files without persisting the file map. A close and reopen after an archive move logged `removed-externally` and **deleted the moved note's index row** (HEAD: 0 rows after reopen; now 1). Both now journal the move, and `archive_move_by_invalidate_survives_reopen` covers it.
+      - **Residual:** `regenerateIndex` (sort, join and write of `index.md`) is the main remaining per-write O(n) cost: 19% of the after-side profile. Avoiding it would need per-directory section caching or an OKF output change, which is out of scope here.
+    - Checks:
+      - `bun test` in `packages/memory/core` (71 pass) and `packages/memory/fabric` (688 pass).
+      - `bun test scripts/memory-bench/run.test.mjs` (all pass, including the new gate).
+      - `bun run typecheck` clean.
+      - `markdown_store_passes_vector_and_working_conformance` hit bun's 5 s default timeout once (5,050 ms) at load average ~21. Alone it runs in 0.5–0.8 s on both HEAD and the fix (three runs each), and the next full-file run passed (31 pass).
+      - Biome clean on every touched source and test file. `markdown-scale.mjs` was already flagged at HEAD and is left in its compact style.
+      - `scripts/budget-gate.test.mjs` still has the same 4 pre-existing failures recorded in Task 0.1, from concurrent work: kernel packed size, export-surface counts, and `biome.json`/`budgets.json` non-null allowlist rows.
+      - No package export moved, so no baseline diff. No retired public name, so no sweep. `readFileMap`/`writeFileMap` were internal, and graft shows no other callers.
 
-- [ ] Task 0.3: Session snapshot — extend on own append, revalidate in O(1); regression gate; cache-pin re-attestation
+- [x] Task 0.3: Session snapshot — extend on own append, revalidate in O(1); regression gate; cache-pin re-attestation
   - Acceptance Criteria:
-    - Functional: In `RuntimeAgentSession.appendNow` (`src/agent-session/session.ts:1163`), when a live cache exists for the previous leaf and the store accepted the append with `expectedParentId` equal to that leaf, the cache is extended with one detached copy of the appended entry instead of being invalidated. The extended snapshot gets new `entries`, `messages` and `summaries` arrays, so earlier snapshot values are never mutated. It keeps the original `expiresAt`.
+    - Functional: In `RuntimeAgentSession.appendNow` (`src/agent-session/session.ts:1163`), when a live cache exists for the previous leaf and the store accepted the append with `expectedParentId` equal to that leaf, the cache is extended with one detached copy of the appended entry instead of being invalidated. The extended snapshot gets new `entries`, `messages` and `summaries` arrays, so earlier snapshot values are never mutated. It keeps the original `expiresAt`. *(Amended 2026-11-07 at execution: "live" means same leaf and generation, expired or not. A model turn outlasts the 1 s TTL, so extending only an unexpired cache would rebuild on every real turn. An expired, extended cache is revalidated by the next `snapshot()`, so the staleness bound is unchanged. The appended entry's own `parentId` must also equal that leaf, because the memory store's `expectedParentId` checks existence, not the tip.)*
       Every other path invalidates as today (`session.ts:771`, `:1178`, `assemble.ts:695`):
       - a `compaction` entry;
       - an append that is not on the tip;
@@ -184,7 +259,7 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
       If any request differs, the fix changed behavior: stop and fix it. Never re-pin over a difference.
     - Performance: On `session-turn-overhead`, for both stores:
       - `storeEntriesReadPerRun` after warm-up is ≤ 1 (one revalidation `get` at most per expired TTL);
-      - `growthRatio` is ≤ 1.5, against the Task 0.1 baseline (memory store ~4).
+      - `growthRatio` is ≤ 1.5, against the Task 0.1 baseline (memory store 64.8 on the 2 KB fixture; the "~4" written here before Task 0.1 came from an unrecorded smaller payload). *(Amended 2026-11-07 by the execution finding: not reachable on this fixture. After the fix, 83% of per-run time is `jsonBytes` serializing the whole provider request for `maxRequestBytes`, which this plan keeps as O(request), and the request grows ~4 KB per run. The frozen ceilings are `growthRatio` ≤ 10 (memory, 300 runs) and ≤ 5 (SQLite, 60 runs). Before: 20.2 / 7.6; after: 5.1 / 1.8. The full 1,000-run memory ratio fell from 64.8 to ~27.)*
       `scripts/budgets.json#sessionTurnOverhead` gains these ceilings and a non-flaky p95 sanity ceiling, enforced by `scripts/benchmark-session-turn.test.mjs`. The markdown ceilings come from Task 0.2. If the kernel's packed size crosses `budgets.json#kernel`, it is rebaselined per `docs/release.md:64-76` with a dated reason.
     - Code Quality: Kernel-only change in `src/agent-session/` (the cache is kernel session state, so no package can own it). No new hook, slot, export or config field. `snapshotCacheTtlMs` validation and constants are unchanged. `bun scripts/release.mjs gate` shows no compat-baseline diff.
     - Security: Ownership scoping is unchanged. The scope check at `session.ts:655` still sees a snapshot that was revalidated or rebuilt within the TTL. A deleted or foreign-scope session is detected at the first revalidation, as today within one TTL. `docs/host-security.md:152` is reworded to the new guarantee: "revalidated against the store at most every TTL; extended only by the session's own CAS-accepted appends".
@@ -239,8 +314,125 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
       - evidence files.
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed 2026-11-07):
+    - What changed:
+      - `src/session-stores.ts`:
+        - `extendSnapshot(snapshot, entry)` is a module export that `src/index.ts` does not re-export.
+        - It returns a new snapshot with new arrays, or `undefined` when the result could differ from a rebuild: a `compaction` entry, a `parentId` other than the snapshot's leaf, or a snapshot whose tail is not past its newest compaction's `throughEntryId`. The caller then rebuilds.
+        - `snapshotFromBranch` marks the snapshots that can be extended in a module `WeakSet`, so the check is O(1).
+      - `src/agent-session/session.ts`:
+        - `appendNow`: an append conflict, or any store throw, now invalidates the cache before rethrowing. After a successful append, it extends the cache with `structuredClone(redacted)` when the cache matches the previous leaf and generation, the TTL is > 0 and `extendSnapshot` accepts. It keeps `expiresAt` and bumps the generation, so the meter cache still sees a mutation. Every other append invalidates as before.
+        - `snapshot()`: an expired cache for the same leaf and generation calls the new `revalidateSnapshot`. That makes one `store.get(tip)` and requires the same id, `sessionId`, `parentId` and ownership stamps, plus `entriesInScope` on the session scope. On success the cache is renewed for one TTL, unless an append or checkout replaced it during the `get`.
+        - TTL `0`, a store without `get`, or any mismatch rebuilds as before.
+      - `src/agent-session/session/provider-round.ts`: `estimateTurnUsage` uses `estimateMessagesMemoized`. It memoizes each message's integer share (per-message overhead plus its text estimate) in a `WeakMap` per model id. The sum is the same integer.
+      - `src/contracts-core/agent.ts`: the `snapshotCacheTtlMs` TSDoc no longer says the cache is "always invalidated by a new leaf or a mutation". The type is unchanged.
+      - Tests:
+        - `src/__tests__/session-snapshot-cache.test.ts` (new): the nine planned unit tests.
+          - `incremental_snapshot_equals_full_rebuild` runs 400 seeded steps over up to four sessions, mixing message, tool, summary, `suspended_run`, label and compaction entries with checkout, fork and resume.
+          - It was mutation-checked: dropping summaries from the extension makes it fail.
+        - `scripts/benchmark-session-turn.test.mjs` gains `session_turn_overhead_within_frozen_ceilings`. It shares one gate-sized scenario run with the schema test, whose `storeEntriesReadPerRun > 0` check became `>= 0`.
+        - `src/__tests__/agents.test.ts` "caches one stable leaf snapshot…": the second run now reads 3, not 4. Own appends no longer re-read.
+      - `scripts/budgets.json`:
+        - `sessionTurnOverhead.ceilings`: `maxStoreEntriesReadPerRun` 1, `maxGrowthRatio` `{memory: 10, sqlite: 5}`, `maxP95Ms` 30 (scaled by `wallClockBudget`).
+        - `kernel.packedBytes`/`unpackedBytes`/`sourceLines` rebaselined to 1217530 / 3960004 / 40523, +2867 / +8313 / +109 over plan 215 Task 15, with a dated reason.
+      - `scripts/memory-bench/equivalence-preload.mjs`: `randomUUID` calls from memory-core's `atomicWriteFile` (temp-file names) get their own counter. See the finding below.
+      - Docs:
+        - `docs/host-security.md:152` gets the new guarantee.
+        - `docs/performance.md` "Session turn overhead" gets the ceilings and after numbers.
+        - `CHANGELOG.md` `[Unreleased]`.
+      - Evidence:
+        - `docs/_evidence/210-task0-hot-paths.md`, "Task 0.3" section.
+        - `docs/_evidence/210-task0/session-turn-overhead.after.json`, `task0.3-gate-paired/` (three interleaved before/after runs at gate counts) and `profiles/kernel-memory.after.summary.json`.
+        - `docs/_evidence/memory-bench/202/cache-stability/{equivalence.json,record.json}` (re-attested).
+    - Append-only check (every first-party store): no first-party store rewrites an ancestor, so the task did not stop.
+      - Memory: append-only `add`; `deleteSession` removes the whole session.
+      - SQLite: the only `DELETE FROM prism_session_entries` statements are whole-session (`persistence.ts` `deleteSession`, `lifecycle.ts` purge), and no `UPDATE` touches entries.
+      - Postgres: only `deleteSession`'s whole-session `DELETE`.
+      - JSONL: `appendFile`; `deleteSession` unlinks the session file.
+    - Results:
+      - **Store reads:** `storeEntriesReadPerRun` is 0 for both stores (was 6,118 memory at 1,000 runs, and 1,918 / 478 at gate counts). Over 1,000 runs the store sees 1 `readBranchPath` and 12–13 revalidation `get`s.
+      - **Full scenario:** the 1,000-run memory variant takes 12.5–13.6 s (was 87 s), inside the 60 s budget. Last-20 p50 is 26–29 ms (was 163 ms), and `growthRatio` is 25–28 (was 64.8).
+      - **Gate counts** (interleaved medians, before → after): memory total 7.2 s → 0.97 s, p95 46 → 6.2 ms, `growthRatio` 20.2 → 5.1. SQLite `growthRatio` 7.6 → 1.8, p95 57 → 2.2 ms.
+    - Findings:
+      - **`growthRatio` ≤ 1.5 is not reachable** (the criterion is amended above). In the after-fix profile, `structuredClone` falls from 57.1% to 0.9%, and 82.9% inclusive is `jsonBytes` → `stringify` of the whole provider request. That is O(request), which this task keeps.
+      - **Equivalence first reported every request different, but the cause was the harness.**
+        - The kept request text showed only memory note ids and session ids differing (pinned counter `…1233` against `…1050`). The same result appeared with the Task 0.3 sources reverted, so Task 0.2 caused the shift.
+        - Mechanism: the preload pins `randomUUID` to one global counter, and `atomicWriteFile` (`packages/memory/core/src/fabric/state.ts:44`) names temp files with it. Task 0.2 writes far fewer whole snapshot files, so every later id shifted.
+        - Fix: the harness, not a re-pin. Temp-file names draw from a separate counter. Afterwards all 54 requests across `preset-r1` and `passive-only` were identical against `a4e09001`, the pre-Task-0.2 commit. `readiness.mjs --cache-stability` passed: 29 tests, equivalence identical.
+        - The base worktree is kept at `.cache/memory-bench/202/cache-stability-base`.
+      - **SQLite parity:** an extended snapshot and a SQLite `list()` rebuild are JSON-identical. They differ only in `undefined`-valued keys (SQLite drops some on messages and adds empty columns), already the case between stores and not read anywhere in the kernel.
+      - For Task 0.4: a live session no longer reads its branch, so the quadratic SQLite CTE now shows only on a cold open or rebuild. The SQLite gate variant is already flat (`growthRatio` 1.8), so Task 0.4 needs its own cold-read test (`branch_read_cost_is_linear_in_depth`), as planned.
+    - Checks:
+      - `bun test src/__tests__/session-snapshot-cache.test.ts`: 9 pass.
+      - `bun test scripts/benchmark-session-turn.test.mjs`: 3 pass.
+      - `bun test src/__tests__/agents.test.ts`: 86 pass.
+      - `bun test` in `packages/stores/{sqlite,jsonl,postgres}` (45, 43 and 12 pass; Postgres live tests gated) and `apps/prism-agent` (61 pass).
+      - `bun test scripts/memory-bench/prefix-probe.test.mjs`: 5 pass.
+      - `bun run typecheck` clean.
+      - `bun test src/__tests__`: 12 failures, all in suites this task does not touch (packaging, browser tools, wiki retirement, network-free guard, host surface, codemod, field-policy microbenchmark under load). The same failures were present before the change.
+      - `bun scripts/release.mjs gate`: no kernel compat-baseline diff. It still reports the pre-existing `rootExports` 1520 against 1519 (plan 215 Task 15 already records it) and Task 0.2's experimental memory-core note.
+      - `scripts/budget-gate.test.mjs`: the same 4 pre-existing failures. After this task's rebaseline, its kernel row fails only on `rootExports`.
+      - Biome: the new test file is clean. The touched kernel files carry the same format and import-order findings they had at HEAD, left as is.
+      - No export moved and no name retired, so no baseline diff and no sweep.
 
-- [ ] Task 1: The feature ledger
+- [x] Task 0.4: SQLite and Postgres branch read — walk ancestors by primary key (added 2026-11-07 from the Task 0.1 finding)
+  - Acceptance Criteria:
+    - Functional: The recursive CTE in `readEntryBranch` (`packages/stores/sqlite/src/persistence.ts:536`) looks each ancestor up by primary key. `EXPLAIN QUERY PLAN` shows `SEARCH ... USING INDEX sqlite_autoindex_prism_session_entries_1 (id=?)` (or the rowid equivalent) in the recursive step, and no full `SCAN` of `prism_session_entries` for the final select. Returned entries, order, paging (`limit`, `cursor`) and the ownership filter are unchanged.
+    - Functional: The Postgres store's branch CTE (`packages/stores/postgres/src/persistence.ts:461`, and the `branchSql` at `:898`) is checked with `EXPLAIN` on a protected run and gets the same fix if its plan has the same shape. The result is recorded either way. *(Executed 2026-11-07: the SQLite `queryEntries({ leafId })` CTE (`persistence.ts:872`) had the same recursive step and got the same fix. Postgres was checked on a local PostgreSQL 18.6 instead of a protected CI run. Its plan does not have the shape, so it is unchanged; see the note.)*
+    - Functional: `storeConformance` stays green for both stores.
+    - Performance: On `session-turn-overhead`, the SQLite variant's per-run time is linear in history before Task 0.3, or flat after it. `budgets.json#sessionTurnOverhead.fixture.sqliteRuns`/`sqliteGateRuns` are removed, so SQLite runs the full `runs`/`gateRuns`, and the scenario's 60 s budget is re-checked. *(Amended 2026-11-07 at execution: at 300 gate runs, not 60, the SQLite `growthRatio` is 5.5–8.2, from the same `jsonBytes` request growth as memory (entries read per run 0). So `ceilings.maxGrowthRatio.sqlite` moves from 5 to memory's 10.)*
+    - Code Quality: Store-only change. No schema migration unless an index is genuinely missing, in which case use the store's existing DDL upgrade path. No new export.
+    - Security: The ownership clause still applies to the seed row. Fail-closed paging validation is unchanged.
+  - Approach:
+    - Documentation Reviewed: `docs/_evidence/210-task0-hot-paths.md` (query plan, quadratic per-run times), `packages/stores/sqlite/src/ddl.ts:70-90`.
+    - Chosen Approach: make the recursive step join `prism_session_entries` by `id` first (for example by disqualifying the `session_id` index on `current` with `+current.session_id`, or by joining `parent` straight from `bp` via a `parent_id` carried in the CTE). Then filter the session on the primary-key row and select the final rows by `id` from the CTE. Pick the smallest variant that the planner provably honours.
+    - Files to Create/Edit: the two `persistence.ts` files, their store test suites (a plan-shape test plus a 2,000-entry branch-read timing ratio test), `scripts/budgets.json`, `scripts/benchmark-scenarios/session-turn-overhead.mjs` (drop `SQLITE_RUNS`), `docs/performance.md`, `docs/_evidence/210-task0-hot-paths.md`, `CHANGELOG.md`.
+  - Test Cases to Write:
+    - `branch_read_query_plan_uses_primary_key`.
+    - `branch_read_cost_is_linear_in_depth`: 200- against 2,000-entry sessions, read time ratio ≤ ~15, where quadratic is ~100.
+    - `branch_read_results_unchanged`: paging, forks and ownership scope, against today's output.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: no.
+    - Docs pages to create/edit: `docs/performance.md`, the `CHANGELOG.md` `## [Unreleased]` performance entry, and the evidence file.
+    - `docs/index.md` update: no
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed 2026-11-07):
+    - What changed:
+      - `packages/stores/sqlite/src/persistence.ts`:
+        - `readEntryBranch`: the recursive CTE carries `parent_id` and joins `parent ON parent.id = bp.parent_id` with `WHERE +parent.session_id = ?`. The unary `+` keeps the planner off the `(session_id, id)` index. The final select is `branch_path bp CROSS JOIN prism_session_entries e`, so it is driven from the path.
+        - The `queryEntries({ leafId })` branch CTE got the same recursive step. Its final select is keyset-paged by timestamp with the other filters, so it was left as is.
+        - The old query required every ancestor to be in the requested session; `+parent.session_id = ?` keeps that. The seed still needs `session_id = ?` and the ownership `EXISTS`.
+        - No schema, index, export or validation change.
+      - Tests (`packages/stores/sqlite/src/__tests__/sqlite-persistence.test.ts`):
+        - `branch_read_query_plan_uses_primary_key`: `EXPLAIN QUERY PLAN` of the SQL both reads actually prepare. The recursive step must `SEARCH parent USING INDEX sqlite_autoindex_prism_session_entries_1 (id=?)` and must not use the `session_id` index. The branch read's final select must `SEARCH e` by primary key, with no `SCAN e`.
+        - `branch_read_cost_is_linear_in_depth`: median of 5 cold reads at 200 and 2,000 entries, ratio ≤ 15.
+        - `branch_read_results_unchanged`: the pre-task SQL is kept verbatim as the reference. It covers a trunk with two forks, equal-timestamp id tiebreaks, a cross-session parent, a foreign session, a missing leaf, full reads and every page at limits 1/3/5, `queryEntries({ leafId })` membership, and the ownership scope on the seed (match, wrong tenant, wrong user).
+        - Mutation check: with the old CTE restored, the plan test and the linear test fail (13.2 → 1,353.9 ms), and the results test passes.
+      - `scripts/benchmark-scenarios/session-turn-overhead.mjs`: `SQLITE_RUNS`, `PRISM_BENCH_SQLITE_RUNS` and the report's `fixture.sqliteRuns` are removed. Both stores run `RUNS`.
+      - `scripts/benchmark-session-turn.test.mjs`: no longer passes `PRISM_BENCH_SQLITE_RUNS`.
+      - `scripts/budgets.json#sessionTurnOverhead`: `fixture.sqliteRuns`/`sqliteGateRuns` are removed, and `ceilings.maxGrowthRatio.sqlite` is 5 → 10, with a dated reason in `$comment`.
+      - Docs: `docs/performance.md` "Session turn overhead", the `CHANGELOG.md` `[Unreleased]` entry, `docs/_evidence/210-task0-hot-paths.md` ("Task 0.4" section), plus `docs/_evidence/210-task0/session-turn-overhead.task0.4.json` and `task0.4-gate/run{1,2,3}.json`.
+    - Results:
+      - Cold full-branch read, one-session chain, mean of 5: 200 entries 9.86 → 0.55 ms; 2,000 entries 1,317.8 → 5.76 ms. The 2,000/200 ratio is ~134 (quadratic) before and ~10.5 (linear) after.
+      - Full scenario, 1,000 runs per store, load average ~4: memory 12.9 s, SQLite 11.9 s (~25 s together, inside 60 s). SQLite `growthRatio` is 27.9 against memory's 26.2, and entries read per run are 0.01 for both.
+      - Gate, 300 runs, three runs: SQLite `growthRatio` 5.5 / 8.2 / 6.1 (memory 5.0 / 5.9 / 3.4), p95 7.2–8.1 ms.
+    - Findings:
+      - **Postgres has no defect, so it is unchanged.** Checked with `EXPLAIN (ANALYZE)` on a throwaway local PostgreSQL 18.6, in two layouts: depth 2,000 alone in the table, and depth 1,000 beside 50,000 rows in 500 other sessions.
+        - The old recursive step is already `Index Scan using prism_session_entries_session_id_idx` with `Index Cond: (session_id = $3 AND id = bp.id)`, 1 row per loop, plus a `pkey` lookup for the parent. That is a point lookup, not a session scan.
+        - With other sessions present, the final select is a `pkey` nested loop.
+        - Old 5.9 / 3.3 ms against the rewrite's 3.7 / 2.5 ms: linear either way. Not worth an untested-in-CI query change.
+        - The protected Postgres CI run is not needed for this verdict. The live suites (42 skipped without `PRISM_TEST_POSTGRES_URL`) were not run, because the Postgres code did not change.
+      - The SQLite growth ceiling of 5 came from 60 runs. At 300 runs the residual `jsonBytes` growth matches memory, hence the change.
+    - Checks:
+      - `bun test` in `packages/stores/sqlite`: 48 pass, including `storeConformance` and the three new tests. `packages/stores/postgres`: 12 pass, 42 live skipped.
+      - `bun test scripts/benchmark-session-turn.test.mjs`: 3 pass.
+      - `apps/prism-agent`: 62 pass.
+      - `bun run typecheck` clean.
+      - `scripts/budget-gate.test.mjs`: the same 4 pre-existing failures as Tasks 0.1–0.3.
+      - Biome: the changed test file is clean. `persistence.ts` still has its pre-existing import-order finding, which is also present at HEAD.
+      - No export moved and nothing was renamed or retired, so there is no baseline diff and no sweep. The `PRISM_BENCH_SQLITE_RUNS`/`sqliteRuns` grep over `src/ packages/ apps/ scripts/ docs/` (excluding `_evidence`) is empty.
+
+- [x] Task 1: The feature ledger
   - Acceptance Criteria:
     - Functional: The ledger has one row per feature. The minimum list, to be completed from the code and the READMEs' config stability tables:
       - **fabric retrieval and ranking:** lexical retrieval; `retrieval: "hybrid"` (kept by 188.11 for compatibility only); scope priors; storage strength S and ACT-R retrieval strength R priors; per-kind decay; `similar` links; the `linker` and `evolution` workers; recall kind hints; multi-query `queries`; `unmatchedTerms`;
@@ -264,7 +456,7 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
     - Functional: **Plan 202 closure inventory (2026-11-02).** Import every source-task row of `docs/_evidence/memory-bench/202/closure.md`, with evidence hashes, `deferredFrom`, development target, limitation and owning task. Preserve Task 4 `baselineComplete: false` and Task 5 screen `miss`; missing evidence is `unmeasured`, and a miss alone is not proof of a statistically negative feature. Tasks 6–12 and the live/model-answer limits of Tasks 14–16 are mandatory candidates where benefit is unmeasured. Record unbuilt Tasks 13/17 as deferred-lever dispositions, separate from installed-feature removal rows. Task 17/F4 must be present even when no facts preset exists.
     - Functional: **Candidates** are rows with status `neutral`, `negative` or `unmeasured`, including every feature plans 202, 208 and 209 listed at their plan end. The ledger is committed before Task 2.
     - Performance: Built offline from code, READMEs and evidence files.
-    - Code Quality: `scripts/memory-bench/feature-ledger.mjs` builds it from the config stability tables (`stability.test.ts` sources) plus a hand-maintained mechanism list. A test fails if a config field or kind is missing from the ledger.
+    - Code Quality: `scripts/memory-bench/feature-ledger.mjs` builds it from the config schemas the stability tables are tested against (`stability.test.ts` sources, plus the wiki package's `config`) and a hand-maintained mechanism list (`feature-ledger-features.mjs`). A test fails if a config field, kind, tool or command is missing from the ledger. *(Amended at execution: tools and commands are covered too, read from source.)*
     - Security: No note text; evidence references only.
   - Approach:
     - Documentation Reviewed:
@@ -281,7 +473,7 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
       timeout 120 bun scripts/memory-bench/feature-ledger.mjs --out docs/_evidence/memory-bench/210/feature-ledger.json
       ```
     - Files to Create/Edit:
-      - `scripts/memory-bench/feature-ledger.mjs` and test (new);
+      - `scripts/memory-bench/feature-ledger.mjs`, `feature-ledger-features.mjs` (the hand-maintained rows) and `feature-ledger.test.mjs` (new);
       - `docs/_evidence/memory-bench/210/{feature-ledger.json,README.md}` (new).
     - References:
       - Plans 188.11 Task 6, 202, 207–209.
@@ -296,6 +488,58 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
       - evidence README.
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed 2026-11-07):
+    - What changed:
+      - `scripts/memory-bench/feature-ledger.mjs` (new): the builder. It reads, rather than restates:
+        - the fabric, OM and wiki config schemas (every property path, walking `anyOf`/`oneOf`);
+        - the `MemoryNoteKind` union;
+        - tool and command names from source;
+        - preset membership from `presetFields()`;
+        - defaults from `scripts/memory-bench/defaults.json`;
+        - a sha256 for every evidence file.
+      - Builder modes: `--out` (write the ledger), `--check` (the committed file equals a fresh build) and `--verify-tests` (runs each named test with `bun test ./<file> -t <name>$`).
+      - `scripts/memory-bench/feature-ledger-features.mjs` (new): the hand-maintained rows, plus the plan 202 closure inventory, the plan 208/209 hand-offs, and the open 188.7 findings and 188.11 limitations, each mapped to its owning rows.
+      - `scripts/memory-bench/feature-ledger.test.mjs` (new): the four named tests plus `every_open_handoff_finding_and_limitation_has_an_owning_row` and `ledger_is_text_free_and_committed_copy_is_current`. Each guard is proven by feeding the builder an altered row list, which must fail with a named problem.
+      - `docs/_evidence/memory-bench/210/feature-ledger.json` and `README.md` (new).
+    - Result:
+      - The ledger has 108 features and covers 220 config paths (fabric, OM and wiki), 9 kinds, 8 tools and 18 commands.
+      - Status counts:
+        - `benefit` 4: exchange archive, `exchange` kind, `conversational` preset, agent read tools;
+        - `neutral` 3: `recall.supersessionHint`, OM promotion, the wiki co-read trigger;
+        - `negative` 0;
+        - `unmeasured` 87;
+        - `safety-proven` 14.
+      - **90 candidates** in all. The ledger also lists:
+        - the open live/model-answer measurements of 202 Tasks 14–16;
+        - the deferred levers 202 Task 13 and Task 17. They are kept apart from the installed-feature rows.
+      - `--verify-tests` ran all 37 named tests, and all 37 passed.
+    - Findings that affect later tasks:
+      - **Every `benefit` row rests on LongMemEval-S only.** The evidence is 188.9 held-out v2 (exchange archive, confounded with that plan's delivery change) and 188.10 held-out v3 (the read tools and the preset). These are earlier plans' partitions; no plan 210 held-out partition was read.
+      - **No row is `negative`.**
+        - The 202 Task 5 screen `miss` has no paired CI that excludes zero, so enrichment and navigation are `unmeasured` overall, `neutral` per screened suite, and `unmeasured` on LongMemEval-M, full BEAM-1M and MemoryAgentBench-CR. This follows the closure rule that a miss is not proof of a negative feature.
+        - Plan 202 Task 5.7 had pre-labelled these rows `negative`/`miss`. The ledger keeps the `miss` as the preserved screen verdict instead.
+      - **Leads for Task 2** (mechanisms that may never fire):
+        - `lifecycle.verification`: verified share 0 in every offline lifecycle arm of 202 Task 16;
+        - `delivery.weak-tool-caller`: the two-turn trigger cannot fire in one-question sessions.
+      - **`om.commands` and `fabric.toggle-status` have no named test for their inspectability role,** so they are `unmeasured`. Task 2 should name or add one.
+      - **Hash mismatch.** Plan 202 Task 5.7 cites the manifest hash prefix `a19a5ab7…`, which matches neither the manifest's `manifestHash` (`461167af…47fe`) nor its file sha256 (`2cbb2f82…22c9`). The ledger records the values read from the file (10 cells).
+      - **Task 17 / F4 flags.** "All 14 Task 17 cell flags `measured: false`" is now computed: 10 decisions in the accepted screen's `summary.json` plus 4 in `failure-attribution.json`, all unmeasured.
+      - **Rule for later edits.** The ledger is generated, so editing any cited evidence file makes `ledger_is_text_free_and_committed_copy_is_current` fail until `--out` is re-run. Tasks 2–6 should re-run `--out` whenever they change a row or an evidence file.
+    - Prerequisite fix (test-only, noted per the plan-task loop):
+      - `task5_development_screen_verdict_matches_criteria_schema_and_recorded_evidence` (`scripts/memory-bench/task5-screen.test.mjs`) rewrote the committed `202/task5/development-screen-verdict.{json,md}` with a fresh `generatedAt` on every suite run. This is why both files were already modified in the working tree, and it made the ledger's pinned hash order-dependent.
+      - The test now restores both files' bytes in a `finally`. Its assertions are unchanged.
+      - The first suite run of this task had restamped the files to `2026-11-07T07:54:20.296Z`. Both were restored to the pre-run `2026-11-06T19:24:46.364Z`, and the json sha256 matches the ledger (`257288b4…`).
+    - Checks:
+      - `bun test scripts/memory-bench/feature-ledger.test.mjs`: 6 pass.
+      - `feature-ledger.mjs --check`: current, both before and after a full suite run.
+      - `--verify-tests`: 37/37.
+      - `bun test scripts/memory-bench`: 496 pass, 3 skip, 1 fail, 1 error.
+        - The fail and the error are the pre-existing `Task5Manifest: the candidate product has uncommitted changes` refusal, which `202/closure-verification.json` already records and Task 2's prerequisites own.
+        - `markdown_store_write_amplification_within_budget` failed once in an earlier run at load average ~12 and passed on the rerun.
+      - `bun run typecheck`: clean.
+      - Biome: clean on the new scripts and the changed test.
+      - No export, config or runtime code changed, so there is no baseline diff and no sweep.
+    - Not done: the Task 0.2 idle-machine markdown-scale re-run (Further Actions, "before Task 1"). The machine stayed at load average 11–21 throughout, so the item stays open.
 
 - [ ] Task 2: Mechanism verification — offline probes for every candidate
   - Acceptance Criteria:
@@ -307,6 +551,11 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
     - Functional: A mechanism error found here (`never-fires`, `no-effect`, `wrong-effect` against the documentation) is fixed in this task with a regression test, when the fix is local and does not change the feature's contract. Otherwise it is recorded for Task 3. Each fix is listed in the ledger and the task note.
     - Functional: Realistic trigger rates come from replaying development histories offline: one LongMemEval-M development history, one BEAM-100K, one coding lifecycle persona and one work-outcome persona, through the product path with scripted model replies. A mechanism that fires on fewer than 1% of eligible turns in realistic use is flagged `rare`.
     - Functional: **Plan 202 verification prerequisites.** Resolve the two memory check blockers recorded in `docs/_evidence/memory-bench/202/closure-verification.json`: make Task 5 manifest tests use an isolated pinned product fixture instead of requiring unrelated working-tree changes to be committed, while preserving the real campaign dirty-product refusal; verify the host's after-forget result from structured hits rather than mistaking the echoed query in `no matching memory` for leaked memory. Preserve deletion/isolation coverage. Re-run the affected benchmark/host checks before C-1; provider compatibility and kernel-budget blockers remain release-path obligations, not evidence of memory benefit.
+    - Functional: **Task 1 leads (amended 2026-11-07).** Probe first:
+      - `lifecycle.verification`: verified share 0 in every offline lifecycle arm;
+      - `delivery.weak-tool-caller`: the two-turn trigger cannot fire in one-question sessions.
+      
+      Name or add an inspectability test for `om.commands` and `fabric.toggle-status`. Re-run `feature-ledger.mjs --out` after each row or status change.
     - Performance: All probes finish offline in ≤ 30 minutes, with no model or network call.
     - Code Quality: One probe file per feature group under `scripts/memory-bench/mechanism-probes/`, sharing the `prefix-probe.mjs` request-capture helpers. Probes report hashes, counts and verdicts only.
     - Security: Fixture text only; temporary roots are removed on exit.
@@ -957,3 +1206,5 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
 ## Further Actions
 
 - To be filled after task completion with improvements, rationale, and priority.
+- (Recorded 2026-11-07 by Task 0.2; high priority, before Task 1.) Re-run the Task 0.2 paired markdown-scale comparison (HEAD fabric sources against the fix, three runs each, `--notes 1000,10000,50000`) on an idle machine. Task 0.2's "cold, warm and recall within 10%" criterion was not demonstrated, because every after-fix run was at load average 14–30. If a real open regression shows up, profile the cold 50k rebuild first: it is the largest observed gap.
+- (Recorded 2026-11-07 by Task 0.3; low priority, post-0.13.0.) The kernel's main per-turn cost on a long, uncompacted session is now `jsonBytes` (`src/agent-session/session/helpers.ts:147`): it stringifies the whole provider request to enforce `maxRequestBytes`, 83% of the 1,000-run profile. It is O(request) and the byte cap must stay. Measuring incrementally (bytes of the stable prefix carried between turns) could remove most of it. Real sessions compact long before this fixture's ~4 MB requests, so it matters only if a host profile shows it.

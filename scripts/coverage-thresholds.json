@@ -86,6 +86,11 @@
       "branches": null,
       "functions": 92.73
     },
+    "@arnilo/prism-host-builder": {
+      "lines": 97,
+      "branches": null,
+      "functions": 97
+    },
     "@arnilo/prism-mcp": {
       "lines": 85.38,
       "branches": null,

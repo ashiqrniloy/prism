@@ -1,0 +1,157 @@
+{
+  "sampledMs": 14287.4,
+  "self": [
+    {
+      "name": "stringify",
+      "ms": 11727.6,
+      "pct": 82.1
+    },
+    {
+      "name": "(anonymous) (content.ts:155)",
+      "ms": 731.3,
+      "pct": 5.1
+    },
+    {
+      "name": "filter",
+      "ms": 340.3,
+      "pct": 2.4
+    },
+    {
+      "name": "estimateMessagesMemoized (provider-round.ts:185)",
+      "ms": 146.9,
+      "pct": 1
+    },
+    {
+      "name": "flatIntoArrayWithCallback",
+      "ms": 145,
+      "pct": 1
+    },
+    {
+      "name": "byteLength",
+      "ms": 128.7,
+      "pct": 0.9
+    },
+    {
+      "name": "structuredClone",
+      "ms": 121.7,
+      "pct": 0.9
+    },
+    {
+      "name": "extendSnapshot (session-stores.ts:208)",
+      "ms": 86.2,
+      "pct": 0.6
+    },
+    {
+      "name": "copyDataProperties",
+      "ms": 37.5,
+      "pct": 0.3
+    },
+    {
+      "name": "providerVisibleLoadedSkills (input.ts:530)",
+      "ms": 29.2,
+      "pct": 0.2
+    },
+    {
+      "name": "buildProviderMessages (input.ts:211)",
+      "ms": 28.3,
+      "pct": 0.2
+    },
+    {
+      "name": "estimateTextTokensForFamily (usage-estimation.ts:70)",
+      "ms": 25.8,
+      "pct": 0.2
+    },
+    {
+      "name": "assembleProviderInput (input.ts:260)",
+      "ms": 25.8,
+      "pct": 0.2
+    },
+    {
+      "name": "flatIntoArray",
+      "ms": 23.7,
+      "pct": 0.2
+    },
+    {
+      "name": "generateProviderTurn (provider-round.ts:299)",
+      "ms": 22.2,
+      "pct": 0.2
+    }
+  ],
+  "inclusive": [
+    {
+      "name": "(root)",
+      "ms": 14287.4,
+      "pct": 100
+    },
+    {
+      "name": "generateProviderTurn (provider-round.ts:299)",
+      "ms": 12248.1,
+      "pct": 85.7
+    },
+    {
+      "name": "(anonymous) (assemble.ts:495)",
+      "ms": 11950,
+      "pct": 83.6
+    },
+    {
+      "name": "generateWithRetry (provider-round.ts:248)",
+      "ms": 11948.9,
+      "pct": 83.6
+    },
+    {
+      "name": "retryLoop (retry.ts:109)",
+      "ms": 11947.9,
+      "pct": 83.6
+    },
+    {
+      "name": "generateProviderTurn (provider-round.ts:288)",
+      "ms": 11940.7,
+      "pct": 83.6
+    },
+    {
+      "name": "jsonBytes (helpers.ts:147)",
+      "ms": 11850.6,
+      "pct": 82.9
+    },
+    {
+      "name": "stringify",
+      "ms": 11727.6,
+      "pct": 82.1
+    },
+    {
+      "name": "assembleProviderInput (input.ts:260)",
+      "ms": 1384.4,
+      "pct": 9.7
+    },
+    {
+      "name": "assertMessagesSupportModelCapabilities (content.ts:169)",
+      "ms": 1241.6,
+      "pct": 8.7
+    },
+    {
+      "name": "flatIntoArrayWithCallback",
+      "ms": 900.1,
+      "pct": 6.3
+    },
+    {
+      "name": "flatMap",
+      "ms": 884.8,
+      "pct": 6.2
+    },
+    {
+      "name": "collectMessageContentBlocks (content.ts:154)",
+      "ms": 882.4,
+      "pct": 6.2
+    },
+    {
+      "name": "(anonymous) (content.ts:155)",
+      "ms": 731.3,
+      "pct": 5.1
+    },
+    {
+      "name": "filter",
+      "ms": 343.4,
+      "pct": 2.4
+    }
+  ]
+}

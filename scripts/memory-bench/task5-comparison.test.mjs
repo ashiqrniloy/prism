@@ -1,6 +1,8 @@
-import { test } from "bun:test";
+import { afterAll, test } from "bun:test";
 import assert from "node:assert/strict";
-import { existsSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { stableHash } from "./journal.mjs";
 import { BENCH_MAX_TURNS } from "./replay.mjs";
@@ -40,7 +42,15 @@ import {
   task5CampaignFingerprint,
 } from "./task5-execute.mjs";
 
-const manifest = await buildTask5ComparisonManifest();
+// Plan 210 Task 2: the manifest is built in an isolated pinned fixture, a detached worktree of HEAD,
+// so unrelated working-tree changes in the real checkout cannot make these tests refuse. The real
+// campaign refusal of a dirty product is unchanged and is proven against the fixture below.
+const fixture = mkdtempSync(join(tmpdir(), "prism-task5-fixture-"));
+execFileSync("git", ["worktree", "add", "--detach", "--quiet", fixture, "HEAD"], { stdio: "ignore" });
+afterAll(() => {
+  execFileSync("git", ["worktree", "remove", "--force", fixture], { stdio: "ignore" });
+});
+const manifest = await buildTask5ComparisonManifest({ root: fixture });
 const clone = () => structuredClone(manifest);
 // A drifted proposal can only be meaningfully refused if its own hash is recomputed, as a forger would.
 const refreeze = (value) => {
@@ -86,7 +96,7 @@ test("task5_manifest_refuses_product_or_cohort_drift", async () => {
 
   // Source is the authority: the committed revision-1 tree and the current product must both reproduce.
   // A prepared control worktree is checked in preflight, not here, so the test does not need the cache.
-  const audited = await auditTask5Comparison(clone(), { worktree: null });
+  const audited = await auditTask5Comparison(clone(), { root: fixture, worktree: null });
   assert.equal(audited.controlProductHash, manifest.product.control.productHash);
   assert.equal(audited.candidateProductHash, manifest.product.candidate.productHash);
 });
@@ -114,6 +124,17 @@ test("task5_control_product_hash_reproduces_revision1", async () => {
   assert.equal(await gitTreeFingerprint(["packages/memory/fabric/src"], TASK5_CONTROL_PRODUCT_SOURCE), TASK5_HISTORICAL_FABRIC_HASH);
   assert.equal(await gitTreeFingerprint(TASK5_PRODUCT_PATHS, TASK5_CONTROL_PRODUCT_SOURCE), TASK5_REVISION1_PRODUCT_HASH);
   assert.notEqual(manifest.product.candidate.productHash, TASK5_REVISION1_PRODUCT_HASH, "the candidate carries the treatment");
+});
+
+test("task5_manifest_still_refuses_a_dirty_product_checkout", async () => {
+  const file = join(fixture, "packages/memory/fabric/src/tools.ts");
+  const original = readFileSync(file);
+  writeFileSync(file, `${original}\n// dirty\n`);
+  try {
+    await assert.rejects(buildTask5ComparisonManifest({ root: fixture }), /candidate product has uncommitted changes/);
+  } finally {
+    writeFileSync(file, original);
+  }
 });
 
 test("task5_refuses_uncommitted_candidate", async () => {

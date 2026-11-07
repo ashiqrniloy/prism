@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-04T18:48:08.308Z",
+  "generatedAt": "2026-11-06T19:41:45.659Z",
   "root": {
     "name": "@arnilo/prism",
     "version": "0.13.0"
@@ -18,6 +18,7 @@
     "@arnilo/prism-devtools": "0.13.0",
     "@arnilo/prism-remote": "0.13.0",
     "@arnilo/prism-headless": "0.13.0",
+    "@arnilo/prism-host-builder": "0.13.0",
     "@arnilo/prism-hooks-json": "0.13.0",
     "@arnilo/prism-mcp": "0.13.0",
     "@arnilo/prism-observability": "0.13.0",
@@ -58,12 +59,12 @@
     "@arnilo/prism-tools-research": "0.13.0"
   },
   "counts": {
-    "publishable": 51,
-    "workspace": 50,
+    "publishable": 52,
+    "workspace": 51,
     "provider": 11,
     "prismFamily": 1,
-    "capability": 38,
-    "codeWithPeer": 50,
+    "capability": 39,
+    "codeWithPeer": 51,
     "pureManifest": 0
   },
   "providers": [
@@ -98,6 +99,7 @@
     "@arnilo/prism-guardrail-packs",
     "@arnilo/prism-headless",
     "@arnilo/prism-hooks-json",
+    "@arnilo/prism-host-builder",
     "@arnilo/prism-mcp",
     "@arnilo/prism-mcp-server",
     "@arnilo/prism-memory-compaction",

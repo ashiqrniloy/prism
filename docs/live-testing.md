@@ -324,6 +324,26 @@ free models, from `~/.config/prism/live.env` only. The router aliases `openroute
 committed. Web items run against a loopback fixture site and the browser opens a local Chromium, so nothing touches the
 live web. Evidence passes `redactSecrets` and a no-secret assertion.
 
+## Host-builder evaluation
+
+The `@arnilo/prism-host-builder` kit (skill, indexes, MCP server) is measured by giving a Prism builder agent seven
+fixture tasks in three arms (`none`, `skill`, `skill+mcp`) and grading its project with hidden tests. Claims are
+published only under the pre-registered rule in `scripts/host-builder-evals/criteria.json`. Details, the tasks and the
+claim rules: [README](../scripts/host-builder-evals/README.md).
+
+```bash
+timeout 600 bun scripts/host-builder-evals/run.mjs --offline                       # scripted oracle, no key, runs in CI
+bun scripts/host-builder-evals/run.mjs --register                                  # lock the criteria and inputs, then commit
+timeout 1800 bun scripts/host-builder-evals/run.mjs --dry-run --providers hyper    # three tasks, one trial: the cost estimate
+timeout 3600 bun scripts/host-builder-evals/run.mjs --live --providers hyper,opencode-go
+```
+
+The live run uses Hyper and OpenCode Go only (`HYPER_API_KEY`, `OPENCODE_GO_API_KEY` from `~/.config/prism/live.env`),
+after the owner approves the dry-run estimate. Models come from `PRISM_LIVE_HOST_BUILDER_EVAL_HYPER_MODEL` and
+`PRISM_LIVE_HOST_BUILDER_EVAL_OPENCODE_MODEL`. A paid run needs the lock to match the criteria and every registered
+input; a scored run also needs them committed. The builder works in a temp copy of each fixture, its shell inherits no
+key, and the evidence passes `redactSecrets` and a no-secret assertion. Evidence: `docs/_evidence/host-builder/212/`.
+
 ## Manual memory benchmark
 
 Requirements, dispatch/local commands, licences and comparison limits:

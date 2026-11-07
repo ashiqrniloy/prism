@@ -123,6 +123,30 @@ describe("plan 210 Task 3.1 recall variants", () => {
     assert.equal((await on.recall(query, { kinds: ["exchange"] })).hits.length, 1, "the informal form is reached");
   });
 
+  // Plan 210 Task 2: coverage is reported over the caller's terms, so the tool's no-match floor (0.34) does not
+  // abstain on a match found only through an alternate. Before the fix, `mother` → `mom` scored 1/4 and abstained.
+  it("expansion_match_reaches_the_recall_tool_instead_of_abstaining", async () => {
+    const fabricFor = (queryExpansion: boolean) => {
+      const memory = createMemory({ tenantId: "t", resourceId: "r", threadId: "s", vectorStore: createMemoryVectorStore() });
+      return createMemoryFabric({ memory, consolidate: false, queryExpansion });
+    };
+    const context = { sessionId: "s", runId: "r", toolCallId: "c" };
+    for (const queryExpansion of [true, false]) {
+      const fabric = fabricFor(queryExpansion);
+      const note = await fabric.remember({ kind: "fact", content: "my mom visits every spring" });
+      const recall = fabric.tools().find((tool) => tool.name === "memory.recall")!;
+      const result = (await recall.execute({ query: "mother" }, context)).value as { hits: { id: string; coverage?: number }[] };
+      if (queryExpansion) {
+        assert.deepEqual(
+          result.hits.map((item) => item.id),
+          [note.id],
+          "the alternate's match reaches the agent",
+        );
+        assert.equal(result.hits[0]?.coverage, 1, "coverage counts the caller's one term, matched through its alternate");
+      } else assert.deepEqual(result.hits, [], "off, the formal term matches nothing");
+    }
+  });
+
   it("recall_expansion_field_is_off_by_default_and_must_be_boolean", () => {
     assert.equal(resolveMemoryFabricConfig({}).recall.expansion, false);
     assert.equal(resolveMemoryFabricConfig({ recall: { expansion: true } }).recall.expansion, true);

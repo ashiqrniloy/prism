@@ -1,0 +1,207 @@
+{
+  "sampledMs": 87781.6,
+  "self": [
+    {
+      "name": "structuredClone",
+      "ms": 50142.8,
+      "pct": 57.1
+    },
+    {
+      "name": "estimateTextTokensForFamily (usage-estimation.ts:70)",
+      "ms": 14003.7,
+      "pct": 16
+    },
+    {
+      "name": "stringify",
+      "ms": 11436.8,
+      "pct": 13
+    },
+    {
+      "name": "indexEntries (session-stores.ts:559)",
+      "ms": 6195.8,
+      "pct": 7.1
+    },
+    {
+      "name": "orderBranch (session-stores.ts:102)",
+      "ms": 1397,
+      "pct": 1.6
+    },
+    {
+      "name": "estimateMessageTokens (estimate.ts:48)",
+      "ms": 1010.1,
+      "pct": 1.2
+    },
+    {
+      "name": "fencedChars (usage-estimation.ts:84)",
+      "ms": 380.7,
+      "pct": 0.4
+    },
+    {
+      "name": "filter",
+      "ms": 304.1,
+      "pct": 0.3
+    },
+    {
+      "name": "flatIntoArrayWithCallback",
+      "ms": 261.2,
+      "pct": 0.3
+    },
+    {
+      "name": "map",
+      "ms": 233.8,
+      "pct": 0.3
+    },
+    {
+      "name": "find",
+      "ms": 187.7,
+      "pct": 0.2
+    },
+    {
+      "name": "(anonymous) (session-stores.ts:168)",
+      "ms": 181.5,
+      "pct": 0.2
+    },
+    {
+      "name": "flatIntoArray",
+      "ms": 144.2,
+      "pct": 0.2
+    },
+    {
+      "name": "(anonymous) (content.ts:155)",
+      "ms": 121.1,
+      "pct": 0.1
+    },
+    {
+      "name": "(anonymous) (estimate.ts:125)",
+      "ms": 106.9,
+      "pct": 0.1
+    },
+    {
+      "name": "messageText (estimate.ts:123)",
+      "ms": 102,
+      "pct": 0.1
+    },
+    {
+      "name": "byteLength",
+      "ms": 101.4,
+      "pct": 0.1
+    },
+    {
+      "name": "push",
+      "ms": 80,
+      "pct": 0.1
+    },
+    {
+      "name": "resolveModelFamily (usage-estimation.ts:58)",
+      "ms": 75.3,
+      "pct": 0.1
+    },
+    {
+      "name": "providerVisibleLoadedSkills (input.ts:530)",
+      "ms": 74.4,
+      "pct": 0.1
+    }
+  ],
+  "inclusive": [
+    {
+      "name": "(root)",
+      "ms": 87781.6,
+      "pct": 100
+    },
+    {
+      "name": "readBranchFromReader (session-stores.ts:86)",
+      "ms": 57924.7,
+      "pct": 66
+    },
+    {
+      "name": "rebuildSessionContextFromReader (session-stores.ts:149)",
+      "ms": 56016,
+      "pct": 63.8
+    },
+    {
+      "name": "snapshot (session.ts:1213)",
+      "ms": 55271.6,
+      "pct": 63
+    },
+    {
+      "name": "(anonymous) (session-turn-overhead.mjs:83)",
+      "ms": 55264.4,
+      "pct": 63
+    },
+    {
+      "name": "readBranchPath (session-stores.ts:298)",
+      "ms": 55254.2,
+      "pct": 62.9
+    },
+    {
+      "name": "map",
+      "ms": 51874,
+      "pct": 59.1
+    },
+    {
+      "name": "structuredClone",
+      "ms": 50142.8,
+      "pct": 57.1
+    },
+    {
+      "name": "(anonymous) (assemble.ts:413)",
+      "ms": 36845.9,
+      "pct": 42
+    },
+    {
+      "name": "(anonymous) (assemble.ts:485)",
+      "ms": 36808.2,
+      "pct": 41.9
+    },
+    {
+      "name": "buildTurnRequest (assemble.ts:408)",
+      "ms": 36799.7,
+      "pct": 41.9
+    },
+    {
+      "name": "generateProviderTurn (provider-round.ts:272)",
+      "ms": 27583,
+      "pct": 31.4
+    },
+    {
+      "name": "assembleRoundContext (assemble.ts:294)",
+      "ms": 18586.6,
+      "pct": 21.2
+    },
+    {
+      "name": "rebuildHistory (session.ts:1194)",
+      "ms": 18497.3,
+      "pct": 21.1
+    },
+    {
+      "name": "(anonymous) (run-controller.ts:129)",
+      "ms": 18449.6,
+      "pct": 21
+    },
+    {
+      "name": "assemble (assemble.ts:485)",
+      "ms": 18378.8,
+      "pct": 20.9
+    },
+    {
+      "name": "recordTurnUsage (provider-round.ts:301)",
+      "ms": 17289.8,
+      "pct": 19.7
+    },
+    {
+      "name": "(anonymous) (provider-round.ts:301)",
+      "ms": 17288.6,
+      "pct": 19.7
+    },
+    {
+      "name": "recordProviderUsage (provider-round.ts:123)",
+      "ms": 17285.3,
+      "pct": 19.7
+    },
+    {
+      "name": "recordProviderUsage (provider-round.ts:129)",
+      "ms": 17283,
+      "pct": 19.7
+    }
+  ]
+}

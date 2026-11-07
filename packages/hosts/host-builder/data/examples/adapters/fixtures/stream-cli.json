@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "turns": [
+    {
+      "input": [
+        "{\"type\":\"user\",\"text\":\"Review the file\"}"
+      ],
+      "output": [
+        "{\"type\":\"init\",\"sessionId\":\"recorded-session\"}",
+        "{\"type\":\"assistant\",\"blocks\":[{\"type\":\"text\",\"text\":\"Checking.\"},{\"type\":\"thinking\",\"text\":\"Read first.\"}]}",
+        "{\"type\":\"delta\",\"block\":\"text\",\"text\":\"Done.\"}",
+        "{\"type\":\"delta\",\"block\":\"thinking\",\"text\":\"Verified.\"}",
+        "{\"type\":\"tool_use\",\"id\":\"read-1\",\"name\":\"read\",\"input\":{\"path\":\"README.md\"}}",
+        "{\"type\":\"tool_result\",\"id\":\"read-1\",\"status\":\"finished\",\"result\":\"contents\"}",
+        "{\"type\":\"retry\",\"category\":\"transient\",\"message\":\"retrying\"}",
+        "{\"type\":\"permission_denied\",\"message\":\"shell declined\"}",
+        "{\"type\":\"subagent\",\"parentToolId\":\"parent\",\"phase\":\"started\",\"name\":\"review\"}",
+        "{\"type\":\"file\",\"payload\":{\"path\":\"note.md\",\"change\":\"modified\",\"source\":\"agent\",\"diff\":\"+reviewed\"}}",
+        "{\"type\":\"subagent\",\"parentToolId\":\"parent\",\"phase\":\"completed\"}",
+        "{\"type\":\"skill\",\"payload\":{\"name\":\"review\",\"source\":\"native\",\"resolved\":true}}",
+        "{\"type\":\"plan\",\"payload\":{\"entries\":[{\"title\":\"review\",\"status\":\"complete\"}]}}",
+        "{\"type\":\"compaction\",\"payload\":{\"phase\":\"completed\",\"summary\":\"reviewed\"}}",
+        "{\"type\":\"result\",\"sessionId\":\"recorded-session\",\"usage\":{\"inputTokens\":10,\"outputTokens\":5,\"cost\":0.001}}"
+      ]
+    }
+  ]
+}

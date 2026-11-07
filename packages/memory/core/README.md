@@ -192,8 +192,14 @@ Writes take a cross-process `<root>/.lock` (`open wx`, 5 s retry, stale after 30
 pid is gone) and are queued in-process. A write puts the file first (temp file + `rename`) and then
 the index transaction; a delete unlinks the file then the row. `index.md` (OKF §8 root) and `log.md`
 (newest first, ids and verbs only, capped at 2,000 entries with older ones rotated to
-`log-<yyyy>.md`) are rewritten under the lock after each batch. Open creates (or migrates to) the schema-v3 index and
-reconciles in bounded batches; a missing or corrupt index is rebuilt from files plus `.state.json`.
+`log-<yyyy>.md`) are rewritten under the lock after each batch; their bytes depend only on the entries, and an
+edit to `log.md` made outside the store is kept. The derived path → entry map is `<root>/.index-files.json` (a
+snapshot) plus `<root>/.index-files.journal.jsonl`, to which each write appends only the entries it changed. Open
+replays the journal onto the snapshot; reconcile, rebuild, and a journal longer than the map fold it back into the
+snapshot. A torn, unparsable or newer-version journal is never trusted: the map is dropped and the open rebuilds the
+index from files. Open creates (or migrates to) the schema-v3 index and reconciles in bounded batches; a missing or
+corrupt index is rebuilt from files plus `.state.json`. The two map files are derived, like the index, and are never
+exported.
 
 Every path resolves under `root` with a `realpath` check, files are written `0o600` and directories
 `0o700`, and `log.md` never contains note text. Legal-hold notes refuse `forget` and keep their files.

@@ -321,8 +321,13 @@ export interface IndexEntry {
   readonly description: string;
 }
 
+/** One `index.md` bullet. */
+export function renderIndexLine(entry: IndexEntry): string {
+  return `- [${entry.title}](${encodeURI(entry.path)}) - ${entry.description}`;
+}
+
 /** Root `index.md` (OKF §8): only `okf_version` frontmatter plus sectioned bullet listings. */
-export function renderIndexFile(entries: readonly IndexEntry[]): string {
+export function renderIndexFile(entries: readonly IndexEntry[], line: (entry: IndexEntry) => string = renderIndexLine): string {
   const groups = new Map<string, IndexEntry[]>();
   for (const entry of entries) {
     const list = groups.get(entry.dir) ?? [];
@@ -332,9 +337,9 @@ export function renderIndexFile(entries: readonly IndexEntry[]): string {
   const sections = [...groups.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([dir, list]) => {
-      const items = [...list]
+      const items = list
         .sort((a, b) => a.title.localeCompare(b.title) || a.path.localeCompare(b.path))
-        .map((entry) => `- [${entry.title}](${encodeURI(entry.path)}) - ${entry.description}`)
+        .map(line)
         .join("\n");
       return `## ${dir}\n\n${items}`;
     })

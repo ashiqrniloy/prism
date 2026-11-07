@@ -33,6 +33,7 @@ export const SCENARIOS = {
   redaction: { module: "benchmark-scenarios/redaction.mjs", phase: 70, protected: false },
   "attention-compiler": { module: "benchmark-scenarios/attention-compiler.mjs", phase: 74, protected: false },
   "session-search": { module: "benchmark-scenarios/session-search.mjs", phase: 95, protected: false },
+  "session-turn-overhead": { module: "benchmark-scenarios/session-turn-overhead.mjs", phase: 210, protected: false },
 };
 
 function main() {

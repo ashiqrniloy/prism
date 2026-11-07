@@ -1356,3 +1356,35 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Source: plans/208-Phase-11-Part-O14-Memory-Three-Tier-Evaluation-Claim-Support-And-Default-Decision.md
 - What: Remove `.cache/memory-bench/208/` once plan 210 Task 3.2 has built its set.
 - Why: It holds the only copy of the claim bundles' text.
+
+## Revisit closing the 209 screen on a partial run
+
+- Section: Compromises Made
+- Priority: P1
+- Source: plans/209-Phase-11-Part-O15-Memory-For-The-Working-Agent-Standing-Rules-Tool-Steps-Lessons-And-Work-Outcomes.md
+- Compromise: Task 6 closed with the small model's `memory-off` arm missing, Qwen's W3 invalid (simulator and answerer were the same model), the no-harm read on plan 208's quick slice only, no tuning revision, and the large model swapped from free Nemotron to paid Muse (gate W-1 amendment 7).
+- Implications: No `+W` feature has a passing development row, and the no-harm read is −7.1 points (CI [−16.7, 0]) on 28 questions. Plan 210 must treat all of them as candidates, not as shipped value.
+
+## Audit the working-agent features against the development rows
+
+- Section: Further Actions
+- Priority: P1
+- Source: plans/209-Phase-11-Part-O15-Memory-For-The-Working-Agent-Standing-Rules-Tool-Steps-Lessons-And-Work-Outcomes.md
+- What: Plan 210's ledger takes tool steps, rule capture, the `rules.md` reconciliation, lessons and the nudge as candidates, starting from W5 (0.82 supported against 0.95) and the no-harm flag.
+- Why: The dev screen showed the right direction on W1, W2 and W6 with no interval clearing its bar.
+
+## Use a distinct simulator model before the held-out work-outcome run
+
+- Section: Further Actions
+- Priority: P1
+- Source: plans/209-Phase-11-Part-O15-Memory-For-The-Working-Agent-Standing-Rules-Tool-Steps-Lessons-And-Work-Outcomes.md
+- What: Run the simulated user on a model other than the answerer and re-measure the small model's W3; pin cache stability before plan 210 Task 9 pays.
+- Why: Qwen leaked hidden answers in 5 sessions when it played both roles.
+
+## Make journal reservations safe under simultaneous first launches
+
+- Section: Further Actions
+- Priority: P2
+- Source: plans/209-Phase-11-Part-O15-Memory-For-The-Working-Agent-Standing-Rules-Tool-Steps-Lessons-And-Work-Outcomes.md
+- What: Three of six simultaneous reservations on a fresh journal were lost (`unknown attempt`); serialize reservation writes in `journal.mjs`.
+- Why: A lost reservation is a setup failure that halts the campaign until a rerun.

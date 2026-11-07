@@ -6,7 +6,7 @@ import { randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createSecretRedactor } from "@arnilo/prism";
+import { createSecretRedactor, type SessionEntry } from "@arnilo/prism";
 import { assertPersistenceSearchQueryParity, storeConformance } from "@arnilo/prism/testing";
 import { runRunLedgerConformance } from "@arnilo/prism/testing/run-ledger-conformance";
 import {
@@ -494,6 +494,162 @@ describe("createSqlitePersistence", () => {
     await assert.rejects(persistence.readBranchPath({ ...query, limit: 0 }), RangeError);
     assert.equal((await persistence.readBranchPath({ sessionId: query.sessionId, leafId: query.leafId })).items.length, 300);
     db.close();
+  });
+
+  // Plan 210 Task 0.4: the branch CTE walks ancestors by primary key, not through the session_id index.
+  async function seedChain(persistence: ReturnType<typeof createSqlitePersistence>, sessionId: string, depth: number) {
+    const payload = "x".repeat(200);
+    for (let i = 0; i < depth; i++) {
+      await persistence.append({
+        id: `${sessionId}-${i}`,
+        sessionId,
+        parentId: i ? `${sessionId}-${i - 1}` : undefined,
+        timestamp: new Date(Date.UTC(2026, 0, 1) + i).toISOString(),
+        kind: "message",
+        message: { role: "user", content: [{ type: "text", text: payload }] },
+      });
+    }
+    return `${sessionId}-${depth - 1}`;
+  }
+
+  it("branch_read_query_plan_uses_primary_key", async () => {
+    const db = new Database(":memory:");
+    const sql: string[] = [];
+    const prepare = db.prepare.bind(db);
+    db.prepare = ((text: string) => {
+      if (text.includes("WITH RECURSIVE branch_path")) sql.push(text);
+      return prepare(text);
+    }) as typeof db.prepare;
+    const persistence = createSqlitePersistence({ filename: ":memory:", database: db });
+    const leafId = await seedChain(persistence, "plan", 20);
+    await persistence.readBranchPath?.({ sessionId: "plan", leafId });
+    await persistence.queryEntries({ sessionId: "plan", leafId });
+    assert.equal(sql.length, 2);
+    for (const text of sql) {
+      const params = text.includes("OFFSET") ? [leafId, "plan", "plan", -1, 0] : [leafId, "plan", "plan", "plan", 101];
+      const detail = (prepare(`EXPLAIN QUERY PLAN ${text}`).all(...params) as { detail: string }[]).map((row) => row.detail);
+      const recursive = detail.slice(detail.indexOf("RECURSIVE STEP"));
+      assert.ok(
+        recursive.some((line) => /^SEARCH parent USING INDEX sqlite_autoindex_prism_session_entries_1 \(id=\?\)$/.test(line)),
+        detail.join("\n"),
+      );
+      assert.ok(!recursive.some((line) => /session_id_idx|session_id=\?/.test(line) && /parent|current/.test(line)), detail.join("\n"));
+      if (text.includes("OFFSET")) {
+        assert.ok(detail.includes("SEARCH e USING INDEX sqlite_autoindex_prism_session_entries_1 (id=?)"), detail.join("\n"));
+        assert.ok(!detail.some((line) => /^SCAN e\b/.test(line)), detail.join("\n"));
+      }
+    }
+    persistence.close();
+  });
+
+  it("branch_read_cost_is_linear_in_depth", async () => {
+    async function timeRead(depth: number): Promise<number> {
+      const persistence = createSqlitePersistence({ filename: ":memory:", database: new Database(":memory:") });
+      // One session of `depth` entries: the old plan scanned the whole session on every ancestor step.
+      const leafId = await seedChain(persistence, "deep", depth);
+      if (!persistence.readBranchPath) throw new Error("readBranchPath required");
+      await persistence.readBranchPath({ sessionId: "deep", leafId });
+      const samples: number[] = [];
+      for (let i = 0; i < 5; i++) {
+        const started = performance.now();
+        const page: { items: readonly SessionEntry[] } = await persistence.readBranchPath({ sessionId: "deep", leafId });
+        samples.push(performance.now() - started);
+        assert.equal(page.items.length, depth);
+      }
+      persistence.close();
+      return samples.sort((a, b) => a - b)[2] ?? 0;
+    }
+    const small = await timeRead(200);
+    const large = await timeRead(2000);
+    // Linear is ~10x, the old quadratic plan ~100x+. Floor the small read so timer noise cannot inflate the ratio.
+    assert.ok(large / Math.max(small, 0.2) <= 15, `200 → ${small.toFixed(2)} ms, 2000 → ${large.toFixed(2)} ms`);
+  });
+
+  it("branch_read_results_unchanged", async () => {
+    // The pre-Task-0.4 query, kept verbatim as the reference output.
+    const legacy = (ownerClause: string) => `WITH RECURSIVE branch_path(id, depth) AS (
+         SELECT seed.id, 0 FROM prism_session_entries seed
+         WHERE seed.id = ? AND seed.session_id = ? ${ownerClause}
+         UNION ALL
+         SELECT parent.id, bp.depth + 1
+         FROM branch_path bp
+         INNER JOIN prism_session_entries current ON current.id = bp.id
+         INNER JOIN prism_session_entries parent ON parent.id = current.parent_id AND parent.session_id = current.session_id
+         WHERE current.session_id = ?
+       )
+       SELECT e.id FROM prism_session_entries e
+       INNER JOIN branch_path bp ON e.id = bp.id
+       ORDER BY bp.depth DESC, e.timestamp ASC, e.id ASC
+       LIMIT ? OFFSET ?`;
+    const db = new Database(":memory:");
+    const persistence = createSqlitePersistence({ filename: ":memory:", database: db });
+    if (!persistence.readBranchPath || !persistence.appendSession) throw new Error("branch read and sessions required");
+    const timestamp = "2026-01-01T00:00:00.000Z";
+    await persistence.appendSession({ id: "a", tenantId: "t-a", userId: "u-a", createdAt: timestamp, updatedAt: timestamp });
+    await persistence.appendSession({ id: "b", tenantId: "t-b", userId: "u-b", createdAt: timestamp, updatedAt: timestamp });
+    // Session a: a trunk of 12 with two forks off entry 5, equal timestamps to exercise the id tiebreak.
+    await seedChain(persistence, "a", 12);
+    for (const fork of ["x", "y"]) {
+      for (let i = 0; i < 4; i++) {
+        await persistence.append({
+          id: `a-${fork}${i}`,
+          sessionId: "a",
+          parentId: i ? `a-${fork}${i - 1}` : "a-5",
+          timestamp,
+          kind: "label",
+          label: fork,
+        });
+      }
+    }
+    await seedChain(persistence, "b", 3);
+    await persistence.append({ id: "a-cross", sessionId: "a", parentId: "b-2", timestamp, kind: "label", label: "cross" });
+    const legacyIds = (leafId: string, sessionId: string, limit: number, offset: number) =>
+      (db.prepare(legacy("")).all(leafId, sessionId, sessionId, limit, offset) as { id: string }[]).map((row) => row.id);
+    const cases: [string, string][] = [
+      ["a-11", "a"],
+      ["a-x3", "a"],
+      ["a-y1", "a"],
+      ["a-5", "a"],
+      ["a-0", "a"],
+      ["a-cross", "a"],
+      ["b-2", "b"],
+      ["b-2", "a"],
+      ["missing", "a"],
+    ];
+    for (const [leafId, sessionId] of cases) {
+      const full: string[] = (await persistence.readBranchPath({ sessionId, leafId })).items.map((entry: SessionEntry) => entry.id);
+      assert.deepEqual(full, legacyIds(leafId, sessionId, -1, 0), `${sessionId}/${leafId}`);
+      for (const limit of [1, 3, 5]) {
+        const paged: string[] = [];
+        let cursor: string | undefined;
+        do {
+          const page: { items: readonly SessionEntry[]; nextCursor?: string } = await persistence.readBranchPath({
+            sessionId,
+            leafId,
+            limit,
+            cursor,
+          });
+          assert.deepEqual(
+            page.items.map((entry: SessionEntry) => entry.id),
+            legacyIds(leafId, sessionId, limit, cursor ? Number(cursor) : 0),
+          );
+          paged.push(...page.items.map((entry: SessionEntry) => entry.id));
+          cursor = page.nextCursor;
+        } while (cursor);
+        assert.deepEqual(paged, full);
+      }
+      const branchQuery = (await persistence.queryEntries({ sessionId, leafId, limit: 500 })).items.map((entry) => entry.id);
+      assert.deepEqual([...branchQuery].sort(), [...full].sort());
+    }
+    // The ownership clause still gates the seed row (the store's internal scope argument).
+    const scoped = persistence.readBranchPath as (
+      query: { sessionId: string; leafId: string },
+      scope: { tenantId?: string; userId?: string },
+    ) => Promise<{ items: readonly SessionEntry[] }>;
+    assert.equal((await scoped({ sessionId: "a", leafId: "a-11" }, { tenantId: "t-a", userId: "u-a" })).items.length, 12);
+    assert.deepEqual((await scoped({ sessionId: "a", leafId: "a-11" }, { tenantId: "t-b" })).items, []);
+    assert.deepEqual((await scoped({ sessionId: "a", leafId: "a-11" }, { tenantId: "t-a", userId: "u-b" })).items, []);
+    persistence.close();
   });
 
   it("filters and keyset-paginates branch entry queries", async () => {
@@ -1310,7 +1466,11 @@ describe("sqlite open pragmas", () => {
     // unset the loser fails "database is locked" instead of waiting (scheduler-leases was flaky on it).
     const executed: string[] = [];
     configureSqliteDatabase({ exec: (sql: string) => executed.push(sql) } as unknown as Database, {});
-    assert.equal(executed[0], `PRAGMA busy_timeout = ${DEFAULT_BUSY_TIMEOUT_MS}`, "the timeout must be set before any statement that takes a lock");
+    assert.equal(
+      executed[0],
+      `PRAGMA busy_timeout = ${DEFAULT_BUSY_TIMEOUT_MS}`,
+      "the timeout must be set before any statement that takes a lock",
+    );
     assert.ok(executed.includes("PRAGMA foreign_keys = ON"));
     assert.equal(executed.at(-1), "PRAGMA journal_mode = WAL");
   });

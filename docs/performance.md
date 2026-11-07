@@ -813,6 +813,18 @@ Offline behavior tests (identity propagation, policy export, router deny paths, 
 
 No new release gate: the ceilings are evidence, not gates. Concurrent-resource evidence is behavioral, not timing: the MCP bridge serializes mutations (one live page), and abort tests prove an aborted in-flight call settles and kills the owned child with zero leaked processes (`scripts/obscura-host-conformance.test.mjs` abort leg; process/web suite timeout/abort-kill tests). Packed tarball 34.4 kB / 16 files; the package installs no binary, image, or browser.
 
+## Session turn overhead (plan 210)
+
+Kernel cost per run as one session's history grows, network-free: `bun scripts/benchmark.mjs --scenario session-turn-overhead`. One session runs 1,000 runs of 2 scripted provider turns plus 1 tool call (a 2 KB tool result and a 2 KB reply), once over `createMemorySessionStore` and once over the SQLite session store (temp file). Per store the report gives per-run p50/p95, first-20 and last-20 window p50s, `growthRatio` (last-window p50 / first-window p50; same-process, so it travels across machines) and `storeEntriesReadPerRun` (entries returned by `readBranchPath`, `list` and `get` after a 20-run warm-up, counted by a wrapping store; deterministic).
+
+- Fixture: `scripts/budgets.json#sessionTurnOverhead`. `PRISM_BENCH_RUNS` overrides the run count for both stores, and `PRISM_BENCH_VARIANTS=memory|sqlite` selects one store (for a CPU profile).
+- Gate: `scripts/benchmark-session-turn.test.mjs` runs it at the reduced gate count (300 runs per store) and holds `scripts/budgets.json#sessionTurnOverhead.ceilings`: `storeEntriesReadPerRun` ≤ 1, `growthRatio` ≤ 10 for each store, and p95 ≤ 30 ms (×8 on CI).
+- Since plan 210 Task 0.4 the SQLite branch read walks ancestors by primary key. A cold read of a 2,000-entry branch takes ~6 ms (was ~1.3 s, O(depth × session size)), and the SQLite variant runs the full 1,000 runs in ~12 s. Postgres was checked: its plan already looks each ancestor up by key.
+- Since plan 210 Task 0.3 the session's snapshot cache is extended by its own appends and revalidated with one `store.get` per expired TTL, so a live session reads no branch per turn: `storeEntriesReadPerRun` is 0 (it was ~6,100 at 1,000 runs). On the reference machine the 1,000-run memory variant takes ~13 s (was 87 s), and its last-20 p50 is ~28 ms (was 163 ms). The remaining growth (`growthRatio` ~27) is `jsonBytes` serializing the whole provider request for `maxRequestBytes`, which grows ~4 KB per run on this fixture.
+- Before and after numbers and CPU profiles: [`docs/_evidence/210-task0-hot-paths.md`](_evidence/210-task0-hot-paths.md).
+
+`bun scripts/memory-bench/markdown-scale.mjs` reports `derivedBytesRewrittenPerUpsert` alongside its timings: the bytes of `.index-files.json`, `.index-files.journal.jsonl`, `log.md` and `index.md` written per single-note upsert, averaged over 100 writes, with a per-file split in `derivedBytesRewrittenPerUpsertByFile`. Since plan 210 Task 0.2 the file map takes a constant ~729 B journal append per upsert, and the whole `index.md` rewrite is the remaining O(n) cost. Gate: `markdown_store_write_amplification_within_budget` (`scripts/memory-bench/run.test.mjs`) against `scripts/budgets.json#markdownStore`, which sets the file-map bytes per upsert at 2,000 notes and the 2,000-vs-200-note write p50 ratio.
+
 ## Related APIs
 
 - [Agent events](events.md): `SubscribeOptions` and `event_subscriber_overflow` event details.

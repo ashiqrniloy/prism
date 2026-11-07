@@ -291,6 +291,37 @@ describe("observational memory package", () => {
     await session.close();
   });
 
+  // Plan 210 Task 2: the inspectability role of `om`, `om:model`, `om:status` and `om:view` rests on this test.
+  it("om_commands_expose_session_state_for_inspection", async () => {
+    const { agent, session } = await harness();
+    const before = (await agent.commands.run("om:status", {}, { session })) as {
+      enabled: boolean;
+      observations: { recorded: number; active: number };
+      inFlight: boolean;
+      text: string;
+    };
+    assert.equal(before.enabled, false, "status reports the toggle before it is flipped");
+    assert.equal(before.observations.recorded, 0);
+    await agent.commands.run("om", {}, { session });
+    await session.run("one");
+    await settle();
+    const after = (await agent.commands.run("om:status", {}, { session })) as typeof before;
+    assert.equal(after.enabled, true, "status reports the per-session toggle");
+    assert.equal(after.observations.recorded, 1, "status counts the ledger's recorded observations");
+    assert.equal(after.observations.active, 1);
+    assert.equal(after.inFlight, false);
+    assert.match(after.text, /1 active \/ 1 recorded observations/);
+    const view = (await agent.commands.run("om:view", {}, { session })) as { observations: number; reflections: number; text: string };
+    assert.equal(view.observations, 1, "view renders the same ledger status counted");
+    assert.equal(view.reflections, 0);
+    assert.ok(view.text.length > 0, "view renders the observation text a person can read");
+    const model = (await agent.commands.run("om:model", { observer: "observer/om-model" }, { session })) as { observer: string };
+    assert.equal(model.observer, "observer/om-model", "om:model reports the observer it switched to");
+    const reported = (await agent.commands.run("om:status", {}, { session })) as { observer: string };
+    assert.equal(reported.observer, "observer/om-model", "status reports the switched observer");
+    await session.close();
+  });
+
   it("om_status_events", async () => {
     const events: AgentEvent[] = [];
     const { agent, session } = await harness({ events });

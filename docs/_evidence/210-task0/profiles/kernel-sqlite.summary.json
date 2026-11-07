@@ -1,0 +1,207 @@
+{
+  "sampledMs": 24517.1,
+  "self": [
+    {
+      "name": "all",
+      "ms": 23190.5,
+      "pct": 94.6
+    },
+    {
+      "name": "estimateTextTokensForFamily (usage-estimation.ts:70)",
+      "ms": 388.6,
+      "pct": 1.6
+    },
+    {
+      "name": "stringify",
+      "ms": 206.2,
+      "pct": 0.8
+    },
+    {
+      "name": "run",
+      "ms": 118.7,
+      "pct": 0.5
+    },
+    {
+      "name": "parse",
+      "ms": 96.2,
+      "pct": 0.4
+    },
+    {
+      "name": "prepare",
+      "ms": 62.9,
+      "pct": 0.3
+    },
+    {
+      "name": "indexEntries (session-stores.ts:559)",
+      "ms": 27.1,
+      "pct": 0.1
+    },
+    {
+      "name": "rowToSessionEntry (index.ts:175)",
+      "ms": 20.8,
+      "pct": 0.1
+    },
+    {
+      "name": "require",
+      "ms": 16.4,
+      "pct": 0.1
+    },
+    {
+      "name": "anonymous",
+      "ms": 15.2,
+      "pct": 0.1
+    },
+    {
+      "name": "map",
+      "ms": 10,
+      "pct": 0
+    },
+    {
+      "name": "messageText (estimate.ts:123)",
+      "ms": 9.5,
+      "pct": 0
+    },
+    {
+      "name": "fencedChars (usage-estimation.ts:84)",
+      "ms": 9.3,
+      "pct": 0
+    },
+    {
+      "name": "get",
+      "ms": 7.5,
+      "pct": 0
+    },
+    {
+      "name": "readBranchFromReader (session-stores.ts:86)",
+      "ms": 7.4,
+      "pct": 0
+    },
+    {
+      "name": "buildDefaultInputMessageGroups (input.ts:145)",
+      "ms": 7,
+      "pct": 0
+    },
+    {
+      "name": "assembleRoundContext (assemble.ts:294)",
+      "ms": 6.7,
+      "pct": 0
+    },
+    {
+      "name": "push",
+      "ms": 6.4,
+      "pct": 0
+    },
+    {
+      "name": "defineProperties",
+      "ms": 6.4,
+      "pct": 0
+    },
+    {
+      "name": "(anonymous) (assemble.ts:413)",
+      "ms": 6.2,
+      "pct": 0
+    }
+  ],
+  "inclusive": [
+    {
+      "name": "(root)",
+      "ms": 24517.1,
+      "pct": 100
+    },
+    {
+      "name": "readBranchFromReader (session-stores.ts:86)",
+      "ms": 23428.2,
+      "pct": 95.6
+    },
+    {
+      "name": "rebuildSessionContextFromReader (session-stores.ts:149)",
+      "ms": 23405.9,
+      "pct": 95.5
+    },
+    {
+      "name": "snapshot (session.ts:1213)",
+      "ms": 23385.8,
+      "pct": 95.4
+    },
+    {
+      "name": "(anonymous) (session-turn-overhead.mjs:83)",
+      "ms": 23379.6,
+      "pct": 95.4
+    },
+    {
+      "name": "readEntryBranch (persistence.ts:536)",
+      "ms": 23376.5,
+      "pct": 95.3
+    },
+    {
+      "name": "all",
+      "ms": 23190.5,
+      "pct": 94.6
+    },
+    {
+      "name": "(anonymous) (assemble.ts:413)",
+      "ms": 15685.4,
+      "pct": 64
+    },
+    {
+      "name": "(anonymous) (assemble.ts:485)",
+      "ms": 15671.5,
+      "pct": 63.9
+    },
+    {
+      "name": "buildTurnRequest (assemble.ts:408)",
+      "ms": 15666.3,
+      "pct": 63.9
+    },
+    {
+      "name": "(anonymous) (run-controller.ts:129)",
+      "ms": 7848.5,
+      "pct": 32
+    },
+    {
+      "name": "assemble (assemble.ts:485)",
+      "ms": 7821.3,
+      "pct": 31.9
+    },
+    {
+      "name": "assembleRoundContext (assemble.ts:294)",
+      "ms": 7750.8,
+      "pct": 31.6
+    },
+    {
+      "name": "rebuildHistory (session.ts:1194)",
+      "ms": 7724.4,
+      "pct": 31.5
+    },
+    {
+      "name": "generateProviderTurn (provider-round.ts:272)",
+      "ms": 675.6,
+      "pct": 2.8
+    },
+    {
+      "name": "(anonymous) (provider-round.ts:301)",
+      "ms": 457.9,
+      "pct": 1.9
+    },
+    {
+      "name": "recordTurnUsage (provider-round.ts:301)",
+      "ms": 457.9,
+      "pct": 1.9
+    },
+    {
+      "name": "recordProviderUsage (provider-round.ts:123)",
+      "ms": 456.7,
+      "pct": 1.9
+    },
+    {
+      "name": "recordProviderUsage (provider-round.ts:129)",
+      "ms": 455.7,
+      "pct": 1.9
+    },
+    {
+      "name": "estimateTurnUsage (provider-round.ts:168)",
+      "ms": 450.4,
+      "pct": 1.8
+    }
+  ]
+}

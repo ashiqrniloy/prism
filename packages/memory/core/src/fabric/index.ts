@@ -24,6 +24,7 @@ import {
   assertInsideRoot,
   directoryForKind,
   FILE_MAP_FILE,
+  FILE_MAP_JOURNAL_FILE,
   fabricFlags,
   fabricKind,
   INDEX_DB_FILE,
@@ -51,6 +52,7 @@ import {
   parseNoteFile,
   parseWorkingFile,
   renderIndexFile,
+  renderIndexLine,
   renderLogFile,
   renderNoteFile,
   renderWorkingFile,
@@ -62,14 +64,12 @@ export { noteRelPath } from "./layout.js";
 import {
   atomicWriteFile,
   deserializeGeneration,
-  type FileMap,
+  FileIndex,
   type IndexedFile,
   type ResourceState,
-  readFileMap,
   readResourceState,
   serializeGeneration,
   type ThreadState,
-  writeFileMap,
   writeResourceState,
 } from "./state.js";
 
@@ -217,6 +217,9 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
   const lock = createWriteLock(root);
   const indexPath = options.index?.path !== undefined ? resolve(root, options.index.path) : join(root, INDEX_DB_FILE);
   const fileMapPath = join(root, FILE_MAP_FILE);
+  const fileMapJournalPath = join(root, FILE_MAP_JOURNAL_FILE);
+  await assertInsideRoot(root, fileMapPath);
+  await assertInsideRoot(root, fileMapJournalPath);
   const classifyNote = options.classifyNote;
   const reviewEdit = options.reviewEdit;
 
@@ -233,7 +236,10 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
     force = true;
   }
 
-  let fileMap: FileMap = await readFileMap(fileMapPath);
+  // A torn or newer-version journal drops the derived map: the open below then runs a full reconcile.
+  const loaded = await FileIndex.load(fileMapPath, fileMapJournalPath);
+  const fileMap = loaded.index;
+  if (!loaded.intact) force = true;
   const states = new Map<string, ResourceState>();
   const stateKey = (tenantId: string, resourceId: string) => `${tenantId}\0${resourceId}`;
 
@@ -298,8 +304,7 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
   }
 
   function findFileById(id: string): IndexedFile | undefined {
-    for (const entry of Object.values(fileMap)) if (entry.id === id) return entry;
-    return undefined;
+    return fileMap.findById(id);
   }
 
   function fileMapEntry(
@@ -331,7 +336,7 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
   function unreadableCounts(): MarkdownUnreadableCounts {
     const unreadableReasons: Record<string, number> = {};
     let unreadable = 0;
-    for (const entry of Object.values(fileMap)) {
+    for (const entry of fileMap.values()) {
       if (entry.unreadable === undefined) continue;
       unreadable += 1;
       unreadableReasons[entry.unreadable] = (unreadableReasons[entry.unreadable] ?? 0) + 1;
@@ -339,24 +344,41 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
     return { unreadable, unreadableReasons };
   }
 
+  // Entries are immutable and replaced on change, so a rendered index line is cached per entry object.
+  const indexLines = new WeakMap<IndexEntry, string>();
+  function cachedIndexLine(entry: IndexEntry): string {
+    let line = indexLines.get(entry);
+    if (line === undefined) {
+      line = renderIndexLine(entry);
+      indexLines.set(entry, line);
+    }
+    return line;
+  }
+
+  /** Residual O(n): the sort, join and write of `index.md`; the per-entry `encodeURI` work is cached. */
   async function regenerateIndex(): Promise<void> {
-    const entries: IndexEntry[] = Object.values(fileMap).map((entry) => ({
-      dir: entry.dir,
-      path: entry.path,
-      title: entry.title,
-      description: entry.description,
-    }));
     const abs = join(root, INDEX_FILE);
     await assertInsideRoot(root, abs);
-    await atomicWriteFile(abs, renderIndexFile(entries));
+    await atomicWriteFile(abs, renderIndexFile([...fileMap.values()], cachedIndexLine));
   }
+
+  /** The entries `log.md` held after this store's last write, keyed by the file's mtime and size then. */
+  let logCache: { readonly entries: readonly LogEntry[]; readonly mtimeMs: number; readonly size: number } | undefined;
 
   async function appendLog(newEntries: readonly LogEntry[]): Promise<void> {
     if (newEntries.length === 0) return;
     const logPath = join(root, LOG_FILE);
-    const existing = parseLogFile(await readFile(logPath, "utf8").catch(() => ""));
+    const info = await stat(logPath).catch(() => undefined);
+    // Any change since this store's own write (an edit, another process) is re-parsed from the file.
+    const existing =
+      logCache !== undefined && info !== undefined && info.mtimeMs === logCache.mtimeMs && info.size === logCache.size
+        ? logCache.entries
+        : parseLogFile(await readFile(logPath, "utf8").catch(() => ""));
     const combined = [...newEntries, ...existing];
-    await atomicWriteFile(logPath, renderLogFile(combined.slice(0, 2000)));
+    const kept = combined.slice(0, 2000);
+    await atomicWriteFile(logPath, renderLogFile(kept));
+    const written = await stat(logPath);
+    logCache = { entries: kept, mtimeMs: written.mtimeMs, size: written.size };
     const overflow = combined.slice(2000);
     if (overflow.length === 0) return;
     const byYear = new Map<string, LogEntry[]>();
@@ -386,7 +408,7 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
     const base = (fullId: boolean) =>
       noteRelPath({ tenantId: record.tenantId, resourceId: record.resourceId, kind, text: record.text, archived, id: record.id, fullId });
     let rel = base(false);
-    const occupant = fileMap[rel];
+    const occupant = fileMap.get(rel);
     if ((occupant && occupant.id !== record.id) || (!occupant && existsSync(join(root, rel)))) rel = base(true);
     // A note a newer version wrote stays where it is: this store never renames what it cannot read.
     if (existing && unreadableReason(record) !== undefined) rel = existing.path;
@@ -396,14 +418,14 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
       await assertInsideRoot(root, to);
       await mkdir(dirname(to), { recursive: true, mode: 0o700 });
       await rename(join(root, existing.path), to);
-      delete fileMap[existing.path];
+      fileMap.delete(existing.path);
     }
     const abs = join(root, rel);
     await assertInsideRoot(root, abs);
     const current = await readFile(abs, "utf8").catch(() => undefined);
     if (current !== content) await atomicWriteFile(abs, content);
     const info = await stat(abs);
-    fileMap[rel] = fileMapEntry(record, rel, kind, archived, info, content);
+    fileMap.set(rel, fileMapEntry(record, rel, kind, archived, info, content));
     // A newly tripped trust flag is its own audit verb; `by` names the writer for every line.
     const newlyFlagged = flags.length > 0 && !sameFlags(flags, existing?.flags);
     const auditVerb = typeof record.metadata?.auditVerb === "string" ? record.metadata.auditVerb : undefined;
@@ -431,7 +453,7 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
     if (!record || isIndexOnlyKind(fabricKind(record))) {
       if (!record) {
         await rm(join(root, existing.path), { force: true });
-        delete fileMap[existing.path];
+        fileMap.delete(existing.path);
       }
       return;
     }
@@ -446,7 +468,7 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
       archived,
       id: record.id,
     });
-    const occupant = fileMap[target];
+    const occupant = fileMap.get(target);
     if (occupant && occupant.id !== record.id) {
       target = noteRelPath({
         tenantId: record.tenantId,
@@ -459,21 +481,21 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
       });
     }
     if (target === existing.path) {
-      fileMap[target] = { ...existing, dir: archived ? `archive/${directoryForKind(kind)}` : directoryForKind(kind) };
+      fileMap.set(target, { ...existing, dir: archived ? `archive/${directoryForKind(kind)}` : directoryForKind(kind) });
       return;
     }
     const to = join(root, target);
     await assertInsideRoot(root, to);
     await mkdir(dirname(to), { recursive: true, mode: 0o700 });
     await rename(join(root, existing.path), to);
-    delete fileMap[existing.path];
-    fileMap[target] = { ...existing, path: target, dir: archived ? `archive/${directoryForKind(kind)}` : directoryForKind(kind) };
+    fileMap.delete(existing.path);
+    fileMap.set(target, { ...existing, path: target, dir: archived ? `archive/${directoryForKind(kind)}` : directoryForKind(kind) });
   }
 
   async function reconcileInternal(forceFull: boolean, signal?: AbortSignal): Promise<MarkdownReconcileReport> {
     return lock.run(async () => {
       const report = { indexed: 0, removed: 0, malformed: 0, errors: [] as string[], complete: true };
-      if (forceFull) fileMap = {};
+      if (forceFull) fileMap.clear();
       const seen = new Set<string>();
       const logs: LogEntry[] = [];
       const today = new Date().toISOString().slice(0, 10);
@@ -486,7 +508,7 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
         const abs = join(root, rel);
         const info = await stat(abs).catch(() => undefined);
         if (!info) continue;
-        const known = fileMap[rel];
+        const known = fileMap.get(rel);
         if (!forceFull && known && known.mtimeMs === info.mtimeMs && known.size === info.size) continue;
         try {
           const content = await readFile(abs, "utf8");
@@ -500,7 +522,10 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
               // Keep the last valid version indexed and the person's file as written; the log says why.
               const keep = previous ?? parsed;
               const keptBlocked = blockedIn(keep, states.get(stateKey(keep.tenantId, keep.resourceId))?.threads[keep.threadId]);
-              fileMap[rel] = fileMapEntry(keep, rel, fabricKind(keep), keptBlocked || isArchived(keep, false, Date.now()), info, content);
+              fileMap.set(
+                rel,
+                fileMapEntry(keep, rel, fabricKind(keep), keptBlocked || isArchived(keep, false, Date.now()), info, content),
+              );
               report.malformed += 1;
               report.errors.push(`${rel}: ${review.reject.verb}: ${review.reject.note}`);
               logs.push({ date: today, verb: review.reject.verb, id: parsed.id, by: "human", note: review.reject.note });
@@ -529,14 +554,14 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
             await atomicWriteFile(abs, text);
             written = await stat(abs);
           }
-          fileMap[rel] = fileMapEntry(record, rel, kind, archived, written, text);
+          fileMap.set(rel, fileMapEntry(record, rel, kind, archived, written, text));
           report.indexed += 1;
           const by = provenanceActor(record);
           logs.push({ date: today, verb: rewritten ? "reviewed" : "indexed", id: record.id, ...(by === undefined ? {} : { by }) });
         } catch (error) {
           report.malformed += 1;
           report.errors.push(`${rel}: ${error instanceof Error ? error.message : String(error)}`);
-          delete fileMap[rel];
+          fileMap.delete(rel);
         }
         processed += 1;
         if (processed >= limits.rebuildBatchSize && Date.now() - start > limits.rebuildMs) {
@@ -545,18 +570,18 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
         }
       }
       if (!forceFull && report.complete) {
-        for (const [rel, entry] of Object.entries(fileMap)) {
+        for (const [rel, entry] of [...fileMap.entries()]) {
           if (seen.has(rel) || existsSync(join(root, rel))) continue;
           await sqlite.vectorStore.delete(
             { tenantId: entry.scope.tenantId, resourceId: entry.scope.resourceId, ids: [entry.id] },
             { signal },
           );
-          delete fileMap[rel];
+          fileMap.delete(rel);
           report.removed += 1;
           logs.push({ date: today, verb: "removed-externally", id: entry.id });
         }
       }
-      await writeFileMap(fileMapPath, fileMap);
+      await fileMap.flush({ compact: true });
       await appendLog(logs);
       await regenerateIndex();
       return { ...report, ...unreadableCounts() };
@@ -590,7 +615,7 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
           await placeNoteFile(record, isArchived(record, blocked, Date.now()), logs, today);
         }
         await sqlite.vectorStore.upsert(records, opts);
-        await writeFileMap(fileMapPath, fileMap);
+        await fileMap.flush();
         await appendLog(logs);
         await regenerateIndex();
       });
@@ -607,16 +632,16 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
         requireScope(filter);
         const logs: LogEntry[] = [];
         const today = new Date().toISOString().slice(0, 10);
-        for (const [rel, entry] of Object.entries(fileMap)) {
+        for (const [rel, entry] of [...fileMap.entries()]) {
           if (entry.scope.tenantId !== filter.tenantId || entry.scope.resourceId !== filter.resourceId) continue;
           if (filter.threadId !== undefined && entry.scope.threadId !== filter.threadId) continue;
           if (filter.ids !== undefined && !filter.ids.includes(entry.id)) continue;
           await rm(join(root, rel), { force: true });
-          delete fileMap[rel];
+          fileMap.delete(rel);
           logs.push({ date: today, verb: "removed", id: entry.id });
         }
         const deleted = await sqlite.vectorStore.delete(filter, opts);
-        await writeFileMap(fileMapPath, fileMap);
+        await fileMap.flush();
         await appendLog(logs);
         await regenerateIndex();
         return deleted;
@@ -671,6 +696,7 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
         threadState(exact).invalidations = Object.fromEntries(listed.map((entry) => [entry.id, entry]));
         await persistState(exact.tenantId, exact.resourceId);
         for (const entry of entries) await repositionFile(exact, entry.id);
+        await fileMap.flush();
         await regenerateIndex();
       });
     },
@@ -685,6 +711,7 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
         threadState(exact).invalidations = Object.fromEntries(listed.map((entry) => [entry.id, entry]));
         await persistState(exact.tenantId, exact.resourceId);
         for (const id of ids) await repositionFile(exact, id);
+        await fileMap.flush();
         await regenerateIndex();
       });
     },

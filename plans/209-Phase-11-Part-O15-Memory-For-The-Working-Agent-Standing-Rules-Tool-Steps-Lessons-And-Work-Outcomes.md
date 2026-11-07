@@ -484,7 +484,7 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
       - `bun run typecheck` clean; `docs.test.ts` 67 pass; `biome check` clean on the new files.
       - No package or export changed, so there is no baseline diff, and no name was retired, so there is no sweep.
 
-- [ ] Task 6: Development screen (owner gate W-1, paid)
+- [x] Task 6: Development screen (owner gate W-1, paid)
   - Acceptance Criteria:
     - Functional: Gate W-1 is approved before any paid call. The gate states:
       - the budget;
@@ -526,34 +526,29 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
       - `CHANGELOG.md` if tuning changes.
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
-  - Progress (2026-11-05; **not complete**: the screen has not run, so W1–W6, O8, the revision and the plan end are open):
-    - **Gate W-1 (owner, 2026-11-05):** budget "Free + named cheap paid", answers "Nemotron free + Qwen Flash", no-harm "Quick slice only". Record `docs/_evidence/memory-bench/209/gates/owner-gate-w1.json`, now bound to manifest hash `84824958…3abe` after two assistant amendments (instrument fixes, below; the owner's scope is unchanged). Answers are `kilo/nvidia/nemotron-3-ultra-550b-a55b:free` (large) and `commandcode/Qwen/Qwen3.7-Flash` (small, paid; USD 20 cap, the figure in the gate question). The simulator is `kilo/cohere/north-mini-code:free`; the judges are plan 208's Command Code stealth pair.
-    - **Wiring done** (offline-tested, green):
-      - `work-outcome/screen.mjs`: models, 18 jobs (12 work-outcome jobs, one per model and arm; 6 no-harm `P`/`P+W` jobs on plan 208's quick slices), the manifest (pins the criteria, the product hash and the tuning table), `assertScreen209Gate`, `assertScreen209Partition`, `assertTuningRevision`, and the merged development report (`noHarmRow`, `mergeModelReports`, USD at the gate's rates).
-      - `work-outcome/live.mjs` (the journal-reserved live child, wire-proxy usage split per route, persona-arm checkpoints keyed by protocol) and `work-outcome/argv.mjs`.
-      - `campaign.mjs --plan 209` (mode `screen209`, sharing plan 208's retry and checkpoint re-run paths), `acceptance-report.mjs --plan 209`, and `ablations.mjs` paths `fabric.exchanges.steps`, `fabric.rules.capture` and `fabric.lessons.nudge`.
-      - `run.mjs`: curator accounting (`measureCurator`, `curatorTotals`), `workOutcomeCriteria`, persona checkpoints, `failureCode` per session row, `simulatorLeak` per arm, and `retryEmptyCompletions` on the simulator's provider.
-      - `ontology-audit.mjs` exports `openClaimJudges`, which `liveJudges` now wraps.
-      - Tests: `work-outcome/screen.test.mjs` (8, including the planned `plan_209_profile_refuses_heldout_partitions` and `revision_changes_only_tuning_tier_values`); work-outcome 13 pass; memory-bench 486 pass, 1 fail (the known dirty-tree guard); `bun run typecheck` clean.
-    - **Live smokes found instrument defects that Task 5's offline mocks could not show** (all fixed, recorded as gate amendments, criteria and partitions untouched; the offline report was regenerated, with the same rows):
-      - The first simulator (`nemotron-3.5-lightning:free`) returned empty replies, and the evals simulator runs with `maxProviderAttempts: 1`, so every probed free model failed some turns. Fixed with a bounded retry of empty completions and transport faults on the simulator only.
-      - The openings did not say where the record goes or in what form: Qwen wrote a TypeScript interface, or explored with `run_command ls -la` until `ERR_PRISM_RUN_LIMIT`. The opening now names `export default {...}` at `src/<folder>/record.ts`, and the action tool says it runs test commands only. After the fix, Qwen wrote the exact expected record in session 1 and ran `npm test` before the correction.
-      - A job whose sessions all failed was reported `completed`. Now any failure code except `ERR_PRISM_RUN_LIMIT` (a scored outcome) fails the job, and only clean persona-arms are checkpointed.
-    - **Root causes, found with a per-call provider log.** The owner said "I do not think it is a paid vs free model issue. But sure. Try with Muse spark" (gate amendment 3), and it was not:
-      - *Simulator failures:* the harness capped the simulator route at 1024 output tokens. The reasoning simulators spent it thinking and stopped on `max_output_tokens` with empty text, which also truncated some openings. The cap is now 4096, the evals simulator's own bound.
-      - *Muse versus cohere:* Muse then still ended replies on `max_output_tokens` or the timeout. It reasons first and declares no effort levels to lower. Free cohere completed every simulator turn, so the simulator returned to `kilo/cohere/north-mini-code:free` (amendment 5).
-      - *`ERR_PRISM_RUN_LIMIT` in 5 of 12 sessions:* the live agent ran under the kernel's unconfigured fences (40k input, 50k total, 120 s). They are now explicit per session: 400k input, 450k total, 40k output, 900 s, 16 turns.
-      - *Exploring commands:* `ls -la` counted as an action and broke W6's last-action check. Non-test commands are now refused and not recorded (`isTestCommand`).
-      - *False leak flag:* `simulatorLeak` flagged an agent that asked without the `QUESTION:` prefix. An earlier assistant turn that names the field now counts as asking; W3 itself still reads the `QUESTION:` line, as pre-registered.
-      - *Transport faults:* Command Code's Qwen route sometimes drops a stream (`gateway_stream_terminated`, `sse_event_overflow`). The session is re-run on a snapshot of the store taken before it began, at most 3 tries; only transport faults are retried, and the counts are in `personas[].sessionRetries`. Empty or failed simulator completions are counted by stop reason in `simulatorRetryCauses`.
-      - *No-harm scorer:* the LoCoMo F1 scorer needs the bench's pinned Python tooling. It was installed at `.cache/memory-bench/python` (`scripts/memory-bench/requirements.txt`).
-    - **Final smokes (one persona per family):**
-      - Nemotron `P+W` and `P+W+O`: 12 of 12 sessions completed in each; W2 0.6, W6 0.42; `P+W+O` made 5 curator calls.
-      - Qwen `coding+W`: 12 of 12 completed; W2 0.9, W6 0.58; 1.25M input and 0.72M output tokens on the answer route.
-      - No-harm LoCoMo `P+W`: scored.
-      - `simulatorLeak` was 0 everywhere. Smoke reports are superseded and deleted.
-    - **Full screen launched 2026-11-05** under gate W-1, manifest `84824958…3abe`: `campaign.mjs --plan 209 --partition dev --parallel-arms 4`, log `.cache/memory-bench/209/screen-run.log`.
-    - Spend so far: smokes and probes only. Qwen used about 0.5M input tokens (under USD 0.05); the free routes cost $0.
+  - Notes (executed 2026-11-05 to 2026-11-07):
+    - **Gate W-1 (owner, 2026-11-05):** budget "Free + named cheap paid", answers "Nemotron free + Qwen Flash", no-harm "Quick slice only". Record `docs/_evidence/memory-bench/209/gates/owner-gate-w1.json`, seven amendments, final manifest `1a513107…d148`. When both allowed attempts of every large job were spent on the free route, the owner chose "Swap the large model to a cheap paid one" (amendment 7); I picked `commandcode/meta/muse-spark-1.2-contributor` (plan 208's paid model, USD 0.10 / 0.20 / 0.002 per million). Final models: large Muse Spark 1.2 and small `commandcode/Qwen/Qwen3.7-Flash` (USD 20 cap). The simulated user is Qwen Flash (amendment 6) and the judges are plan 208's stealth pair.
+    - **What changed:**
+      - `work-outcome/{screen,live,argv}.mjs` and `screen.test.mjs` (10 tests, including `plan_209_profile_refuses_heldout_partitions` and `revision_changes_only_tuning_tier_values`). 18 jobs: 12 work-outcome jobs (model × arm) and 6 no-harm jobs on plan 208's quick slices.
+      - `campaign.mjs --plan 209` (mode `screen209`, shares plan 208's retry and checkpoint re-run paths), `acceptance-report.mjs --plan 209`, `ablations.mjs` paths `fabric.exchanges.steps`, `fabric.rules.capture`, `fabric.lessons.nudge`.
+      - `run.mjs`: `curatorStats` accounting, persona-arm checkpoints, `failureCode` per session, `simulatorLeak`, `retryEmptyCompletions`, session retry on a store snapshot, explicit agent fences (400k input, 450k total, 40k output, 900 s, 16 turns). `ontology-audit.mjs` exports `openClaimJudges`.
+      - Evidence: `docs/_evidence/memory-bench/209/{gates,screen}/`, README section, and this plan.
+    - **Instrument defects only a live run showed** (all fixed and recorded as amendments; criteria and partitions never touched):
+      - The simulator route was capped at 1024 output tokens, so reasoning simulators stopped on `max_output_tokens` with empty text. The owner's guess that it was not a paid-vs-free problem was right. The cap is now 4096 (the evals simulator's bound), plus a bounded retry of empty completions and transport faults on the simulator only.
+      - Persona openings did not name the record format and path; the coding action tool ran any command and Qwen explored until `ERR_PRISM_RUN_LIMIT`. Openings now say `export default {...}` at `src/<folder>/record.ts`; the tool runs test commands only.
+      - Any failure code but `ERR_PRISM_RUN_LIMIT` now fails a job; only clean persona-arms are checkpointed.
+      - Free routes cannot carry the screen: the free Kilo cohere simulator returned 429 for 93% of requests (amendment 6), and the free Kilo Nemotron answer route 429 for about 70% through both attempts (amendment 7); under the free bounded wire each rejected call also counted the model's full context window against the 3M no-harm cap.
+      - Operational: a fresh journal lost three of six simultaneous reservations (`unknown attempt`, setup failure, no spend); a rerun picked them up. Worth fixing in `journal.mjs` before plan 210's parallel launches.
+    - **Findings** (advisory; 7 persona clusters per row; details in `docs/_evidence/memory-bench/209/README.md` and `screen/development-report.json`):
+      - Memory works for the working agent: `P` vs `memory-off` on Muse moves W2 0.00 → 0.83, W3 0.92 → 0.08, W4 7.2 → 2.5 requests, W6 0.17 → 0.69 (W1 0.71 → 0.36, interval spans 0).
+      - The `+W` features (tool steps, rule capture, `rules.md` reconciliation, lessons, nudge) point the right way on W1, W2, W6 but no row passes: `work` fails W1, W4 (+0.6 requests), W6 and W5 (0.82 supported against 0.95); `coding-work` fails every bar (W5 0.93).
+      - O8 (plan 208's `ontology-work`): no pass on Muse or Qwen; 15 and 7 curator calls. No evidence for the tier.
+      - `simulatorLeak` is 0 on every Muse arm (W3 valid). Qwen leaked in 5 sessions (`P+W` 1, `P+W+O` 1, `coding` 3), so Qwen's W3 is invalid. Qwen `memory-off` failed both attempts (simulator faults and Command Code stream drops), so the small model has no `memory` row. Qwen played both answerer and simulator.
+      - No-harm (`P+W` vs `P`, 28 questions, large model): −7.1 points, CI [−16.7, 0]. A flag for plan 210, not a verdict.
+    - **Tuning revision: none.** No tuning-tier value (`maxSteps`, `rules.maxTokens`, nudge rate, `archiveAfterSessions`) is tied to development evidence at this sample size, and `assertTuningRevision` refuses an untied change (plan 208 closed the same way). The product hash `b33a7f90…07a1` is unchanged since the manifest, so the product is frozen by that hash for plan 210. No fabric README or CHANGELOG change.
+    - **Hand-off to plan 210's ledger:** every `+W` feature has no passing development row and enters as a candidate with these rows as evidence: tool steps, rule capture (Task 5 also found it takes one cue per user turn), the `rules.md` reconciliation, lessons and the nudge. Plan 210 should look first at W5 (lesson/rule claim support, 0.82 on Muse) and at the −7.1-point no-harm read before choosing defaults.
+    - **Spend:** about USD 4.5 of the USD 20 cap. Free routes cost $0. No owned paid process remains (checked at close).
+    - **Checks:** work-outcome tests pass; memory-bench suite has the one known dirty-tree guard failure (`Task5Manifest: the candidate product has uncommitted changes`, same as Tasks 3–5). No package or export changed, so no baseline diff; no name retired, so no sweep.
 
 - Task 7: **moved to plan 210 on 2026-10-31** (sequential memory train). The held-out work-outcome arms are plan 210 Task 9; this plan's defaults (`rules.capture`, `exchanges.steps`, `lessons.nudge`) and the `PRODUCT.md` Memory positioning are plan 210 Task 10. Their criteria and tests moved with them unchanged in substance.
 
@@ -575,8 +570,14 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
 
 ## Compromises Made
 
-- To be filled after tasks are completed and tests pass.
+- Task 6 closed on a partial screen. The small model's `memory-off` arm failed both attempts, so it has no `memory` row, and its W3 is invalid because the simulator and the answerer were the same model and leaked in 5 sessions.
+- The large model changed from free Nemotron to paid Muse Spark 1.2 (gate W-1 amendment 7, owner choice of "swap to a cheap paid one", model picked by the assistant) because the free route refused about 70% of requests.
+- The no-harm read is plan 208's quick slice (8/10/10 questions, large model only), not the full plan 202 development partitions (owner answer at the gate). It shows −7.1 points, CI [−16.7, 0], on 28 questions.
+- Every row is seven persona clusters, so intervals are wide. No tuning revision was made, and no `+W` feature has a passing development row.
+- The cache-stability pin (plan 202 Task 4.15) was not asserted for this advisory screen, as for plan 208's.
 
 ## Further Actions
 
-- To be filled after task completion with improvements, rationale, and priority.
+- P1: Plan 210 audits every `+W` feature (tool steps, rule capture, `rules.md` reconciliation, lessons, nudge) as a candidate; start from W5 (0.82 supported) and the no-harm flag.
+- P1: Before plan 210 Task 9 pays for held-out work-outcome arms, make the simulator a different model from the answerer and re-measure Qwen's W3, and pin cache stability.
+- P2: Make `journal.mjs` reservations safe under simultaneous first launches (three of six were lost with `unknown attempt`).

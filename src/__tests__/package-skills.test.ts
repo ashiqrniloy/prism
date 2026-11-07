@@ -104,6 +104,7 @@ describe("package skills", () => {
       "docx",
       "pdf",
       "powerpoint",
+      "prism-host-builder",
       "research-report",
       "research-scoping",
       "research-synthesis",

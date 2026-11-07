@@ -325,6 +325,24 @@
         "mode": ""
       }
     },
+    "@arnilo/prism-host-builder": {
+      ".": {
+        "suites": [
+          "examples/host-builder-agent.ts",
+          "packages/hosts/host-builder/src/__tests__/bin.test.ts",
+          "packages/hosts/host-builder/src/__tests__/check-runner.test.ts",
+          "packages/hosts/host-builder/src/__tests__/check-tools.test.ts",
+          "packages/hosts/host-builder/src/__tests__/indexes.test.ts",
+          "packages/hosts/host-builder/src/__tests__/install.test.ts",
+          "packages/hosts/host-builder/src/__tests__/lookup.test.ts",
+          "packages/hosts/host-builder/src/__tests__/server.test.ts",
+          "packages/hosts/host-builder/src/__tests__/version.test.ts",
+          "scripts/host-builder-evals/run.test.mjs",
+          "scripts/host-builder-index.test.mjs"
+        ],
+        "mode": ""
+      }
+    },
     "@arnilo/prism-remote": {
       ".": {
         "suites": [

@@ -14,16 +14,24 @@ export interface ConversationalMemoryResult {
   readonly forgetFound: boolean;
   /** The `memory.recall` tool output from the third session. */
   readonly afterForget: string;
+  /** The forgotten note's id, read from session B's structured recall hits. */
+  readonly forgottenId: string;
+  /** The note ids in the fourth session's structured recall hits (the echoed query is not a hit). */
+  readonly afterForgetHitIds: readonly string[];
 }
 
 export function textOf(result: ToolResult): string {
   return (result.content ?? []).map((block) => (block.type === "text" ? block.text : "")).join("\n");
 }
 
+function hitIds(value: unknown): string[] {
+  const hits = (value as { hits?: readonly { id?: unknown }[] } | undefined)?.hits ?? [];
+  return hits.flatMap((hit) => (typeof hit.id === "string" ? [hit.id] : []));
+}
+
 function hitId(value: unknown): string {
-  const hits = (value as { hits?: readonly { id?: unknown }[] } | undefined)?.hits;
-  const id = hits?.[0]?.id;
-  if (typeof id !== "string") throw new Error("memory.recall returned no note id");
+  const id = hitIds(value)[0];
+  if (id === undefined) throw new Error("memory.recall returned no note id");
   return id;
 }
 
@@ -111,6 +119,8 @@ export async function conversationalMemory(config: HostConfig): Promise<Conversa
       recalled: textOf(recalled.result),
       forgetFound: (forgot.result.value as { found?: unknown } | undefined)?.found === true,
       afterForget: textOf(after.result),
+      forgottenId: id,
+      afterForgetHitIds: hitIds(after.result.value),
     };
   } finally {
     await agent.dispose();

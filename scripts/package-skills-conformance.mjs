@@ -91,6 +91,20 @@ export function defaultFixtures(root = REPO_ROOT) {
       // One visible child registers `delegate`, `delegate_wait` and `delegate_cancel`; the child inherits no package.
       return [delegate({ children: { reviewer: { inherit: [], description: "Reviews a diff.", instructions: "Review the diff." } } })];
     }),
+    fixture("packages/hosts/host-builder", async () => {
+      // The published package registers nothing (it has no `setup`); the installer copies its skill into the project.
+      // The gate registers it under the package's own name so the skill is checked exactly like a package skill.
+      const { definePackage } = await import("@arnilo/prism");
+      const skills = join(root, "packages/hosts/host-builder/skills");
+      return [
+        definePackage({
+          name: "@arnilo/prism-host-builder",
+          version: "0.0.0",
+          requires: { api: 1 },
+          setup: (prism) => prism.skills.addDir(skills),
+        }),
+      ];
+    }),
     fixture("packages/tools/work", async () => {
       const { definePackage } = await import("@arnilo/prism");
       const { toolsWork } = await load("packages/tools/work/src/index.ts");

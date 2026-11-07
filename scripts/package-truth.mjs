@@ -216,6 +216,8 @@ export const PACKAGE_NOTES = {
   "@arnilo/prism-mcp-server":
     "library — host library serving Prism tools, resources, and prompts over MCP (stdio and Streamable HTTP transports)",
   "@arnilo/prism-headless": "library — host library routing HostUi requests through ordered routes with a value-free answer log",
+  "@arnilo/prism-host-builder":
+    "library — host library shipping version-exact API, error-code and example indexes, a skill, an MCP server and an installer for coding agents that build Prism hosts",
   "@arnilo/prism-remote":
     "library — host library serving a Prism agent to remote clients and connecting to remote agents over prism.remote/1",
   "@arnilo/prism-tools-coding":

@@ -106,7 +106,7 @@ The primitives largely exist. This roadmap unifies them into one hook model and 
                                                                                         host-written
                                                                                         adapters)
 
- Surfaces (host libraries, not packages): acp · ag-ui · mcp-server · channels · remote · headless — take an Agent, serve it.
+ Surfaces (host libraries, not packages): acp · ag-ui · mcp-server · channels · remote · headless · host-builder — take an Agent, serve it.
  Reference host (§2.13): Prism Agent, unpublished — proves the SDK end to end. Prism ships no agent product.
  Driver kit (kernel subpath @arnilo/prism/driver-kit): the contract a driver package fills to run an external agent as a loop.
  Vendor adapters (Claude Code, Codex, …) are host code on driver-process; Prism ships none.
@@ -637,6 +637,7 @@ Host libraries (not packages):
 | `@arnilo/prism-devtools` | `prism-coding-tools/dev` |
 | `@arnilo/prism-remote` (`serveAgent`, `connectAgent`; Phase 17) | `src/rpc.ts` (`prism --mode rpc`) |
 | `@arnilo/prism-headless` (`routeHostUi`, `createScheduler`; Phase 17) | new |
+| `@arnilo/prism-host-builder` (version-exact indexes, skill, MCP server and installer for coding agents that build hosts; Phase 11) | new |
 
 Retired:
 
@@ -670,7 +671,7 @@ prism/
 │  ├─ policy/{approval,governance,guardrail-packs,model-router}/
 │  ├─ integrations/{mcp,hooks-json,observability,workflows,delegate}/
 │  ├─ drivers/process/               @arnilo/prism-driver-process (vendor adapters are host code)
-│  └─ hosts/{acp,ag-ui,mcp-server,channels,evals,devtools,remote,headless}/   host libraries
+│  └─ hosts/{acp,ag-ui,mcp-server,channels,evals,devtools,remote,headless,host-builder}/   host libraries
 ├─ apps/prism-agent/                 Prism Agent, the reference host (private, never published; §2.13.3)
 ├─ examples/                         host and package examples, execution-gated
 └─ docs/

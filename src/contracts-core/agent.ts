@@ -297,8 +297,10 @@ export interface SessionOptions {
   /**
    * TTL of the in-memory `session.snapshot()` branch cache in milliseconds.
    * Default `DEFAULT_SNAPSHOT_CACHE_TTL_MS`; `0` disables the cache (every snapshot read
-   * rebuilds from the store); at most `HARD_MAX_SNAPSHOT_CACHE_TTL_MS`. The cache is always
-   * invalidated by a new leaf or a mutation, so the TTL only bounds staleness-free reuse.
+   * rebuilds from the store); at most `HARD_MAX_SNAPSHOT_CACHE_TTL_MS`. The session's own appends
+   * at the cached tip extend the cache; checkout, fork, resume, a compaction entry or an append
+   * conflict drop it. Once the TTL expires, one `store.get` of the tip revalidates it (a store
+   * without `get` rebuilds), so the TTL bounds how long an external delete can go unseen.
    */
   readonly snapshotCacheTtlMs?: number;
 }

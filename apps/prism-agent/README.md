@@ -335,6 +335,10 @@ The same leg runs in `release:gate` after the client-neutrality check, and `run-
 
 **The gap log.** A seam the host needs and the SDK lacks is never worked around. It is either added to the SDK inside the task that found it, or recorded in the Phase 12 plan's `## Gap log` table with the disposition `fixed in <file> (<test>)` or `backlog: <title> — <reason>`. Phase 12 is not done while a row is open, and a grep over `apps/prism-agent/` must find no workaround (a type-erasing `any` cast, a reach into package internals, or reimplemented package logic). The log is currently empty: every Phase 12 scenario is expressible with what the SDK ships.
 
+## Building a host with an agent
+
+The reference host's code does not change for this. A Prism agent can also be the *builder* of a host: [`@arnilo/prism-host-builder`](../../packages/hosts/host-builder/README.md) installs a skill and serves lookup and check tools over MCP, and [`examples/host-builder-agent.ts`](../../examples/host-builder-agent.ts) wires an agent with `tools-coding`, `contextFiles` and `@arnilo/prism-mcp` to them on the mock provider. The host starts the MCP server with its own flags (`--root`, `--entry`), never from model output.
+
 ## Gating a host release on evals
 
 `evals/dataset.ts` and `src/evals/suite.ts` evaluate the coding and research workers with `@arnilo/prism-evals` across 12 items (`dev` and `heldout` splits, `trials: 4`, `timeline: "metadata"`), scoring `approval_before_effect` (using `agent.tools`), `citation_integrity`, `createStateMatchScorer` over the workspace files, and `task_success` (including `web_fetch` prompt-injection items built from `createInjectionDataset`).

@@ -105,13 +105,14 @@ test("counts match manifests at the truth graph", () => {
     // @arnilo/prism-provider-kilo: publishable 49, workspace 48, provider 9, codeWithPeer 48.
     // Plan 214 Task 2 adds @arnilo/prism-provider-litellm: publishable 50, workspace 49, provider 10,
     // codeWithPeer 49. Plan 206 Task 2 adds @arnilo/prism-provider-ollama-cloud: publishable 51,
-    // workspace 50, provider 11, codeWithPeer 50.
-    assert.equal(t.counts.publishable, 51);
-    assert.equal(t.counts.workspace, 50);
+    // workspace 50, provider 11, codeWithPeer 50. Plan 215 Task 14 adds @arnilo/prism-host-builder:
+    // publishable 52, workspace 51, capability 39, codeWithPeer 51.
+    assert.equal(t.counts.publishable, 52);
+    assert.equal(t.counts.workspace, 51);
     assert.equal(t.counts.provider, 11);
     assert.equal(t.counts.prismFamily, 1);
-    assert.equal(t.counts.capability, 38);
-    assert.equal(t.counts.codeWithPeer, 50);
+    assert.equal(t.counts.capability, 39);
+    assert.equal(t.counts.codeWithPeer, 51);
     assert.equal(t.counts.pureManifest, 0);
   } else if (hasCodingToolsPackage) {
     assert.equal(t.counts.publishable, 17);

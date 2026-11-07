@@ -1,0 +1,59 @@
+{
+  "generatedAt": "2026-11-07T07:13:44.735Z",
+  "environment": {
+    "runtime": "bun 1.4.4",
+    "platform": "linux",
+    "arch": "x64",
+    "cpu": "AMD Ryzen 9 PRO 7940HS w/ Radeon 780M Graphics",
+    "memoryBytes": 65972367360,
+    "network": false,
+    "credentials": false
+  },
+  "fixture": {
+    "runs": 300,
+    "sqliteRuns": 60,
+    "window": 20,
+    "warmupRuns": 20,
+    "payloadBytes": 2048,
+    "providerTurnsPerRun": 2,
+    "toolCallsPerRun": 1
+  },
+  "results": [
+    {
+      "name": "memory",
+      "runs": 300,
+      "providerTurns": 600,
+      "failedRuns": 0,
+      "totalMs": 6852.8,
+      "p50Ms": 23.236,
+      "p95Ms": 43.361,
+      "firstWindowP50Ms": 2.156,
+      "lastWindowP50Ms": 43.593,
+      "growthRatio": 20.223,
+      "storeEntriesReadPerRun": 1918,
+      "storeReads": {
+        "list": 0,
+        "readBranchPath": 539400,
+        "get": 0
+      }
+    },
+    {
+      "name": "sqlite",
+      "runs": 60,
+      "providerTurns": 120,
+      "failedRuns": 0,
+      "totalMs": 1431.5,
+      "p50Ms": 17.94,
+      "p95Ms": 58.532,
+      "firstWindowP50Ms": 6.174,
+      "lastWindowP50Ms": 45.914,
+      "growthRatio": 7.436,
+      "storeEntriesReadPerRun": 478,
+      "storeReads": {
+        "list": 0,
+        "readBranchPath": 21480,
+        "get": 0
+      }
+    }
+  ]
+}

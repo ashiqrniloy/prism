@@ -69,7 +69,14 @@ export interface ImportMemoryOkfResult {
   readonly invalidations: number;
 }
 
-const DERIVED_FILES = [".index.sqlite", ".index.sqlite-wal", ".index.sqlite-shm", ".index-files.json", ".lock"] as const;
+const DERIVED_FILES = [
+  ".index.sqlite",
+  ".index.sqlite-wal",
+  ".index.sqlite-shm",
+  ".index-files.json",
+  ".index-files.journal.jsonl",
+  ".lock",
+] as const;
 const INVALIDATION_BATCH = 64;
 
 function fullScope(memory: Memory): Required<MemoryScope> {

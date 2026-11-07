@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "turns": [
+    {
+      "input": [
+        "{\"type\":\"prompt\",\"text\":\"Review the file\"}"
+      ],
+      "output": [
+        "{\"type\":\"init\",\"conversationId\":\"recorded-conversation\"}",
+        "{\"type\":\"text_delta\",\"text\":\"Checking.\"}",
+        "{\"type\":\"message\",\"role\":\"assistant\",\"blocks\":[{\"type\":\"text\",\"text\":\"Done.\"}]}",
+        "{\"type\":\"tool_start\",\"id\":\"read-1\",\"name\":\"read\",\"parameters\":{\"path\":\"README.md\"}}",
+        "{\"type\":\"tool_progress\",\"id\":\"read-1\",\"progress\":{\"percent\":50}}",
+        "{\"type\":\"tool_end\",\"id\":\"read-1\",\"status\":\"finished\",\"output\":\"contents\"}",
+        "{\"type\":\"skill_read\",\"name\":\"review\",\"source\":\"tool\",\"resolved\":true}",
+        "{\"type\":\"file_change\",\"path\":\"note.md\",\"change\":\"modified\",\"source\":\"diff\",\"diff\":\"+reviewed\"}",
+        "{\"type\":\"plan_update\",\"entries\":[{\"title\":\"read\",\"status\":\"done\"}]}",
+        "{\"type\":\"subagent_info\",\"phase\":\"started\",\"id\":\"parent\",\"name\":\"review\"}",
+        "{\"type\":\"subagent_info\",\"phase\":\"completed\",\"id\":\"parent\",\"result\":\"done\"}",
+        "{\"type\":\"checkpoint\",\"phase\":\"completed\",\"summary\":\"compacted\"}",
+        "{\"type\":\"notice\",\"level\":\"warn\",\"code\":\"seen\",\"message\":\"notice\"}",
+        "{\"type\":\"usage\",\"usage\":{\"inputTokens\":2,\"outputTokens\":3,\"thinkingTokens\":7}}",
+        "{\"type\":\"raw\",\"payload\":{\"vendor\":\"workspace-config\",\"type\":\"custom\",\"data\":{\"ok\":true}}}",
+        "{\"type\":\"result\",\"conversationId\":\"recorded-conversation\",\"status\":\"done\",\"usage\":{\"inputTokens\":2,\"outputTokens\":3,\"thinkingTokens\":7}}"
+      ]
+    }
+  ]
+}

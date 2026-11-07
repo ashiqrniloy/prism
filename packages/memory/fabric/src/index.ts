@@ -91,6 +91,7 @@ import { reconcileFabricFiles } from "./reconcile.js";
 import { renderProjectFile } from "./scope/identity.js";
 import { createTouchedPathTracker, type TouchedPathTracker } from "./scope/touched-paths.js";
 import { createScopedMemoryPolicy } from "./scoped/policy.js";
+import { createNoteNavigator } from "./navigation.js";
 import { createMemoryFabricTools } from "./tools.js";
 import {
   type CreateMemoryFabricOptions,
@@ -413,6 +414,9 @@ const definition = definePackage<MemoryFabricConfig>({
     });
     // Confirmed rule capture is a config field (`rules.capture`); the coding preset turns it on.
     const ruleCapture = config.rules !== false && config.rules.capture === "confirm";
+    // Capture reads the archived user turn, so without the exchange archive it can never fire (plan 210 Task 2).
+    if (ruleCapture && !config.exchanges.enabled)
+      prism.status.note("warn", "memory-fabric: rules.capture needs the exchange archive (exchanges); no rule will be captured");
     // Turns since the last background pass, per session. In memory: a restored session starts at 0,
     // and the `session.opened` catch-up covers whatever the previous process missed.
     const turnsSincePass = new Map<string, number>();
@@ -629,12 +633,26 @@ const definition = definePackage<MemoryFabricConfig>({
       isIndexedNotesAvailable: indexedNotes,
       tracker,
       readNotes: readNotesAcrossScopes,
+      // Plan 210 Task 2: the same cross-scope routing `createMemoryFabric().tools()` has. Without these the package's
+      // `memory.read { around | session }` never navigated, and `memory.replace { id, pin }` ignored `pin` and missed
+      // a note outside the narrowest scope.
+      noteMemory: async (id, signal) => {
+        for (const binding of memories)
+          if ((await binding.memory.getEntry(id, signal === undefined ? {} : { signal })) !== undefined) return binding.memory;
+        return undefined;
+      },
+      navigateNotes: createNoteNavigator({
+        memories: memories.map((binding) => binding.memory),
+        vectorStore,
+        notify: (message) => prism.status.note("warn", message),
+      }),
       ...(ontology === undefined ? {} : { ontology: { maxClaimsRendered: config.ontology.maxClaimsRendered } }),
       scopeLevel: memories[0]!.level,
       scopeLevels: [...memories.map((binding) => binding.level), ...(team === undefined ? [] : (["team"] as const))],
       ...(directory ? { directory } : {}),
       lifecycle: {
-        verify: (id, signal) => lifecycle.verify(id, signal === undefined ? {} : { signal }),
+        verify: (id, signal) => fabric.verify(id, signal === undefined ? {} : { signal }),
+        pin: (id, pinned, signal) => fabric.pin(id, pinned, signal === undefined ? {} : { signal }),
       },
       touchedPaths: touchedPathsFor,
     })(config.tools);

@@ -25,6 +25,8 @@ export const LOG_FILE = "log.md";
 export const LOCK_FILE = ".lock";
 export const INDEX_DB_FILE = ".index.sqlite";
 export const FILE_MAP_FILE = ".index-files.json";
+/** Append-only journal of file-map changes since the snapshot; folded back in by reconcile. */
+export const FILE_MAP_JOURNAL_FILE = ".index-files.journal.jsonl";
 export const STATE_FILE = ".state.json";
 export const WORKING_DIRECTORY = "working";
 

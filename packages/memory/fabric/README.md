@@ -610,7 +610,8 @@ turn with a lasting cue becomes a **proposed** rule: a preference (`I prefer…`
 user scope, a procedure (`make sure to…`, `whenever you…`, `before you commit…`) in the project, or a
 decision (`from now on`, `always`, `never`, `we decided`, `use X instead of Y`, `no, do X`) with a
 lexical rationale. A path in the rule (`in src/payments`) makes it path-scoped. No model is called.
-The only capture input is the archived user turn: tool output and assistant text never become rules,
+The only capture input is the archived user turn, so capture needs the exchange archive (`exchanges`; both
+presets turn it on); without it nothing is captured and setup leaves a warning status note. Tool output and assistant text never become rules,
 and every proposal passes the trust scan. One batched `host.ui` confirmation per turn makes the
 proposal active and pinned; a host that answers `unavailable`, denies, dismisses or throws leaves it a
 `candidate`. A correction that names what it replaces (`use zod instead of yup`) retires the matching

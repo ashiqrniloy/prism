@@ -1291,7 +1291,8 @@ describe("agent session runtime", () => {
     await session.checkout(leaf);
     assert.equal(reads, 3, "checkout invalidates the snapshot");
     await session.run("second");
-    assert.equal(reads, 4, "successful append invalidates once; stable-leaf reads remain shared");
+    // Plan 210 Task 0.3: the session's own tip appends extend the cached snapshot instead of a re-read.
+    assert.equal(reads, 3, "own appends on the cached tip extend the snapshot without a store read");
   });
 
   it("fork_at_entry_copies_branch_and_package_state", async () => {

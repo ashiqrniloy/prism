@@ -163,7 +163,7 @@ const PROVIDER_TABLE = {
   commandcode: { module: "@arnilo/prism-provider-commandcode", factory: "commandcode", key: "COMMAND_CODE_API_KEY" },
 };
 
-async function liveProvider(entry) {
+export async function liveProvider(entry) {
   await loadEnv();
   const spec = PROVIDER_TABLE[entry.id];
   if (!spec) throw new Error(`SkillEvalProvider: ${entry.id} has no provider wiring`);

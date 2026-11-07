@@ -48,6 +48,8 @@ const packages: Array<{ dir: string; name: string; isCore?: boolean; isSubpaths?
   { dir: "packages/hosts/channels", name: "@arnilo/prism-channels" },
   { dir: "packages/hosts/evals", name: "@arnilo/prism-evals" },
   { dir: "packages/hosts/devtools", name: "@arnilo/prism-devtools" },
+  // Plan 215 Task 14: the host-builder indexes ship in the tarball, so it joins the offline install set.
+  { dir: "packages/hosts/host-builder", name: "@arnilo/prism-host-builder" },
   { dir: "packages/integrations/hooks-json", name: "@arnilo/prism-hooks-json" },
   // Plan 175 Task 7: the 0.13 host libraries and integration packages that the truth graph ships.
   { dir: "packages/drivers/process", name: "@arnilo/prism-driver-process" },

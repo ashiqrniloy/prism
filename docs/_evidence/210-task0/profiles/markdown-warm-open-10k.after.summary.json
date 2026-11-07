@@ -1,0 +1,207 @@
+{
+  "sampledMs": 1017.3,
+  "self": [
+    {
+      "name": "stat",
+      "ms": 209.8,
+      "pct": 20.6
+    },
+    {
+      "name": "join",
+      "ms": 115.7,
+      "pct": 11.4
+    },
+    {
+      "name": "run",
+      "ms": 54.9,
+      "pct": 5.4
+    },
+    {
+      "name": "writeFile",
+      "ms": 52.6,
+      "pct": 5.2
+    },
+    {
+      "name": "all",
+      "ms": 51.3,
+      "pct": 5
+    },
+    {
+      "name": "parse",
+      "ms": 48.4,
+      "pct": 4.8
+    },
+    {
+      "name": "isNoteRelPath (layout.ts:159)",
+      "ms": 44.1,
+      "pct": 4.3
+    },
+    {
+      "name": "get",
+      "ms": 36.4,
+      "pct": 3.6
+    },
+    {
+      "name": "(anonymous) (okf.ts:341)",
+      "ms": 33.5,
+      "pct": 3.3
+    },
+    {
+      "name": "renderIndexFile (okf.ts:330)",
+      "ms": 27.7,
+      "pct": 2.7
+    },
+    {
+      "name": "stat (promises:246)",
+      "ms": 19.8,
+      "pct": 1.9
+    },
+    {
+      "name": "cachedIndexLine (index.ts:349)",
+      "ms": 17.4,
+      "pct": 1.7
+    },
+    {
+      "name": "(anonymous) (catalog.ts:40)",
+      "ms": 17,
+      "pct": 1.7
+    },
+    {
+      "name": "(anonymous) (index.ts:496)",
+      "ms": 17,
+      "pct": 1.7
+    },
+    {
+      "name": "stringify",
+      "ms": 15.5,
+      "pct": 1.5
+    },
+    {
+      "name": "performIteration",
+      "ms": 15.3,
+      "pct": 1.5
+    },
+    {
+      "name": "walkFiles (index.ts:166)",
+      "ms": 12,
+      "pct": 1.2
+    },
+    {
+      "name": "split",
+      "ms": 12,
+      "pct": 1.2
+    },
+    {
+      "name": "anonymous",
+      "ms": 11.5,
+      "pct": 1.1
+    },
+    {
+      "name": "createMarkdownMemoryStores (index.ts:213)",
+      "ms": 9.9,
+      "pct": 1
+    }
+  ],
+  "inclusive": [
+    {
+      "name": "(root)",
+      "ms": 1017.3,
+      "pct": 100
+    },
+    {
+      "name": "(anonymous) (index.ts:496)",
+      "ms": 350.4,
+      "pct": 34.4
+    },
+    {
+      "name": "stat (promises:246)",
+      "ms": 229.5,
+      "pct": 22.6
+    },
+    {
+      "name": "stat",
+      "ms": 209.8,
+      "pct": 20.6
+    },
+    {
+      "name": "regenerateIndex (index.ts:359)",
+      "ms": 193.4,
+      "pct": 19
+    },
+    {
+      "name": "map",
+      "ms": 192.7,
+      "pct": 18.9
+    },
+    {
+      "name": "renderIndexFile (okf.ts:330)",
+      "ms": 173.5,
+      "pct": 17.1
+    },
+    {
+      "name": "(anonymous) (okf.ts:339)",
+      "ms": 141.4,
+      "pct": 13.9
+    },
+    {
+      "name": "join",
+      "ms": 115.7,
+      "pct": 11.4
+    },
+    {
+      "name": "(module) (ab.mjs:2)",
+      "ms": 114.5,
+      "pct": 11.3
+    },
+    {
+      "name": "lexicalQuery (index.ts:325)",
+      "ms": 113.5,
+      "pct": 11.2
+    },
+    {
+      "name": "lexicalQuery (index.ts:626)",
+      "ms": 113.5,
+      "pct": 11.2
+    },
+    {
+      "name": "transaction (bun:sqlite:439)",
+      "ms": 89.4,
+      "pct": 8.8
+    },
+    {
+      "name": "(anonymous) (index.ts:597)",
+      "ms": 71.4,
+      "pct": 7
+    },
+    {
+      "name": "atomicWriteFile (state.ts:42)",
+      "ms": 58,
+      "pct": 5.7
+    },
+    {
+      "name": "writeFile (promises:187)",
+      "ms": 56.7,
+      "pct": 5.6
+    },
+    {
+      "name": "run",
+      "ms": 54.9,
+      "pct": 5.4
+    },
+    {
+      "name": "writeFile",
+      "ms": 52.6,
+      "pct": 5.2
+    },
+    {
+      "name": "bound writeFile",
+      "ms": 52.6,
+      "pct": 5.2
+    },
+    {
+      "name": "all",
+      "ms": 51.3,
+      "pct": 5
+    }
+  ]
+}

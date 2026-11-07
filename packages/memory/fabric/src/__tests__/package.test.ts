@@ -567,6 +567,46 @@ describe("@arnilo/prism-memory-fabric package (plan 158 Task 4)", () => {
     await agent.dispose();
   });
 
+  // Plan 210 Task 2: capture reads the archived user turn; without the archive it cannot fire, so setup says so.
+  it("rules_capture_without_the_exchange_archive_warns_at_setup", async () => {
+    const { agent } = await harness({ config: { store: "memory", rules: { capture: "confirm" } } });
+    const notes = agent.inspect().statusNotes.map((note) => note.message);
+    assert.ok(notes.some((message) => /rules\.capture needs the exchange archive/.test(message)), "the silent no-op is reported");
+    await agent.dispose();
+    const { agent: archived } = await harness({ config: { store: "memory", rules: { capture: "confirm" }, exchanges: {} } });
+    assert.equal(
+      archived.inspect().statusNotes.some((note) => /rules\.capture needs/.test(note.message)),
+      false,
+      "with the archive on, capture can fire and nothing is reported",
+    );
+    await archived.dispose();
+  });
+
+  // Plan 210 Task 2: the inspectability role of the `memory` toggle and `memory:status` rests on this test.
+  it("memory_toggle_and_status_commands_are_inspectable", async () => {
+    const script = [
+      [providerToolCall(toolCallContent("c1", "memory.insert", { kind: "fact", text: "canary rollout protects deploys" })), providerDone()],
+      [providerTextDelta("stored"), providerDone()],
+    ] as const;
+    const { agent } = await harness({ config: { store: "memory" }, script });
+    const session = await agent.session({ id: "fabric-inspect", create: true });
+    type Status = { ok: boolean; candidate: number; verified: number; archived: number; refused: number; text: string };
+    const empty = (await agent.commands.run("memory:status", {} as JsonObject, { session })) as Status;
+    assert.equal(empty.ok, true);
+    assert.equal(empty.candidate + empty.verified + empty.archived, 0, "status counts an empty store as empty");
+    await session.run("remember the canary rule");
+    const after = (await agent.commands.run("memory:status", {} as JsonObject, { session })) as Status;
+    assert.equal(after.candidate + after.verified, 1, "status counts the note the turn wrote");
+    assert.equal(after.refused, 0);
+    assert.match(after.text, /Fabric notes: \d+ candidate, \d+ verified, 0 archived/);
+    const off = (await agent.commands.run("memory", {} as JsonObject, { session })) as { enabled: boolean; text?: string };
+    assert.equal(off.enabled, false, "the toggle reports the state it set");
+    const on = (await agent.commands.run("memory", {} as JsonObject, { session })) as { enabled: boolean };
+    assert.equal(on.enabled, true, "a second toggle reports the restored state");
+    await session.close();
+    await agent.dispose();
+  });
+
   it("memory_fabric_state_survives_reopen", async () => {
     const { agent } = await harness({ config: { semantic: false } });
     const first = await agent.session({ id: "fabric-reopen", create: true });

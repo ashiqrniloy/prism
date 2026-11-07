@@ -226,8 +226,8 @@ function parseLock(files, path, problems) {
 export function claimViolations(files, current) {
   const problems = [];
   const manifests = [...files.keys()].filter((path) => MANIFEST.test(path)).sort();
-  if (manifests.length !== 51) {
-    problems.push(`expected 51 manifests (root + 50 workspaces) to check for lockstep ${current}, got ${manifests.length}`);
+  if (manifests.length !== 52) {
+    problems.push(`expected 52 manifests (root + 51 workspaces) to check for lockstep ${current}, got ${manifests.length}`);
   }
   const parsed = new Map();
   for (const path of manifests) {

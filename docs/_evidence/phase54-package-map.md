@@ -1,11 +1,11 @@
 # Phase 54 — 0.3.3 Package/Export Baseline & 0.4 Import Map Evidence
 
-Generated: `2026-11-04T18:48:08.313Z`
+Generated: `2026-11-06T19:41:45.665Z`
 Repository root version: `0.13.0`
 
 ## 1. Executive Summary & Counts
 
-- **Current repository manifests:** 51 (50 packages during consolidation transition)
+- **Current repository manifests:** 52 (50 packages during consolidation transition)
 - **Retired 0.3.x package names:** 55 (hard-frozen at final 0.3.x releases, deprecated with legacy tag)
 - **Retained package names:** 7 (`@arnilo/prism`, `@arnilo/prism-providers`, `@arnilo/prism-web-tools`, `@arnilo/prism-memory`, `@arnilo/prism-mcp`, `@arnilo/prism-acp-agent`, `@arnilo/prism-ag-ui`)
 - **New family packages:** 4 (`@arnilo/prism-core`, `@arnilo/prism-channels`, `@arnilo/prism-coding-tools`, `@arnilo/prism-office`)
@@ -556,12 +556,12 @@ Total declared exports across all packages are frozen in `scripts/compat-baselin
 
 | Package Name | Declared Public Exports (dist) | Budget-Gated Exports (src) | Snapshot Baseline File |
 |---|---|---|---|
-| `@arnilo/prism` | 0 | 1516 | `scripts/compat-baseline/arnilo__prism.txt` |
+| `@arnilo/prism` | 0 | 1519 | `scripts/compat-baseline/arnilo__prism.txt` |
 | `@arnilo/prism-context-files` | 0 | 25 | `scripts/compat-baseline/arnilo__prism-context-files.txt` |
 | `@arnilo/prism-context-engineering` | 0 | 157 | `scripts/compat-baseline/arnilo__prism-context-engineering.txt` |
 | `@arnilo/prism-credentials-keyring` | 0 | 107 | `scripts/compat-baseline/arnilo__prism-credentials-keyring.txt` |
 | `@arnilo/prism-driver-process` | 0 | 45 | `scripts/compat-baseline/arnilo__prism-driver-process.txt` |
-| `@arnilo/prism-mcp-server` | 0 | 37 | `scripts/compat-baseline/arnilo__prism-mcp-server.txt` |
+| `@arnilo/prism-mcp-server` | 0 | 42 | `scripts/compat-baseline/arnilo__prism-mcp-server.txt` |
 | `@arnilo/prism-acp` | 0 | 46 | `scripts/compat-baseline/arnilo__prism-acp.txt` |
 | `@arnilo/prism-ag-ui` | 0 | 206 | `scripts/compat-baseline/arnilo__prism-ag-ui.txt` |
 | `@arnilo/prism-channels` | 0 | 139 | `scripts/compat-baseline/arnilo__prism-channels.txt` |
@@ -569,9 +569,10 @@ Total declared exports across all packages are frozen in `scripts/compat-baselin
 | `@arnilo/prism-devtools` | 0 | 38 | `scripts/compat-baseline/arnilo__prism-devtools.txt` |
 | `@arnilo/prism-remote` | 0 | 114 | `scripts/compat-baseline/arnilo__prism-remote.txt` |
 | `@arnilo/prism-headless` | 0 | 39 | `scripts/compat-baseline/arnilo__prism-headless.txt` |
+| `@arnilo/prism-host-builder` | 0 | 16 | `scripts/compat-baseline/arnilo__prism-host-builder.txt` |
 | `@arnilo/prism-hooks-json` | 0 | 35 | `scripts/compat-baseline/arnilo__prism-hooks-json.txt` |
 | `@arnilo/prism-mcp` | 0 | 149 | `scripts/compat-baseline/arnilo__prism-mcp.txt` |
-| `@arnilo/prism-observability` | 0 | 77 | `scripts/compat-baseline/arnilo__prism-observability.txt` |
+| `@arnilo/prism-observability` | 0 | 80 | `scripts/compat-baseline/arnilo__prism-observability.txt` |
 | `@arnilo/prism-delegate` | 0 | 53 | `scripts/compat-baseline/arnilo__prism-delegate.txt` |
 | `@arnilo/prism-workflows` | 0 | 279 | `scripts/compat-baseline/arnilo__prism-workflows.txt` |
 | `@arnilo/prism-advisor` | 0 | 52 | `scripts/compat-baseline/arnilo__prism-advisor.txt` |
@@ -579,7 +580,7 @@ Total declared exports across all packages are frozen in `scripts/compat-baselin
 | `@arnilo/prism-memory-observational` | 0 | 178 | `scripts/compat-baseline/arnilo__prism-memory-observational.txt` |
 | `@arnilo/prism-memory-core` | 0 | 296 | `scripts/compat-baseline/arnilo__prism-memory-core.txt` |
 | `@arnilo/prism-memory-rag` | 0 | 205 | `scripts/compat-baseline/arnilo__prism-memory-rag.txt` |
-| `@arnilo/prism-memory-fabric` | 0 | 646 | `scripts/compat-baseline/arnilo__prism-memory-fabric.txt` |
+| `@arnilo/prism-memory-fabric` | 0 | 695 | `scripts/compat-baseline/arnilo__prism-memory-fabric.txt` |
 | `@arnilo/prism-memory-wiki` | 0 | 89 | `scripts/compat-baseline/arnilo__prism-memory-wiki.txt` |
 | `@arnilo/prism-approval` | 0 | 11 | `scripts/compat-baseline/arnilo__prism-approval.txt` |
 | `@arnilo/prism-guardrail-packs` | 0 | 31 | `scripts/compat-baseline/arnilo__prism-guardrail-packs.txt` |

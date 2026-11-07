@@ -157,17 +157,26 @@ function rebuildSessionContextCore(entries: readonly SessionEntry[], options: Se
   return snapshotFromBranch(getSessionBranchEntriesCore(entries, options));
 }
 
+/**
+ * Snapshots whose next appended entry `snapshotFromBranch` would include as-is: no compaction on
+ * the branch, or every entry after the newest compaction's `throughEntryId` counts. Only these can
+ * be extended in O(1) by {@link extendSnapshot}; any other snapshot is rebuilt.
+ */
+const extendableSnapshots = new WeakSet<SessionContextSnapshot>();
+
 function snapshotFromBranch(branch: readonly SessionEntry[]): SessionContextSnapshot {
   const compaction = [...branch]
     .reverse()
     .find((entry) => entry.kind === "compaction" && entry.summary && isCompactionEntryData(entry.data));
   if (!compaction || !isCompactionEntryData(compaction.data)) {
-    return {
+    const snapshot: SessionContextSnapshot = {
       leafId: branch.at(-1)?.id,
       entries: branch,
       messages: branch.flatMap((entry) => (entry.kind === "message" && entry.message ? [entry.message] : [])),
       summaries: branch.flatMap((entry) => (entry.kind === "summary" && entry.summary ? [entry.summary] : [])),
     };
+    extendableSnapshots.add(snapshot);
+    return snapshot;
   }
 
   const keepIds = new Set(compaction.data.keepEntryIds ?? []);
@@ -184,7 +193,29 @@ function snapshotFromBranch(branch: readonly SessionEntry[]): SessionContextSnap
     if (entry.kind === "summary" && entry.summary && afterThrough) summaries.push(entry.summary);
   }
 
-  return { leafId: branch.at(-1)?.id, entries: branch, messages, summaries };
+  const snapshot: SessionContextSnapshot = { leafId: branch.at(-1)?.id, entries: branch, messages, summaries };
+  if (afterThrough) extendableSnapshots.add(snapshot);
+  return snapshot;
+}
+
+/**
+ * Kernel-internal (plan 210 Task 0.3): the snapshot `snapshotFromBranch` would build for
+ * `snapshot`'s branch plus `entry` appended at its tip, in O(1). `entry` must be a detached copy
+ * whose `parentId` is `snapshot.leafId`. Returns `undefined` when the result could differ from a
+ * rebuild (a compaction entry, or a snapshot whose tail is not past its compaction), so the
+ * caller rebuilds. The result has new arrays; `snapshot` is never mutated.
+ */
+export function extendSnapshot(snapshot: SessionContextSnapshot, entry: SessionEntry): SessionContextSnapshot | undefined {
+  if (!extendableSnapshots.has(snapshot) || entry.kind === "compaction") return undefined;
+  if (snapshot.leafId === undefined || entry.parentId !== snapshot.leafId) return undefined;
+  const next: SessionContextSnapshot = {
+    leafId: entry.id,
+    entries: [...snapshot.entries, entry],
+    messages: entry.kind === "message" && entry.message ? [...snapshot.messages, entry.message] : [...snapshot.messages],
+    summaries: entry.kind === "summary" && entry.summary ? [...snapshot.summaries, entry.summary] : [...snapshot.summaries],
+  };
+  extendableSnapshots.add(next);
+  return next;
 }
 
 export type MemorySessionSearchMode = "linear" | "unsupported";

@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, 
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 
-import { checkKernelBudget, loadBudgets, measureExportCounts, measureKernelSourceLines } from "./budget-gates.mjs";
+import { checkHostBuilderBudget, checkKernelBudget, loadBudgets, measureExportCounts, measureKernelSourceLines } from "./budget-gates.mjs";
 
 export const BASELINE_DIR = "scripts/compat-baseline";
 
@@ -57,6 +57,60 @@ function reexportNames(statement) {
     .filter((name) => name && name !== "default");
 }
 
+// First sentence-ish line of a JSDoc block, with tags and markup stripped; undefined when empty.
+function docSummary(block) {
+  const lines = block
+    .replace(/^\/\*\*/, "")
+    .replace(/\*\/$/, "")
+    .split("\n")
+    .map((line) => line.replace(/^\s*\*\s?/, "").trim());
+  const body = [];
+  for (const line of lines) {
+    if (line.startsWith("@")) break;
+    if (!line) {
+      if (body.length) break;
+      continue;
+    }
+    body.push(line);
+  }
+  const text = body
+    .join(" ")
+    .replace(/\{@(?:link|linkcode|linkplain)\s+([^}|\s]+)[^}]*\}/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!text) return undefined;
+  const sentence = text.match(/^.*?[.!?](?=\s|$)/)?.[0] ?? text;
+  return sentence.length > 240 ? `${sentence.slice(0, 237)}...` : sentence;
+}
+
+// The declaration header with balanced brackets. A function, const or type ends at the first `;` outside
+// brackets and strings, so an inline object parameter is not cut at its `{` the way the baseline text is.
+// A class, interface, enum or namespace ends at its body `{`. Capped at 600 characters.
+function richSignature(text, start, kind) {
+  const bodyKinds = new Set(["class", "interface", "enum", "namespace", "module"]);
+  let depth = 0;
+  let quote = "";
+  let index = start;
+  for (; index < text.length && index - start < 4000; index++) {
+    const char = text[index];
+    if (quote) {
+      if (char === "\\") index++;
+      else if (char === quote) quote = "";
+      continue;
+    }
+    if (char === '"' || char === "'" || char === "`") quote = char;
+    else if (char === "(" || char === "[") depth++;
+    else if (char === ")" || char === "]") depth--;
+    else if (char === "{") {
+      if (bodyKinds.has(kind) && depth === 0) break;
+      depth++;
+    } else if (char === "}") depth--;
+    else if (char === ";" && depth <= 0) break;
+  }
+  const flat = text.slice(start, index).replace(/\s+/g, " ").trim();
+  return flat.length > 600 ? `${flat.slice(0, 597)}...` : flat;
+}
+
 // Parse one .d.ts file. Returns { locals: Map<name, signature>, stars: [file], named: Map<name, signature> }.
 export function parseDeclarationFile(file, text = readFileSync(file, "utf8")) {
   const locals = new Map();
@@ -75,6 +129,50 @@ export function parseDeclarationFile(file, text = readFileSync(file, "utf8")) {
     if (brace !== -1 && (end === -1 || brace < end)) end = brace;
     const signature = collapse(end === -1 ? text.slice(start, start + 500) : text.slice(start, end));
     if (!locals.has(name)) locals.set(name, signature);
+  }
+
+  // Additive model for the host-builder index (plan 215 Task 14): declarations tsc emits without
+  // `declare` (`export interface`, `export type`), the leading doc comment of each declaration, and
+  // the per-name source of a named re-export. `locals`, `named` and `stars` keep their meaning, so
+  // the baseline text does not change.
+  const typeLocals = new Map();
+  const docs = new Map();
+  const declDocs = (index) => {
+    const before = text.slice(0, index).replace(/\s+$/, "");
+    if (!before.endsWith("*/")) return undefined;
+    const start = before.lastIndexOf("/**");
+    return start === -1 ? undefined : docSummary(before.slice(start));
+  };
+  const typeRe = /^export (interface|type)\s+([A-Za-z0-9_$]+)/gm;
+  while ((match = typeRe.exec(text))) {
+    const name = match[2];
+    if (!typeLocals.has(name)) typeLocals.set(name, richSignature(text, match.index, match[1]));
+    const summary = declDocs(match.index);
+    if (summary && !docs.has(name)) docs.set(name, summary);
+  }
+  const declKindRe =
+    /export declare (?:abstract |async |readonly )*(function|class|const|let|var|enum|interface|type|namespace|module)\s+([A-Za-z0-9_$]+)/g;
+  const rich = new Map();
+  while ((match = declKindRe.exec(text))) {
+    const name = match[2];
+    if (!rich.has(name)) rich.set(name, richSignature(text, match.index, match[1]));
+    const summary = declDocs(match.index);
+    if (summary && !docs.has(name)) docs.set(name, summary);
+  }
+  const namedFrom = [];
+  const fromRe = /export (type )?\{([^}]*)\}\s*from\s*["']([^"']+)["']/g;
+  while ((match = fromRe.exec(text))) {
+    const statementTypeOnly = Boolean(match[1]);
+    for (const part of match[2]
+      .split(",")
+      .map((piece) => piece.trim())
+      .filter(Boolean)) {
+      const typeOnly = statementTypeOnly || /^type\s/.test(part);
+      const pieces = part.replace(/^type\s+/, "").split(/\s+as\s+/);
+      const original = pieces[0].trim();
+      const exported = (pieces[1] ?? pieces[0]).trim();
+      if (exported && exported !== "default") namedFrom.push({ exported, original, specifier: match[3], typeOnly });
+    }
   }
 
   // export default
@@ -102,7 +200,7 @@ export function parseDeclarationFile(file, text = readFileSync(file, "utf8")) {
     if (target) stars.push(target);
   }
 
-  return { locals, named, stars };
+  return { locals, named, stars, typeLocals, rich, docs, namedFrom };
 }
 
 // Union surface of every .d.ts under distDir, resolving star re-exports within the package.
@@ -130,6 +228,68 @@ export function extractDeclaredSurface(distDir) {
   return surface;
 }
 
+function kindOf(signature) {
+  const declared = signature.match(
+    /^export declare (?:abstract |async |readonly )*(function|class|const|let|var|enum|interface|type|namespace|module)\b/,
+  );
+  if (declared) return declared[1] === "module" ? "namespace" : declared[1];
+  const plain = signature.match(/^export (interface|type)\b/);
+  if (plain) return plain[1];
+  return "reexport";
+}
+
+/**
+ * The names reachable from one entry declaration file, each with `{ kind, signature, summary? }`.
+ * Plan 215 Task 14: the host-builder index records the surface per `exports` subpath, where
+ * `extractDeclaredSurface` above is a union over every emitted file. A local declaration wins over a
+ * named re-export, which wins over a star re-export. A named re-export follows its relative specifier to
+ * the declaration; a specifier outside the package keeps the re-export statement as its signature.
+ */
+export function extractEntrySurface(entryFile) {
+  const cache = new Map();
+  const active = new Set();
+  function resolve(file) {
+    if (cache.has(file)) return cache.get(file);
+    if (active.has(file)) return new Map();
+    active.add(file);
+    const parsed = parseDeclarationFile(file);
+    const result = new Map();
+    for (const star of parsed.stars) {
+      for (const [name, info] of resolve(star)) if (!result.has(name)) result.set(name, info);
+    }
+    for (const [name, signature] of parsed.named) {
+      // `export * as ns from` is recorded in `named` as the full statement.
+      if (/^export (?:type )?\* as /.test(signature)) result.set(name, { kind: "namespace", signature });
+    }
+    for (const { exported, original, specifier } of parsed.namedFrom) {
+      const target = specifier.startsWith(".") ? resolveModuleFile(file, specifier) : undefined;
+      const found = target ? resolve(target).get(original) : undefined;
+      result.set(
+        exported,
+        found ?? {
+          kind: "reexport",
+          signature: `export { ${original === exported ? exported : `${original} as ${exported}`} } from "${specifier}"`,
+        },
+      );
+    }
+    for (const [name, signature] of parsed.locals) {
+      const full = parsed.rich.get(name) ?? signature;
+      const summary = parsed.docs.get(name);
+      result.set(name, { kind: kindOf(signature), signature: full, ...(summary ? { summary } : {}) });
+    }
+    for (const [name, signature] of parsed.typeLocals) {
+      const summary = parsed.docs.get(name);
+      result.set(name, { kind: kindOf(signature), signature, ...(summary ? { summary } : {}) });
+    }
+    active.delete(file);
+    cache.set(file, result);
+    return result;
+  }
+  const out = resolve(entryFile);
+  // A named re-export resolved through another file carries that file's summary already.
+  return new Map([...out.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
+}
+
 function sourceEntry(manifest) {
   const exp = manifest.exports?.["."];
   const target = typeof exp === "string" ? exp : exp?.default;
@@ -144,7 +304,7 @@ function sourceEntry(manifest) {
  * every package that fails to emit instead of stopping at the first. The caller owns `cleanup` and
  * must run it in a `finally`, so `<pkg>/.types/` and the temp tsconfig never survive a run.
  */
-function declarationDir(root, pkg) {
+export function declarationDir(root, pkg) {
   const distDir = join(root, pkg.path, "dist");
   if (existsSync(distDir)) return { distDir };
   const entry = sourceEntry(pkg.manifest);
@@ -359,10 +519,12 @@ export function runGates({
   // 3. Tarball deny list, and the kernel size budget from the root pack it makes.
   if (!skipTarball) {
     let rootPack;
+    let hostBuilderPack;
     for (const pkg of release.packages) {
       try {
         const packed = packStats(release.root, pkg.path);
         if (pkg.path === ".") rootPack = packed;
+        if (pkg.manifest.name === "@arnilo/prism-host-builder") hostBuilderPack = packed;
         assertTarballAllowDeny(pkg.manifest.name, packed.files);
       } catch (error) {
         errors.push(`tarball: ${error.message}`);
@@ -380,6 +542,11 @@ export function runGates({
         sourceLines: measureKernelSourceLines(release.root),
       };
       for (const check of checkKernelBudget(budget, measured)) if (!check.ok) errors.push(check.message);
+    }
+    // 5. Host-builder size budget (plan 215 Task 14): its tarball carries the generated indexes.
+    if (hostBuilderPack) {
+      const measured = { packedBytes: hostBuilderPack.packedBytes, unpackedBytes: hostBuilderPack.unpackedBytes };
+      for (const check of checkHostBuilderBudget(loadBudgets().hostBuilder, measured)) if (!check.ok) errors.push(check.message);
     }
   }
 

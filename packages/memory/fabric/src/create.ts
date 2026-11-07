@@ -92,6 +92,7 @@ import {
   validateAppliesTo,
   validateNoteKey,
 } from "./types.js";
+import { createNoteNavigator } from "./navigation.js";
 import { resolveMemoryFabricSettings, runFabricEvolutionWorker } from "./workers.js";
 
 const isIso = (value: unknown): value is string => typeof value === "string" && value.length > 0 && Number.isFinite(Date.parse(value));
@@ -1142,83 +1143,11 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
     }
     return [...found.values()];
   }
-  async function navigateNotes(
-    request: { around?: string; session?: string; page?: number },
-    signal?: AbortSignal,
-  ): Promise<readonly string[]> {
-    let session = request.session;
-    let memories = orderedMemories;
-    if (request.around !== undefined) {
-      const owner = await memoryWithNote(request.around, signal);
-      if (owner === undefined) return [];
-      const anchor = await owner.getEntry(request.around, { signal });
-      const metadata = anchor === undefined ? undefined : parseMemoryNoteMetadata(anchor.metadata);
-      if (metadata?.kind !== "exchange" || !metadata.session) return [];
-      session = metadata.session;
-      memories = [owner];
-    }
-    if (!session) return [];
-    const rows = new Map<string, { id: string; time: string }>();
-    for (const source of memories) {
-      const { tenantId, resourceId, threadId } = source.scope;
-      if (!tenantId || !resourceId || !threadId) continue;
-      const store = options.vectorStore;
-      let metadataRows: readonly import("@arnilo/prism-memory-core").MemoryVectorMetadataRow[] = [];
-      if (store?.listBySession) {
-        metadataRows = await store.listBySession({ tenantId, resourceId, threadId }, session, { signal });
-      } else if (store?.scanMetadata) {
-        options.notify?.("memory-fabric: store has no listBySession; session navigation uses a metadata scan");
-        const collected: import("@arnilo/prism-memory-core").MemoryVectorMetadataRow[] = [];
-        let cursor: string | undefined;
-        do {
-          signal?.throwIfAborted();
-          const page = await store.scanMetadata({ scope: { tenantId, resourceId }, limit: 200, cursor, signal });
-          collected.push(...page.rows);
-          cursor = page.nextCursor;
-        } while (cursor !== undefined);
-        // get() below binds every candidate back to the exact active thread.
-        metadataRows = collected;
-      } else {
-        options.notify?.("memory-fabric: session navigation unavailable; store has no listBySession or scanMetadata");
-      }
-      const candidates = metadataRows.filter((row) => {
-        const metadata = parseMemoryNoteMetadata(row.metadata);
-        return metadata?.kind === "exchange" && metadata.session === session;
-      });
-      // Bind metadata to the active memory before paging, excluding revoked and foreign-thread rows.
-      for (let start = 0; start < candidates.length; start += 200) {
-        const batch = candidates.slice(start, start + 200);
-        const readable = store?.listBySession
-          ? batch
-          : await source.get(
-              batch.map((row) => row.id),
-              { signal },
-            );
-        for (const record of readable) {
-          const metadata = parseMemoryNoteMetadata(record.metadata);
-          const now = Date.now();
-          if (
-            metadata?.kind !== "exchange" ||
-            metadata.session !== session ||
-            metadata.status === "archived" ||
-            metadata.status === "retired" ||
-            metadata.status === "candidate" ||
-            (metadata.validFrom !== undefined && Date.parse(metadata.validFrom) > now) ||
-            (metadata.validTo !== undefined && Date.parse(metadata.validTo) <= now)
-          )
-            continue;
-          if (!rows.has(record.id)) rows.set(record.id, { id: record.id, time: metadata.tRef ?? record.createdAt });
-        }
-      }
-    }
-    const sorted = [...rows.values()].sort((a, b) => Date.parse(a.time) - Date.parse(b.time) || a.id.localeCompare(b.id));
-    if (request.around !== undefined) {
-      const index = sorted.findIndex((row) => row.id === request.around);
-      return index < 0 ? [] : sorted.slice(Math.max(0, index - 2), index + 3).map((row) => row.id);
-    }
-    const offset = (request.page ?? 0) * 8;
-    return sorted.slice(offset, offset + 8).map((row) => row.id);
-  }
+  const navigateNotes = createNoteNavigator({
+    memories: orderedMemories,
+    ...(options.vectorStore === undefined ? {} : { vectorStore: options.vectorStore }),
+    ...(options.notify === undefined ? {} : { notify: options.notify }),
+  });
   const recall = createFabricRecall({
     loadCandidates,
     limits,
