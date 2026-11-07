@@ -3,15 +3,15 @@ import { relative } from "node:path";
 import type { JsonObject, ModelClient, ModelRef, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import type { Memory, MemoryVectorRecord } from "@arnilo/prism-memory-core";
 import { HARD_TOP_K_CAP, lexicalMatches, lexicalTerms, MemoryValidationError } from "@arnilo/prism-memory-core";
-import { EvidenceNotFoundError, LessonRequiresEvidenceError } from "./lessons.js";
 import { noteRelPath } from "@arnilo/prism-memory-core/fabric";
 import { appendFabricBlock, assertFabricBlockLabel, fabricBlockId, readFabricBlock } from "./blocks.js";
 import type { FabricCitationTracker } from "./context.js";
 import type { FabricDecisions } from "./decisions.js";
 import { type FabricDirectoryHandle, pageFabricDirectory, renderFabricDirectory } from "./directory.js";
 import { queryExcerpt } from "./excerpt.js";
-import { type ConceptRender, citedByCurrentClaims, readConceptBody, renderConceptClaims, renderConceptRead } from "./ontology/render.js";
 import { createFabricFileJail, type FabricFileJail } from "./files.js";
+import { EvidenceNotFoundError, LessonRequiresEvidenceError } from "./lessons.js";
+import { type ConceptRender, citedByCurrentClaims, readConceptBody, renderConceptClaims, renderConceptRead } from "./ontology/render.js";
 import { groupRecallHits, noteTime, parseRecallKinds } from "./recall.js";
 import { selectWithScopeReserve } from "./scope/recall.js";
 import { scanScopedMemoryContent } from "./scoped/trust.js";
@@ -864,7 +864,9 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
           // RRF over the per-query rankings, deduplicated by id; the first occurrence keeps the hit.
           const fused = new Map<string, { readonly hit: MemoryNoteHit; score: number }>();
           for (const result of results) {
-            result.hits.forEach((hit, index) => {
+            // A gather pages a whole history into context, so a quarantined (flagged) note is left out rather than shown
+            // with its flag the way a relevance page shows it. The default call is unchanged.
+            (gather ? result.hits.filter((hit) => (hit.flags?.length ?? 0) === 0) : result.hits).forEach((hit, index) => {
               const contribution = 1 / (60 + index + 1);
               const existing = fused.get(hit.id);
               if (existing) existing.score += contribution;

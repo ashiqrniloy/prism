@@ -1614,7 +1614,9 @@ query with the informal and formal forms of its words from a small fixed English
 dozen more), so a question that says "girlfriend" reaches a note that says "gf". It makes no model or
 embedding call; the original query is kept whole and only missing alternates are appended. Because
 alternates add query terms, the relevance floor is scaled by the share of terms that were the caller's
-own, so the same threshold still means "how much of the question". A query with no table term is
+own, so the same threshold still means "how much of the question". Each hit's `coverage` is reported on
+that scale too (matched caller terms, an alternate counting for its word), so a match found only through
+an alternate clears `memory.recall`'s no-match floor instead of abstaining. A query with no table term is
 unchanged, and so is recall when the field is unset.
 
 `recall: { gather: true }` (default `false`, a tuning field; plan 210 Task 3.1) adds a boolean `gather` to
@@ -1622,7 +1624,8 @@ the `memory.recall` tool for list and multi-hop questions ("the names of his dog
 been"). A call with `gather: true` returns the whole matching history in one call, up to the 32-hit
 recall window, oldest first, with a snippet budget of 3,000 tokens instead of 1,200; an explicit `topK`,
 `order` or `budget` still wins. It is the same tool, scope, eligibility and trust path as a normal
-recall (a forgotten, archived-away, other-scope or quarantined note is still excluded). Cost: a gather
+recall (a forgotten, archived-away or other-scope note is still excluded), except that a quarantined
+(flagged) note is left out instead of being shown with its flag as a normal page shows it. Cost: a gather
 call can render up to 3,000 tokens of snippet lines instead of 1,200, and only when the agent asks for
 it. With the field unset the tool schema has no `gather` property and results are byte-identical.
 
@@ -1909,6 +1912,15 @@ Task 5 makes for the kernel). Everything else is an implementation detail.
 - Ranking and scoring, injection budgets, the delivery format, prompt text, tool descriptions, and a preset's contents
   inside its contract (a change to those bumps `CONVERSATIONAL_PRESET_REVISION` or `CODING_PRESET_REVISION`).
 - Anything classified "Not exported" under [Stable exports](#stable-exports).
+
+### Experimental features after graduation
+
+The memory feature audit (plan 210) decides every memory feature against pre-registered rules
+(`scripts/memory-bench/cleanup-criteria.json`). A feature that has no measured benefit, safety, cost or compatibility
+role is removed. The owner may hold such a feature instead, with a written reason, or keep one whose removal could not
+be shown harmless. Either way the feature is marked **experimental** here. An experimental feature is outside the API
+level 1 promise: it can change or be removed in a minor version. This is the only way a feature without evidence stays
+in the package. The audit fills in the list when it finishes. Until then it is empty.
 
 ### Needs a new name or an explicit opt-in
 

@@ -16,7 +16,8 @@ export function coverageProblems(rows, candidates, known = candidates) {
   for (const row of rows) seen.set(row.id, (seen.get(row.id) ?? 0) + 1);
   for (const id of candidates) if (!seen.has(id)) problems.push(`candidate without a probe: ${id}`);
   for (const [id, count] of seen) if (count > 1) problems.push(`probe reported twice: ${id}`);
-  for (const id of seen.keys()) if (!known.includes(id)) problems.push(`probe for a row the ledger does not have: ${id}`);
+  // A variant probe (`<row>#<variant>`, plan 210 Task 3.1) belongs to its row; the row itself still needs its own probe.
+  for (const id of seen.keys()) if (!known.includes(id.split("#")[0])) problems.push(`probe for a row the ledger does not have: ${id}`);
   return problems;
 }
 
@@ -28,7 +29,9 @@ export async function buildReport({ rows, errors = [], candidates, known, replay
     .map(({ ms: _ms, ...row }) => ({
       ...row,
       ...(rates[row.id] === undefined ? {} : { replay: rates[row.id] }),
-      ...(FIXES.some((fix) => fix.features.includes(row.id)) ? { fixes: FIXES.filter((fix) => fix.features.includes(row.id)).map((fix) => fix.id) } : {}),
+      ...(FIXES.some((fix) => fix.features.includes(row.id))
+        ? { fixes: FIXES.filter((fix) => fix.features.includes(row.id)).map((fix) => fix.id) }
+        : {}),
     }));
   const verdicts = {};
   for (const row of probes) verdicts[row.verdict] = (verdicts[row.verdict] ?? 0) + 1;
@@ -40,7 +43,14 @@ export async function buildReport({ rows, errors = [], candidates, known, replay
     note: "Offline, deterministic, mock-provider probes of every Task 1 candidate. Counts, hashes and verdicts only; no note or history text.",
     verdictVocabulary: ["works", "never-fires", "no-effect", "wrong-effect"],
     rule: "fires: the mechanism ran (count); reaches: what the agent receives differs with it on vs off (or vs its trigger-absent control); correct: the documented effect. A replay rate under 1% of eligible units is rare.",
-    summary: { probes: probes.length, candidatesProbed: candidates.filter((id) => probes.some((row) => row.id === id)).length, verdicts, problems: problems.length, fixes: FIXES.filter((fix) => fix.kind === "fixed").length, reported: FIXES.filter((fix) => fix.kind !== "fixed").length },
+    summary: {
+      probes: probes.length,
+      candidatesProbed: candidates.filter((id) => probes.some((row) => row.id === id)).length,
+      verdicts,
+      problems: problems.length,
+      fixes: FIXES.filter((fix) => fix.kind === "fixed").length,
+      reported: FIXES.filter((fix) => fix.kind !== "fixed").length,
+    },
     problems,
     fixes: FIXES,
     replay: replay

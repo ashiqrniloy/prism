@@ -11,13 +11,27 @@ async function env(levels = ["project"], ontologyOptions = {}) {
   const { fabric } = await packages();
   const core = await import("@arnilo/prism-memory-core");
   const vectorStore = core.createMemoryVectorStore();
-  const memories = new Map(levels.map((level) => [level, fabric.createMemory({ tenantId: "t", threadId: "th", resourceId: `r-${level}`, vectorStore })]));
-  const ontology = fabric.createFabricOntology({ scopes: [...memories].map(([level, memory]) => ({ level, memory })), store: vectorStore, ...ontologyOptions });
+  const memories = new Map(
+    levels.map((level) => [level, fabric.createMemory({ tenantId: "t", threadId: "th", resourceId: `r-${level}`, vectorStore })]),
+  );
+  const ontology = fabric.createFabricOntology({
+    scopes: [...memories].map(([level, memory]) => ({ level, memory })),
+    store: vectorStore,
+    ...ontologyOptions,
+  });
   const fabrics = new Map(
-    [...memories].map(([level, memory]) => [level, fabric.createMemoryFabric({ memory, vectorStore, consolidate: false, subjects: ontology.subjects, ...ontologyOptions.fabric })]),
+    [...memories].map(([level, memory]) => [
+      level,
+      fabric.createMemoryFabric({ memory, vectorStore, consolidate: false, subjects: ontology.subjects, ...ontologyOptions.fabric }),
+    ]),
   );
   const note = (text, options = {}) =>
-    fabrics.get(options.level ?? "project").remember({ kind: "fact", content: text, ...(options.subject ? { subject: options.subject } : {}), ...(options.keywords ? { keywords: options.keywords } : {}) });
+    fabrics.get(options.level ?? "project").remember({
+      kind: "fact",
+      content: text,
+      ...(options.subject ? { subject: options.subject } : {}),
+      ...(options.keywords ? { keywords: options.keywords } : {}),
+    });
   const coRead = async (ids, turns) => {
     const memory = memories.get("project");
     for (const id of ids)
@@ -83,7 +97,11 @@ export async function tierArm(dir, { wiki = true, fabricConfig = {}, after, edit
   const ev = await events();
   let curatorCalls = 0;
   const { memoryWiki } = await import(`${WIKI}/index.ts`);
-  const s = scripted().queue({ calls: [{ name: "memory.recall", args: { query: "deploy pipeline approval", ...(wiki ? { kinds: ["concept"] } : { kinds: ["concept"] }) } }] });
+  const s = scripted().queue({
+    calls: [
+      { name: "memory.recall", args: { query: "deploy pipeline approval", ...(wiki ? { kinds: ["concept"] } : { kinds: ["concept"] }) } },
+    ],
+  });
   const h = await fabricAgent(dir, {
     config: { rules: false, ...fabricConfig },
     respond: s.respond,
@@ -100,11 +118,21 @@ export async function tierArm(dir, { wiki = true, fabricConfig = {}, after, edit
     agentOptions,
   });
   try {
-    const pass = wiki ? await h.command("wiki:consolidate", {}, "probe").catch((error) => ({ error: String(error?.message ?? error) })) : undefined;
+    const pass = wiki
+      ? await h.command("wiki:consolidate", {}, "probe").catch((error) => ({ error: String(error?.message ?? error) }))
+      : undefined;
     await h.run("probe", "how do deploys work");
     const value = lastValue(h);
     const extra = after ? await after(h) : undefined;
-    return { pass, curatorCalls, value, text: resultText(h.toolResults.at(-1)?.result), concepts: (await h.notes()).filter((note) => note.metadata?.kind === "concept").length, extra, h };
+    return {
+      pass,
+      curatorCalls,
+      value,
+      text: resultText(h.toolResults.at(-1)?.result),
+      concepts: (await h.notes()).filter((note) => note.metadata?.kind === "concept").length,
+      extra,
+      h,
+    };
   } finally {
     await h.close();
   }
@@ -118,10 +146,14 @@ export const probes = [
       const off = await tierArm(join(root, "off"), { wiki: false });
       return {
         surface: "tool-result",
-        property: "with memory-wiki over the fabric, a curator pass turns a note cluster into a concept that recall renders with cited claims; without the wiki no concept is ever written",
+        property:
+          "with memory-wiki over the fabric, a curator pass turns a note cluster into a concept that recall renders with cited claims; without the wiki no concept is ever written",
         fires: on.concepts,
         reaches: digest(on.text) !== digest(off.text),
-        correct: on.concepts >= 1 && on.value?.hits?.some((hit) => hit.kind === "concept") && !(off.value?.hits ?? []).some((hit) => hit.kind === "concept"),
+        correct:
+          on.concepts >= 1 &&
+          on.value?.hits?.some((hit) => hit.kind === "concept") &&
+          !(off.value?.hits ?? []).some((hit) => hit.kind === "concept"),
         on: digest(on.text),
         off: digest(off.text),
         counts: { concepts: on.concepts, curatorCalls: on.curatorCalls },
@@ -153,7 +185,8 @@ export const probes = [
       const arm = async (withEvidence) => {
         const e = await env();
         await seeded(e);
-        if (withEvidence) for (let i = 0; i < 3; i++) await e.note(`payments detail ${i}: refunds reuse the retry queue ${i}`, { subject: "payments" });
+        if (withEvidence)
+          for (let i = 0; i < 3; i++) await e.note(`payments detail ${i}: refunds reuse the retry queue ${i}`, { subject: "payments" });
         const calls = [];
         const client = await curator(calls);
         const report = await runWikiPass({
@@ -416,8 +449,13 @@ export const probes = [
           fabricConfig: { team: { dir: ".prism/memory", write: "ask" } },
           agentOptions: { host: { ui: ui.ui } },
           after: async (h) => {
-            const id = h.toolResults.findLast((row) => row.name === "memory.recall")?.result?.value?.hits?.find((hit) => hit.kind === "concept")?.id;
-            const shared = share && id ? await h.command("memory:share", { id }, "probe").catch((error) => ({ error: String(error?.message ?? error) })) : undefined;
+            const id = h.toolResults
+              .findLast((row) => row.name === "memory.recall")
+              ?.result?.value?.hits?.find((hit) => hit.kind === "concept")?.id;
+            const shared =
+              share && id
+                ? await h.command("memory:share", { id }, "probe").catch((error) => ({ error: String(error?.message ?? error) }))
+                : undefined;
             status = await h.command("memory:status", {}, "probe");
             return { id, shared };
           },
@@ -447,7 +485,12 @@ export const probes = [
         const dir = join(root, name);
         await mkdir(join(dir, "docs"), { recursive: true });
         await writeFile(join(dir, "docs", "adr-7.md"), "ADR 7: billing events are idempotent by event id.\n");
-        const s = scripted().queue({ calls: [...(wiki ? [{ name: "wiki_ingest", args: { path: "docs/adr-7.md" } }] : []), { name: "memory.recall", args: { query: "billing events idempotent" } }] });
+        const s = scripted().queue({
+          calls: [
+            ...(wiki ? [{ name: "wiki_ingest", args: { path: "docs/adr-7.md" } }] : []),
+            { name: "memory.recall", args: { query: "billing events idempotent" } },
+          ],
+        });
         const h = await fabricAgent(dir, {
           config: { rules: false },
           respond: s.respond,
@@ -457,7 +500,11 @@ export const probes = [
           await h.run("probe", "ingest the adr");
           const ingest = h.toolResults.find((row) => row.name === "wiki_ingest");
           const hits = lastValue(h)?.hits ?? [];
-          return { ingested: ingest?.result?.value?.id !== undefined || /indexed|staged|id/i.test(resultText(ingest?.result)), hits: hits.length, d: digest(resultText(h.toolResults.at(-1)?.result)) };
+          return {
+            ingested: ingest?.result?.value?.id !== undefined || /indexed|staged|id/i.test(resultText(ingest?.result)),
+            hits: hits.length,
+            d: digest(resultText(h.toolResults.at(-1)?.result)),
+          };
         } finally {
           await h.close();
         }

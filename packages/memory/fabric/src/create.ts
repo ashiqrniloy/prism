@@ -26,14 +26,7 @@ import type { ConsolidationExistingNote } from "./consolidation/prompts.js";
 import { createFabricCitationTracker } from "./context.js";
 import { decideConsolidation } from "./decider.js";
 import type { SupersessionChoice } from "./decisions.js";
-import {
-  createFabricLifecycle,
-  isActiveNote,
-  type MemoryNoteStatus,
-  normalizeNoteStatus,
-  type RecordUsesOptions,
-} from "./lifecycle/index.js";
-import { runMaintenance } from "./lifecycle/maintain.js";
+import { exchangeDialogue } from "./exchanges.js";
 import {
   assertEvidenceInput,
   assertLessonInput,
@@ -42,18 +35,26 @@ import {
   evidenceLevelsFor,
   isLessonTagged,
 } from "./lessons.js";
+import {
+  createFabricLifecycle,
+  isActiveNote,
+  type MemoryNoteStatus,
+  normalizeNoteStatus,
+  type RecordUsesOptions,
+} from "./lifecycle/index.js";
+import { runMaintenance } from "./lifecycle/maintain.js";
 import { noteImportance, storageStrength, strengthPrior } from "./lifecycle/strength.js";
-import { exchangeDialogue } from "./exchanges.js";
 import { mergeNoteLinks, resolveNoteLinks } from "./links.js";
+import { createNoteNavigator } from "./navigation.js";
+import { ConceptRequiresOntologyError } from "./ontology/errors.js";
+import { DEFAULT_CONCEPT_PRIOR, DEFAULT_MAX_CLAIMS_RENDERED } from "./ontology/render.js";
+import { emitMemoryRetract } from "./ontology/retract.js";
 import { registerMemoryFabricContext } from "./provider.js";
 import { createFabricRecall, type FabricCandidate, noteInWindow, noteTime } from "./recall.js";
 import { createScopeRecall, resolveScopePriors } from "./scope/recall.js";
 import { scanScopedMemoryContent } from "./scoped/trust.js";
 import { createFabricConversationSearch } from "./search.js";
 import { resolveStateConfig } from "./state.js";
-import { ConceptRequiresOntologyError } from "./ontology/errors.js";
-import { DEFAULT_CONCEPT_PRIOR, DEFAULT_MAX_CLAIMS_RENDERED } from "./ontology/render.js";
-import { emitMemoryRetract } from "./ontology/retract.js";
 import { createMemoryFabricTools } from "./tools.js";
 import {
   type CreateMemoryFabricOptions,
@@ -92,7 +93,6 @@ import {
   validateAppliesTo,
   validateNoteKey,
 } from "./types.js";
-import { createNoteNavigator } from "./navigation.js";
 import { resolveMemoryFabricSettings, runFabricEvolutionWorker } from "./workers.js";
 
 const isIso = (value: unknown): value is string => typeof value === "string" && value.length > 0 && Number.isFinite(Date.parse(value));

@@ -28,8 +28,8 @@ import { dirname, join, relative, resolve, sep } from "node:path";
 import {
   definePackage,
   type JsonObject,
-  type Message,
   type JsonSchema,
+  type Message,
   type PackageAPI,
   type PackageCommand,
   type PackageCommandContext,
@@ -76,12 +76,13 @@ import {
   messageText,
   summarizeSteps,
 } from "./exchanges.js";
-import { createLessonNudges, lessonSignal } from "./lessons.js";
 import { createFabricFileJail } from "./files.js";
+import { createLessonNudges, lessonSignal } from "./lessons.js";
 import { createScopeClock, readScopeClockState, SCOPE_CLOCK_COUNTER } from "./lifecycle/clock.js";
 import { citationEvidence } from "./lifecycle/evidence.js";
 import { createFabricLifecycle, describeNote, type FabricLifecycle, inspectNote, normalizeNoteStatus } from "./lifecycle/index.js";
 import { createMemory } from "./memory.js";
+import { createNoteNavigator } from "./navigation.js";
 import { exportMemoryOkf, importMemoryOkf } from "./okf-bundle.js";
 import { createConceptDeletionHandler, MEMORY_FABRIC_CONCEPT_HANDLER_SERVICE } from "./ontology/handler.js";
 import { createFabricOntology, MEMORY_FABRIC_SERVICE } from "./ontology/port.js";
@@ -91,7 +92,6 @@ import { reconcileFabricFiles } from "./reconcile.js";
 import { renderProjectFile } from "./scope/identity.js";
 import { createTouchedPathTracker, type TouchedPathTracker } from "./scope/touched-paths.js";
 import { createScopedMemoryPolicy } from "./scoped/policy.js";
-import { createNoteNavigator } from "./navigation.js";
 import { createMemoryFabricTools } from "./tools.js";
 import {
   type CreateMemoryFabricOptions,
@@ -108,7 +108,6 @@ export {
   CODING_PRESET_REVISION,
   CONVERSATIONAL_PRESET_REVISION,
   type MemoryFabricConfig,
-  type MemoryFabricRulesConfig,
   type MemoryFabricCuesConfig,
   type MemoryFabricExchangesConfig,
   type MemoryFabricInjectConfig,
@@ -118,14 +117,15 @@ export {
   type MemoryFabricPostgresStoreConfig,
   type MemoryFabricPresetName,
   type MemoryFabricProjectScopeConfig,
+  type MemoryFabricRulesConfig,
   type MemoryFabricScopedConfig,
   type MemoryFabricScopesConfig,
   type MemoryFabricStateConfig,
   type MemoryFabricTeamConfig,
   type MemoryFabricToolsConfig,
   memoryFabricConfigSchema,
-  type ResolvedFabricRulesOptions,
   type ResolvedFabricExchangesOptions,
+  type ResolvedFabricRulesOptions,
   type ResolvedFabricScope,
   type ResolvedFabricTeamOptions,
   type ResolvedLifecycleConfig,

@@ -720,7 +720,7 @@
         {
           "path": "docs/_evidence/memory-bench/210/gap-predictions.json",
           "effect": "Task 3.1 prediction: keyed-only within +-1 of 60",
-          "sha256": "c7dd6dc329794cb6ad7a12f80ac25787a98c1b7ebe89356190d14ac3bd22a065"
+          "sha256": "36ac343dc4ce5319be99b21539a5ad100e8d2d48ed1885f2f2b9b9d8698cfd80"
         }
       ],
       "tests": [],
@@ -767,7 +767,7 @@
         {
           "path": "docs/_evidence/memory-bench/210/gap-predictions.json",
           "effect": "Task 3.1 prediction only: never-candidate wrong answers 4 -> <= 2 of 60 on locomo/dev",
-          "sha256": "c7dd6dc329794cb6ad7a12f80ac25787a98c1b7ebe89356190d14ac3bd22a065"
+          "sha256": "36ac343dc4ce5319be99b21539a5ad100e8d2d48ed1885f2f2b9b9d8698cfd80"
         }
       ],
       "tests": [],
@@ -816,8 +816,8 @@
       "evidence": [
         {
           "path": "docs/_evidence/memory-bench/210/gap-predictions.json",
-          "effect": "Task 3.1 prediction only: multi-hop 3 -> >= 5 of 12 on locomo/dev",
-          "sha256": "c7dd6dc329794cb6ad7a12f80ac25787a98c1b7ebe89356190d14ac3bd22a065"
+          "effect": "Task 3 prediction (Task 3.1 figure rescored under the oracle ceiling): multi-hop evidence rounds +1 per question, correct 3 -> 4 of 12 on locomo/dev",
+          "sha256": "36ac343dc4ce5319be99b21539a5ad100e8d2d48ed1885f2f2b9b9d8698cfd80"
         }
       ],
       "tests": [],
@@ -2268,7 +2268,7 @@
         {
           "path": "docs/_evidence/memory-bench/210/gap-predictions.json",
           "effect": "inject.cardExcerpt 'query' variant prediction (Task 3.1)",
-          "sha256": "c7dd6dc329794cb6ad7a12f80ac25787a98c1b7ebe89356190d14ac3bd22a065"
+          "sha256": "36ac343dc4ce5319be99b21539a5ad100e8d2d48ed1885f2f2b9b9d8698cfd80"
         }
       ],
       "tests": [],
@@ -2477,7 +2477,7 @@
         {
           "path": "docs/_evidence/memory-bench/210/gap-predictions.json",
           "effect": "directory.stopWords: measure-elsewhere (hygiene, cost-justified only)",
-          "sha256": "c7dd6dc329794cb6ad7a12f80ac25787a98c1b7ebe89356190d14ac3bd22a065"
+          "sha256": "36ac343dc4ce5319be99b21539a5ad100e8d2d48ed1885f2f2b9b9d8698cfd80"
         }
       ],
       "tests": [],
@@ -2544,6 +2544,12 @@
           "effect": "bundled in +W: 20 rules in P+W; W5 claim support 23/28 (0.82) vs 0.95 target",
           "partition": "209 dev",
           "sha256": "f02aacad70e51feef5e47aea9751db1cd1bf8c46e6b7636208c4aa04d0771e28"
+        },
+        {
+          "path": "docs/_evidence/memory-bench/208/accuracy-investigation-2026-11-04.json",
+          "effect": "linked target (210 Task 3.1): beam-100k instruction_following 2/4 recall vs 0/4 oracle, preference_following 3/4 vs 1/4; standing instructions belong to this row, not to recall",
+          "partition": "208 dev",
+          "sha256": "0b08d5a415fdcf39d24527e83f3cdecf54f078fc04a76c0bbcff523e70f98246"
         }
       ],
       "tests": [],
@@ -3548,6 +3554,18 @@
           "sha256": "0e270050aa692c55537462637df14c2adf991fd78484ca27d892fa60189021b3"
         },
         {
+          "path": "docs/_evidence/memory-bench/208/audit/claim-audit-P+O.large.json",
+          "effect": "O3 early read, 60 claims, two paid judges: supported 0.75 per Nemotron route group; valid=false (no human calibration)",
+          "partition": "208 dev",
+          "sha256": "8fbf1dae26e9e72a99d2881b490e677ca75d1ab0beaa9c9bdd621971daa796fb"
+        },
+        {
+          "path": "docs/_evidence/memory-bench/208/audit/claim-audit-P+O.series-default.muse.json",
+          "effect": "O3 early read, 60 claims: supported 0.65 on the Muse default-policy arm; valid=false",
+          "partition": "208 dev",
+          "sha256": "4b69f4611a7374c04e41b030bc5c901d02aa7317be0d45f543bfa425cf5662f5"
+        },
+        {
           "path": "docs/_evidence/memory-bench/209/screen/development-report.json",
           "effect": "O8 (ontology-work) P+W+O vs P+W: no pass",
           "partition": "209 dev",
@@ -3567,7 +3585,7 @@
         "correct": true
       },
       "status": "unmeasured",
-      "statusBasis": "No benefit row passed; claim support O3 never ran.",
+      "statusBasis": "No benefit row passed. Claim support (O3) has only an uncalibrated early read; the 208 claim bundles were deleted before calibration, so the panel is calibrated on fresh claims as the first step of plan 210 Task 5 (Task 3.2, amended 2026-11-07).",
       "candidate": true
     },
     {
@@ -4561,7 +4579,7 @@
         {
           "path": "docs/_evidence/memory-bench/210/mechanisms.json",
           "effect": "Task 2 probe: works (toggle, status counts and the ledger view)",
-          "sha256": "bcc9c9e805bd7c0b95b07ac4fdfbfd54f63e60754c630289604b50553986188e"
+          "sha256": "2cf235d1c1a8883e2df465d93703f0c7207cb10cdd3677a2ae18ccf7a195e6f6"
         }
       ],
       "tests": [
@@ -5354,7 +5372,7 @@
         {
           "path": "docs/_evidence/memory-bench/210/mechanisms.json",
           "effect": "Task 2 probe: works (the toggle hides every fabric tool; status counts notes)",
-          "sha256": "bcc9c9e805bd7c0b95b07ac4fdfbfd54f63e60754c630289604b50553986188e"
+          "sha256": "2cf235d1c1a8883e2df465d93703f0c7207cb10cdd3677a2ae18ccf7a195e6f6"
         }
       ],
       "tests": [
@@ -6365,7 +6383,7 @@
   "mechanismFixes": {
     "source": {
       "path": "docs/_evidence/memory-bench/210/mechanisms.json",
-      "sha256": "bcc9c9e805bd7c0b95b07ac4fdfbfd54f63e60754c630289604b50553986188e"
+      "sha256": "2cf235d1c1a8883e2df465d93703f0c7207cb10cdd3677a2ae18ccf7a195e6f6"
     },
     "fixes": [
       {

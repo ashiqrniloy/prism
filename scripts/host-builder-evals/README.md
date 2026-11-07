@@ -37,6 +37,15 @@ Seven fixture tasks from plan 215 Task 13 (c). Each has a seed project in `works
 - `no_retired_names`: no 0.12 name from `docs/migrate-to-0.13.md`.
 - `tool_calls` (cost, not a claim): `1 / (1 + tool calls)`. Tokens, cost and wall time come from the experiment report.
 
+## Loading: natural and preload
+
+`--preload` is the second variant. In the `skill` and `skill+mcp` arms the builder is told first to call `load_skill`
+with `prism-host-builder` (`builder.preloadInstruction`); the `none` arm is unchanged. It separates what the skill's
+text is worth from whether a model finds it on its own (plan 215 Task 11 found natural recall low). Claims about the
+skill's value are published from the preload run; the natural run is reported with the same comparisons, labelled
+natural, and records how often the skill was loaded and the MCP tools used. Evidence of the preload run has the
+`.preload` suffix.
+
 ## Claim rules
 
 Pre-registered in `criteria.json` and locked in `criteria.lock.json`. Per provider, `compareExperiments` compares
@@ -52,16 +61,19 @@ Pre-registered in `criteria.json` and locked in `criteria.lock.json`. Per provid
 ```bash
 timeout 600 bun scripts/host-builder-evals/run.mjs --offline                       # scripted oracle, no key, about 15 s
 bun scripts/host-builder-evals/run.mjs --register                                  # lock the criteria and inputs, then commit
-timeout 1800 bun scripts/host-builder-evals/run.mjs --dry-run --providers hyper    # three tasks, one trial: the cost estimate
-timeout 3600 bun scripts/host-builder-evals/run.mjs --live --providers hyper,opencode-go
+timeout 1800 bun scripts/host-builder-evals/run.mjs --dry-run --providers kilo     # three tasks, one trial: the cost estimate
+timeout 3600 bun scripts/host-builder-evals/run.mjs --live --providers openrouter,kilo,commandcode
+timeout 3600 bun scripts/host-builder-evals/run.mjs --live --providers openrouter,kilo,commandcode --preload
 ```
 
 Offline mode answers every task with its oracle solution through the real write tool. It proves the workspaces, the
 arms, the hidden tests and the scorers are wired together, not that the kit helps. A paid run (`--dry-run` or `--live`)
 needs the lock to match `criteria.json` and every registered input; a `--live` run also needs `scripts/host-builder-evals`,
-the skill and the indexes committed. Keys come from `~/.config/prism/live.env`; the builder's shell inherits none of them
+the skill and the indexes committed. Providers are those in `criteria.json`: Hyper, OpenCode Go and the free models of OpenRouter, Kilo and Command Code
+(owner decision 2026-11-07), with `Qwen/Qwen3.7-Flash` (paid) on Command Code as the reserve; router aliases are
+refused. Keys come from `~/.config/prism/live.env`; the builder's shell inherits none of them
 (`host_builder_eval_builder_shell_never_sees_live_keys`). Models come from
-`PRISM_LIVE_HOST_BUILDER_EVAL_{HYPER,OPENCODE}_MODEL`.
+`PRISM_LIVE_HOST_BUILDER_EVAL_{HYPER,OPENCODE,OPENROUTER,KILO,COMMANDCODE}_MODEL`.
 
 Evidence is written to `docs/_evidence/host-builder/212/<providers>.json` and `.md` (`.dry-run` and `.round2` suffixes).
 It passes `redactSecrets` and a no-secret assertion. `--dump-dir <dir>` writes each trial's tool-by-tool transcript and

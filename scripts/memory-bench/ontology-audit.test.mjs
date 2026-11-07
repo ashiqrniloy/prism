@@ -8,8 +8,10 @@ import {
   selectHumanAuditClaims,
 } from "./audit/claim-review.mjs";
 import {
+  assertNoCuratorJudge,
   assertReportHasNoText,
   bundleFromConcepts,
+  calibratePanel,
   citationOrder,
   claimPrompt,
   createClaimPanel,
@@ -208,6 +210,55 @@ test("claims_bundle_from_concept_bodies_and_evidence_reach", () => {
   assert.equal(human, 1);
   // q2's answer-bearing note is only in a question, not a claim: not reachable. q3 is wrong, q4 has no evidence.
   assert.deepEqual(evidenceReach([bundle]), { answered: 2, reached: 1, share: 0.5 });
+});
+
+test("calibration_report_carries_ids_and_counts_only", async () => {
+  const bundles = offlineFixture();
+  const labels = offlineHumanLabels(bundles);
+  const report = await runAudit({ bundles, arm: ARM, judges: scriptedJudges(), humanLabels: labels });
+  const calibration = await calibratePanel({ rows: report.rows, humanLabels: labels });
+  assert.equal(calibration.n, HUMAN_AUDIT_CLAIMS);
+  // Every value is a count, a statistic or a table of counts: no string anywhere in the calibration record.
+  const strings = [];
+  const walk = (value) => {
+    if (typeof value === "string") strings.push(value);
+    else if (value && typeof value === "object") for (const inner of Object.values(value)) walk(inner);
+  };
+  walk(calibration);
+  assert.deepEqual(strings, []);
+  const body = JSON.stringify({ calibration, report: report.calibration });
+  for (const bundle of bundles) {
+    for (const note of Object.values(bundle.notes)) assert.ok(!body.includes(note));
+    for (const concept of bundle.concepts) for (const claim of concept.claims) assert.ok(!body.includes(claim.text));
+  }
+  assert.doesNotThrow(() => assertReportHasNoText({ calibration }, bundles));
+});
+
+test("live_audit_refuses_a_panel_judge_that_curated_any_bundle_of_the_arm", () => {
+  const bundles = [{ model: "kilo/nvidia/nemotron-3-ultra-550b-a55b:free" }, { model: "commandcode/Qwen/Qwen3.7-Flash" }];
+  // A curator of any one bundle is refused, by its exact ref or by the same model through another route.
+  assert.throws(
+    () => assertNoCuratorJudge({ refs: "commandcode/Qwen/Qwen3.7-Flash,commandcode/meta/muse-spark-1.2-contributor", bundles }),
+    /curated claims in this arm/,
+  );
+  assert.throws(
+    () =>
+      assertNoCuratorJudge({
+        refs: "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free,commandcode/meta/muse-spark-1.2-contributor",
+        bundles,
+      }),
+    /curated claims in this arm/,
+  );
+  assert.throws(
+    () => assertNoCuratorJudge({ refs: "openrouter/qwen/qwen3.7-flash,commandcode/meta/muse-spark-1.2-contributor", bundles }),
+    /curated claims in this arm/,
+  );
+  // Unconflicted judges from distinct families pass.
+  const panel = assertNoCuratorJudge({
+    refs: "commandcode/meta/muse-spark-1.2-contributor,openrouter/google/gemma-4-31b-it:free",
+    bundles: [{ model: "kilo/nvidia/nemotron-3-ultra-550b-a55b:free" }],
+  });
+  assert.equal(panel.refs.length, 2);
 });
 
 test("a_mixed_case_judge_model_id_makes_a_valid_package_name", () => {

@@ -1,6 +1,19 @@
 /** Plan 210 Task 2: delivery-tier probes (passive tail, filters, rules, cues, directory, decision points). */
 import { join } from "node:path";
-import { answerAll, blocksOf, decider, digest, fabricAgent, lastValue, packages, receivedText, resultText, scripted, tailSourceText, tailText } from "./harness.mjs";
+import {
+  answerAll,
+  blocksOf,
+  decider,
+  digest,
+  fabricAgent,
+  lastValue,
+  packages,
+  receivedText,
+  resultText,
+  scripted,
+  tailSourceText,
+  tailText,
+} from "./harness.mjs";
 
 const PASSIVE = { inject: { query: "user", minSimilarity: 0 }, rules: false };
 
@@ -16,7 +29,12 @@ async function fileTools() {
         name: "read",
         description: "Read a file.",
         parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"] },
-        execute: (args, context) => ({ toolCallId: context.toolCallId, name: "read", value: { path: args.path }, content: [{ type: "text", text: "file body" }] }),
+        execute: (args, context) => ({
+          toolCallId: context.toolCallId,
+          name: "read",
+          value: { path: args.path },
+          content: [{ type: "text", text: "file body" }],
+        }),
       });
     },
   })();
@@ -29,7 +47,13 @@ async function turns(dir, { config, seed, texts, plans = [], extraPackages = [],
   try {
     for (const text of texts) await h.run("probe", text);
     const extra = after ? await after(h) : undefined;
-    return { requests: h.requests.map((row) => row.request), toolResults: h.toolResults, notes: await h.notes(), extra, workerRequests: h.workerRequests.length };
+    return {
+      requests: h.requests.map((row) => row.request),
+      toolResults: h.toolResults,
+      notes: await h.notes(),
+      extra,
+      workerRequests: h.workerRequests.length,
+    };
   } finally {
     await h.close();
   }
@@ -44,7 +68,10 @@ const seedFacts = async ({ writer }) => {
 };
 
 /** One passive turn with a decisions provider; returns the tail text and the decision call keys. */
-async function decisionArm(dir, { noul, points, config = PASSIVE, seed = seedFacts, text = "where does the staging cluster run", plans, extraPackages = [] }) {
+async function decisionArm(
+  dir,
+  { noul, points, config = PASSIVE, seed = seedFacts, text = "where does the staging cluster run", plans, extraPackages = [] },
+) {
   const d = await decider(answerAll(noul));
   const arm = await turns(dir, {
     config: { ...config, ...(points ? { decisions: { model: "decider/d1", points } } : {}) },
@@ -61,11 +88,16 @@ export const probes = [
     id: "delivery.passive-tail",
     async run(root) {
       const on = await turns(join(root, "on"), { config: PASSIVE, seed: seedFacts, texts: ["where does the staging cluster run"] });
-      const off = await turns(join(root, "off"), { config: { rules: false }, seed: seedFacts, texts: ["where does the staging cluster run"] });
+      const off = await turns(join(root, "off"), {
+        config: { rules: false },
+        seed: seedFacts,
+        texts: ["where does the staging cluster run"],
+      });
       const tail = tailText(lastRequest(on));
       return {
         surface: "request",
-        property: "with inject on, the turn's matching notes are delivered as an untrusted semantic tail after the transcript; the unrelated note is not",
+        property:
+          "with inject on, the turn's matching notes are delivered as an untrusted semantic tail after the transcript; the unrelated note is not",
         fires: blocksOf(lastRequest(on), "fabric-semantic").length + (tail ? 1 : 0),
         reaches: reqDigest(on) !== reqDigest(off),
         correct: /frankfurt/.test(tail) && !/lunch/.test(tail) && tailText(lastRequest(off)) === "",
@@ -84,12 +116,17 @@ export const probes = [
       // Six query terms: the picnic note matches one (coverage 1/6, under the 0.2 floor).
       const text = "which city hosts the staging cluster deployment region";
       const on = await turns(join(root, "on"), { config: { inject: { query: "user" }, rules: false }, seed, texts: [text] });
-      const off = await turns(join(root, "off"), { config: { inject: { query: "user", minSimilarity: 0, minScore: 0 }, rules: false }, seed, texts: [text] });
+      const off = await turns(join(root, "off"), {
+        config: { inject: { query: "user", minSimilarity: 0, minScore: 0 }, rules: false },
+        seed,
+        texts: [text],
+      });
       const onTail = tailText(lastRequest(on));
       const offTail = tailText(lastRequest(off));
       return {
         surface: "request",
-        property: "the default minSimilarity/minScore floors (0.2) drop a weak single-term match from passive delivery and keep the strong one",
+        property:
+          "the default minSimilarity/minScore floors (0.2) drop a weak single-term match from passive delivery and keep the strong one",
         fires: /picnic/.test(offTail) && !/picnic/.test(onTail) ? 1 : 0,
         reaches: digest(onTail) !== digest(offTail),
         correct: /frankfurt/.test(onTail) && !/picnic/.test(onTail) && /picnic/.test(offTail),
@@ -105,7 +142,8 @@ export const probes = [
       const texts = ["which city runs the staging cluster", "list the staging failover targets", "when did the staging cluster move"];
       const status = async (h) => h.command("memory:status", {}, "probe");
       // A partial match (coverage under fullTextScore 0.35) is a pointer card; excerpt mode delivers it whole.
-      const longSeed = async ({ writer }) => writer.remember({ kind: "fact", content: "staging approvals need two reviewers from the platform group", scope: "project" });
+      const longSeed = async ({ writer }) =>
+        writer.remember({ kind: "fact", content: "staging approvals need two reviewers from the platform group", scope: "project" });
       const on = await turns(join(root, "on"), { config: PASSIVE, seed: longSeed, texts, after: status });
       const reset = await turns(join(root, "reset"), {
         config: PASSIVE,
@@ -119,22 +157,33 @@ export const probes = [
       const third = tailText(on.requests[2]);
       return {
         surface: "request",
-        property: "passive delivery starts as pointers and switches to excerpts after two cued turns without a memory.* call; a memory call resets it",
+        property:
+          "passive delivery starts as pointers and switches to excerpts after two cued turns without a memory.* call; a memory call resets it",
         fires: on.extra?.delivery === "excerpts" ? 1 : 0,
         reaches: digest(first) !== digest(third),
         correct: on.extra?.delivery === "excerpts" && reset.extra?.delivery !== "excerpts" && single.extra?.delivery !== "excerpts",
         on: digest(third),
         off: digest(first),
-        counts: { switched: on.extra?.delivery === "excerpts" ? 1 : 0, oneTurnSessionSwitched: single.extra?.delivery === "excerpts" ? 1 : 0 },
-        finding: "Needs two cued turns in one session; a one-question benchmark session never reaches the switch (oneTurnSessionSwitched 0).",
+        counts: {
+          switched: on.extra?.delivery === "excerpts" ? 1 : 0,
+          oneTurnSessionSwitched: single.extra?.delivery === "excerpts" ? 1 : 0,
+        },
+        finding:
+          "Needs two cued turns in one session; a one-question benchmark session never reaches the switch (oneTurnSessionSwitched 0).",
       };
     },
   },
   {
     id: "delivery.aggregation-abstention",
     async run(root) {
-      const seed = async ({ writer }) => writer.remember({ kind: "fact", content: "the staging cluster runs in frankfurt", scope: "project" });
-      const s = scripted().queue({ calls: [{ name: "memory.recall", args: { query: "zanzibar ferry timetable staging" } }, { name: "memory.recall", args: { query: "staging cluster" } }] });
+      const seed = async ({ writer }) =>
+        writer.remember({ kind: "fact", content: "the staging cluster runs in frankfurt", scope: "project" });
+      const s = scripted().queue({
+        calls: [
+          { name: "memory.recall", args: { query: "zanzibar ferry timetable staging" } },
+          { name: "memory.recall", args: { query: "staging cluster" } },
+        ],
+      });
       const h = await fabricAgent(join(root, "arm"), { seed, respond: s.respond });
       try {
         await h.run("probe", "look it up");
@@ -144,7 +193,8 @@ export const probes = [
         const strongHits = strong?.result?.value?.hits?.length ?? -1;
         return {
           surface: "tool-result",
-          property: "a weak-only result (best coverage below 0.34) becomes an abstention line naming the terms and scopes; a strong one returns hits",
+          property:
+            "a weak-only result (best coverage below 0.34) becomes an abstention line naming the terms and scopes; a strong one returns hits",
           control: "trigger-absent",
           fires: weakHits === 0 ? 1 : 0,
           reaches: /no matching memory for:/.test(resultText(weak?.result)) && !/no matching memory/.test(resultText(strong?.result)),
@@ -172,7 +222,67 @@ export const probes = [
         property: "the memory directory block lists note counts and topics (tags) in the context prefix",
         fires: block.length,
         reaches: reqDigest(on) !== reqDigest(off),
-        correct: block.length === 1 && /deploy \(2\)|deploy/.test(receivedText({ context: block })) && blocksOf(lastRequest(off), "fabric-directory").length === 0,
+        correct:
+          block.length === 1 &&
+          /deploy \(2\)|deploy/.test(receivedText({ context: block })) &&
+          blocksOf(lastRequest(off), "fabric-directory").length === 0,
+        on: reqDigest(on),
+        off: reqDigest(off),
+      };
+    },
+  },
+  // Plan 210 Task 3.1 variants: probed under `<row>#<variant>` beside their ledger row (report.mjs coverage rule).
+  {
+    id: "delivery.directory#directory.stopWords",
+    async run(root) {
+      const seed = async ({ writer }) => {
+        await writer.remember({ kind: "fact", content: "billing uses stripe", tags: ["i", "it", "billing"], scope: "project" });
+      };
+      const on = await turns(join(root, "on"), { config: { rules: false, directory: { stopWords: true } }, seed, texts: ["hello"] });
+      const off = await turns(join(root, "off"), { config: { rules: false }, seed, texts: ["hello"] });
+      const onText = receivedText({ context: blocksOf(lastRequest(on), "fabric-directory") });
+      const offText = receivedText({ context: blocksOf(lastRequest(off), "fabric-directory") });
+      const listed = (text, tag) => new RegExp(`(^|[\\s,(])${tag}( \\(\\d+\\))?([\\s,)]|$)`, "m").test(text);
+      return {
+        surface: "request",
+        property: "with directory.stopWords the topic list drops stop-word-only topics and keeps content words; unset lists them all",
+        fires: listed(offText, "it") && !listed(onText, "it") ? 1 : 0,
+        reaches: reqDigest(on) !== reqDigest(off),
+        correct: listed(onText, "billing") && !listed(onText, "it") && listed(offText, "it") && listed(offText, "billing"),
+        on: reqDigest(on),
+        off: reqDigest(off),
+      };
+    },
+  },
+  {
+    id: "delivery.passive-tail#inject.cardExcerpt",
+    async run(root) {
+      const filler = "We talked about many things that day and nothing in the opening matters here. ".repeat(3);
+      const seed = async ({ writer }) => {
+        await writer.remember({
+          kind: "exchange",
+          content: `user: Sam: ${filler}\n\nassistant: Max: We should try kayaking at Lake Tahoe this summer, it looks great for beginners.`,
+          scope: "project",
+        });
+      };
+      // fullTextScore 1: every hit is delivered as a pointer card, so the card's content is what the probe reads.
+      const inject = { query: "user", minSimilarity: 0, minScore: 0, fullTextScore: 1 };
+      const text = "which lake did max suggest for kayaking";
+      const on = await turns(join(root, "on"), {
+        config: { inject: { ...inject, cardExcerpt: "query" }, rules: false },
+        seed,
+        texts: [text],
+      });
+      const off = await turns(join(root, "off"), { config: { inject, rules: false }, seed, texts: [text] });
+      const onTail = tailText(lastRequest(on));
+      const offTail = tailText(lastRequest(off));
+      return {
+        surface: "request",
+        property:
+          'with inject.cardExcerpt "query" a pointer card shows the query-centred excerpt across both halves; the default card shows the head of the user half',
+        fires: /tahoe/i.test(onTail) ? 1 : 0,
+        reaches: reqDigest(on) !== reqDigest(off),
+        correct: /tahoe/i.test(onTail) && offTail.length > 0 && !/tahoe/i.test(offTail),
         on: reqDigest(on),
         off: reqDigest(off),
       };
@@ -193,7 +303,10 @@ export const probes = [
         property: "a verified preference in a rule scope is pinned in the standing-rules block of the context prefix",
         fires: block.length,
         reaches: reqDigest(on) !== reqDigest(off),
-        correct: block.length === 1 && /formatter/.test(receivedText({ context: block })) && blocksOf(lastRequest(off), "fabric-rules").length === 0,
+        correct:
+          block.length === 1 &&
+          /formatter/.test(receivedText({ context: block })) &&
+          blocksOf(lastRequest(off), "fabric-rules").length === 0,
         on: reqDigest(on),
         off: reqDigest(off),
       };
@@ -207,13 +320,22 @@ export const probes = [
         const s = scripted();
         const ui = testing.createScriptedHostUi({ confirm: true });
         // Capture reads the archived user turn, so the exchange archive is on in both arms.
-        const h = await fabricAgent(join(root, name), { config: { exchanges: {}, rules: { capture } }, respond: s.respond, agentOptions: { host: { ui: ui.ui } } });
+        const h = await fabricAgent(join(root, name), {
+          config: { exchanges: {}, rules: { capture } },
+          respond: s.respond,
+          agentOptions: { host: { ui: ui.ui } },
+        });
         try {
           await h.run("probe", "Make sure to run the linter before every commit.");
           await h.closeSession("probe");
           await h.run("next", "thanks");
           const notes = await h.notes();
-          return { captured: notes.filter((note) => /linter before every commit/.test(note.text ?? "") && note.metadata?.kind !== "exchange").length, asked: ui.requestsOf("confirm").length, rules: receivedText({ context: blocksOf(h.requests.at(-1)?.request ?? {}, "fabric-rules") }) };
+          return {
+            captured: notes.filter((note) => /linter before every commit/.test(note.text ?? "") && note.metadata?.kind !== "exchange")
+              .length,
+            asked: ui.requestsOf("confirm").length,
+            rules: receivedText({ context: blocksOf(h.requests.at(-1)?.request ?? {}, "fabric-rules") }),
+          };
         } finally {
           await h.close();
         }
@@ -222,7 +344,8 @@ export const probes = [
       const off = await arm("off", "off");
       return {
         surface: "request",
-        property: "with capture confirm, an imperative user turn is proposed as a rule and, once confirmed, written and shown in the rules block",
+        property:
+          "with capture confirm, an imperative user turn is proposed as a rule and, once confirmed, written and shown in the rules block",
         fires: on.captured,
         reaches: digest(on.rules) !== digest(off.rules),
         correct: on.captured === 1 && on.asked === 1 && /linter/.test(on.rules) && off.captured === 0 && off.asked === 0,
@@ -236,7 +359,11 @@ export const probes = [
     async run(root) {
       const { readFile, readdir, writeFile } = await import("node:fs/promises");
       const arm = async (name, edit) => {
-        const s = scripted().queue({ calls: [{ name: "memory.insert", args: { kind: "preference", scope: "project", text: "always run the formatter before committing" } }] });
+        const s = scripted().queue({
+          calls: [
+            { name: "memory.insert", args: { kind: "preference", scope: "project", text: "always run the formatter before committing" } },
+          ],
+        });
         // The markdown store (the default with tools.root) is the one with an editable rules.md.
         const dir = join(root, name);
         const h = await fabricAgent(dir, { config: { store: "markdown" }, respond: s.respond });
@@ -255,7 +382,12 @@ export const probes = [
             }
           }
           await h.run("three", "hello again");
-          return { files: files.length, edited, before: receivedText({ context: blocksOf(h.requests.at(-2)?.request ?? {}, "fabric-rules") }), rules: receivedText({ context: blocksOf(h.requests.at(-1)?.request ?? {}, "fabric-rules") }) };
+          return {
+            files: files.length,
+            edited,
+            before: receivedText({ context: blocksOf(h.requests.at(-2)?.request ?? {}, "fabric-rules") }),
+            rules: receivedText({ context: blocksOf(h.requests.at(-1)?.request ?? {}, "fabric-rules") }),
+          };
         } finally {
           await h.close();
         }
@@ -264,10 +396,16 @@ export const probes = [
       const off = await arm("off", false);
       return {
         surface: "request",
-        property: "a person's edit of rules.md is reconciled into notes at the next session start, so that session's rules block shows the edited text",
+        property:
+          "a person's edit of rules.md is reconciled into notes at the next session start, so that session's rules block shows the edited text",
         fires: on.edited,
         reaches: digest(on.rules) !== digest(off.rules),
-        correct: on.edited >= 1 && /formatter/.test(on.before) && /linter/.test(on.rules) && !/formatter/.test(on.rules) && /formatter/.test(off.rules),
+        correct:
+          on.edited >= 1 &&
+          /formatter/.test(on.before) &&
+          /linter/.test(on.rules) &&
+          !/formatter/.test(on.rules) &&
+          /formatter/.test(off.rules),
         on: digest(on.rules),
         off: digest(off.rules),
         counts: { files: on.files, edited: on.edited },
@@ -278,7 +416,13 @@ export const probes = [
     id: "delivery.path-cues",
     async run(root) {
       const seed = async ({ writer }) => {
-        const note = await writer.remember({ kind: "decision", content: "api handlers validate input with zod", rationale: "one validator", scope: "path", appliesTo: ["src/api/**"] });
+        const note = await writer.remember({
+          kind: "decision",
+          content: "api handlers validate input with zod",
+          rationale: "one validator",
+          scope: "path",
+          appliesTo: ["src/api/**"],
+        });
         await writer.verify(note.id);
       };
       const arm = async (name, cues) =>
@@ -309,7 +453,10 @@ export const probes = [
     async run(root) {
       // The working prefix is frozen for a session's cache epoch, so the write shows from the next session.
       const arm = async (name, write) => {
-        const s = scripted().queue({ calls: write ? [{ name: "memory.insert", args: { block: "profile", text: "Name: Ada" } }] : [] }, { calls: [] });
+        const s = scripted().queue(
+          { calls: write ? [{ name: "memory.insert", args: { block: "profile", text: "Name: Ada" } }] : [] },
+          { calls: [] },
+        );
         const h = await fabricAgent(join(root, name), { config: { rules: false }, respond: s.respond });
         try {
           await h.run("first", "remember my name");
@@ -369,7 +516,12 @@ export const probes = [
         try {
           await h.run("probe", "Make sure to run the linter before every commit.");
           await h.settle();
-          return { captured: (await h.notes()).filter((note) => /linter before every commit/.test(note.text ?? "") && note.metadata?.kind !== "exchange").length, calls: d.calls.flat().filter((key) => key === "P1").length };
+          return {
+            captured: (await h.notes()).filter(
+              (note) => /linter before every commit/.test(note.text ?? "") && note.metadata?.kind !== "exchange",
+            ).length,
+            calls: d.calls.flat().filter((key) => key === "P1").length,
+          };
         } finally {
           await h.close();
         }
@@ -384,7 +536,8 @@ export const probes = [
         correct: on.captured === 0 && off.captured === 1,
         on: digest(on.captured),
         off: digest(off.captured),
-        finding: "The extractor leg of P1 runs only with promote on and fresh observational-memory material; this probe drives the capture leg, which shares the same per-turn call.",
+        finding:
+          "The extractor leg of P1 runs only with promote on and fresh observational-memory material; this probe drives the capture leg, which shares the same per-turn call.",
       };
     },
   },
@@ -394,19 +547,41 @@ export const probes = [
       const arm = async (name, points) => {
         const d = await decider(answerAll(0.5, "replaces"));
         const s = scripted().queue(
-          { calls: [{ name: "memory.insert", args: { kind: "fact", text: "the platform team standup happens at nine every weekday morning in room four" } }] },
-          { calls: [{ name: "memory.insert", args: { kind: "fact", text: "the platform team standup happens at ten every weekday morning in room four" } }] },
+          {
+            calls: [
+              {
+                name: "memory.insert",
+                args: { kind: "fact", text: "the platform team standup happens at nine every weekday morning in room four" },
+              },
+            ],
+          },
+          {
+            calls: [
+              {
+                name: "memory.insert",
+                args: { kind: "fact", text: "the platform team standup happens at ten every weekday morning in room four" },
+              },
+            ],
+          },
           { calls: [{ name: "memory.recall", args: { query: "team standup morning" } }] },
         );
         const h = await fabricAgent(join(root, name), {
-          config: { rules: false, consolidate: { decider: "model", model: "worker/main" }, ...(points ? { decisions: { model: "decider/d1", points } } : {}) },
+          config: {
+            rules: false,
+            consolidate: { decider: "model", model: "worker/main" },
+            ...(points ? { decisions: { model: "decider/d1", points } } : {}),
+          },
           respond: s.respond,
           extraPackages: [d.pkg],
         });
         try {
           for (const text of ["note the standup", "it moved", "when is standup"]) await h.run("probe", text);
           const hits = lastValue(h)?.hits ?? [];
-          return { calls: d.calls.flat().filter((key) => key.startsWith("P2:")).length, d: digest(hits.map((hit) => [hit.content, Boolean(hit.supersededBy)])), hits: hits.length };
+          return {
+            calls: d.calls.flat().filter((key) => key.startsWith("P2:")).length,
+            d: digest(hits.map((hit) => [hit.content, Boolean(hit.supersededBy)])),
+            hits: hits.length,
+          };
         } finally {
           await h.close();
         }
@@ -493,7 +668,13 @@ export const probes = [
     id: "decisions.P6",
     async run(root) {
       const seed = async ({ writer }) => {
-        const note = await writer.remember({ kind: "decision", content: "api handlers validate input with zod", rationale: "one validator", scope: "path", appliesTo: ["src/api/**"] });
+        const note = await writer.remember({
+          kind: "decision",
+          content: "api handlers validate input with zod",
+          rationale: "one validator",
+          scope: "path",
+          appliesTo: ["src/api/**"],
+        });
         await writer.verify(note.id);
       };
       const arm = async (name, points) => {
@@ -537,7 +718,12 @@ export const probes = [
         try {
           await h.run("probe", "Make sure to run the linter before every commit.");
           await h.settle();
-          return { captured: (await h.notes()).filter((note) => /linter before every commit/.test(note.text ?? "") && note.metadata?.kind !== "exchange").length, calls: d.calls.length };
+          return {
+            captured: (await h.notes()).filter(
+              (note) => /linter before every commit/.test(note.text ?? "") && note.metadata?.kind !== "exchange",
+            ).length,
+            calls: d.calls.length,
+          };
         } finally {
           await h.close();
         }

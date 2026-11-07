@@ -1,0 +1,282 @@
+{
+  "plan": "215 Task 20",
+  "round": 1,
+  "mode": "dryRun",
+  "loading": "natural",
+  "startedAt": "2026-11-07T10:00:56.773Z",
+  "finishedAt": "2026-11-07T10:29:53.856Z",
+  "criteriaHash": "ee29e22e5b5fc0b6917962b30c55609a1add7bca1329e60127d323eebf57c2c6",
+  "criteriaLockedAt": "2026-11-07T09:29:57.121Z",
+  "datasetContentHash": "sha256:454a44e1fb013536af8c38bd6c9ed4234d0f16f794cdad68cb43cbfd78e51356",
+  "inputs": {
+    "workspaces": "sha256:01e6b6bd91ac9a3cacb7bf53dcede244af7cef486f41892139aea3c4bfdf0e5c",
+    "hidden": "sha256:b096d72e77abf7968097d14d70886604e0768a01c0b7a201d051b48c6512a47e",
+    "solutions": "sha256:810998b18afee3a8778287c312a19c9a25a50a46ec1b68f88b45c2e9ba99462b",
+    "skill": "sha256:d6f77d7615fbca2b917cba158564b59d44fb597e9a891be1751d8803dff44a33",
+    "indexes": "sha256:986940dc89d1e1b48ea5301ec8813d775e836fcd1999429cb0900c989742783e"
+  },
+  "runtimeRevision": "20119d6ba680bf32c14104e23af20ae97e3832f9",
+  "trials": 1,
+  "providers": [
+    {
+      "provider": "kilo",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "arms": {
+        "none": {
+          "status": "succeeded",
+          "scorers": {
+            "typecheck_passes": {
+              "mean": 1,
+              "ci95": {
+                "low": 0.34238022714360744,
+                "high": 1
+              },
+              "records": 2
+            },
+            "acceptance_tests_pass": {
+              "mean": 0,
+              "ci95": {
+                "low": 0,
+                "high": 0.6576197728563925
+              },
+              "records": 2
+            },
+            "public_surface_only": {
+              "mean": 1,
+              "ci95": {
+                "low": 0.34238022714360744,
+                "high": 1
+              },
+              "records": 2
+            },
+            "no_retired_names": {
+              "mean": 1,
+              "ci95": {
+                "low": 0.34238022714360744,
+                "high": 1
+              },
+              "records": 2
+            }
+          },
+          "failedCount": 4,
+          "scoredRuns": 2,
+          "limitedRuns": 1,
+          "toolCalls": 133,
+          "skillLoadedRuns": 0,
+          "mcpUsedRuns": 0,
+          "acceptanceByLoading": {
+            "loaded": {
+              "runs": 0,
+              "passed": 0
+            },
+            "notLoaded": {
+              "runs": 2,
+              "passed": 0
+            }
+          },
+          "inputTokens": 3467157,
+          "cacheReadTokens": 2957152,
+          "uncachedInputTokens": 510005,
+          "outputTokens": 70729,
+          "costComplete": false,
+          "meanDurationMs": 333004.24691266665,
+          "durationMs": {
+            "p50": 268519.5331179999,
+            "p95": 670871.5399600001
+          }
+        },
+        "skill": {
+          "status": "succeeded",
+          "scorers": {
+            "typecheck_passes": null,
+            "acceptance_tests_pass": null,
+            "public_surface_only": null,
+            "no_retired_names": null
+          },
+          "failedCount": 12,
+          "scoredRuns": 0,
+          "limitedRuns": 0,
+          "toolCalls": 0,
+          "skillLoadedRuns": 0,
+          "mcpUsedRuns": 0,
+          "acceptanceByLoading": {
+            "loaded": {
+              "runs": 0,
+              "passed": 0
+            },
+            "notLoaded": {
+              "runs": 0,
+              "passed": 0
+            }
+          },
+          "inputTokens": 1054112,
+          "cacheReadTokens": 858528,
+          "uncachedInputTokens": 195584,
+          "outputTokens": 7683,
+          "costComplete": false,
+          "meanDurationMs": 40813.45861500009,
+          "durationMs": {
+            "p50": 33340.850032000104,
+            "p95": 80007.29547699995
+          }
+        },
+        "skill+mcp": {
+          "status": "succeeded",
+          "scorers": {
+            "typecheck_passes": null,
+            "acceptance_tests_pass": null,
+            "public_surface_only": null,
+            "no_retired_names": null
+          },
+          "failedCount": 12,
+          "scoredRuns": 0,
+          "limitedRuns": 0,
+          "toolCalls": 0,
+          "skillLoadedRuns": 0,
+          "mcpUsedRuns": 0,
+          "acceptanceByLoading": {
+            "loaded": {
+              "runs": 0,
+              "passed": 0
+            },
+            "notLoaded": {
+              "runs": 0,
+              "passed": 0
+            }
+          },
+          "inputTokens": 1525660,
+          "cacheReadTokens": 1222752,
+          "uncachedInputTokens": 302908,
+          "outputTokens": 9286,
+          "costComplete": false,
+          "meanDurationMs": 203430.73160299993,
+          "durationMs": {
+            "p50": 155028.7117339999,
+            "p95": 300265.2720329999
+          }
+        }
+      },
+      "decision": {
+        "verdict": "inconclusive",
+        "roundVerdict": "inconclusive",
+        "reason": "comparison skill_vs_none failed: Missing scorer typecheck_passes on paired item acp-serve",
+        "comparisons": [],
+        "claims": [],
+        "regressions": []
+      },
+      "tasks": [
+        {
+          "id": "headless-host",
+          "arms": {
+            "none": {
+              "typecheck_passes": "1/1",
+              "acceptance_tests_pass": "0/1",
+              "public_surface_only": "1/1",
+              "no_retired_names": "1/1",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/headless-host.test.ts:\n\n# Unhandled error between tests\n-------------------------------\nerror: Cannot find module '../src/host.ts' from '/tmp/hbe-headless-host-ZLvaxM/__acceptance__/headless-host.test.ts'\n-------------------------------\n\n\n 0 pass\n 1 fail\n …",
+              "unscored": 0
+            },
+            "skill": {
+              "typecheck_passes": "0/0",
+              "acceptance_tests_pass": "0/0",
+              "public_surface_only": "0/0",
+              "no_retired_names": "0/0",
+              "unscored": 1,
+              "firstError": "run failed: ENOTDIR: not a directory, stat '/tmp/hbe-headless-host-Rc5zfo/node_modules/@arnilo/prism/src/agent-session/runtime-registry.ts/AGENTS.md'"
+            },
+            "skill+mcp": {
+              "typecheck_passes": "0/0",
+              "acceptance_tests_pass": "0/0",
+              "public_surface_only": "0/0",
+              "no_retired_names": "0/0",
+              "unscored": 1,
+              "firstError": "run failed: Kilo request failed: 429 Kilo's free models are limited to 200 requests per hour. {\"error\":\"Rate limit exceeded\",\"error_type\":\"rate_limit_exceeded\",\"message\":\"Free model usage limit reached. Please tr"
+            }
+          }
+        },
+        {
+          "id": "acp-serve",
+          "arms": {
+            "none": {
+              "typecheck_passes": "1/1",
+              "acceptance_tests_pass": "0/1",
+              "public_surface_only": "1/1",
+              "no_retired_names": "1/1",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/acp-serve.test.ts:\n53 | \n54 | test(\"an ACP client approves an edit through session/request_permission\", async () => {\n55 |   const { initialized, prompt, asked } = await session(\"allow_once\");\n56 |   expect(initialized.agentCapabilities?.loadSession).toBe(…",
+              "unscored": 0
+            },
+            "skill": {
+              "typecheck_passes": "0/0",
+              "acceptance_tests_pass": "0/0",
+              "public_surface_only": "0/0",
+              "no_retired_names": "0/0",
+              "unscored": 1,
+              "firstError": "run failed: ENOTDIR: not a directory, stat '/tmp/hbe-acp-serve-lTxs81/node_modules/@arnilo/prism/src/contracts-core/agent.ts/AGENTS.md'"
+            },
+            "skill+mcp": {
+              "typecheck_passes": "0/0",
+              "acceptance_tests_pass": "0/0",
+              "public_surface_only": "0/0",
+              "no_retired_names": "0/0",
+              "unscored": 1,
+              "firstError": "run failed: Kilo request failed: 429 Kilo's free models are limited to 200 requests per hour. {\"error\":\"Rate limit exceeded\",\"error_type\":\"rate_limit_exceeded\",\"message\":\"Free model usage limit reached. Please tr"
+            }
+          }
+        },
+        {
+          "id": "upgrade-0-12",
+          "arms": {
+            "none": {
+              "typecheck_passes": "0/0",
+              "acceptance_tests_pass": "0/0",
+              "public_surface_only": "0/0",
+              "no_retired_names": "0/0",
+              "unscored": 1,
+              "firstError": "run failed: ENOTDIR: not a directory, stat '/tmp/hbe-upgrade-0-12-k0V3yk/node_modules/@arnilo/prism/src/contracts.ts/AGENTS.md'"
+            },
+            "skill": {
+              "typecheck_passes": "0/0",
+              "acceptance_tests_pass": "0/0",
+              "public_surface_only": "0/0",
+              "no_retired_names": "0/0",
+              "unscored": 1,
+              "firstError": "run failed: ENOTDIR: not a directory, stat '/tmp/hbe-upgrade-0-12-Q4XLBu/node_modules/@arnilo/prism/src/index.ts/AGENTS.md'"
+            },
+            "skill+mcp": {
+              "typecheck_passes": "0/0",
+              "acceptance_tests_pass": "0/0",
+              "public_surface_only": "0/0",
+              "no_retired_names": "0/0",
+              "unscored": 1,
+              "firstError": "run failed: Kilo request failed: 429 Kilo's free models are limited to 200 requests per hour. {\"error\":\"Rate limit exceeded\",\"error_type\":\"rate_limit_exceeded\",\"message\":\"Free model usage limit reached. Please tr"
+            }
+          }
+        }
+      ],
+      "fullRunEstimate": {
+        "none": {
+          "dryRuns": 3,
+          "fullRuns": 21,
+          "inputTokens": 24270099,
+          "uncachedInputTokens": 3570035,
+          "outputTokens": 495103
+        },
+        "skill": {
+          "dryRuns": 3,
+          "fullRuns": 21,
+          "inputTokens": 7378784,
+          "uncachedInputTokens": 1369088,
+          "outputTokens": 53781
+        },
+        "skill+mcp": {
+          "dryRuns": 3,
+          "fullRuns": 21,
+          "inputTokens": 10679620,
+          "uncachedInputTokens": 2120356,
+          "outputTokens": 65002
+        }
+      }
+    }
+  ],
+  "verdict": "inconclusive"
+}

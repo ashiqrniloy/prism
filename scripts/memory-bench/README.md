@@ -71,6 +71,19 @@ pins plan 202's criteria hash and each suite's partition ids hash, so it cannot 
 partition. Ontology manifests and reports carry `threeTierManifestPin()`; `assertThreeTierCriteriaPin()` refuses a
 manifest that lacks it or pins another hash. Plan 210 Task 9 runs the held-out arms against it.
 
+Plan 210 Task 4's pre-registered decision rules are in `cleanup-criteria.json`. They are hashed by
+`cleanupCriteriaHash()` in `robustness.mjs` and checked with
+`bun scripts/memory-bench/robustness.mjs --verify-criteria cleanup-criteria.json`. The file pins these hashes:
+
+- the robustness, three-tier and work-outcome criteria;
+- the Task 3 predictions;
+- plan 202 Task 5's frozen criteria.
+
+It also names the ledger and gap-analysis rows its inert-removal lists and pre-registered legs use. `cleanupVerdict()`
+applies the rules, in this order: negative, fix-kept, keep, remove, inconclusive. An owner hold routes to the
+experimental tier. Plan 210 manifests and reports carry `cleanupManifestPin()`, and `assertCleanupCriteriaPin()`
+refuses drift.
+
 Plan 208 Task 2's claim-support audit is `ontology-audit.mjs`. It samples model-written, cited concept claims
 (seeded, stratified by suite and subject size, at most 200 per arm and model; human-written claims are excluded) and asks
 a plan 199 `createJudgePanel` whether the cited notes, shown verbatim and nothing else, fully support each claim:

@@ -23,7 +23,9 @@ async function seededMechanism({ trigger, mutate }) {
         const text = JSON.stringify(last?.content ?? "");
         if (trigger !== undefined && !text.includes(trigger)) return draft;
         counter.n++;
-        return mutate ? { ...draft, messages: [...draft.messages, { role: "user", content: [{ type: "text", text: "seeded note" }] }] } : draft;
+        return mutate
+          ? { ...draft, messages: [...draft.messages, { role: "user", content: [{ type: "text", text: "seeded note" }] }] }
+          : draft;
       });
     },
   })();
@@ -65,7 +67,11 @@ test("probe_detects_a_seeded_never_firing_mechanism", async () => {
   const row = await seededProbe({ trigger: "xyzzy-never-sent", mutate: true });
   assert.equal(row.fires, 0);
   assert.equal(row.verdict, "never-fires");
-  assert.equal(verdict({ fires: false, reaches: true, correct: true }), "never-fires", "a mechanism that never ran cannot be credited with a difference");
+  assert.equal(
+    verdict({ fires: false, reaches: true, correct: true }),
+    "never-fires",
+    "a mechanism that never ran cannot be credited with a difference",
+  );
 });
 
 test("probe_detects_a_seeded_no_effect_mechanism", async () => {
@@ -80,7 +86,14 @@ test("probe_detects_a_seeded_no_effect_mechanism", async () => {
 });
 
 test("probes_deterministic_and_text_free", async () => {
-  const ids = ["lifecycle.verification", "retrieval.strength-priors", "delivery.passive-tail", "recall.expansion", "om.observer", "ontology.trigger.co-read"];
+  const ids = [
+    "lifecycle.verification",
+    "retrieval.strength-priors",
+    "delivery.passive-tail",
+    "recall.expansion",
+    "om.observer",
+    "ontology.trigger.co-read",
+  ];
   const probes = (await loadProbes()).filter((probe) => ids.includes(probe.id));
   assert.equal(probes.length, ids.length);
   const strip = (rows) => rows.map(({ ms: _ms, ...row }) => row);
@@ -88,7 +101,8 @@ test("probes_deterministic_and_text_free", async () => {
   const second = strip((await runProbes(probes)).rows);
   assert.deepEqual(first, second, "two runs give the same rows, hashes included");
   const text = JSON.stringify(first);
-  for (const fixture of ["frankfurt", "orchard", "lisbon", "standup", "my mom visits", "Ada"]) assert.ok(!text.includes(fixture), `no fixture text: ${fixture}`);
+  for (const fixture of ["frankfurt", "orchard", "lisbon", "standup", "my mom visits", "Ada"])
+    assert.ok(!text.includes(fixture), `no fixture text: ${fixture}`);
   assert.ok(!/\b[0-9a-f]{12}\b/.test(text.replace(/"[a-zA-Z]*Sha256":"[0-9a-f]{64}"/g, "")), "no note id leaves a probe");
   assert.equal(digest({ a: "x 0123456789ab" }), digest({ a: "x ba9876543210" }), "run-local ids are canonicalised before hashing");
 });
@@ -99,6 +113,11 @@ test("every_ledger_candidate_has_exactly_one_probe", async () => {
   assert.deepEqual(coverageProblems(probes, candidates, known), []);
   assert.deepEqual(coverageProblems([...probes, probes[0]], candidates, known), [`probe reported twice: ${probes[0].id}`]);
   assert.deepEqual(coverageProblems(probes.slice(1), candidates, known).length, candidates.includes(probes[0].id) ? 1 : 0);
+  // A Task 3.1 variant probe hangs off a known row; one on an unknown row is a problem.
+  assert.deepEqual(coverageProblems([...probes, { id: "delivery.directory#x" }], candidates, known), []);
+  assert.deepEqual(coverageProblems([...probes, { id: "no.such#x" }], candidates, known), [
+    "probe for a row the ledger does not have: no.such#x",
+  ]);
 });
 
 test("committed_mechanisms_evidence_has_no_problems_and_covers_the_candidates", async () => {
@@ -107,7 +126,11 @@ test("committed_mechanisms_evidence_has_no_problems_and_covers_the_candidates", 
   const report = JSON.parse(readFileSync(path, "utf8"));
   assert.deepEqual(report.problems, []);
   const { candidates } = await ledgerRows();
-  for (const id of candidates) assert.ok(report.probes.some((row) => row.id === id), `probed: ${id}`);
+  for (const id of candidates)
+    assert.ok(
+      report.probes.some((row) => row.id === id),
+      `probed: ${id}`,
+    );
   for (const row of report.probes) assert.ok(["works", "never-fires", "no-effect", "wrong-effect"].includes(row.verdict));
   assert.ok(report.durationSeconds <= 1800, "offline probes finish in 30 minutes");
 });

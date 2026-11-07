@@ -38,6 +38,8 @@ import {
   createScorers,
   decideClaims,
   disposeStaged,
+  installRateLimitedFetch,
+  LIVE_MIN_INTERVAL_MS,
   EVIDENCE_DIR,
   LOCK_PATH,
   loadCriteria,
@@ -54,7 +56,7 @@ export function parseArgs(argv) {
   const flags = new Set(["providers", "round", "out-dir", "trials", "tasks", "dump-dir"]);
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (["--offline", "--live", "--dry-run", "--register", "--help"].includes(arg)) {
+    if (["--offline", "--live", "--dry-run", "--register", "--help", "--preload"].includes(arg)) {
       options[arg.slice(2).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())] = true;
       continue;
     }
@@ -168,7 +170,7 @@ export function armPackages(arm, dir) {
   return packages;
 }
 
-export async function buildBuilder({ task, arm, mode, provider, criteria }) {
+export async function buildBuilder({ task, arm, mode, provider, criteria, preload = false }) {
   const workspace = buildWorkspace({ task, arm });
   try {
     const providerPackages =
@@ -177,7 +179,10 @@ export async function buildBuilder({ task, arm, mode, provider, criteria }) {
       mode === "offline" ? { provider: "host-builder-eval-offline", model: "oracle" } : { provider: provider.id, model: provider.model };
     const agent = await createAgent({
       model,
-      instructions: criteria.builder.instructions,
+      instructions:
+        preload && arm !== "none"
+          ? `${criteria.builder.instructions}\n${criteria.builder.preloadInstruction}`
+          : criteria.builder.instructions,
       packages: [...providerPackages, ...armPackages(arm, workspace.dir)],
       limits: { ...criteria.builder.limits },
       ownership: { tenantId: "host-builder-eval" },
@@ -222,7 +227,7 @@ async function runArm({ arm, mode, provider, suite, options, dataset }) {
       dataset,
       agent: async ({ item }) => {
         await cleanup(item.id);
-        const built = await buildBuilder({ task: item.id, arm, mode, provider, criteria });
+        const built = await buildBuilder({ task: item.id, arm, mode, provider, criteria, preload: options.preload === true });
         live.set(item.id, built);
         return built.agent;
       },
@@ -333,13 +338,20 @@ function taskTable(reports) {
         counts[id] = `${scored.filter((record) => record.score === 1).length}/${scored.length}`;
         firstFailure ??= scored.find((record) => record.score !== 1)?.reason;
       }
-      row.arms[arm] = { ...counts, firstFailure };
+      const unscored = (item?.evaluations ?? []).filter(
+        (record) => record.scorerId === "acceptance_tests_pass" && record.status !== "scored",
+      );
+      const firstError = unscored
+        .find((record) => record.error?.message)
+        ?.error?.message?.replace(/\s+/g, " ")
+        .slice(0, 240);
+      row.arms[arm] = { ...counts, firstFailure, unscored: unscored.length, firstError };
     }
     return row;
   });
 }
 
-export function evidenceFor({ results, round, mode, suite, startedAt, lock, fullTasks, dataset }) {
+export function evidenceFor({ results, round, mode, suite, startedAt, lock, fullTasks, dataset, loading = "natural" }) {
   const providers = results.map(({ provider, reports, decision }) => ({
     provider: provider.id,
     model: mode === "offline" ? "oracle" : provider.model,
@@ -371,6 +383,7 @@ export function evidenceFor({ results, round, mode, suite, startedAt, lock, full
     plan: "215 Task 20",
     round,
     mode,
+    loading,
     startedAt,
     finishedAt: new Date().toISOString(),
     criteriaHash: suite.criteriaHash,
@@ -390,7 +403,7 @@ export function evidenceMarkdown(evidence) {
   const lines = [
     "# Host-builder evaluation",
     "",
-    `Round ${evidence.round}, ${evidence.mode} run, started ${evidence.startedAt}. Verdict: **${evidence.verdict}**.`,
+    `Round ${evidence.round}, ${evidence.mode} run, ${evidence.loading ?? "natural"} loading, started ${evidence.startedAt}. Verdict: **${evidence.verdict}**.`,
     "",
     `- Pre-registered criteria hash \`${evidence.criteriaHash.slice(0, 16)}…\`, locked at ${evidence.criteriaLockedAt ?? "(not locked: offline wiring run)"}.`,
     `- Trials per task: ${evidence.trials}. Runtime revision \`${evidence.runtimeRevision.slice(0, 12)}\`. Skill \`${evidence.inputs.skill.slice(0, 19)}…\`, indexes \`${evidence.inputs.indexes.slice(0, 19)}…\`.`,
@@ -453,9 +466,7 @@ export function evidenceMarkdown(evidence) {
     for (const row of entry.tasks)
       for (const arm of ARMS)
         lines.push(
-          `| ${row.id} | ${arm} | ${SCORER_IDS.map((id) => row.arms[arm][id]).join(" | ")} | ${String(row.arms[arm].firstFailure ?? "")
-            .replace(/\s+/g, " ")
-            .slice(0, 120)} |`,
+          `| ${row.id} | ${arm} | ${SCORER_IDS.map((id) => row.arms[arm][id]).join(" | ")} | ${(row.arms[arm].unscored ? `UNSCORED x${row.arms[arm].unscored}: ${row.arms[arm].firstError ?? "no error text"}` : String(row.arms[arm].firstFailure ?? "").replace(/\s+/g, " ")).slice(0, 200)} |`,
         );
     lines.push("");
   }
@@ -501,7 +512,7 @@ export async function run(argv = process.argv.slice(2)) {
   const options = Array.isArray(argv) ? parseArgs(argv) : argv;
   if (options.help) {
     console.log(
-      "bun scripts/host-builder-evals/run.mjs --offline | --register | --dry-run --providers a,b | --live --providers a,b [--round 1|2] [--tasks a,b] [--trials n]",
+      "bun scripts/host-builder-evals/run.mjs --offline | --register | --dry-run --providers a,b | --live --providers a,b [--round 1|2] [--tasks a,b] [--trials n] [--preload]",
     );
     return undefined;
   }
@@ -536,23 +547,34 @@ export async function run(argv = process.argv.slice(2)) {
       ? suite.dataset
       : defineDataset({ id: suite.dataset.id, version: suite.dataset.version, items });
   const startedAt = new Date().toISOString();
+  const restoreFetch = mode === "offline" ? undefined : installRateLimitedFetch({ minIntervalMs: LIVE_MIN_INTERVAL_MS });
   try {
     const results = await evaluate({
       suite,
       mode: mode === "dryRun" ? "live" : mode,
       providers,
-      options: { ...options, trials: mode === "dryRun" ? undefined : options.trials },
+      options: { ...options, trials: mode === "dryRun" ? suite.criteria.costGate.dryRunTrials : options.trials },
       dataset,
     });
     const evidence = sealEvidence(
-      evidenceFor({ results, round, mode, suite, startedAt, lock, fullTasks: suite.tasks.length, dataset }),
+      evidenceFor({
+        results,
+        round,
+        mode,
+        suite,
+        startedAt,
+        lock,
+        fullTasks: suite.tasks.length,
+        dataset,
+        loading: options.preload ? "preload" : "natural",
+      }),
       secrets,
     );
     if (outDir) {
       await mkdir(outDir, { recursive: true });
       const markdown = evidenceMarkdown(evidence);
       assertNoSecret(markdown, secrets);
-      const suffix = `${mode === "dryRun" ? ".dry-run" : round > 1 ? `.round${round}` : ""}`;
+      const suffix = `${mode === "dryRun" ? ".dry-run" : round > 1 ? `.round${round}` : ""}${options.preload ? ".preload" : ""}`;
       const name = `${options.providers.join("+") || "run"}${suffix}`;
       await writeFile(join(outDir, `${name}.json`), `${JSON.stringify(evidence, null, 2)}\n`);
       await writeFile(join(outDir, `${name}.md`), markdown);
@@ -560,6 +582,7 @@ export async function run(argv = process.argv.slice(2)) {
     console.log(`host-builder-evals: ${evidence.verdict}`);
     return { mode, round, evidence };
   } finally {
+    restoreFetch?.();
     disposeStaged();
   }
 }

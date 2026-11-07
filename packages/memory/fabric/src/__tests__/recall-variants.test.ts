@@ -2,9 +2,9 @@ import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { createMemoryVectorStore } from "@arnilo/prism-memory-core";
 import { resolveMemoryFabricConfig } from "../config.js";
+import { fitInjection } from "../excerpt.js";
 import { createMemory, createMemoryFabric } from "../index.js";
 import { expandLexicalQuery } from "../lexical-expansion.js";
-import { fitInjection } from "../excerpt.js";
 import { groupRecallHits } from "../recall.js";
 import type { MemoryNoteHit } from "../types.js";
 
@@ -58,7 +58,12 @@ describe("plan 210 Task 3.1 recall variants", () => {
   });
 
   it("supersession_hint_all_is_byte_identical_to_the_unset_default", () => {
-    const input = [hit("a", "2023-03-01T00:00:00.000Z"), hit("b", "2023-02-01T00:00:00.000Z"), hit("c", "2023-01-01T00:00:00.000Z", { kind: "fact", key: "k" }), hit("d", "2023-02-20T00:00:00.000Z", { kind: "fact", key: "k" })];
+    const input = [
+      hit("a", "2023-03-01T00:00:00.000Z"),
+      hit("b", "2023-02-01T00:00:00.000Z"),
+      hit("c", "2023-01-01T00:00:00.000Z", { kind: "fact", key: "k" }),
+      hit("d", "2023-02-20T00:00:00.000Z", { kind: "fact", key: "k" }),
+    ];
     assert.deepEqual(groupRecallHits(input, { supersessionHint: "all" }), groupRecallHits(input));
     assert.deepEqual(groupRecallHits(input, {}), groupRecallHits(input));
   });
@@ -77,7 +82,10 @@ describe("plan 210 Task 3.1 recall variants", () => {
     const low = hit("card-1", "2023-05-01T00:00:00.000Z", { content, score: 0.1, coverage: 0.1 } as Partial<MemoryNoteHit>);
     const terms = new Set(["kayak", "lake", "tahoe"]);
     const lineOf = (mode?: "head" | "query") =>
-      (mode === undefined ? fitInjection([low], terms, 4000, 12, 1, 0, 0.9) : fitInjection([low], terms, 4000, 12, 1, 0, 0.9, mode)).lines.join("\n");
+      (mode === undefined
+        ? fitInjection([low], terms, 4000, 12, 1, 0, 0.9)
+        : fitInjection([low], terms, 4000, 12, 1, 0, 0.9, mode)
+      ).lines.join("\n");
     const head = lineOf();
     assert.ok(!head.includes("Tahoe"), "the head card never reaches the assistant half");
     assert.equal(lineOf("head"), head, "an explicit head card is the default");
@@ -88,7 +96,11 @@ describe("plan 210 Task 3.1 recall variants", () => {
   });
 
   it("inject_card_excerpt_field_is_head_by_default_and_fails_closed_on_unknown_values", () => {
-    assert.equal(resolveMemoryFabricConfig({ inject: {} }).inject !== false && (resolveMemoryFabricConfig({ inject: {} }).inject as { cardExcerpt?: string }).cardExcerpt, undefined);
+    assert.equal(
+      resolveMemoryFabricConfig({ inject: {} }).inject !== false &&
+        (resolveMemoryFabricConfig({ inject: {} }).inject as { cardExcerpt?: string }).cardExcerpt,
+      undefined,
+    );
     assert.throws(() => resolveMemoryFabricConfig({ inject: { cardExcerpt: "wide" as never } }), /inject\.cardExcerpt/);
     assert.equal((resolveMemoryFabricConfig({ inject: { cardExcerpt: "query" } }).inject as { cardExcerpt?: string }).cardExcerpt, "query");
   });
@@ -98,7 +110,9 @@ describe("plan 210 Task 3.1 recall variants", () => {
     assert.ok(/\bgf\b/.test(expanded), "girlfriend also asks for gf");
     assert.ok(expanded.startsWith("When is Andrew planning to go to the beach with his girlfriend?"), "the original query is kept whole");
     assert.ok(/\bgirlfriend\b/.test(expandLexicalQuery("did the gf call?")), "gf also asks for girlfriend");
-    assert.ok(/\bmom\b/.test(expandLexicalQuery("What did his mother say?")) && /\bmother\b/.test(expandLexicalQuery("What did his mom say?")));
+    assert.ok(
+      /\bmom\b/.test(expandLexicalQuery("What did his mother say?")) && /\bmother\b/.test(expandLexicalQuery("What did his mom say?")),
+    );
     for (const plain of ["Where did Sam plan to try kayaking?", "it is what it is", "billing uses stripe"])
       assert.equal(expandLexicalQuery(plain), plain, "a query with no table term is byte-identical");
     const once = expandLexicalQuery("his girlfriend");
@@ -113,7 +127,11 @@ describe("plan 210 Task 3.1 recall variants", () => {
       const memory = createMemory({ tenantId: "t", resourceId: "u", threadId: "th", vectorStore });
       return createMemoryFabric({ memory, vectorStore, consolidate: false, ...(queryExpansion === undefined ? {} : { queryExpansion }) });
     };
-    const note = { kind: "exchange" as const, content: "Andrew: great news, the gf and I are hitting the beach next month", keywords: ["andrew", "gf", "beach"] };
+    const note = {
+      kind: "exchange" as const,
+      content: "Andrew: great news, the gf and I are hitting the beach next month",
+      keywords: ["andrew", "gf", "beach"],
+    };
     const off = make();
     await off.remember(note);
     const on = make(true);
@@ -181,7 +199,11 @@ describe("plan 210 Task 3.1 recall variants", () => {
       const gathered = textOf(await recallTool(fabric).execute({ query: "James dog", gather: true } as never, context));
       assert.equal(ids.filter((id) => gathered.includes(id)).length, 12, "gather shows every matching exchange in one call");
       const positions = ids.map((id) => gathered.indexOf(id));
-      assert.deepEqual([...positions].sort((a, b) => a - b), positions, "oldest first");
+      assert.deepEqual(
+        [...positions].sort((a, b) => a - b),
+        positions,
+        "oldest first",
+      );
     });
 
     it("gather_is_absent_from_the_tool_schema_unless_enabled_so_the_default_surface_is_unchanged", () => {
@@ -194,11 +216,66 @@ describe("plan 210 Task 3.1 recall variants", () => {
 
     it("gather_never_widens_scope_a_forgotten_note_is_not_gathered", async () => {
       const fabric = make(true);
-      const keep = await fabric.remember({ kind: "exchange", content: "James: the dog is fine", keywords: ["james", "dog"], tRef: "2022-01-01T00:00:00.000Z" });
-      const gone = await fabric.remember({ kind: "exchange", content: "James: the other dog is fine", keywords: ["james", "dog"], tRef: "2022-02-01T00:00:00.000Z" });
+      const keep = await fabric.remember({
+        kind: "exchange",
+        content: "James: the dog is fine",
+        keywords: ["james", "dog"],
+        tRef: "2022-01-01T00:00:00.000Z",
+      });
+      const gone = await fabric.remember({
+        kind: "exchange",
+        content: "James: the other dog is fine",
+        keywords: ["james", "dog"],
+        tRef: "2022-02-01T00:00:00.000Z",
+      });
       await fabric.forget({ id: gone.id });
       const out = textOf(await recallTool(fabric).execute({ query: "James dog", gather: true } as never, context));
       assert.ok(out.includes(keep.id) && !out.includes(gone.id));
+    });
+
+    it("gather_never_reaches_another_scope_or_a_quarantined_note", async () => {
+      const vectorStore = createMemoryVectorStore();
+      const own = createMemory({ tenantId: "t", resourceId: "u", threadId: "th", vectorStore });
+      const other = createMemory({ tenantId: "t", resourceId: "someone-else", threadId: "th", vectorStore });
+      const fabric = createMemoryFabric({ memory: own, vectorStore, consolidate: false, gather: true });
+      const foreign = createMemoryFabric({ memory: other, vectorStore, consolidate: false });
+      const keep = await fabric.remember({
+        kind: "exchange",
+        content: "James: the dog is fine",
+        keywords: ["james", "dog"],
+        tRef: "2022-01-01T00:00:00.000Z",
+      });
+      const theirs = await foreign.remember({
+        kind: "exchange",
+        content: "James: the dog from another scope",
+        keywords: ["james", "dog"],
+        tRef: "2022-01-02T00:00:00.000Z",
+      });
+      // A quarantined note: the trust scan's flag and candidate status, as a poisoned human edit gets.
+      const flagged = "f".repeat(12);
+      await own.remember(
+        {
+          entries: [
+            {
+              id: flagged,
+              text: "James: the dog note with a poisoned edit",
+              metadata: {
+                fabric: { v: 1, kind: "exchange", flags: ["prompt-injection"], keywords: ["james", "dog"] },
+                status: "candidate",
+              },
+            },
+          ],
+        },
+        { wait: true },
+      );
+      const gathered = textOf(await recallTool(fabric).execute({ query: "James dog", gather: true } as never, context));
+      assert.ok(gathered.includes(keep.id), "the own-scope note is gathered");
+      assert.ok(!gathered.includes(theirs.id), "another scope's note is never gathered");
+      assert.ok(!gathered.includes(flagged), "a quarantined note is never gathered");
+      // The relevance page still shows the quarantined note with its flag, as before: only gather leaves it out.
+      const plain = textOf(await recallTool(fabric).execute({ query: "James dog" } as never, context));
+      assert.ok(!plain.includes(theirs.id));
+      assert.ok(plain.includes(flagged) && /\[flagged: prompt-injection\]/.test(plain), "the default page is unchanged");
     });
   });
   it("every_variant_is_byte_identical_when_unset", async () => {
@@ -213,10 +290,18 @@ describe("plan 210 Task 3.1 recall variants", () => {
     for (const fabric of [unset, named]) {
       await fabric.remember({ kind: "fact", content: "project budget is 600 dollars", key: "budget", tags: ["budget"] });
       await fabric.remember({ kind: "fact", content: "project budget is 450 dollars", key: "budget", tags: ["budget"] });
-      await fabric.remember({ kind: "exchange", content: "Andrew: the gf and I went to the beach", keywords: ["andrew", "gf", "beach"], tRef: "2023-05-01T00:00:00.000Z" });
+      await fabric.remember({
+        kind: "exchange",
+        content: "Andrew: the gf and I went to the beach",
+        keywords: ["andrew", "gf", "beach"],
+        tRef: "2023-05-01T00:00:00.000Z",
+      });
     }
     const shape = async (fabric: ReturnType<typeof make>) => {
-      const hits = (await fabric.recall("project budget beach girlfriend", {})).hits.map((hit) => ({ kind: hit.kind, supersededBy: Boolean(hit.supersededBy) }));
+      const hits = (await fabric.recall("project budget beach girlfriend", {})).hits.map((hit) => ({
+        kind: hit.kind,
+        supersededBy: Boolean(hit.supersededBy),
+      }));
       const schema = JSON.stringify(fabric.tools().find((tool) => tool.name === "memory.recall")?.parameters);
       return { hits, schema };
     };

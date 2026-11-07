@@ -38,13 +38,15 @@ export function canonical(value) {
     if (!seen.has(match)) seen.set(match, `<${kind}${seen.size}>`);
     return seen.get(match);
   };
-  return JSON.stringify(value ?? null)
-    .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g, token("uuid"))
-    // Hex lookarounds, not \b: in JSON an id often follows an escaped newline (`\nab12…`).
-    .replace(/(?<![0-9a-f])[0-9a-f]{12}(?![0-9a-f])/g, token("id"))
-    // A note file name carries its id's first 8 hex digits (`<slug>--<id8>.md`).
-    .replace(/--[0-9a-f]{8}(?=\.md)/g, token("id8"))
-    .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z/g, token("t"));
+  return (
+    JSON.stringify(value ?? null)
+      .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g, token("uuid"))
+      // Hex lookarounds, not \b: in JSON an id often follows an escaped newline (`\nab12…`).
+      .replace(/(?<![0-9a-f])[0-9a-f]{12}(?![0-9a-f])/g, token("id"))
+      // A note file name carries its id's first 8 hex digits (`<slug>--<id8>.md`).
+      .replace(/--[0-9a-f]{8}(?=\.md)/g, token("id8"))
+      .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z/g, token("t"))
+  );
 }
 
 export const digest = (value) => sha256(canonical(value));
@@ -203,12 +205,19 @@ export async function fabricAgent(
       const ctx = { ...turnState, call, toolTurn: isToolTurn(request), ev };
       return respond ? respond(request, ctx) : ev.say("ok");
     },
-    (request) => requests.push({ ...turnState, request: structuredClone({ context: request.context, messages: request.messages, tools: request.tools?.map((tool) => tool.name) }) }),
+    (request) =>
+      requests.push({
+        ...turnState,
+        request: structuredClone({ context: request.context, messages: request.messages, tools: request.tools?.map((tool) => tool.name) }),
+      }),
   );
   const workers = await responder(
     "worker",
     (request, call) => (worker ? worker(request, { call, toolTurn: isToolTurn(request), ev }) : ev.say("")),
-    (request) => workerRequests.push(structuredClone({ system: request.system, messages: request.messages, tools: request.tools?.map((tool) => tool.name) })),
+    (request) =>
+      workerRequests.push(
+        structuredClone({ system: request.system, messages: request.messages, tools: request.tools?.map((tool) => tool.name) }),
+      ),
   );
   const root = projectRoot ?? dir;
   const fabricConfig = {
@@ -216,7 +225,9 @@ export async function fabricAgent(
     store: { sqlite: { path } },
     scopes: { tenantId: TENANT, project: { id: PROJECT_ID, root }, agent: false, user: false },
     ...config,
-    ...(config.scopes ? { scopes: { tenantId: TENANT, project: { id: PROJECT_ID, root }, agent: false, user: false, ...config.scopes } } : {}),
+    ...(config.scopes
+      ? { scopes: { tenantId: TENANT, project: { id: PROJECT_ID, root }, agent: false, user: false, ...config.scopes } }
+      : {}),
   };
   const agent = await prism.createAgent({
     model: "mock/main",
@@ -321,11 +332,15 @@ export function requestShape(request) {
 
 /** Text the agent receives on a request: context blocks plus message text (in-process only). */
 export function receivedText(request) {
-  const blocks = (request.context ?? []).map((block) => (typeof block.content === "string" ? block.content : JSON.stringify(block.content)));
+  const blocks = (request.context ?? []).map((block) =>
+    typeof block.content === "string" ? block.content : JSON.stringify(block.content),
+  );
   const messages = (request.messages ?? []).map((message) =>
     typeof message.content === "string"
       ? message.content
-      : (message.content ?? []).map((block) => (block.type === "text" ? block.text : block.type === "tool_result" ? JSON.stringify(block) : "")).join("\n"),
+      : (message.content ?? [])
+          .map((block) => (block.type === "text" ? block.text : block.type === "tool_result" ? JSON.stringify(block) : ""))
+          .join("\n"),
   );
   return [...blocks, ...messages].join("\n");
 }

@@ -28,7 +28,8 @@ async function twoProjects() {
   return { a: projectFabric(PROJECT_A), b: projectFabric(PROJECT_B), l };
 }
 
-const ids = async (f, query, options = {}) => (await f.recall(query, { minSimilarity: 0, kinds: ["all"], ...options })).hits.map((hit) => hit.id);
+const ids = async (f, query, options = {}) =>
+  (await f.recall(query, { minSimilarity: 0, kinds: ["all"], ...options })).hits.map((hit) => hit.id);
 
 export const probes = [
   {
@@ -71,8 +72,18 @@ export const probes = [
     id: "scope.path",
     async run() {
       const { fabric } = await packages();
-      const l = await lib({ scopes: (make, memory) => [{ level: "project", memory }, { level: "agent", memory: make("agent") }] });
-      const path = await l.fabric.remember({ kind: "fact", scope: "path", appliesTo: ["src/api/**"], content: "handlers return problem json errors" });
+      const l = await lib({
+        scopes: (make, memory) => [
+          { level: "project", memory },
+          { level: "agent", memory: make("agent") },
+        ],
+      });
+      const path = await l.fabric.remember({
+        kind: "fact",
+        scope: "path",
+        appliesTo: ["src/api/**"],
+        content: "handlers return problem json errors",
+      });
       const plain = await l.fabric.remember({ kind: "fact", scope: "project", content: "handlers return problem json errors" });
       const gap = async (touchedPaths) => {
         const hits = (await l.fabric.recall("handlers problem json errors", { minSimilarity: 0, touchedPaths })).hits;
@@ -84,7 +95,8 @@ export const probes = [
       void fabric;
       return {
         surface: "recall-result",
-        property: "a path note earns the path prior (0.15 over project 0.10) only when a touched path matches its glob; otherwise it ranks as a project note",
+        property:
+          "a path note earns the path prior (0.15 over project 0.10) only when a touched path matches its glob; otherwise it ranks as a project note",
         fires: matched > 0.001 ? 1 : 0,
         reaches: Math.abs(matched - unmatched) > 0.001,
         correct: matched > 0.001 && Math.abs(unmatched) <= 0.001,
@@ -126,11 +138,20 @@ export const probes = [
           agentOptions: { host: { ui: ui.ui } },
         });
         try {
-          s.queue({ calls: [{ name: "memory.insert", args: { kind: "fact", scope: "project", text: "release notes live in the changelog folder" } }] });
+          s.queue({
+            calls: [
+              { name: "memory.insert", args: { kind: "fact", scope: "project", text: "release notes live in the changelog folder" } },
+            ],
+          });
           await h.run("one", "note it");
           // The markdown store is the package's own; read the id from the insert's result.
-          const id = /Remembered ([0-9a-f]{12})/.exec(resultText(h.toolResults.findLast((row) => row.name === "memory.insert")?.result))?.[1];
-          const shared = team && id ? await h.command("memory:share", { id }, "one").catch((error) => ({ error: String(error?.message ?? error) })) : undefined;
+          const id = /Remembered ([0-9a-f]{12})/.exec(
+            resultText(h.toolResults.findLast((row) => row.name === "memory.insert")?.result),
+          )?.[1];
+          const shared =
+            team && id
+              ? await h.command("memory:share", { id }, "one").catch((error) => ({ error: String(error?.message ?? error) }))
+              : undefined;
           const status = await h.command("memory:status", {}, "one");
           await h.closeSession("one");
           s.queue({ calls: [{ name: "memory.recall", args: { query: "release notes changelog folder" } }] });
@@ -147,7 +168,8 @@ export const probes = [
       const teamNotes = (on.team?.verified ?? 0) + (on.team?.candidate ?? 0);
       return {
         surface: "tool-result",
-        property: "memory:share copies a note into the checked-in team store after a confirmation; recall reads team notes as a read-only level",
+        property:
+          "memory:share copies a note into the checked-in team store after a confirmation; recall reads team notes as a read-only level",
         fires: teamNotes,
         reaches: digest(on.levels) !== digest(off.levels),
         correct: teamNotes >= 1 && on.levels.includes("team") && !off.levels.includes("team"),
@@ -162,8 +184,18 @@ export const probes = [
     async run() {
       const arm = async (sameKey) => {
         const { a } = await twoProjects();
-        const wide = await a.remember({ kind: "preference", scope: "user", key: "package-manager", content: "prefer pnpm for project scripts" });
-        const narrow = await a.remember({ kind: "preference", scope: "project", key: sameKey ? "package-manager" : "package-manager-local", content: "prefer npm for project release scripts" });
+        const wide = await a.remember({
+          kind: "preference",
+          scope: "user",
+          key: "package-manager",
+          content: "prefer pnpm for project scripts",
+        });
+        const narrow = await a.remember({
+          kind: "preference",
+          scope: "project",
+          key: sameKey ? "package-manager" : "package-manager-local",
+          content: "prefer npm for project release scripts",
+        });
         const result = await a.recall("prefer pnpm npm project scripts", { minSimilarity: 0, kinds: ["all"] });
         return {
           hits: result.hits.map((hit) => hit.id),

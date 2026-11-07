@@ -14,7 +14,7 @@ export async function omAgent({ config = {}, mainCalls = [], compaction, mainMod
   const ev = await events();
   const requests = [];
   const workerCalls = { record_observation: 0, record_reflection: 0, drop_observations: 0, record_task_state: 0 };
-  let queue = [...mainCalls];
+  const queue = [...mainCalls];
   const main = await responder(
     "mock",
     (request) => {
@@ -24,7 +24,10 @@ export async function omAgent({ config = {}, mainCalls = [], compaction, mainMod
       }
       return ev.say("ok");
     },
-    (request) => requests.push(structuredClone({ context: request.context, messages: request.messages, tools: request.tools?.map((tool) => tool.name) })),
+    (request) =>
+      requests.push(
+        structuredClone({ context: request.context, messages: request.messages, tools: request.tools?.map((tool) => tool.name) }),
+      ),
   );
   const worker = await responder("worker", (request) => {
     if (request.messages.some((message) => message.role === "tool")) return ev.say("");
@@ -36,9 +39,23 @@ export async function omAgent({ config = {}, mainCalls = [], compaction, mainMod
       if (tools.includes("record_task_state") && /task/.test(text)) workerCalls.record_task_state++;
       return source
         ? [
-            testing.providerToolCall(testing.toolCallContent("o1", "record_observation", { content: "User asked about the staging cluster", relevance: "high", sourceEntryIds: [source] })),
-            testing.providerToolCall(testing.toolCallContent("o2", "record_observation", { content: "User mentioned lunch plans", relevance: "low", sourceEntryIds: [source] })),
-            ...(tools.includes("record_task_state") ? [testing.providerToolCall(testing.toolCallContent("t1", "record_task_state", { goal: "migrate the staging cluster" }))] : []),
+            testing.providerToolCall(
+              testing.toolCallContent("o1", "record_observation", {
+                content: "User asked about the staging cluster",
+                relevance: "high",
+                sourceEntryIds: [source],
+              }),
+            ),
+            testing.providerToolCall(
+              testing.toolCallContent("o2", "record_observation", {
+                content: "User mentioned lunch plans",
+                relevance: "low",
+                sourceEntryIds: [source],
+              }),
+            ),
+            ...(tools.includes("record_task_state")
+              ? [testing.providerToolCall(testing.toolCallContent("t1", "record_task_state", { goal: "migrate the staging cluster" }))]
+              : []),
             testing.providerDone(),
           ]
         : ev.say("");
@@ -47,7 +64,12 @@ export async function omAgent({ config = {}, mainCalls = [], compaction, mainMod
       workerCalls.record_reflection++;
       if (!reflect) return ev.say("");
       const shown = ids(text);
-      return shown.length ? ev.call("record_reflection", { content: "The user is migrating the staging cluster", supportingObservationIds: shown.slice(0, 2) }) : ev.say("");
+      return shown.length
+        ? ev.call("record_reflection", {
+            content: "The user is migrating the staging cluster",
+            supportingObservationIds: shown.slice(0, 2),
+          })
+        : ev.say("");
     }
     if (tools.includes("drop_observations")) {
       workerCalls.drop_observations++;
@@ -75,7 +97,8 @@ export async function omAgent({ config = {}, mainCalls = [], compaction, mainMod
     async run(text) {
       const results = [];
       const pump = (async () => {
-        for await (const event of session.subscribe()) if (event.type === "tool.completed") results.push({ name: event.name, result: event.result });
+        for await (const event of session.subscribe())
+          if (event.type === "tool.completed") results.push({ name: event.name, result: event.result });
       })();
       await session.run(text);
       await pump;
@@ -93,7 +116,9 @@ export async function omAgent({ config = {}, mainCalls = [], compaction, mainMod
 
 /** The OM block: the pinned context block (`observational-memory`) or OM's own compaction summary. */
 const omBlock = (request) =>
-  [...(request?.context ?? []), ...(request?.messages ?? [])].filter((item) => /observational-memory|# Observational Memory/.test(JSON.stringify(item)));
+  [...(request?.context ?? []), ...(request?.messages ?? [])].filter((item) =>
+    /observational-memory|# Observational Memory/.test(JSON.stringify(item)),
+  );
 
 export const probes = [
   {
@@ -127,7 +152,9 @@ export const probes = [
     id: "om.reflector",
     async run() {
       const arm = async (observationTokens) => {
-        const h = await omAgent({ config: { reflector: { model: OM_MODEL, observationTokens }, dropper: { targetTokens: 2_000_000, policy: "lowest-relevance" } } });
+        const h = await omAgent({
+          config: { reflector: { model: OM_MODEL, observationTokens }, dropper: { targetTokens: 2_000_000, policy: "lowest-relevance" } },
+        });
         try {
           await h.run("Where does the staging cluster run?");
           await h.run("And the failover?");
@@ -155,7 +182,13 @@ export const probes = [
     async run() {
       const arm = async (targetTokens) => {
         // The reflector declines, so the observation pool stays over the dropper's target.
-        const h = await omAgent({ reflect: false, config: { reflector: { model: OM_MODEL, observationTokens: targetTokens }, dropper: { model: OM_MODEL, targetTokens, policy: "model" } } });
+        const h = await omAgent({
+          reflect: false,
+          config: {
+            reflector: { model: OM_MODEL, observationTokens: targetTokens },
+            dropper: { model: OM_MODEL, targetTokens, policy: "model" },
+          },
+        });
         try {
           await h.run("Where does the staging cluster run?");
           const status = await h.status();
@@ -182,7 +215,13 @@ export const probes = [
     id: "om.dropper-lowest-relevance",
     async run() {
       const arm = async (targetTokens) => {
-        const h = await omAgent({ reflect: false, config: { reflector: { model: OM_MODEL, observationTokens: targetTokens }, dropper: { targetTokens, policy: "lowest-relevance" } } });
+        const h = await omAgent({
+          reflect: false,
+          config: {
+            reflector: { model: OM_MODEL, observationTokens: targetTokens },
+            dropper: { targetTokens, policy: "lowest-relevance" },
+          },
+        });
         try {
           await h.run("Where does the staging cluster run?");
           const status = await h.status();
@@ -246,10 +285,15 @@ export const probes = [
       const off = await arm(false);
       return {
         surface: "request",
-        property: "OM owns the compaction slot: a compaction is built from the ledger and the next request carries the observational-memory block",
+        property:
+          "OM owns the compaction slot: a compaction is built from the ledger and the next request carries the observational-memory block",
         fires: on.strategy && on.strategy !== "default-compaction" ? 1 : 0,
         reaches: digest(on.block) !== digest(off.block),
-        correct: on.strategy !== undefined && on.strategy !== "default-compaction" && /staging cluster/.test(JSON.stringify(on.block)) && off.block.length === 0,
+        correct:
+          on.strategy !== undefined &&
+          on.strategy !== "default-compaction" &&
+          /staging cluster/.test(JSON.stringify(on.block)) &&
+          off.block.length === 0,
         on: digest(on.block),
         off: digest(off.block),
       };
@@ -267,7 +311,10 @@ export const probes = [
           h.queueMain({ name: "recall", args: { id } });
           const results = await h.run("what did I ask before?");
           const tools = h.requests.at(-1)?.tools ?? [];
-          return { text: results.map((row) => receivedText({ messages: [{ content: row.result.content }] })).join("\n"), visible: tools.includes("recall") };
+          return {
+            text: results.map((row) => receivedText({ messages: [{ content: row.result.content }] })).join("\n"),
+            visible: tools.includes("recall"),
+          };
         } finally {
           await h.close();
         }
@@ -301,7 +348,8 @@ export const probes = [
         const status = await h.status();
         return {
           surface: "request",
-          property: "under a foreign compactor, OM pins its ledger block after the compaction and keeps it byte-identical; it never forces the foreign owner",
+          property:
+            "under a foreign compactor, OM pins its ledger block after the compaction and keeps it byte-identical; it never forces the foreign owner",
           control: "trigger-absent",
           fires: status.contextMode === "pinned" ? 1 : 0,
           reaches: first.length > 0,

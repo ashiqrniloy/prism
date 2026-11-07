@@ -1,8 +1,7 @@
-import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
 import type { AgentEvent, Compactor, LoopStrategy, ModelProvider, ProviderRequest } from "@arnilo/prism";
 import {
-  SlotConflictError,
   createAgent,
   createMemorySessionStore,
   createSecretRedactor,
@@ -10,6 +9,7 @@ import {
   providerDone,
   providerTextDelta,
   providerToolCall,
+  SlotConflictError,
   toolCallContent,
 } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
@@ -420,12 +420,18 @@ describe("observational memory package", () => {
   });
 });
 
-
 it("om_context_block_pinned_after_foreign_compaction_and_foreign_owner_keeps_gate", async () => {
   let compactions = 0;
-  const { session, agent, requests } = await harness({ enabled: true, compaction: {
-    name: "foreign", compact: () => { compactions++; return { summary: "foreign summary" }; },
-  } });
+  const { session, agent, requests } = await harness({
+    enabled: true,
+    compaction: {
+      name: "foreign",
+      compact: () => {
+        compactions++;
+        return { summary: "foreign summary" };
+      },
+    },
+  });
   await session.run("one");
   await settle();
   await session.compact();
@@ -434,9 +440,12 @@ it("om_context_block_pinned_after_foreign_compaction_and_foreign_owner_keeps_gat
   assert.match(JSON.stringify(first), /Observed/);
   await settle();
   await session.run("three");
-  assert.deepEqual(requests.at(-1)!.messages.filter((message) => JSON.stringify(message).includes("observational-memory")), first);
+  assert.deepEqual(
+    requests.at(-1)!.messages.filter((message) => JSON.stringify(message).includes("observational-memory")),
+    first,
+  );
   assert.equal(compactions, 1, "foreign owner is never forced by advancing observation coverage");
-  assert.equal((await agent.commands.run("om:status", {}, { session }) as any).contextMode, "pinned");
+  assert.equal(((await agent.commands.run("om:status", {}, { session })) as any).contextMode, "pinned");
   await agent.dispose();
 });
 it("om_requests_compaction_when_coverage_advances_after_own_compaction", async () => {
@@ -450,7 +459,7 @@ it("om_requests_compaction_when_coverage_advances_after_own_compaction", async (
   const before = (await store.list("s")).filter((entry) => entry.kind === "compaction").length;
   await session.run("three");
   assert.equal((await store.list("s")).filter((entry) => entry.kind === "compaction").length, before + 1);
-  assert.equal((await agent.commands.run("om:status", {}, { session }) as any).contextMode, "own-compaction");
+  assert.equal(((await agent.commands.run("om:status", {}, { session })) as any).contextMode, "own-compaction");
   await agent.dispose();
 });
 it("om_prefix_stable_between_compactions", async () => {
@@ -469,7 +478,15 @@ it("om_prefix_stable_between_compactions", async () => {
   await agent.dispose();
 });
 it("failed_compaction_does_not_pin", async () => {
-  const { session, agent, store } = await harness({ enabled: true, compaction: { name: "broken", compact() { throw new Error("broken"); } } });
+  const { session, agent, store } = await harness({
+    enabled: true,
+    compaction: {
+      name: "broken",
+      compact() {
+        throw new Error("broken");
+      },
+    },
+  });
   await assert.rejects(session.compact(), /broken/);
   assert.doesNotMatch(JSON.stringify(await store.list("s")), /om.context.pinned/);
   await agent.dispose();

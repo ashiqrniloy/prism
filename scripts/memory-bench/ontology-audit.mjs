@@ -508,13 +508,33 @@ export function offlineHumanLabels(bundles, arm = "conversational+O") {
   }));
 }
 
+/** The model behind a ref, route-free: `kilo/x/m:free` and `openrouter/x/m:free` are the same model. */
+const curatorModelKey = (ref) =>
+  String(ref ?? "")
+    .split("/")
+    .slice(1)
+    .join("/")
+    .replace(/:free$/, "")
+    .toLowerCase();
+
+/**
+ * A judge may not score claims its own model curated, through any route, in any bundle of the arm. Returns the
+ * resolved panel; throws before any judge call.
+ */
+export function assertNoCuratorJudge({ refs, bundles }) {
+  const panel = resolveJudgePanel({ judges: refs });
+  const curators = new Set(bundles.map((bundle) => curatorModelKey(bundle.model)));
+  for (const ref of panel.refs)
+    if (curators.has(curatorModelKey(ref)))
+      throw new Error(`MemoryBenchJudgePanel: ${ref} curated claims in this arm and cannot judge them`);
+  return panel;
+}
+
 async function liveJudges({ refs, bundles, calls, gate }) {
   const approval = JSON.parse(await readFile(gate, "utf8").catch(() => "null"));
   if (approval?.plan !== 208 || approval.gate !== "O-1" || approval.approved !== true)
     throw new Error("MemoryBenchGate: live claim audit needs the approved gate O-1 record (--gate)");
-  const panel = resolveJudgePanel({ judges: refs });
-  for (const bundle of bundles)
-    if (panel.refs.includes(bundle.model)) throw new Error("MemoryBenchJudgePanel: the curator model cannot judge its own claims");
+  const panel = assertNoCuratorJudge({ refs, bundles });
   return openClaimJudges({ refs: panel.refs, calls });
 }
 

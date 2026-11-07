@@ -1,0 +1,476 @@
+{
+  "plan": "215 Task 20",
+  "round": 1,
+  "mode": "dryRun",
+  "loading": "natural",
+  "startedAt": "2026-11-07T09:30:05.489Z",
+  "finishedAt": "2026-11-07T10:01:06.676Z",
+  "criteriaHash": "ee29e22e5b5fc0b6917962b30c55609a1add7bca1329e60127d323eebf57c2c6",
+  "criteriaLockedAt": "2026-11-07T09:29:57.121Z",
+  "datasetContentHash": "sha256:454a44e1fb013536af8c38bd6c9ed4234d0f16f794cdad68cb43cbfd78e51356",
+  "inputs": {
+    "workspaces": "sha256:01e6b6bd91ac9a3cacb7bf53dcede244af7cef486f41892139aea3c4bfdf0e5c",
+    "hidden": "sha256:b096d72e77abf7968097d14d70886604e0768a01c0b7a201d051b48c6512a47e",
+    "solutions": "sha256:810998b18afee3a8778287c312a19c9a25a50a46ec1b68f88b45c2e9ba99462b",
+    "skill": "sha256:d6f77d7615fbca2b917cba158564b59d44fb597e9a891be1751d8803dff44a33",
+    "indexes": "sha256:986940dc89d1e1b48ea5301ec8813d775e836fcd1999429cb0900c989742783e"
+  },
+  "runtimeRevision": "20119d6ba680bf32c14104e23af20ae97e3832f9",
+  "trials": 1,
+  "providers": [
+    {
+      "provider": "commandcode",
+      "model": "stealth/glyph-cluster:free",
+      "arms": {
+        "none": {
+          "status": "succeeded",
+          "scorers": {
+            "typecheck_passes": {
+              "mean": 1,
+              "ci95": {
+                "low": 0.43850296784794796,
+                "high": 1
+              },
+              "records": 3
+            },
+            "acceptance_tests_pass": {
+              "mean": 1,
+              "ci95": {
+                "low": 0.43850296784794796,
+                "high": 1
+              },
+              "records": 3
+            },
+            "public_surface_only": {
+              "mean": 0.6666666666666666,
+              "ci95": {
+                "low": 0.20765960059822086,
+                "high": 0.9385080553510953
+              },
+              "records": 3
+            },
+            "no_retired_names": {
+              "mean": 1,
+              "ci95": {
+                "low": 0.43850296784794796,
+                "high": 1
+              },
+              "records": 3
+            }
+          },
+          "failedCount": 0,
+          "scoredRuns": 3,
+          "limitedRuns": 0,
+          "toolCalls": 252,
+          "skillLoadedRuns": 0,
+          "mcpUsedRuns": 0,
+          "acceptanceByLoading": {
+            "loaded": {
+              "runs": 0,
+              "passed": 0
+            },
+            "notLoaded": {
+              "runs": 3,
+              "passed": 3
+            }
+          },
+          "inputTokens": 2065255,
+          "cacheReadTokens": 1752646,
+          "uncachedInputTokens": 312609,
+          "outputTokens": 47938,
+          "costComplete": false,
+          "meanDurationMs": 370597.69617633335,
+          "durationMs": {
+            "p50": 363030.183523,
+            "p95": 524653.985958
+          }
+        },
+        "skill": {
+          "status": "succeeded",
+          "scorers": {
+            "typecheck_passes": {
+              "mean": 1,
+              "ci95": {
+                "low": 0.43850296784794796,
+                "high": 1
+              },
+              "records": 3
+            },
+            "acceptance_tests_pass": {
+              "mean": 0.6666666666666666,
+              "ci95": {
+                "low": 0.20765960059822086,
+                "high": 0.9385080553510953
+              },
+              "records": 3
+            },
+            "public_surface_only": {
+              "mean": 0.6666666666666666,
+              "ci95": {
+                "low": 0.20765960059822086,
+                "high": 0.9385080553510953
+              },
+              "records": 3
+            },
+            "no_retired_names": {
+              "mean": 1,
+              "ci95": {
+                "low": 0.43850296784794796,
+                "high": 1
+              },
+              "records": 3
+            }
+          },
+          "failedCount": 0,
+          "scoredRuns": 3,
+          "limitedRuns": 0,
+          "toolCalls": 105,
+          "skillLoadedRuns": 3,
+          "mcpUsedRuns": 0,
+          "acceptanceByLoading": {
+            "loaded": {
+              "runs": 3,
+              "passed": 2
+            },
+            "notLoaded": {
+              "runs": 0,
+              "passed": 0
+            }
+          },
+          "inputTokens": 734693,
+          "cacheReadTokens": 609280,
+          "uncachedInputTokens": 125413,
+          "outputTokens": 17840,
+          "costComplete": false,
+          "meanDurationMs": 130812.9871943333,
+          "durationMs": {
+            "p50": 143325.00171800004,
+            "p95": 185116.71439899993
+          }
+        },
+        "skill+mcp": {
+          "status": "succeeded",
+          "scorers": {
+            "typecheck_passes": {
+              "mean": 1,
+              "ci95": {
+                "low": 0.43850296784794796,
+                "high": 1
+              },
+              "records": 3
+            },
+            "acceptance_tests_pass": {
+              "mean": 1,
+              "ci95": {
+                "low": 0.43850296784794796,
+                "high": 1
+              },
+              "records": 3
+            },
+            "public_surface_only": {
+              "mean": 1,
+              "ci95": {
+                "low": 0.43850296784794796,
+                "high": 1
+              },
+              "records": 3
+            },
+            "no_retired_names": {
+              "mean": 1,
+              "ci95": {
+                "low": 0.43850296784794796,
+                "high": 1
+              },
+              "records": 3
+            }
+          },
+          "failedCount": 0,
+          "scoredRuns": 3,
+          "limitedRuns": 0,
+          "toolCalls": 105,
+          "skillLoadedRuns": 3,
+          "mcpUsedRuns": 3,
+          "acceptanceByLoading": {
+            "loaded": {
+              "runs": 3,
+              "passed": 3
+            },
+            "notLoaded": {
+              "runs": 0,
+              "passed": 0
+            }
+          },
+          "inputTokens": 620825,
+          "cacheReadTokens": 508416,
+          "uncachedInputTokens": 112409,
+          "outputTokens": 14619,
+          "costComplete": false,
+          "meanDurationMs": 116436.80522066673,
+          "durationMs": {
+            "p50": 104973.31927500013,
+            "p95": 177741.91000199993
+          }
+        }
+      },
+      "decision": {
+        "verdict": "no-claims",
+        "roundVerdict": "no-claims",
+        "reason": "no significant improvement; nothing to claim",
+        "comparisons": [
+          {
+            "id": "skill_vs_none",
+            "baseline": "none",
+            "candidate": "skill",
+            "scorers": {
+              "typecheck_passes": {
+                "difference": 0,
+                "ci95": {
+                  "low": 0,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "acceptance_tests_pass": {
+                "difference": -0.3333333333333333,
+                "ci95": {
+                  "low": -1,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "public_surface_only": {
+                "difference": 0,
+                "ci95": {
+                  "low": 0,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "no_retired_names": {
+                "difference": 0,
+                "ci95": {
+                  "low": 0,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              }
+            }
+          },
+          {
+            "id": "skill_mcp_vs_none",
+            "baseline": "none",
+            "candidate": "skill+mcp",
+            "scorers": {
+              "typecheck_passes": {
+                "difference": 0,
+                "ci95": {
+                  "low": 0,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "acceptance_tests_pass": {
+                "difference": 0,
+                "ci95": {
+                  "low": 0,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "public_surface_only": {
+                "difference": 0.3333333333333333,
+                "ci95": {
+                  "low": 0,
+                  "high": 1
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "no_retired_names": {
+                "difference": 0,
+                "ci95": {
+                  "low": 0,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              }
+            }
+          },
+          {
+            "id": "skill_mcp_vs_skill",
+            "baseline": "skill",
+            "candidate": "skill+mcp",
+            "scorers": {
+              "typecheck_passes": {
+                "difference": 0,
+                "ci95": {
+                  "low": 0,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "acceptance_tests_pass": {
+                "difference": 0.3333333333333333,
+                "ci95": {
+                  "low": 0,
+                  "high": 1
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "public_surface_only": {
+                "difference": 0.3333333333333333,
+                "ci95": {
+                  "low": 0,
+                  "high": 1
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "no_retired_names": {
+                "difference": 0,
+                "ci95": {
+                  "low": 0,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              }
+            }
+          }
+        ],
+        "claims": [],
+        "regressions": []
+      },
+      "tasks": [
+        {
+          "id": "headless-host",
+          "arms": {
+            "none": {
+              "typecheck_passes": "1/1",
+              "acceptance_tests_pass": "1/1",
+              "public_surface_only": "1/1",
+              "no_retired_names": "1/1"
+            },
+            "skill": {
+              "typecheck_passes": "1/1",
+              "acceptance_tests_pass": "1/1",
+              "public_surface_only": "1/1",
+              "no_retired_names": "1/1"
+            },
+            "skill+mcp": {
+              "typecheck_passes": "1/1",
+              "acceptance_tests_pass": "1/1",
+              "public_surface_only": "1/1",
+              "no_retired_names": "1/1"
+            }
+          }
+        },
+        {
+          "id": "acp-serve",
+          "arms": {
+            "none": {
+              "typecheck_passes": "1/1",
+              "acceptance_tests_pass": "1/1",
+              "public_surface_only": "1/1",
+              "no_retired_names": "1/1"
+            },
+            "skill": {
+              "typecheck_passes": "1/1",
+              "acceptance_tests_pass": "1/1",
+              "public_surface_only": "1/1",
+              "no_retired_names": "1/1"
+            },
+            "skill+mcp": {
+              "typecheck_passes": "1/1",
+              "acceptance_tests_pass": "1/1",
+              "public_surface_only": "1/1",
+              "no_retired_names": "1/1"
+            }
+          }
+        },
+        {
+          "id": "upgrade-0-12",
+          "arms": {
+            "none": {
+              "typecheck_passes": "1/1",
+              "acceptance_tests_pass": "1/1",
+              "public_surface_only": "0/1",
+              "no_retired_names": "1/1",
+              "firstFailure": "src/host.ts: testing import outside a test: @arnilo/prism/testing"
+            },
+            "skill": {
+              "typecheck_passes": "1/1",
+              "acceptance_tests_pass": "0/1",
+              "public_surface_only": "0/1",
+              "no_retired_names": "1/1",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/upgrade-0-12.test.ts:\n254 |   // 1. Resolve inputs.\n255 |   const normalized = options.inputs.map((input) => normalizePackageInput(input));\n256 |   const seen = new Set<string>();\n257 |   for (const item of normalized) {\n258 |     const name = item.definit…"
+            },
+            "skill+mcp": {
+              "typecheck_passes": "1/1",
+              "acceptance_tests_pass": "1/1",
+              "public_surface_only": "1/1",
+              "no_retired_names": "1/1"
+            }
+          }
+        }
+      ],
+      "fullRunEstimate": {
+        "none": {
+          "dryRuns": 3,
+          "fullRuns": 21,
+          "inputTokens": 14456785,
+          "uncachedInputTokens": 2188263,
+          "outputTokens": 335566
+        },
+        "skill": {
+          "dryRuns": 3,
+          "fullRuns": 21,
+          "inputTokens": 5142851,
+          "uncachedInputTokens": 877891,
+          "outputTokens": 124880
+        },
+        "skill+mcp": {
+          "dryRuns": 3,
+          "fullRuns": 21,
+          "inputTokens": 4345775,
+          "uncachedInputTokens": 786863,
+          "outputTokens": 102333
+        }
+      }
+    }
+  ],
+  "verdict": "no-claims"
+}

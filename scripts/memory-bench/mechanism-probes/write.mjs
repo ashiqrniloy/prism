@@ -54,7 +54,11 @@ async function promotionArm(dir, { promote, ledger = [], text = "Remember that t
       extractorCalls++;
       const body = receivedText({ messages: request.messages });
       if (/orchard keys stay in the shed/.test(body)) sawReflection = true;
-      return ev.call("record_notes", { notes: [NOTE(sawReflection ? "orchard keys stay in the shed" : "the release train leaves on thursdays")] }, `x${extractorCalls}`);
+      return ev.call(
+        "record_notes",
+        { notes: [NOTE(sawReflection ? "orchard keys stay in the shed" : "the release train leaves on thursdays")] },
+        `x${extractorCalls}`,
+      );
     },
     extraPackages: ledger.length ? [await reflections(ledger)] : [],
   });
@@ -63,7 +67,9 @@ async function promotionArm(dir, { promote, ledger = [], text = "Remember that t
     await h.run("probe", "and one more thing");
     const consolidated = command ? await h.command("memory:consolidate", {}, "probe") : undefined;
     await h.settle();
-    const promoted = (await h.notes()).filter((note) => note.metadata?.generated?.by === "promotion" || note.metadata?.promotion !== undefined);
+    const promoted = (await h.notes()).filter(
+      (note) => note.metadata?.generated?.by === "promotion" || note.metadata?.promotion !== undefined,
+    );
     return { extractorCalls, sawReflection, promoted: promoted.length, consolidated, d: digest(promoted.map((note) => note.text)) };
   } finally {
     await h.close();
@@ -81,14 +87,17 @@ export const probes = [
         await l.fabric.remember({ kind: "fact", content: "the nightly backup job runs at three in the morning on the db host" });
         const hits = (await l.fabric.recall("nightly backup job db host", { minSimilarity: 0 })).hits;
         const { fabric } = await packages();
-        const similar = hits.filter((hit) => (fabric.parseMemoryNoteMetadata((hit.metadata ?? {}))?.links ?? hit.links ?? []).some((link) => link.relation === "similar")).length;
+        const similar = hits.filter((hit) =>
+          (fabric.parseMemoryNoteMetadata(hit.metadata ?? {})?.links ?? hit.links ?? []).some((link) => link.relation === "similar"),
+        ).length;
         return { count: hits.length, similar, d: digest(hits.map((hit) => hit.content)) };
       };
       const on = await arm(true);
       const off = await arm(false);
       return {
         surface: "recall-result",
-        property: "default consolidation folds a same-text write into the existing note; a near-duplicate (Dice ≥ 0.85) is kept as a new note with a similar link",
+        property:
+          "default consolidation folds a same-text write into the existing note; a near-duplicate (Dice ≥ 0.85) is kept as a new note with a similar link",
         fires: off.count - on.count,
         reaches: on.d !== off.d,
         correct: on.count === 2 && on.similar >= 1 && off.count === 3,
@@ -105,8 +114,22 @@ export const probes = [
       const arm = async (name, decider) => {
         let calls = 0;
         const s = scripted().queue(
-          { calls: [{ name: "memory.insert", args: { kind: "fact", text: "the platform team standup happens at nine every weekday morning in room four" } }] },
-          { calls: [{ name: "memory.insert", args: { kind: "fact", text: "the platform team standup happens at ten every weekday morning in room four" } }] },
+          {
+            calls: [
+              {
+                name: "memory.insert",
+                args: { kind: "fact", text: "the platform team standup happens at nine every weekday morning in room four" },
+              },
+            ],
+          },
+          {
+            calls: [
+              {
+                name: "memory.insert",
+                args: { kind: "fact", text: "the platform team standup happens at ten every weekday morning in room four" },
+              },
+            ],
+          },
           { calls: [{ name: "memory.recall", args: { query: "platform team standup weekday morning" } }] },
         );
         const h = await fabricAgent(join(root, name), {
@@ -148,7 +171,8 @@ export const probes = [
       const off = await promotionArm(join(root, "off"), { promote: false, command: true });
       return {
         surface: "stored-note",
-        property: "with promote on, a consolidation pass gathers the session's sources, makes one extractor call and writes candidate notes",
+        property:
+          "with promote on, a consolidation pass gathers the session's sources, makes one extractor call and writes candidate notes",
         fires: on.extractorCalls,
         reaches: on.d !== off.d,
         correct: on.extractorCalls >= 1 && on.promoted >= 1 && off.extractorCalls === 0 && off.promoted === 0,
@@ -161,12 +185,15 @@ export const probes = [
   {
     id: "write.om-promotion",
     async run(root) {
-      const reflection = () => [{ id: "cccccccccccc", content: "orchard keys stay in the shed", tokenCount: 7, supportingObservationIds: [] }];
+      const reflection = () => [
+        { id: "cccccccccccc", content: "orchard keys stay in the shed", tokenCount: 7, supportingObservationIds: [] },
+      ];
       const on = await promotionArm(join(root, "on"), { promote: true, ledger: reflection(), text: "ok thanks" });
       const off = await promotionArm(join(root, "off"), { promote: true, text: "ok thanks" });
       return {
         surface: "stored-note",
-        property: "observational-memory reflections are consolidation sources: fresh OM material triggers the pass and the reflection reaches the extractor",
+        property:
+          "observational-memory reflections are consolidation sources: fresh OM material triggers the pass and the reflection reaches the extractor",
         fires: on.sawReflection ? 1 : 0,
         reaches: on.d !== off.d,
         correct: on.sawReflection && on.promoted >= 1 && off.extractorCalls === 0,
@@ -187,11 +214,16 @@ export const probes = [
         await h.closeSession("one");
         await h.run("two", "what trips do I have");
         const note = (await h.notes()).find((row) => row.metadata?.kind === "exchange");
-        on = { keywords: note?.metadata?.keywords ?? [], hits: lastValue(h)?.hits?.length ?? 0, d: digest(resultText(h.toolResults.at(-1)?.result)) };
+        on = {
+          keywords: note?.metadata?.keywords ?? [],
+          hits: lastValue(h)?.hits?.length ?? 0,
+          d: digest(resultText(h.toolResults.at(-1)?.result)),
+        };
       } finally {
         await h.close();
       }
-      const seed = async ({ writer }) => writer.remember({ kind: "exchange", content: "I booked a flight to Lisbon for the spring.", scope: "project" });
+      const seed = async ({ writer }) =>
+        writer.remember({ kind: "exchange", content: "I booked a flight to Lisbon for the spring.", scope: "project" });
       const off = await toolArm(join(root, "off"), { seed, args: { query: "travel", kinds: ["exchange"] } });
       return {
         surface: "tool-result",
@@ -218,13 +250,22 @@ export const probes = [
             name: "deploy_status",
             description: "Check a deploy.",
             parameters: { type: "object", properties: { service: { type: "string" } }, required: ["service"] },
-            execute: (args, context) => ({ toolCallId: context.toolCallId, name: "deploy_status", value: { ok: true }, content: [{ type: "text", text: "deploy is green" }] }),
+            execute: (_args, context) => ({
+              toolCallId: context.toolCallId,
+              name: "deploy_status",
+              value: { ok: true },
+              content: [{ type: "text", text: "deploy is green" }],
+            }),
           });
         },
       })();
       const arm = async (name, steps) => {
         const s = scripted().queue({ calls: [{ name: "deploy_status", args: { service: "billing" } }] });
-        const h = await fabricAgent(join(root, name), { config: { exchanges: steps ? { steps: true } : {}, rules: false }, respond: s.respond, extraPackages: [tool] });
+        const h = await fabricAgent(join(root, name), {
+          config: { exchanges: steps ? { steps: true } : {}, rules: false },
+          respond: s.respond,
+          extraPackages: [tool],
+        });
         try {
           await h.run("one", "is the billing deploy healthy");
           await h.closeSession("one");
@@ -270,7 +311,8 @@ export const probes = [
       const all = (await l.fabric.recall("bought bike", { minSimilarity: 0 })).hits;
       return {
         surface: "recall-result",
-        property: "the archive resolves a relative date at write time; from/to keeps only notes dated in the window; order time sorts oldest first",
+        property:
+          "the archive resolves a relative date at write time; from/to keeps only notes dated in the window; order time sorts oldest first",
         control: "trigger-absent",
         fires: dates.length + windowed.length,
         reaches: digest(windowed.map((hit) => hit.content)) !== digest(all.map((hit) => hit.content)),
@@ -290,10 +332,24 @@ export const probes = [
     async run() {
       const arm = async (keyed) => {
         const l = await lib({});
-        await l.fabric.remember({ kind: "fact", content: "the office is on floor two", ...(keyed ? { key: "office.floor" } : {}), tRef: "2025-01-01T00:00:00.000Z" });
-        await l.fabric.remember({ kind: "fact", content: "the office is on floor five now", ...(keyed ? { key: "office.floor" } : {}), tRef: "2025-06-01T00:00:00.000Z" });
+        await l.fabric.remember({
+          kind: "fact",
+          content: "the office is on floor two",
+          ...(keyed ? { key: "office.floor" } : {}),
+          tRef: "2025-01-01T00:00:00.000Z",
+        });
+        await l.fabric.remember({
+          kind: "fact",
+          content: "the office is on floor five now",
+          ...(keyed ? { key: "office.floor" } : {}),
+          tRef: "2025-06-01T00:00:00.000Z",
+        });
         const hits = (await l.fabric.recall("office floor", { minSimilarity: 0 })).hits;
-        return { marked: hits.filter((hit) => hit.supersededBy).length, first: hits[0]?.content ?? "", d: digest(hits.map((hit) => [hit.content, Boolean(hit.supersededBy)])) };
+        return {
+          marked: hits.filter((hit) => hit.supersededBy).length,
+          first: hits[0]?.content ?? "",
+          d: digest(hits.map((hit) => [hit.content, Boolean(hit.supersededBy)])),
+        };
       };
       const on = await arm(true);
       const off = await arm(false);
@@ -358,7 +414,10 @@ export const probes = [
       try {
         await h.run("probe", "remember: tabs");
         const id = (await h.notes()).find((note) => /tabs/.test(note.text ?? ""))?.id;
-        s.queue({ calls: [{ name: "memory.replace", args: { id, old: "tabs", new: "spaces" } }] }, { calls: [{ name: "memory.recall", args: { query: "indentation" } }] });
+        s.queue(
+          { calls: [{ name: "memory.replace", args: { id, old: "tabs", new: "spaces" } }] },
+          { calls: [{ name: "memory.recall", args: { query: "indentation" } }] },
+        );
         await h.run("probe", "find it");
         await h.run("probe", "change it");
         await h.run("probe", "find it again");
@@ -369,7 +428,11 @@ export const probes = [
           property: "memory.insert writes a typed note with agent provenance that recall returns; memory.replace edits that note in place",
           fires: id ? 2 : 0,
           reaches: digest(recalls[0]) !== digest(recalls[1]),
-          correct: note?.metadata?.kind === "preference" && note?.metadata?.generated?.by === "agent" && /tabs/.test(recalls[0] ?? "") && /spaces/.test(recalls[1] ?? ""),
+          correct:
+            note?.metadata?.kind === "preference" &&
+            note?.metadata?.generated?.by === "agent" &&
+            /tabs/.test(recalls[0] ?? "") &&
+            /spaces/.test(recalls[1] ?? ""),
           on: digest(recalls[1]),
           off: digest(recalls[0]),
         };

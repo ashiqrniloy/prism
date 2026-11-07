@@ -571,7 +571,10 @@ describe("@arnilo/prism-memory-fabric package (plan 158 Task 4)", () => {
   it("rules_capture_without_the_exchange_archive_warns_at_setup", async () => {
     const { agent } = await harness({ config: { store: "memory", rules: { capture: "confirm" } } });
     const notes = agent.inspect().statusNotes.map((note) => note.message);
-    assert.ok(notes.some((message) => /rules\.capture needs the exchange archive/.test(message)), "the silent no-op is reported");
+    assert.ok(
+      notes.some((message) => /rules\.capture needs the exchange archive/.test(message)),
+      "the silent no-op is reported",
+    );
     await agent.dispose();
     const { agent: archived } = await harness({ config: { store: "memory", rules: { capture: "confirm" }, exchanges: {} } });
     assert.equal(

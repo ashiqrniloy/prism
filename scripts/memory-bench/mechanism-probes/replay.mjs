@@ -20,7 +20,8 @@ import { blocksOf, fabricAgent, packages, tailSourceText, tailText, withTempRoot
 export const RARE_BELOW = 0.01;
 const CACHE = join(process.env.PRISM_CACHE_DIR ?? join(homedir(), ".cache/prism"), "memory-bench");
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
-const CUE = /\b(?:all|any|compare|count|each|earliest|every|first|how many|last|latest|least|list|most|number of|oldest|order|timeline|when|which|who)\b/iu;
+const CUE =
+  /\b(?:all|any|compare|count|each|earliest|every|first|how many|last|latest|least|list|most|number of|oldest|order|timeline|when|which|who)\b/iu;
 
 /**
  * Stream LongMemEval-M (2.7 GB, one top-level JSON array) and parse only the first row whose
@@ -50,7 +51,9 @@ async function firstDevRow(path, devIds) {
         depth--;
         if (depth === 0 && start >= 0) {
           parts.push(chunk.subarray(start, i + 1));
-          const head = Buffer.concat(parts.length === 1 ? parts : [parts[0]]).subarray(0, 4096).toString("utf8");
+          const head = Buffer.concat(parts.length === 1 ? parts : [parts[0]])
+            .subarray(0, 4096)
+            .toString("utf8");
           const id = /"question_id"\s*:\s*"([^"]+)"/.exec(head)?.[1];
           if (id !== undefined && wanted.has(id)) return JSON.parse(Buffer.concat(parts).toString("utf8"));
           parts = [];
@@ -106,7 +109,11 @@ export async function loadHistories({ maxSessions = 60 } = {}) {
     idSha256: sha256(persona.id),
     sessionsTotal: persona.schedule.length,
     preset: "coding",
-    sessions: persona.schedule.map((step, index) => ({ key: `coding-${index}`, project: step.project, turns: [{ user: step.script, assistant: "Done." }] })),
+    sessions: persona.schedule.map((step, index) => ({
+      key: `coding-${index}`,
+      project: step.project,
+      turns: [{ user: step.script, assistant: "Done." }],
+    })),
   });
   // The work-outcome persona (plan 209): the opening turn, then the correction when the step has one.
   const family = "coding";
@@ -150,7 +157,12 @@ export async function replayHistory(history, root) {
       agents.set(
         project,
         await fabricAgent(join(root, project), {
-          config: { preset: history.preset, tools: { root }, store: { sqlite: { path } }, scopes: { project: { id: `${project}--0123456789`.slice(0, 20), root: join(root, project) }, agent: true, user: true } },
+          config: {
+            preset: history.preset,
+            tools: { root },
+            store: { sqlite: { path } },
+            scopes: { project: { id: `${project}--0123456789`.slice(0, 20), root: join(root, project) }, agent: true, user: true },
+          },
           respond: (_request, ctx) => ctx.ev.say(reply),
           agentOptions: { host: { ui: ui.ui } },
         }),
@@ -180,7 +192,10 @@ export async function replayHistory(history, root) {
     // Every scope's rows, read from the one SQLite file all project agents share (resource ids are the package's).
     const { Database } = await import("bun:sqlite");
     const db = new Database(path, { readonly: true });
-    const rows = db.query("SELECT record FROM semantic_memory").all().map((row) => JSON.parse(row.record));
+    const rows = db
+      .query("SELECT record FROM semantic_memory")
+      .all()
+      .map((row) => JSON.parse(row.record));
     db.close();
     const { fabric } = await packages();
     const notes = rows.map((row) => ({ metadata: fabric.parseMemoryNoteMetadata(row.metadata), status: row.metadata?.status }));
@@ -207,7 +222,14 @@ export async function replayHistory(history, root) {
       episodes: notes.filter((note) => note.metadata?.kind === "episode").length,
       confirmations: ui.requestsOf("confirm").length,
       maintenance: maintenance
-        ? { archived: maintenance.archived, merged: maintenance.merged, episodesMerged: maintenance.episodesMerged, evicted: maintenance.evicted, widened: maintenance.widened, superseded: maintenance.superseded }
+        ? {
+            archived: maintenance.archived,
+            merged: maintenance.merged,
+            episodesMerged: maintenance.episodesMerged,
+            evicted: maintenance.evicted,
+            widened: maintenance.widened,
+            superseded: maintenance.superseded,
+          }
         : null,
     };
   } finally {
@@ -219,7 +241,14 @@ export async function replayHistory(history, root) {
 export function triggerRates(replays) {
   const sum = (key) => replays.reduce((total, row) => total + (typeof row[key] === "number" ? row[key] : 0), 0);
   const maint = (key) => replays.reduce((total, row) => total + (row.maintenance?.[key] ?? 0), 0);
-  const rate = (fired, eligible, unit, note) => ({ fired, eligible, unit, rate: eligible ? fired / eligible : null, rare: eligible ? fired / eligible < RARE_BELOW : true, ...(note ? { note } : {}) });
+  const rate = (fired, eligible, unit, note) => ({
+    fired,
+    eligible,
+    unit,
+    rate: eligible ? fired / eligible : null,
+    rare: eligible ? fired / eligible < RARE_BELOW : true,
+    ...(note ? { note } : {}),
+  });
   const turns = sum("turns");
   const notes = sum("notes");
   const exchanges = sum("exchanges");
@@ -227,18 +256,43 @@ export function triggerRates(replays) {
     "delivery.passive-tail": rate(sum("passive"), turns, "turns"),
     "delivery.directory": rate(sum("directory"), turns, "turns"),
     "delivery.standing-rules": rate(sum("rules"), turns, "turns"),
-    "delivery.working-memory": rate(sum("working"), turns, "turns", "no replayed turn writes a working block (scripted replies make no tool call)"),
-    "delivery.weak-tool-caller": rate(sum("excerptTurns"), turns, "turns", "a session reaches excerpts after two cued turns without a memory.* call"),
+    "delivery.working-memory": rate(
+      sum("working"),
+      turns,
+      "turns",
+      "no replayed turn writes a working block (scripted replies make no tool call)",
+    ),
+    "delivery.weak-tool-caller": rate(
+      sum("excerptTurns"),
+      turns,
+      "turns",
+      "a session reaches excerpts after two cued turns without a memory.* call",
+    ),
     "delivery.rule-capture": rate(sum("confirmations"), turns, "turns", "presets with rules.capture confirm only (coding)"),
-    "lessons": rate(sum("nudges"), turns, "turns", "lessons.nudge is off in both presets"),
+    lessons: rate(sum("nudges"), turns, "turns", "lessons.nudge is off in both presets"),
     "write.keyword-enrichment": rate(sum("exchangesWithKeywords"), exchanges, "exchanges"),
-    "timeline": rate(sum("exchangesWithDates"), exchanges, "exchanges"),
+    timeline: rate(sum("exchangesWithDates"), exchanges, "exchanges"),
     "write.exchange-steps": rate(sum("exchangesWithSteps"), exchanges, "exchanges", "exchanges.steps is off in both presets"),
-    "lifecycle.verification": rate(sum("verifiedByUse"), notes, "notes", "only candidate notes cited as [id] in two sessions; scripted replies cite nothing"),
-    "lifecycle.archive-revival": rate(maint("archived"), notes, "notes", "one memory:maintain pass after the replay; on the conversational preset the archived notes are raw exchanges"),
+    "lifecycle.verification": rate(
+      sum("verifiedByUse"),
+      notes,
+      "notes",
+      "only candidate notes cited as [id] in two sessions; scripted replies cite nothing",
+    ),
+    "lifecycle.archive-revival": rate(
+      maint("archived"),
+      notes,
+      "notes",
+      "one memory:maintain pass after the replay; on the conversational preset the archived notes are raw exchanges",
+    ),
     "lifecycle.capacity-eviction": rate(maint("evicted"), notes, "notes", "evicted also counts exchange demotions"),
     "lifecycle.duplicate-merge": rate(maint("merged"), notes, "notes"),
-    "lifecycle.episode-merge": rate(maint("episodesMerged"), Math.max(1, sum("episodes")), "episodes", "no product path writes episode rows with promote off"),
+    "lifecycle.episode-merge": rate(
+      maint("episodesMerged"),
+      Math.max(1, sum("episodes")),
+      "episodes",
+      "no product path writes episode rows with promote off",
+    ),
     "lifecycle.widen-narrow": rate(maint("widened") + maint("superseded"), notes, "notes"),
     "kind.decision": rate(sum("decisions"), turns, "turns"),
   };

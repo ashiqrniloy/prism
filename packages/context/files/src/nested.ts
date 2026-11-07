@@ -139,7 +139,8 @@ export async function projectNestedInstructions(
     const targets = pathTargets(call, plan.root);
     let current = message;
     for (const target of targets) {
-      for (const directory of candidateDirectories(plan.root, target.directory)) {
+      const base = target.mayBeFile ? await directoryOf(target.directory) : target.directory;
+      for (const directory of candidateDirectories(plan.root, base)) {
         const dir = relativePath(plan.root, directory);
         if (visibleDirs.has(dir)) continue;
         const probe = await probeAgentFile(directory);
@@ -237,6 +238,8 @@ function toolResult(message: Message): Extract<Message["content"][number], { typ
 
 interface PathTarget {
   readonly directory: string;
+  /** `grep` and `glob` take a directory or a single file; a file's instructions come from its directory. */
+  readonly mayBeFile: boolean;
 }
 
 const FILE_PATH_TOOLS = new Set(["read", "edit", "write", "diagnostics"]);
@@ -256,7 +259,7 @@ function pathTargets(call: ToolCall, root: string): readonly PathTarget[] {
     const absolute = resolve(root, value);
     const target = directory ? absolute : dirname(absolute);
     if (!isPathInside(root, target)) continue;
-    targets.push({ directory: target });
+    targets.push({ directory: target, mayBeFile: directory });
   }
   return targets;
 }
@@ -273,6 +276,16 @@ function candidateDirectories(root: string, target: string): readonly string[] {
   return dirs;
 }
 
+/** A `grep`/`glob` path that names a file touches the file's directory; a missing path stays as given. */
+async function directoryOf(path: string): Promise<string> {
+  try {
+    return (await stat(path)).isDirectory() ? path : dirname(path);
+  } catch (error) {
+    if (isEnoent(error) || isNotDirectory(error)) return path;
+    throw error;
+  }
+}
+
 interface AgentFileProbe {
   readonly path: string;
   readonly size: number;
@@ -286,7 +299,8 @@ async function probeAgentFile(directory: string): Promise<AgentFileProbe | undef
       if (!info.isFile()) continue;
       return { path, size: info.size, mtime: info.mtime.getTime() };
     } catch (error) {
-      if (!isEnoent(error)) throw error;
+      // ENOTDIR: a path component is a file (a tool path that runs through one), so no directory holds the file.
+      if (!isEnoent(error) && !isNotDirectory(error)) throw error;
     }
   }
   return undefined;
@@ -346,6 +360,10 @@ function noteOnce(
 
 function isEnoent(error: unknown): boolean {
   return typeof error === "object" && error !== null && (error as { readonly code?: unknown }).code === "ENOENT";
+}
+
+function isNotDirectory(error: unknown): boolean {
+  return typeof error === "object" && error !== null && (error as { readonly code?: unknown }).code === "ENOTDIR";
 }
 
 /** `AGENTS.md` candidates from the outermost enclosing trusted root down to `root`. */

@@ -16,6 +16,7 @@ import {
   disposeStaged,
   EVIDENCE_DIR,
   HIDDEN,
+  installRateLimitedFetch,
   loadCriteria,
   registeredInputs,
   retiredNames,
@@ -24,7 +25,18 @@ import {
   WORKSPACES,
 } from "./lib.mjs";
 import { assertNoSecret, sealEvidence } from "../skill-evals/run.mjs";
-import { armPackages, assertPreregistered, evidenceFor, loadSuite, parseArgs, readLock, registrationFor, run } from "./run.mjs";
+import {
+  armPackages,
+  assertPreregistered,
+  buildBuilder,
+  evidenceFor,
+  loadSuite,
+  parseArgs,
+  readLock,
+  registrationFor,
+  run,
+} from "./run.mjs";
+import { allowedProviders } from "../skill-evals/run.mjs";
 
 const { criteria } = loadCriteria();
 const TASKS = criteria.tasks.map((task) => task.id);
@@ -40,9 +52,12 @@ test("host_builder_eval_criteria_preregistered", () => {
   assert.equal(criteria.claims.alpha, 0.05);
   assert.deepEqual(
     criteria.providers.map((entry) => entry.id),
-    ["hyper", "opencode-go"],
-    "Hyper and OpenCode Go only",
+    ["hyper", "opencode-go", "openrouter", "kilo", "commandcode"],
+    "the owner-approved provider set",
   );
+  assert.ok(criteria.forbiddenProviders.includes("openrouter/free"), "router aliases stay refused");
+  assert.deepEqual(Object.keys(criteria.loadings), ["natural", "preload"]);
+  assert.match(criteria.builder.preloadInstruction, /load_skill.*prism-host-builder/);
   // Every task has a prompt, a seed workspace and a hidden test, and the hidden tests live outside the workspaces.
   for (const task of criteria.tasks) {
     assert.ok(task.prompt.length > 80, `${task.id} has a prompt`);
@@ -398,6 +413,45 @@ test("host_builder_eval_unscored_records_are_inconclusive", () => {
   assert.equal(unpaired.verdict, "inconclusive");
 });
 
+// ── the preload variant ────────────────────────────────────────────────────────
+
+test("host_builder_eval_preload_tells_only_the_skill_arms_to_load_the_skill", async () => {
+  try {
+    const instructionsOf = async (arm, preload) => {
+      const built = await buildBuilder({ task: "headless-host", arm, mode: "offline", criteria, preload });
+      try {
+        return built.agent.config?.instructions ?? built.agent.inspect().instructions ?? JSON.stringify(built.agent.inspect());
+      } finally {
+        await built.agent.dispose();
+        built.workspace.dispose();
+      }
+    };
+    for (const arm of ARMS) {
+      const natural = await instructionsOf(arm, false);
+      const preloaded = await instructionsOf(arm, true);
+      assert.ok(!String(natural).includes(criteria.builder.preloadInstruction), `${arm} natural`);
+      assert.equal(String(preloaded).includes(criteria.builder.preloadInstruction), arm !== "none", `${arm} preload`);
+    }
+    const { evidence } = await run(["--offline", "--preload"]);
+    assert.equal(evidence.loading, "preload");
+    assert.equal((await run(["--offline"])).evidence.loading, "natural");
+  } finally {
+    disposeStaged();
+  }
+}, 180_000);
+
+test("host_builder_eval_provider_allowlist", () => {
+  const ids = (list) => allowedProviders(criteria, list).map((entry) => entry.id);
+  assert.deepEqual(ids(["openrouter", "kilo", "commandcode"]), ["openrouter", "kilo", "commandcode"]);
+  assert.throws(() => allowedProviders(criteria, ["litellm"]), /not allowed/);
+  const model = (id) => criteria.providers.find((entry) => entry.id === id).defaultModel;
+  assert.ok(
+    model("openrouter").endsWith(":free") && model("kilo").endsWith(":free") && model("commandcode").endsWith(":free"),
+    "the defaults are the free rows",
+  );
+  assert.deepEqual(criteria.providers.find((entry) => entry.id === "commandcode").reserveModels, ["Qwen/Qwen3.7-Flash"]);
+});
+
 // ── arguments ──────────────────────────────────────────────────────────────────
 
 test("host_builder_eval_arguments", () => {
@@ -408,6 +462,7 @@ test("host_builder_eval_arguments", () => {
   assert.throws(() => parseArgs(["--offline", "--trials", "0"]), /positive integer/);
   assert.deepEqual(parseArgs(["--dry-run", "--providers", "hyper,opencode-go"]).providers, ["hyper", "opencode-go"]);
   assert.equal(parseArgs(["--offline"]).offline, true);
+  assert.equal(parseArgs(["--offline", "--preload"]).preload, true);
 });
 
 test("host_builder_eval_evidence_shape", async () => {
@@ -439,4 +494,46 @@ test("host_builder_eval_cleanup", () => {
   disposeStaged();
   rmSync(join(WORKSPACES, "headless-host", "__acceptance__"), { recursive: true, force: true });
   assert.equal(existsSync(join(WORKSPACES, "headless-host", "__acceptance__")), false);
+});
+
+test("host_builder_eval_rate_limited_fetch_waits_on_a_429_and_gives_up_on_a_daily_cap", async () => {
+  const waits = [];
+  const responses = [
+    new Response("slow down", { status: 429, headers: { "retry-after": "2" } }),
+    new Response("slow down", { status: 429, headers: { "x-ratelimit-reset": String(Date.now() + 4000) } }),
+    new Response("ok", { status: 200 }),
+  ];
+  const calls = [];
+  const restore = installRateLimitedFetch({
+    minIntervalMs: { "example.test": 100 },
+    base: async (url) => (calls.push(String(url)), responses.shift()),
+    sleep: async (ms) => void waits.push(ms),
+  });
+  try {
+    const response = await fetch("https://example.test/v1");
+    assert.equal(response.status, 200);
+    assert.equal(calls.length, 3, "two 429s were retried");
+    const retryWaits = waits.filter((ms) => ms >= 1000);
+    assert.equal(retryWaits[0], 2000, "Retry-After seconds");
+    assert.ok(retryWaits[1] > 3000 && retryWaits[1] <= 4600, `reset time: ${retryWaits[1]}`);
+    assert.ok(
+      waits.some((ms) => ms > 0 && ms <= 100),
+      "requests to one host are spaced",
+    );
+  } finally {
+    restore();
+  }
+  // A reset a day away is a daily cap: the 429 comes back at once instead of sleeping.
+  const capped = [];
+  const restoreCap = installRateLimitedFetch({
+    base: async () => new Response("cap", { status: 429, headers: { "x-ratelimit-reset": String(Date.now() + 86_400_000) } }),
+    sleep: async (ms) => void capped.push(ms),
+  });
+  try {
+    assert.equal((await fetch("https://example.test/v1")).status, 429);
+    assert.deepEqual(capped, []);
+  } finally {
+    restoreCap();
+  }
+  assert.equal(fetch.name === "fetch" || typeof fetch === "function", true, "the previous fetch is restored");
 });

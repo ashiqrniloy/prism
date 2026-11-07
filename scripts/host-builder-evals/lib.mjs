@@ -528,3 +528,52 @@ export function applyRound(decision, round) {
   if (decision.verdict !== "blocked") return decision.verdict;
   return round >= 2 ? "owner-decision" : "fix-and-remeasure";
 }
+
+// ── rate-limited fetch for the free models ──────────────────────────────────────
+
+/**
+ * Wraps `fetch` for a live run: it spaces requests to a host by `minIntervalMs[hostname]`, and on a 429 waits for the
+ * reset the response names (`Retry-After` seconds or `X-RateLimit-Reset` epoch ms) and retries, up to `maxRetries`.
+ * A wait longer than `maxWaitMs` (a daily cap) is not waited for: the 429 is returned and the run is unscored.
+ * Returns a function that restores the previous `fetch`.
+ */
+export function installRateLimitedFetch({
+  minIntervalMs = {},
+  maxRetries = 10,
+  maxWaitMs = 90_000,
+  base = globalThis.fetch,
+  sleep = (ms) => new Promise((done) => setTimeout(done, ms)),
+} = {}) {
+  const previous = globalThis.fetch;
+  const nextSlot = new Map();
+  const waitFor = (response) => {
+    const retryAfter = Number(response.headers.get("retry-after"));
+    if (Number.isFinite(retryAfter) && retryAfter > 0) return retryAfter * 1000;
+    const reset = Number(response.headers.get("x-ratelimit-reset"));
+    if (Number.isFinite(reset) && reset > 1e9) return Math.max(1000, reset - Date.now() + 500);
+    return 15_000;
+  };
+  globalThis.fetch = async (input, init) => {
+    const host = new URL(typeof input === "string" ? input : (input.url ?? String(input))).hostname;
+    const interval = minIntervalMs[host] ?? 0;
+    for (let attempt = 0; ; attempt += 1) {
+      if (interval > 0) {
+        const slot = Math.max(Date.now(), nextSlot.get(host) ?? 0);
+        nextSlot.set(host, slot + interval);
+        if (slot > Date.now()) await sleep(slot - Date.now());
+      }
+      const response = await base(input, init);
+      if (response.status !== 429 || attempt >= maxRetries) return response;
+      const wait = waitFor(response);
+      if (wait > maxWaitMs) return response;
+      await response.body?.cancel().catch(() => undefined);
+      await sleep(wait);
+    }
+  };
+  return () => {
+    globalThis.fetch = previous;
+  };
+}
+
+/** Per-host request spacing for live runs: OpenRouter's free tier allows 20 requests a minute. */
+export const LIVE_MIN_INTERVAL_MS = Object.freeze({ "openrouter.ai": 3200 });

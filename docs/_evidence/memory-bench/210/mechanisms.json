@@ -12,10 +12,10 @@
   ],
   "rule": "fires: the mechanism ran (count); reaches: what the agent receives differs with it on vs off (or vs its trigger-absent control); correct: the documented effect. A replay rate under 1% of eligible units is rare.",
   "summary": {
-    "probes": 90,
-    "candidatesProbed": 90,
+    "probes": 92,
+    "candidatesProbed": 88,
     "verdicts": {
-      "works": 90
+      "works": 92
     },
     "problems": 0,
     "fixes": 2,
@@ -421,6 +421,18 @@
       }
     },
     {
+      "id": "delivery.directory#directory.stopWords",
+      "fires": 1,
+      "reaches": true,
+      "correct": true,
+      "verdict": "works",
+      "surface": "request",
+      "property": "with directory.stopWords the topic list drops stop-word-only topics and keeps content words; unset lists them all",
+      "onSha256": "c8834f097ea0b7cbefb51e2e60ee051700ffbd8cb522a8a385731a86eb98845c",
+      "offSha256": "90c2128febb33e1878786fdb2efcd547d3824d49cdb01e31d339bb3dde3dce00",
+      "group": "delivery"
+    },
+    {
       "id": "delivery.passive-tail",
       "fires": 1,
       "reaches": true,
@@ -438,6 +450,18 @@
         "rate": 0.861904761904762,
         "rare": false
       }
+    },
+    {
+      "id": "delivery.passive-tail#inject.cardExcerpt",
+      "fires": 1,
+      "reaches": true,
+      "correct": true,
+      "verdict": "works",
+      "surface": "request",
+      "property": "with inject.cardExcerpt \"query\" a pointer card shows the query-centred excerpt across both halves; the default card shows the head of the user half",
+      "onSha256": "5e1cbf39e231b3a78dc6f450f902e5715ace1035d405dbcc887a97df30335682",
+      "offSha256": "4041def606e5550b9123941f9d72c9fe4f6fa4695896092b7fff3352477f3da9",
+      "group": "delivery"
     },
     {
       "id": "delivery.path-cues",
@@ -1696,5 +1720,5 @@
       "group": "write"
     }
   ],
-  "durationSeconds": 11
+  "durationSeconds": 12
 }

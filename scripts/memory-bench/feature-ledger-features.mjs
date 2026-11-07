@@ -56,6 +56,8 @@ export const EV = Object.freeze({
   dev208: `${MB}/208/screen/development-report.json`,
   safety208: `${MB}/208/safety/safety.json`,
   accuracy208: `${MB}/208/accuracy-investigation-2026-11-04.json`,
+  audit208Large: `${MB}/208/audit/claim-audit-P+O.large.json`,
+  audit208Muse: `${MB}/208/audit/claim-audit-P+O.series-default.muse.json`,
   dev209: `${MB}/209/screen/development-report.json`,
   offline209: `${MB}/209/offline/work-outcome-offline-dev.json`,
   gap210: `${MB}/210/gap-predictions.json`,
@@ -326,7 +328,12 @@ export const FEATURES = [
     defaultRef: "fabric.recall.gather",
     cost: { modelCalls: "0", writes: "0", tokens: "up to 3,000 rendered tokens per gather call instead of 1,200" },
     roles: ["accuracy"],
-    evidence: [e(EV.gap210, "Task 3.1 prediction only: multi-hop 3 -> >= 5 of 12 on locomo/dev")],
+    evidence: [
+      e(
+        EV.gap210,
+        "Task 3 prediction (Task 3.1 figure rescored under the oracle ceiling): multi-hop evidence rounds +1 per question, correct 3 -> 4 of 12 on locomo/dev",
+      ),
+    ],
     status: "unmeasured",
     statusBasis: "Built by Task 3.1 behind an opt-in field; measured once in Task 5.",
   },
@@ -836,7 +843,15 @@ export const FEATURES = [
     presetKeys: ["rules"],
     cost: { modelCalls: "0", writes: "0", tokens: "up to rules.maxTokens (600) per request, stable prefix" },
     roles: ["accuracy"],
-    evidence: [e(EV.dev209, "bundled in +W: 20 rules in P+W; W5 claim support 23/28 (0.82) vs 0.95 target", { partition: "209 dev" })],
+    evidence: [
+      e(EV.dev209, "bundled in +W: 20 rules in P+W; W5 claim support 23/28 (0.82) vs 0.95 target", { partition: "209 dev" }),
+      // Plan 210 Task 3.1 link: BEAM's instruction and preference following is the conversational test of standing rules.
+      e(
+        EV.accuracy208,
+        "linked target (210 Task 3.1): beam-100k instruction_following 2/4 recall vs 0/4 oracle, preference_following 3/4 vs 1/4; standing instructions belong to this row, not to recall",
+        { partition: "208 dev" },
+      ),
+    ],
     status: "unmeasured",
     statusBasis: "+W bundle only; no row isolates the block.",
   },
@@ -1062,11 +1077,20 @@ export const FEATURES = [
     roles: ["accuracy", "inspectability"],
     evidence: [
       e(EV.dev208, "O1 pending, O2 pending, O3 not-run, O4 pass, O5 pending, O6 not screened, O7 pending", { partition: "208 dev" }),
+      e(
+        EV.audit208Large,
+        "O3 early read, 60 claims, two paid judges: supported 0.75 per Nemotron route group; valid=false (no human calibration)",
+        {
+          partition: "208 dev",
+        },
+      ),
+      e(EV.audit208Muse, "O3 early read, 60 claims: supported 0.65 on the Muse default-policy arm; valid=false", { partition: "208 dev" }),
       e(EV.dev209, "O8 (ontology-work) P+W+O vs P+W: no pass", { partition: "209 dev" }),
       e(EV.prefix207, "207 prefix probe (cache stability of the tier)"),
     ],
     status: "unmeasured",
-    statusBasis: "No benefit row passed; claim support O3 never ran.",
+    statusBasis:
+      "No benefit row passed. Claim support (O3) has only an uncalibrated early read; the 208 claim bundles were deleted before calibration, so the panel is calibrated on fresh claims as the first step of plan 210 Task 5 (Task 3.2, amended 2026-11-07).",
   },
   {
     id: "ontology.binding-deterministic",
@@ -1377,7 +1401,8 @@ export const FEATURES = [
     evidence: [e(EV.mechanisms210, "Task 2 probe: works (toggle, status counts and the ledger view)")],
     tests: [t("packages/memory/observational/src/__tests__/observational.test.ts", "om_commands_expose_session_state_for_inspection")],
     status: "safety-proven",
-    statusBasis: "Inspectability proven by the named test added in plan 210 Task 2; the compatibility role is a contract, not a measured benefit.",
+    statusBasis:
+      "Inspectability proven by the named test added in plan 210 Task 2; the compatibility role is a contract, not a measured benefit.",
   },
   {
     id: "om.worker-limits",
@@ -1668,7 +1693,8 @@ export const FEATURES = [
     evidence: [e(EV.mechanisms210, "Task 2 probe: works (the toggle hides every fabric tool; status counts notes)")],
     tests: [t("packages/memory/fabric/src/__tests__/package.test.ts", "memory_toggle_and_status_commands_are_inspectable")],
     status: "safety-proven",
-    statusBasis: "Inspectability proven by the named test added in plan 210 Task 2; the compatibility role is a contract, not a measured benefit.",
+    statusBasis:
+      "Inspectability proven by the named test added in plan 210 Task 2; the compatibility role is a contract, not a measured benefit.",
   },
   {
     id: "scoped.policy",

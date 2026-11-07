@@ -24,7 +24,11 @@ export const probes = [
       const { testing } = await packages();
       const arm = async (name, preset) => {
         const ui = testing.createScriptedHostUi({ confirm: true });
-        const h = await fabricAgent(join(root, name), { config: preset ? { preset } : {}, respond: scripted().respond, agentOptions: { host: { ui: ui.ui } } });
+        const h = await fabricAgent(join(root, name), {
+          config: preset ? { preset } : {},
+          respond: scripted().respond,
+          agentOptions: { host: { ui: ui.ui } },
+        });
         try {
           await h.run("one", "Make sure to run the linter before every commit.");
           const status = await h.command("memory:status", {}, "one");
@@ -46,10 +50,12 @@ export const probes = [
       const off = await arm("off", undefined);
       return {
         surface: "request",
-        property: "the coding preset turns on the exchange archive, confirmed rule capture and the coding rules block, and memory:status names it",
+        property:
+          "the coding preset turns on the exchange archive, confirmed rule capture and the coding rules block, and memory:status names it",
         fires: on.exchanges + on.captured,
         reaches: on.d !== off.d,
-        correct: on.preset === "coding" && on.exchanges >= 1 && on.captured === 1 && on.asked === 1 && off.exchanges === 0 && off.captured === 0,
+        correct:
+          on.preset === "coding" && on.exchanges >= 1 && on.captured === 1 && on.asked === 1 && off.exchanges === 0 && off.captured === 0,
         on: on.d,
         off: off.d,
         counts: { exchanges: on.exchanges, captured: on.captured },
@@ -63,7 +69,9 @@ export const probes = [
         const dir = join(root, name);
         const first = await fabricAgent(dir, {
           config: { rules: false, ...(store ? { store } : {}) },
-          respond: scripted().queue({ calls: [{ name: "memory.insert", args: { kind: "fact", text: "the oncall rotation flips on mondays" } }] }).respond,
+          respond: scripted().queue({
+            calls: [{ name: "memory.insert", args: { kind: "fact", text: "the oncall rotation flips on mondays" } }],
+          }).respond,
         });
         try {
           await first.run("one", "note it");
@@ -98,8 +106,13 @@ export const probes = [
   {
     id: "fabric.toggle-status",
     async run(root) {
-      const seed = async ({ writer }) => writer.remember({ kind: "fact", content: "the staging cluster runs in frankfurt", scope: "project" });
-      const h = await fabricAgent(join(root, "arm"), { config: { rules: false, inject: { query: "user", minSimilarity: 0 } }, seed, respond: scripted().respond });
+      const seed = async ({ writer }) =>
+        writer.remember({ kind: "fact", content: "the staging cluster runs in frankfurt", scope: "project" });
+      const h = await fabricAgent(join(root, "arm"), {
+        config: { rules: false, inject: { query: "user", minSimilarity: 0 } },
+        seed,
+        respond: scripted().respond,
+      });
       try {
         await h.run("probe", "where does the staging cluster run");
         const onTools = h.requests.at(-1)?.request.tools ?? [];
@@ -112,7 +125,10 @@ export const probes = [
           property: "the memory toggle hides every fabric tool for the session; memory:status counts notes by lifecycle status",
           fires: toggled?.enabled === false ? 1 : 0,
           reaches: onTools.includes("memory.recall") && !offTools.includes("memory.recall"),
-          correct: toggled?.enabled === false && status?.verified + status?.candidate === 1 && !offTools.some((name) => name.startsWith("memory.")),
+          correct:
+            toggled?.enabled === false &&
+            status?.verified + status?.candidate === 1 &&
+            !offTools.some((name) => name.startsWith("memory.")),
           on: digest(onTools),
           off: digest(offTools),
           finding: "Inspectability now rests on the named test memory_toggle_and_status_commands_are_inspectable (package.test.ts).",

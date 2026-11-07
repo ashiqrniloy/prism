@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- A `grep` or `glob` call whose `path` names a single file no longer fails the run with `ENOTDIR` (`stat '<file>/AGENTS.md'` in the `context.build` hook). The nested-instructions hook now uses the file's directory for these two tools, and treats `ENOTDIR` on a probe as "no instructions here". Found by the host-builder evaluation (plan 215 Task 20), where it ended 5 of 9 builder runs that searched a source file.
+
 ### Added
 
 - Nested instruction files (plan 190 Task 7): a directory deeper than `root` contributes its

@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 1,
+  "plan": 210,
+  "task": 4,
+  "frozen": "2026-11-07",
+  "hashRule": "sha256 over canonical JSON of this file, exposed by cleanupCriteriaHash() in robustness.mjs and checked by verifyCleanupCriteria(); every plan 210 Task 5 manifest and report and the Task 6 decision record pin it, and assertCleanupCriteriaPin refuses drift",
+  "ownerDecisions": {
+    "rulesFirst": {
+      "date": "2026-10-31",
+      "decision": "decision rules are pre-registered and committed before any Task 5 run",
+      "reason": "The 188.10 lesson: only pre-registered rules survive scrutiny. A rule changed after a Task 5 result is read is a new owner decision, not a revision of this file."
+    },
+    "auditScope": {
+      "date": "2026-10-31",
+      "decision": "memory-observational, memory-fabric, memory-wiki and the parts of memory-core only they use; memory-rag and memory-compaction are excluded",
+      "reason": "Plan 210 header."
+    },
+    "postReleaseTrack": {
+      "date": "2026-11-04",
+      "decision": "the audit runs on the experimental line (plan 215); the stable surface it leaves graduates in Task 10",
+      "reason": "Plan 215 consolidation."
+    }
+  },
+  "pins": {
+    "robustnessCriteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+    "threeTierCriteriaHash": "3d5a5c10fddda0931d00003aad8f2fccf5bdef2a829fa0b09bfac004b2bd263f",
+    "workOutcomeCriteriaHash": "d30681ec13dfd1e9f01ce9fdfe8ad2caa674b97182210c12788bd0bc77717bd2",
+    "gapPredictions": {
+      "path": "docs/_evidence/memory-bench/210/gap-predictions.json",
+      "schemaVersion": 2,
+      "predictionsHash": "2c26bbb3730d7f6ab5218d611d7dff54e3647ec17b321149557d275cb67926c1",
+      "rule": "canonical hash of the `predictions` array only: Task 5 scores these predictions as frozen here. The `deferred` entries may record a measured disposition after the diagnostic leg; their protocol and rule text must stay equal to `preRegistered` below."
+    },
+    "plan202Task5": {
+      "manifest": "docs/_evidence/memory-bench/202/task5/development-comparison-manifest.json",
+      "criteriaVersion": "202-task5-candidate-gap-v2",
+      "criteriaHash": "07383989252c65d72aecb828c08049e28ca59cd2248f2259bb26f88fc2efde51",
+      "note": "v2 differs from v1 only in criteria.transport (gate 16, 2026-11-01); every rule is byte-identical. The full target, not the -screen variant, is carried: candidate-gap halving per suite and the ability guard as a veto."
+    }
+  },
+  "partitions": {
+    "reads": ["dev"],
+    "heldOut": ["heldout-a", "heldout-b"],
+    "rule": "Every rule here uses development partitions only. Held-out partitions stay unread until plan 210 Task 9, so a removal needs no held-out confirmation: Task 9 accepts the product with the removals in it, and a removal that hurts shows up there as a miss."
+  },
+  "statistics": {
+    "ci": 0.95,
+    "method": "paired cluster analysis of scripts/memory-bench/stats.mjs (clustered by source conversation, haystack or persona), every arm paired against its base on identical items",
+    "pairedAnalysisVersion": "202-paired-cluster-v1",
+    "perAnswerModel": true,
+    "unit": "points: percentage points of the target metric (accuracy, task success or W-row rate x 100); cost and latency are relative",
+    "answerModels": "keep and fix-kept need the CI lower bound above 0 on at least one answer model and no answer model negative; removal non-inferiority must hold on every answer model"
+  },
+  "features": {
+    "source": "docs/_evidence/memory-bench/210/feature-ledger.json `candidates.features`",
+    "statusVocabulary": ["benefit", "neutral", "negative", "unmeasured", "safety-proven"],
+    "rule": "Every ledger candidate receives exactly one verdict from these rules. Non-candidate ledger rows (accepted evidence) are not re-decided."
+  },
+  "verdicts": {
+    "vocabulary": ["remove", "fix-kept", "keep", "owner-hold", "inconclusive"],
+    "tiers": { "keep": "stable", "fix-kept": "stable", "remove": "removed", "owner-hold": "experimental", "inconclusive": "experimental" },
+    "precedence": ["negative", "fix-kept", "keep", "remove", "inconclusive"],
+    "computedBy": "cleanupVerdict() in robustness.mjs, called by acceptance-report.mjs --plan 210; no hand-set value"
+  },
+  "rules": {
+    "negative": {
+      "verdict": "remove",
+      "when": ["ledger status `negative`", "CI upper bound < 0 on any ability of any suite on any answer model", "a safety failure"],
+      "overrides": "everything: a keep reason, a passing fix and an owner hold do not apply. Keeping a negative feature needs a new owner decision that changes this file, recorded before the Task 6 record is generated."
+    },
+    "keep": {
+      "verdict": "keep",
+      "anyOf": {
+        "benefit": { "ciLowAbove": 0, "on": "the feature's target metric from its gap-predictions entry", "source": "existing evidence (ledger status `benefit`) or a Task 5 arm" },
+        "safetyProven": { "status": "safety-proven", "source": "the ledger" },
+        "costOrLatency": {
+          "relativeReductionAtLeast": 0.1,
+          "metrics": ["costPerQuestionUsd", "answerInputTokensPerQuestion", "p95LatencyMs"],
+          "on": "the feature's own suite, measured as the paired mean of its leave-one-out arm",
+          "andNonInferiorPoints": 2,
+          "rule": "the cost or latency role counts only when accuracy stays within 2 points at the CI lower bound"
+        },
+        "ownerNamedShim": { "listedIn": "ownerNamedShims", "requires": "a written reason per shim" }
+      },
+      "plan202Task5": {
+        "features": ["write.keyword-enrichment", "navigation.agentic-lexical"],
+        "rule": "These features carry plan 202 Task 5's deferred arms, scored by the pinned Task 5 rules (candidate-gap halving per suite, ability guard as a veto). Those rows are reported next to this file's verdict and never overridden by it: a Task 5 miss bars `keep` on benefit, so the feature is decided by fix-kept, removal or inconclusive, and Task 6 records the miss as a plan 202 Task 5 miss."
+      }
+    },
+    "fixKept": {
+      "verdict": "fix-kept",
+      "appliesTo": "a gap-predictions entry with verdict `fix-and-measure` whose change is not `as-is` (a real fix, not a plain ablation)",
+      "when": "the fix measured once meets its own prediction's direction and its CI lower bound on the predicted metric is above 0",
+      "ciLowAbove": 0,
+      "secondTry": false,
+      "onMiss": "the feature is decided by the other rules as shipped without the fix; the fix is deleted"
+    },
+    "remove": {
+      "verdict": "remove",
+      "when": "no keep reason, no fix kept, and removal is non-inferior on development partitions",
+      "nonInferior": {
+        "everySuiteCiLowAtLeastPoints": -2,
+        "workOutcome": {
+          "rows": ["W1", "W2", "W3", "W4", "W6"],
+          "points": 2,
+          "W4": { "relativeIncreaseAtMost": 0.1, "of": "the base arm's mean" },
+          "W5": { "supportedShareAtLeast": 0.95 },
+          "source": "work-outcome-criteria.json `work` row margins, applied with the feature removed against the configuration that has it"
+        }
+      },
+      "inert": "a feature in `inertRemoval.features` meets non-inferiority by the byte-identical-preset test instead of a paid arm"
+    },
+    "inconclusive": {
+      "verdict": "inconclusive",
+      "when": "no keep reason, no fix kept, not negative, and removal non-inferiority is not shown (missing arm, missing stratum or the CI crosses the margin)",
+      "tier": "experimental",
+      "rule": "An unmeasured mechanism never becomes an API-level-1 obligation. Task 6 lists it; the owner removes it or holds it in the experimental tier with a written reason."
+    },
+    "ownerHold": {
+      "verdict": "owner-hold",
+      "appliesTo": ["remove", "inconclusive"],
+      "never": ["negative"],
+      "requires": "a written reason in docs/_evidence/memory-bench/210/decisions.md",
+      "tier": "experimental"
+    }
+  },
+  "ownerNamedShims": [],
+  "experimentalTier": {
+    "documentedIn": "packages/memory/fabric/README.md `## Compatibility` (and the owning package's README for observational and wiki features)",
+    "promise": "outside the API-level-1 promise: an experimental feature can change or be removed in a minor version",
+    "onlyRoute":"the experimental tier is the only way to keep a feature without a keep or fix-kept verdict"
+  },
+  "inertRemoval": {
+    "features": [
+      "retrieval.hybrid",
+      "workers.linker",
+      "workers.evolution",
+      "write.consolidate-model-decider",
+      "recall.state-wrapper",
+      "lifecycle.episode-merge",
+      "decisions.P1",
+      "decisions.P2",
+      "decisions.P6",
+      "ontology.binding-extractor",
+      "scoped.policy",
+      "write.om-promotion",
+      "retrieval.decay-per-kind",
+      "lifecycle.verification",
+      "lifecycle.duplicate-merge",
+      "delivery.working-memory",
+      "kind.procedure",
+      "kind.episode"
+    ],
+    "test": "With the feature's code removed, the conversational and coding presets' provider requests and tool schemas are byte-identical on the offline replay fixtures (mock provider). A feature that any shipped preset or reference-host default turns on, or whose test is not byte-identical, needs a paid leave-one-out arm under C-1.",
+    "conditional": {
+      "features": ["retrieval.similar-links", "lifecycle.widen-narrow"],
+      "rule": "no-credible-path rows that are active by default outside the presets (similar links are always available; widen and narrow run on the default lifecycle values). The byte-identical-preset test runs first; if it is not byte-identical, the removal needs a paid leave-one-out arm under C-1."
+    }
+  },
+  "preRegistered": {
+    "f4DiagnosticLeg": {
+      "deferredId": "202-task17",
+      "suites": ["beam-100k/dev", "locomo/dev", "longmemeval-m/dev"],
+      "arms": { "readTime": "gather + expansion + card excerpt + grouping", "oracle": "gold evidence handed over" },
+      "protocol": "Task 5 diagnostic leg under C-1, pre-registered in Task 4: per suite x model (beam-100k/dev, locomo/dev, longmemeval-m/dev), run the best read-time arm (gather + expansion + card excerpt + grouping) and the oracle arm on the same questions with validated ingestion. A failure counts toward extraction only if the oracle answers it, the read-time arm does not, the report's evidenceCounts show the gold evidence was delivered or was a candidate, the ability is state or aggregation, and the failure id is unique (repeats collapsed). Source and protocol hashes are pinned.",
+      "rule": "complete attribution and < 5% -> not-needed (F4's remedy closed; the existing extractor is not thereby declared reliable); >= 5% irrecoverable in any suite x model -> fix-and-measure, the original scoped Task 17 remedy (opt-in `conversational-facts`); incomplete attribution -> stays unmeasured and no preset is built. Task 13's >= 5% shared-entity/not-in-query condition is kept separately; no graph store.",
+      "thresholdShare": 0.05,
+      "originalBars": "plan 202 Task 17 acceptance as written: exchange citations, scope and consent inheritance, unchanged `conversational`, <= 2% session failures, cheap-model per-session and per-1k-exchange write cost, product-extract cache-read/write tokens and costs with and without cache reads, target-ability benefit and no regression",
+      "heldOutTrigger": false
+    },
+    "task13SharedEntity": {
+      "deferredId": "202-task13",
+      "protocol": "Recorded from the same diagnostic leg: failures where the gold evidence shares an entity with a hit but no query term (counted from evidenceCounts and the term sets, no text).",
+      "rule": ">= 5% of a suite x model's failures -> reconsider typed links (owner gate); otherwise stays closed. No graph store is authorized.",
+      "thresholdShare": 0.05
+    },
+    "maintainThenAnswer": {
+      "arm": "archive-exchange-exempt",
+      "feature": "lifecycle.archive-revival",
+      "rule": "the only Task 5 arm that runs memory:maintain (once per history, before answering); every other arm runs without maintenance",
+      "scored": "with the exchange exemption >= without it + 2 points on beam-100k/dev, and within 1 point of the no-maintain arm; offline: archived raw exchanges 29/293 and 73/94 -> 0, growth-stream month-1 active retrieval 0.5625 -> >= 0.9"
+    },
+    "weakHitsBelowFloor": {
+      "status": "recorded-not-built",
+      "feature": "delivery.aggregation-abstention",
+      "variant": "return the weak hits below the 0.34 relevance floor instead of 'no matching memory'",
+      "buildOnlyIf": "the guidance leave-one-out (arm aggregation-loo) shows the floor causes the abstention gap: in some suite x model, >= 5% of the arm's abstention failures had the gold evidence among candidates below the floor (counted from evidenceCounts, no text)",
+      "ifBuilt": "an opt-in tuning field, default off, measured once as a fix under fixKept; no second try"
+    }
+  },
+  "noTextRule": "Reports and the decision record carry ids, labels, counts, rates and scores; never question, gold, note, claim or corpus text."
+}

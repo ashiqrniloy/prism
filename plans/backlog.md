@@ -1299,14 +1299,14 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Priority: P1
 - Source: plans/208-Phase-11-Part-O14-Memory-Three-Tier-Evaluation-Claim-Support-And-Default-Decision.md
 - Compromise: O3 ran at 60 claims per group with two paid judges and no human calibration (`valid=false`); the small arm could not be audited because its curators sat on the panel.
-- Implications: Supported share 0.75 / 0.75 / 0.65 against 0.95 cannot decide the tier. Plan 210 Task 3.2 calibrates the panel first.
+- Implications: Supported share 0.75 / 0.75 / 0.65 against 0.95 cannot decide the tier. The panel is calibrated first, at the head of plan 210 Task 5. It moved from Task 3.2 on 2026-11-07 because the 208 claim bundles were deleted.
 
 ## Judge the evasive-lure residual with the panel
 
 - Section: Further Actions
 - Priority: P2
 - Source: plans/208-Phase-11-Part-O14-Memory-Three-Tier-Evaluation-Claim-Support-And-Default-Decision.md
-- What: Run the panel over the delivered claims of the Task 4 `evasiveResidual` fixture (plan 210 Task 3.2).
+- What: Run the panel over the delivered claims of the Task 4 `evasiveResidual` fixture (plan 210 Task 5, panel calibration step; moved from Task 3.2 on 2026-11-07).
 - Why: O4's "no poison in a delivered claim" rests on the scripted check only.
 
 ## Calibrate the claim-support panel and rerun O3 at full size
@@ -1314,7 +1314,7 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Section: Further Actions
 - Priority: P1
 - Source: plans/208-Phase-11-Part-O14-Memory-Three-Tier-Evaluation-Claim-Support-And-Default-Decision.md
-- What: Label 60 claims from `P+O.large`, compute the panel-human kappa (plan 210 Task 3.2), then run 200 claims per group under gate C-1.
+- What: Label 60 freshly curated claims from a `P+O` arm whose curator is on no judge panel, compute the panel-human kappa, then run 200 claims per group under gate C-1 (plan 210 Task 5, first step). The `P+O.large` bundles were deleted before plan 210 Task 3.2 could use them (2026-11-07).
 - Why: O3 cannot pass or fail while `valid=false`.
 
 ## Measure the ontology tier on full partitions
@@ -1356,6 +1356,7 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Source: plans/208-Phase-11-Part-O14-Memory-Three-Tier-Evaluation-Claim-Support-And-Default-Decision.md
 - What: Remove `.cache/memory-bench/208/` once plan 210 Task 3.2 has built its set.
 - Why: It holds the only copy of the claim bundles' text.
+- Status (2026-11-07): Done, but before the set was built. The directory was already gone when plan 210 Task 3.2 ran, so the calibration moved to plan 210 Task 5 on fresh claims.
 
 ## Revisit closing the 209 screen on a partial run
 

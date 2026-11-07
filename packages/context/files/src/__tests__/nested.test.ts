@@ -252,6 +252,46 @@ describe("context-files nested instructions", () => {
     }
   });
 
+  it("nested_grep_or_glob_on_a_file_uses_its_directory_and_never_fails_the_run", async () => {
+    const root = await tempRoot();
+    await mkdir(join(root, "pkg", "src"), { recursive: true });
+    await writeFile(join(root, "pkg", "AGENTS.md"), "NESTED RULE");
+    await writeFile(join(root, "pkg", "src", "a.ts"), "export const a = 1;\n");
+    const grep: ToolDefinition = {
+      name: "grep",
+      description: "Search.",
+      parameters: { type: "object", properties: { pattern: { type: "string" }, path: { type: "string" } } },
+      execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "grep", value: "match" }),
+    };
+    const captured: ProviderRequest[] = [];
+    const agent = await createAgent({
+      model: { provider: "mock", model: "m" },
+      packages: [
+        provider(
+          [
+            // A file path, a path that runs through a file, and a missing path: none may throw ENOTDIR.
+            [providerToolCall(toolCallContent("g1", "grep", { pattern: "a", path: "pkg/src/a.ts" })), providerDone()],
+            [providerToolCall(toolCallContent("g2", "grep", { pattern: "a", path: "pkg/src/a.ts/deeper" })), providerDone()],
+            [providerToolCall(toolCallContent("g3", "grep", { pattern: "a", path: "pkg/missing" })), providerDone()],
+            [providerDone()],
+          ],
+          captured,
+        ),
+        contextFiles({ root }),
+      ],
+      tools: { add: [grep] },
+    });
+    const session = await agent.session();
+    try {
+      const result = await session.run("hi");
+      assert.equal(result.status, "completed", JSON.stringify(result.error));
+      assert.equal(nestedText(captured[1]).length, 1, "the file's directory instructions load once");
+      assert.match(nestedText(captured[1]).join(""), /Instructions for pkg\//);
+    } finally {
+      await agent.dispose();
+    }
+  });
+
   it("nested_false_restores_root_only_behavior", async () => {
     const root = await tempRoot();
     await mkdir(join(root, "pkg"), { recursive: true });

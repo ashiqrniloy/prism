@@ -122,11 +122,20 @@ test("package_memory_read_navigates_and_replace_pins_across_scopes", async () =>
     const memory = createMemory({ ...scope, ...stores });
     const writer = createMemoryFabric({ memory, vectorStore: stores.vectorStore, consolidate: false });
     for (let i = 0; i < 5; i++)
-      await writer.remember({ kind: "exchange", id: `00000000000${i}`, session: "past", content: `round ${i}`, tRef: `2026-01-0${i + 1}T00:00:00Z` });
+      await writer.remember({
+        kind: "exchange",
+        id: `00000000000${i}`,
+        session: "past",
+        content: `round ${i}`,
+        tRef: `2026-01-0${i + 1}T00:00:00Z`,
+      });
     const fact = await writer.remember({ kind: "fact", content: "the canary pool drains first" });
     stores.close();
     const results: { name: string; value: unknown }[] = [];
-    const step = (id: string, name: string, args: Record<string, unknown>) => [providerToolCall(toolCallContent(id, name, args)), providerDone()];
+    const step = (id: string, name: string, args: import("@arnilo/prism").JsonObject) => [
+      providerToolCall(toolCallContent(id, name, args)),
+      providerDone(),
+    ];
     const agent = await createAgent({
       model: "mock/main",
       packages: [
@@ -136,19 +145,30 @@ test("package_memory_read_navigates_and_replace_pins_across_scopes", async () =>
           step("c", "memory.replace", { id: fact.id, old: "first", new: "first always", pin: true }),
           [providerTextDelta("ok"), providerDone()],
         ]),
-        memoryFabric({ tools: { root }, store: { sqlite: { path } }, scopes: { tenantId: "nav", project: { id: "nav--01234567", root }, agent: false, user: false } }),
+        memoryFabric({
+          tools: { root },
+          store: { sqlite: { path } },
+          scopes: { tenantId: "nav", project: { id: "nav--01234567", root }, agent: false, user: false },
+        }),
       ],
     });
     const session = await agent.session({ id: "s", create: true });
     const pump = (async () => {
-      for await (const event of session.subscribe()) if (event.type === "tool.completed") results.push({ name: event.name, value: event.result.value });
+      for await (const event of session.subscribe())
+        if (event.type === "tool.completed") results.push({ name: event.name ?? "", value: event.result.value });
     })();
     await session.run("navigate");
     await session.close();
     await agent.dispose();
     await pump;
     const [around, paged, replaced] = results as { value: { notes?: { id: string }[]; found?: boolean } }[];
-    expect(around!.value.notes?.map((note) => note.id)).toEqual(["000000000000", "000000000001", "000000000002", "000000000003", "000000000004"]);
+    expect(around!.value.notes?.map((note) => note.id)).toEqual([
+      "000000000000",
+      "000000000001",
+      "000000000002",
+      "000000000003",
+      "000000000004",
+    ]);
     expect(paged!.value.notes).toHaveLength(5);
     expect(replaced!.value.found).toBe(true);
     const reopened = await createSqliteMemoryStores({ path });

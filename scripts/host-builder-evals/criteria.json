@@ -11,7 +11,11 @@
     "skill+mcp": "The skill arm plus @arnilo/prism-mcp connected over stdio to `prism-host-builder mcp --root <project>` (server id prism-host-builder). The lookup tools and docs resources are offered; no --entry or --package flag is passed, so the check tools list but are unconfigured (a factory that needs arguments cannot be a fixed target)."
   },
   "builder": {
-    "packages": ["tools-coding (shell enabled, rooted at the project)", "context-files (rooted at the project)", "mcp (skill+mcp arm only)"],
+    "packages": [
+      "tools-coding (shell enabled, rooted at the project)",
+      "context-files (rooted at the project)",
+      "mcp (skill+mcp arm only)"
+    ],
     "approval": "None. tools-coding's hard deny keeps every file tool inside the project root, and no network tool is loaded. The shell can still reach the network; the instructions forbid it and the evidence does not depend on it.",
     "instructions": "You are a coding agent working in the project in your current directory. It is a TypeScript project on Bun that uses the Prism agent SDK (`@arnilo/prism`, version 0.13), installed under `node_modules/@arnilo`. Complete the task by editing files in this project. You can run shell commands here, for example `bun test` and `node_modules/.bin/tsc -p tsconfig.json`. Do not install packages and do not use the network. When the task is done, end with a short summary of what you changed and what you checked.",
     "limits": {
@@ -23,7 +27,8 @@
       "maxTotalTokens": 2100000,
       "maxWallTimeMs": 900000
     },
-    "workspace": "A temp copy per trial: workspaces/_common, then workspaces/<task>, then a staged node_modules (real copies of @arnilo/prism and every published package as an install lays them out; symlinks to the other dependencies). The hidden test is copied in only after the run, and removed."
+    "workspace": "A temp copy per trial: workspaces/_common, then workspaces/<task>, then a staged node_modules (real copies of @arnilo/prism and every published package as an install lays them out; symlinks to the other dependencies). The hidden test is copied in only after the run, and removed.",
+    "preloadInstruction": "Before you start, call load_skill with the name \"prism-host-builder\" and follow it."
   },
   "tasks": [
     {
@@ -67,9 +72,18 @@
       "failureEvidence": "plan 215 Task 13 (c): hook payload field names and the conformance helper are not guessable",
       "prompt": "Write a Prism package in `src/no-force-push.ts` with a default export. Its name is `@acme/no-force-push` and its version is `1.0.0`. It denies any `shell` tool call whose command force-pushes with git (`--force`, `--force-with-lease` or `-f` on `git push`), with a reason that mentions a force push, and it allows every other call. Also write `src/no-force-push.test.ts` (run with `bun test`) that runs the SDK's package conformance helper on it and checks both the deny and the allow behavior.",
       "checks": {
-        "requireFiles": ["src/no-force-push.ts", "src/no-force-push.test.ts"],
-        "requireContains": { "src/no-force-push.test.ts": ["packageConformance"] },
-        "runOwnTests": ["src/no-force-push.test.ts"]
+        "requireFiles": [
+          "src/no-force-push.ts",
+          "src/no-force-push.test.ts"
+        ],
+        "requireContains": {
+          "src/no-force-push.test.ts": [
+            "packageConformance"
+          ]
+        },
+        "runOwnTests": [
+          "src/no-force-push.test.ts"
+        ]
       }
     },
     {
@@ -88,28 +102,78 @@
     "tool_calls": "Recorded for cost, not a claim scorer: 1 / (1 + the number of tool calls). Tokens, cost and latency come from the experiment report."
   },
   "claims": {
-    "scorers": ["typecheck_passes", "acceptance_tests_pass", "public_surface_only", "no_retired_names"],
+    "scorers": [
+      "typecheck_passes",
+      "acceptance_tests_pass",
+      "public_surface_only",
+      "no_retired_names"
+    ],
     "alpha": 0.05,
     "comparisons": [
-      { "id": "skill_vs_none", "baseline": "none", "candidate": "skill" },
-      { "id": "skill_mcp_vs_none", "baseline": "none", "candidate": "skill+mcp" },
-      { "id": "skill_mcp_vs_skill", "baseline": "skill", "candidate": "skill+mcp" }
+      {
+        "id": "skill_vs_none",
+        "baseline": "none",
+        "candidate": "skill"
+      },
+      {
+        "id": "skill_mcp_vs_none",
+        "baseline": "none",
+        "candidate": "skill+mcp"
+      },
+      {
+        "id": "skill_mcp_vs_skill",
+        "baseline": "skill",
+        "candidate": "skill+mcp"
+      }
     ],
     "rules": [
-      "A claim (\"the skill improves X\", \"the MCP server improves X over the skill\") is published only when compareExperiments shows a significant improvement for scorer X at alpha .05 in that comparison, on every provider that ran.",
+      "A claim (\"the skill improves X\", \"the MCP server improves X over the skill\") is published only when compareExperiments shows a significant improvement for scorer X at alpha .05 in that comparison, on every provider that ran, in the preload run. The natural run is reported with the same comparisons and its claims are labelled natural.",
       "A significant regression of the skill or skill+mcp arm against none on any claim scorer blocks the plan until that component is fixed and re-measured once (round 2, fresh trials). If it still regresses, the owner decides and the decision is recorded.",
       "An unscored record (a provider or harness failure) makes the comparison inconclusive: rerun, never publish.",
       "The README states only passed claims, each linked to its evidence file. Natural loading is reported (how often the skill was loaded and the MCP tools were used) and the evidence splits results by loading; the arms are compared as run."
     ]
   },
   "providers": [
-    { "id": "hyper", "modelEnv": "PRISM_LIVE_HOST_BUILDER_EVAL_HYPER_MODEL", "defaultModel": "deepseek-v4-pro-0813" },
-    { "id": "opencode-go", "modelEnv": "PRISM_LIVE_HOST_BUILDER_EVAL_OPENCODE_MODEL", "defaultModel": "mimo-v2.5" }
+    {
+      "id": "hyper",
+      "modelEnv": "PRISM_LIVE_HOST_BUILDER_EVAL_HYPER_MODEL",
+      "defaultModel": "deepseek-v4-pro-0813"
+    },
+    {
+      "id": "opencode-go",
+      "modelEnv": "PRISM_LIVE_HOST_BUILDER_EVAL_OPENCODE_MODEL",
+      "defaultModel": "mimo-v2.5"
+    },
+    {
+      "id": "openrouter",
+      "modelEnv": "PRISM_LIVE_HOST_BUILDER_EVAL_OPENROUTER_MODEL",
+      "defaultModel": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "id": "kilo",
+      "modelEnv": "PRISM_LIVE_HOST_BUILDER_EVAL_KILO_MODEL",
+      "defaultModel": "nvidia/nemotron-3.5-super-vl:free"
+    },
+    {
+      "id": "commandcode",
+      "modelEnv": "PRISM_LIVE_HOST_BUILDER_EVAL_COMMANDCODE_MODEL",
+      "defaultModel": "stealth/glyph-cluster:free",
+      "reserveModels": [
+        "Qwen/Qwen3.7-Flash"
+      ]
+    }
   ],
-  "forbiddenProviders": ["openrouter/free", "openrouter/auto"],
-  "providersNote": "Plan 215 Task 20 text: the live run uses Hyper and OpenCode Go only, after the owner approves a dry-run cost estimate recorded in the task note. Widening the set (the free models Task 11 allowed) needs a new owner decision.",
+  "forbiddenProviders": [
+    "openrouter/free",
+    "openrouter/auto"
+  ],
+  "providersNote": "Plan 215 Task 20 text: Hyper and OpenCode Go. Owner decision 2026-11-07: the dry run and the scored runs use the free models of OpenRouter (a specific :free id), Kilo and Command Code (stealth/glyph-cluster:free; the other free row, reflection/beam:free, fails multi-turn tool use with a 400 'Missing required parameter: messages[n].reasoning_content' because the model needs every earlier assistant message's reasoning replayed, so it is not used), and, only if those leave a comparison undecidable, Qwen/Qwen3.7-Flash (paid) on Command Code via PRISM_LIVE_HOST_BUILDER_EVAL_COMMANDCODE_MODEL. Hyper and OpenCode Go stay allowed. Router aliases (openrouter/free, openrouter/auto) stay refused: they pick a model per request, which breaks a paired comparison.",
   "costGate": {
-    "dryRunTaskIds": ["headless-host", "acp-serve", "upgrade-0-12"],
+    "dryRunTaskIds": [
+      "headless-host",
+      "acp-serve",
+      "upgrade-0-12"
+    ],
     "dryRunTrials": 1,
     "ownerApprovalRequired": true
   },
@@ -119,5 +183,9 @@
     "per task and arm: pass counts for every scorer and the first failure",
     "per arm: tool calls per run, input/output/cache tokens, cost, wall time, runs that ended on a limit",
     "skill loaded and MCP used per run, and acceptance_tests_pass split by loading"
-  ]
+  ],
+  "loadings": {
+    "natural": "The builder is told nothing about the skill; the skill arms list it in the catalog and the builder loads it or not. Reported (how often it loaded the skill and used the MCP tools, and acceptance split by loading).",
+    "preload": "`--preload`: in the skill and skill+mcp arms the builder is told to load the skill first (builder.preloadInstruction). It isolates what the skill's text is worth from whether the model finds it. The none arm is unchanged. Claims about the skill's value are published from this run; the natural run reports whether a model finds the skill on its own (same split as plan 215 Task 11, protocol v3)."
+  }
 }

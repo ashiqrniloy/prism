@@ -6,7 +6,9 @@ hashes, counts, rates and short effect statements only. They hold no note, quest
 | File | What it is |
 | --- | --- |
 | `feature-ledger.json` | Task 1. One row per memory feature, with its status and the evidence behind it. |
-| `gap-predictions.json` | Task 3.1. Predicted effects of the recall-quality variants. Task 5 scores them. |
+| `mechanisms.json` | Task 2. One offline mechanism probe per candidate (fires, reaches, correct, verdict), realistic replay trigger rates, and the mechanism errors found. |
+| `gap-analysis.md` | Task 3. One section per candidate: intended effect, why it did not show, evidence, gap, verdict. Also the deferred levers, the Task 2 structural decisions and the second-pass review. Generated. |
+| `gap-predictions.json` | Task 3 (schema 2; Task 3.1's predictions folded in). One machine-readable entry per candidate and variant. Task 5 scores them. Generated. |
 
 ## Feature ledger (Task 1, 2026-11-07)
 
@@ -85,3 +87,168 @@ There are **90 candidates** for Tasks 2–5 (`neutral` plus `unmeasured`). The l
   - `delivery.weak-tool-caller`: the two-turn trigger never fires in one-question sessions;
   - `om.commands` and `fabric.toggle-status`: their inspectability role has no named test yet.
 - **The 202 Task 5 manifest hash.** Plan 202 Task 5.7 cites the prefix `a19a5ab7…`, which matches neither the manifest's `manifestHash` nor its file hash. The ledger records the values read from the file: `manifestHash` `461167af…47fe`, file sha256 `2cbb2f82…22c9`, 10 cells.
+
+## Mechanism verification (Task 2, 2026-11-07)
+
+Run, test and refresh the ledger:
+
+```sh
+timeout 1800 bun scripts/memory-bench/mechanism-probes/run.mjs --out docs/_evidence/memory-bench/210/mechanisms.json
+timeout 120 bun scripts/memory-bench/feature-ledger.mjs --out docs/_evidence/memory-bench/210/feature-ledger.json
+timeout 900 bun test --timeout=0 scripts/memory-bench/mechanism-probes/probes.test.mjs
+```
+
+`--group <name>` or `--only <id>` runs a subset and prints it; `--no-replay` skips the replays.
+
+### How it works
+
+- **One probe per candidate**, one file per feature group (`lifecycle`, `retrieval`, `write`, `scopes`, `delivery`,
+  `kinds`, `ontology`, `om`, `surface`). Each drives the real packages through a scripted scenario on a scripted
+  provider. Most probes run the fabric package in an agent; ranking and lifecycle probes call the same code through
+  `createMemoryFabric`. Each probe reports:
+  - **fires**: a count from an observable effect, such as a note field, a pass report, a command result or a call;
+  - **reaches**: whether what the agent receives (request bytes and tool results) differs with the mechanism on vs
+    off. A mechanism with no switch (unmatched terms, timeline, grouping, task state, pinned context) is compared
+    with its trigger-absent control instead;
+  - **correct**: the documented behaviour.
+- **Verdict**, in this order: `never-fires` (it did not run), then `no-effect` (it ran but the agent received
+  identical bytes), then `wrong-effect` (the effect differs from the documentation), else `works`.
+- **Deterministic.** The clock is fixed, network calls throw, and `randomUUID()` in the id sources draws from a
+  counter each probe resets (`deterministic-ids.mjs`). Hashes are taken after run-local ids are replaced by
+  first-appearance tokens. `probes_deterministic_and_text_free` runs probes twice and compares the rows.
+- **Realistic rates** (`replay.mjs`). Four development histories go through the fabric package on their preset with
+  scripted replies, where the model says the history's own assistant text:
+  - a LongMemEval-M development row: the first in file order, streamed from the 2.7 GB file, capped at 60 of its
+    470 sessions;
+  - a BEAM-100K development conversation;
+  - the coding lifecycle persona (seed 7);
+  - the first coding work-outcome persona.
+  Per turn the replay reads what the agent received. After the replay it reads the store and runs one
+  `memory:maintain`. A rate under 1% of eligible units is **rare**.
+
+### Result
+
+- All 90 Task 1 candidates are probed, and **every verdict is `works`** after this task's fixes. The full run with
+  replays takes about 11 seconds and makes no model or network call.
+- Two mechanisms did **not** work before this task and were fixed, each with a regression test:
+  - **Package tool routing.** Through the package, `memory.read { around | session }` always answered `not_found`,
+    so agentic navigation (202 Task 5) never fired in the product path. `memory.replace { id, pin }` also ignored
+    `pin`. Every earlier navigation test used the library's `fabric.tools()`.
+  - **`recall.expansion`.** A match found only through an alternate fell under the tool's no-match floor, so the
+    tool abstained.
+- **Task 3.1 addition (2026-11-07).** The file now has 92 probes, all `works`. The two added probes are `delivery.directory#directory.stopWords` and `delivery.passive-tail#inject.cardExcerpt`; a `<row>#<variant>` probe belongs to its ledger row.
+- One silent no-op is now reported: `rules.capture: "confirm"` without `exchanges`.
+- `om.commands` and `fabric.toggle-status` each gained a named inspectability test, so both are now `safety-proven`.
+  That leaves 88 candidates.
+- **Rare in realistic use** (under 1% of eligible units across the four replays):
+  - `lifecycle.verification`, `lifecycle.capacity-eviction`, `lifecycle.duplicate-merge`,
+    `lifecycle.episode-merge`, `lifecycle.widen-narrow`;
+  - `delivery.rule-capture`, `delivery.working-memory`, `kind.decision`, `lessons`, `write.exchange-steps`.
+
+### What to read with care
+
+- **`works` means the mechanism functions as documented.** It is not a benefit; Tasks 3–5 decide benefit.
+- **Rates from scripted replies.** The model never calls a tool and never cites `[id]`, so tool-driven and
+  citation-driven mechanisms are rare by construction here. Their probes show they work when triggered.
+- **Handed to Task 3** (`fixes.mjs`, kind `task3`). The package's per-turn lifecycle task runs on a project-only
+  lifecycle, so a cited user- or agent-scope note never gains a use, never verifies by use and builds no R or S.
+  Routing it needs each scope's own clock, which is a contract question. A run confirmed it: the cited project
+  note reached `useSessions: 2` and the cited user note recorded none.
+- **Other Task 3 inputs:**
+  - Use-based verification needs `candidate` notes, and both presets leave promotion off, so preset notes are never
+    eligible.
+  - The weak-tool-caller switch fires on 49% of replayed multi-turn haystack turns but cannot fire in a
+    one-question benchmark session.
+  - One maintenance pass over the 60-session LongMemEval-M replay archived 29 of 293 raw exchanges, which hides
+    them from active recall.
+  - BEAM-100K archived 73 exchanges from 94 turns.
+  - `kind: "episode"` views are reachable only from a library host: the package passes no observational source.
+    Episode rows come only from the consolidation extractor, so episode merge cannot fire under either preset.
+  - A one-scope library fabric applies no recall prior (documented).
+
+## Conceptual gap analysis (Task 3, 2026-11-07)
+
+Build, check and test:
+
+```sh
+timeout 60 bun scripts/memory-bench/gap-analysis.mjs --out     # writes gap-analysis.md and gap-predictions.json
+timeout 60 bun scripts/memory-bench/gap-analysis.mjs --check
+timeout 120 bun test scripts/memory-bench/gap-analysis.test.mjs
+```
+
+The rows are hand-maintained in `scripts/memory-bench/gap-analysis-rows.mjs`. The builder fails in these cases:
+
+- a ledger candidate has no row;
+- a row names a feature that is not a candidate;
+- a prediction lacks its change, metric, suite or predicted effect;
+- a suite is neither a development suite nor `offline:`;
+- a held-out partition is named.
+
+The ledger pins `gap-predictions.json` as evidence, so re-run `feature-ledger.mjs --out` after `--out` here.
+
+### Result
+
+- **88 candidates** were analysed.
+  - `fix-and-measure`: 30 rows (29 distinct Task 5 arms).
+  - `measure-elsewhere`: 38 rows.
+  - `no-credible-path`: 20 rows. These are removal candidates for Task 6; nothing is removed here.
+- **Deferred levers.**
+  - 202 Task 17 / F4 stays `unmeasured`. Attribution covers 0–19% of failures per cell, and the read-time variants are unmeasured. On BEAM-100K the oracle beats recall by a net 5 of 40 on aggregation and state abilities, which rules out `not-needed`. The diagnostic-leg protocol is written for Task 4.
+  - Task 13 stays closed unless the same leg shows ≥ 5% shared-entity failures.
+- **Second pass.** A delegated reviewer, blind to the verdicts, agreed on 61 of 88. Every disagreement is resolved in the analysis's review table: 16 were labels only, 6 calls were adopted and 7 were kept with a reason.
+
+### What to read with care
+
+- **The 202 Task 5 screen never measured navigation.** The harness uses the package, which answered every `memory.read { around | session }` with `not_found` until Task 2's fix. The screen's miss is enrichment evidence only.
+- **`memory:maintain` archives raw exchanges by strength.**
+  - The growth stream's month-1 active retrieval is 0.5625 against 1.0 inclusive.
+  - Benchmark runs never call maintenance, so earlier scores describe an unmaintained product.
+  - Task 5 runs one maintain-then-answer arm and runs every other arm without maintenance.
+- **Task 3.1's gather prediction was above the ceiling.** It predicted multi-hop "≥ 5 of 12", but the oracle scores 4 of 12. It is rescored on evidence rounds recalled.
+
+## Pre-registered decision rules (Task 4, 2026-11-07)
+
+Check and test:
+
+```sh
+timeout 60 bun scripts/memory-bench/robustness.mjs --verify-criteria cleanup-criteria.json
+timeout 120 bun test scripts/memory-bench/cleanup-criteria.test.mjs
+```
+
+`scripts/memory-bench/cleanup-criteria.json` holds the rules every Task 5 verdict is computed from. Its hash is `eea138eb71d58408d09c331e55da419ad8caf8bdcc0a1e44536dda0cc55a7a51`. It must be committed before any Task 5 run, and every plan 210 manifest, report and decision record pins it (`cleanupManifestPin()` / `assertCleanupCriteriaPin()`).
+
+### What it pins
+
+- the plan 202 robustness criteria, the plan 208 three-tier criteria and the plan 209 work-outcome criteria;
+- the Task 3 predictions (`gap-predictions.json` `predictions` array), so Task 5 scores them as frozen;
+- plan 202 Task 5's frozen criteria (`202-task5-candidate-gap-v2`, hash `0738398…`). v2 differs from v1 only in its transport.
+
+The validator also checks the ledger and gap-analysis rows that the rules name.
+
+### The rules
+
+`cleanupVerdict()` in `robustness.mjs` applies them, in this order:
+
+1. **negative → remove.** Ledger status `negative`, a CI upper bound below 0 on any ability for any answer model, or a safety failure. Nothing overrides it: not a benefit, a passing fix or an owner hold.
+2. **fix-kept.** A real fix (not an `as-is` ablation), measured once, that meets its prediction's direction with its CI lower bound above 0. A fix that misses gets no second try.
+3. **keep.** Any one of these:
+   - a benefit with its CI lower bound above 0 on at least one answer model;
+   - `safety-proven`;
+   - a cost or p95 reduction of at least 10% with accuracy within 2 points;
+   - an owner-named shim with its reason.
+   Keyword enrichment and agentic navigation are kept on benefit only if they also pass plan 202 Task 5's pinned rules.
+4. **remove.** Removal is non-inferior: every suite's CI lower bound is at least −2 points on every answer model, and the work-outcome rows stay within their `work`-row margins. The 18 inert features meet this with a byte-identical-preset test instead of a paid arm. Two more, similar links and widen/narrow, take that test first and need an arm only if it fails.
+5. **inconclusive.** Anything else. It goes to the experimental tier, and Task 6 lists it for the owner.
+
+An owner hold applies to `remove` or `inconclusive`, never to `negative`. It needs a written reason and routes the feature to the experimental tier (fabric README, "Experimental features after graduation").
+
+### Pre-registered legs
+
+- **The F4 diagnostic leg (202 Task 17) and the Task 13 shared-entity count.** Their protocol and rule text must equal `gap-predictions.json` `deferred`. The threshold is 5%. Held-out data cannot trigger the build.
+- **The maintain-then-answer arm (`archive-exchange-exempt`).** It is the only arm that runs `memory:maintain`.
+- **The weak-hits-below-floor variant.** Recorded, not built. It may be built only if the aggregation leave-one-out shows that the 0.34 floor causes at least 5% of the abstention failures.
+
+### What to read with care
+
+- **`inconclusive` is a fifth verdict that Task 4's text did not name.** Without it, a feature whose removal costs accuracy but whose benefit is not shown would have no verdict. It cannot be stable, because it has no evidence. It cannot be removed under the non-inferiority rule, because its removal was not shown harmless. So it goes to the experimental tier, and Task 6 asks the owner to decide.
+- **The rules hold for every answer model.** Keeping a feature needs one model's CI lower bound above 0 and no model negative. Removing one needs non-inferiority on every model.

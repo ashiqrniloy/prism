@@ -1,6 +1,6 @@
 /** Plan 210 Task 2: retrieval and ranking probes. */
 import { join } from "node:path";
-import { digest, fabricAgent, lastValue, packages, resultText, scripted, SCOPE } from "./harness.mjs";
+import { digest, fabricAgent, lastValue, packages, resultText, SCOPE, scripted } from "./harness.mjs";
 import { lib } from "./lifecycle.mjs";
 
 /** One agent turn that calls `tool` with `args`; returns the structured value and the text the model receives. */
@@ -17,9 +17,6 @@ export async function toolArm(dir, { config, seed, tool = "memory.recall", args,
     await h.close();
   }
 }
-
-/** Order of `ids` in a recall, for ranking probes. */
-const orderOf = (hits, ids) => hits.map((hit) => hit.id).filter((id) => ids.includes(id));
 
 /**
  * A ranking prior decides between otherwise-equal notes, and equal notes tie-break on random ids, so
@@ -68,7 +65,10 @@ export const probes = [
         property: "lexical recall returns the note holding the exact identifier first; without indexed notes recall is unavailable",
         fires: on.hits.length,
         reaches: on.d !== off.d,
-        correct: on.hits.length >= 1 && /INC-4471/.test(on.text.split("\n").find((line) => line.includes(on.hits[0])) ?? "") && off.hits.length === 0,
+        correct:
+          on.hits.length >= 1 &&
+          /INC-4471/.test(on.text.split("\n").find((line) => line.includes(on.hits[0])) ?? "") &&
+          off.hits.length === 0,
         on: on.d,
         off: off.d,
         counts: { hits: on.hits.length },
@@ -104,7 +104,8 @@ export const probes = [
         on: on.d,
         off: off.d,
         counts: { fusedHits: fused },
-        finding: "Compatibility only: no preset uses it and lexical is the default; the leg needs an embeddings service the package resolves per agent.",
+        finding:
+          "Compatibility only: no preset uses it and lexical is the default; the leg needs an embeddings service the package resolves per agent.",
       };
     },
   },
@@ -119,7 +120,11 @@ export const probes = [
       };
       const on = await arm(undefined);
       const off = await arm({ project: 0, agent: 0, path: 0, team: 0, user: 0 });
-      return { surface: "recall-result", property: "the default scope priors (project 0.10 > agent 0.05) order an otherwise-equal project note first", ...scoreGap(on, off) };
+      return {
+        surface: "recall-result",
+        property: "the default scope priors (project 0.10 > agent 0.05) order an otherwise-equal project note first",
+        ...scoreGap(on, off),
+      };
     },
   },
   {
@@ -142,7 +147,8 @@ export const probes = [
         property: "the default w_R·σ(R) + w_S·σ(S) (0.05 each) orders a used note before an equal unused one",
         ...scoreGap(on, off),
         counts: { ...scoreGap(on, off).counts, singleScopeGapMilli: Math.round(single.gap * 1000) },
-        finding: "Documented exception: with one active scope recall skips fusion and every prior, so a library fabric bound to one scope never applies R or S. The package's default scopes (project, agent, user) always fuse.",
+        finding:
+          "Documented exception: with one active scope recall skips fusion and every prior, so a library fabric bound to one scope never applies R or S. The package's default scopes (project, agent, user) always fuse.",
       };
     },
   },
@@ -152,15 +158,26 @@ export const probes = [
       const arm = async (decay) => {
         const l = await lib({ lifecycle: decay === undefined ? {} : { decay }, scopes: twoScopes });
         const f = await l.fabric.remember({ kind: "fact", content: "the build cache lives on the shared volume" }, { status: "candidate" });
-        const p = await l.fabric.remember({ kind: "preference", content: "the build cache lives on the shared volume", scope: "project" }, { status: "candidate" });
+        const p = await l.fabric.remember(
+          { kind: "preference", content: "the build cache lives on the shared volume", scope: "project" },
+          { status: "candidate" },
+        );
         for (const id of [f.id, p.id]) await l.fabric.recordUses(`s-${id}`, [id], { clock: 1 });
         l.setClock(30);
-        return gapOf((await l.fabric.recall("build cache shared volume", { minSimilarity: 0, kinds: ["fact", "preference"] })).hits, p.id, f.id);
+        return gapOf(
+          (await l.fabric.recall("build cache shared volume", { minSimilarity: 0, kinds: ["fact", "preference"] })).hits,
+          p.id,
+          f.id,
+        );
       };
       // Defaults: fact 0.4 decays faster than preference 0.2, so the preference keeps more R after idle sessions.
       const on = await arm(undefined);
       const off = await arm({ fact: 0.3, preference: 0.3 });
-      return { surface: "recall-result", property: "a higher per-kind decay lowers R after idle sessions, so the slower-decaying kind's equal note ranks first", ...scoreGap(on, off) };
+      return {
+        surface: "recall-result",
+        property: "a higher per-kind decay lowers R after idle sessions, so the slower-decaying kind's equal note ranks first",
+        ...scoreGap(on, off),
+      };
     },
   },
   {
@@ -169,9 +186,17 @@ export const probes = [
       const arm = async (link) => {
         const l = await lib({});
         const target = await l.fabric.remember({ kind: "fact", content: "distant detail about the vault" });
-        await l.fabric.remember({ kind: "fact", content: "seed note about rollouts", ...(link ? { links: [{ id: target.id, relation: "similar" }] } : {}) });
+        await l.fabric.remember({
+          kind: "fact",
+          content: "seed note about rollouts",
+          ...(link ? { links: [{ id: target.id, relation: "similar" }] } : {}),
+        });
         const result = await l.fabric.recall("seed rollouts", { topK: 1, minSimilarity: 0 });
-        return { linked: result.explain.filter((entry) => entry.link).length, has: result.hits.some((hit) => hit.id === target.id), d: digest(result.hits.map((hit) => hit.id)) };
+        return {
+          linked: result.explain.filter((entry) => entry.link).length,
+          has: result.hits.some((hit) => hit.id === target.id),
+          d: digest(result.hits.map((hit) => hit.id)),
+        };
       };
       const on = await arm(true);
       const off = await arm(false);
@@ -224,7 +249,11 @@ export const probes = [
         const { fabric } = await packages();
         const meta = fabric.parseMemoryNoteMetadata((await l.memory.getEntry(neighbour.id))?.metadata);
         const recalled = await l.fabric.recall("kms", { minSimilarity: 0 });
-        return { patched: (meta?.keywords ?? []).includes("kms") ? 1 : 0, found: recalled.hits.some((hit) => hit.id === neighbour.id), d: digest(recalled.hits.map((hit) => hit.id)) };
+        return {
+          patched: (meta?.keywords ?? []).includes("kms") ? 1 : 0,
+          found: recalled.hits.some((hit) => hit.id === neighbour.id),
+          d: digest(recalled.hits.map((hit) => hit.id)),
+        };
       };
       const on = await arm({ enabled: true });
       const off = await arm(false);
@@ -257,7 +286,8 @@ export const probes = [
         property: "the kinds argument restricts recall to the named kinds; the tool default searches every kind except working",
         fires: kinds.length,
         reaches: on.d !== off.d,
-        correct: kinds.length >= 1 && kinds.every((kind) => kind === "preference") && defaultKinds.has("procedure") && defaultKinds.has("fact"),
+        correct:
+          kinds.length >= 1 && kinds.every((kind) => kind === "preference") && defaultKinds.has("procedure") && defaultKinds.has("fact"),
         on: on.d,
         off: off.d,
         counts: { hinted: kinds.length, defaultKinds: defaultKinds.size },
@@ -288,7 +318,8 @@ export const probes = [
   {
     id: "recall.unmatched-terms",
     async run(root) {
-      const seed = async ({ writer }) => writer.remember({ kind: "fact", content: "the staging cluster runs in frankfurt", scope: "project" });
+      const seed = async ({ writer }) =>
+        writer.remember({ kind: "fact", content: "the staging cluster runs in frankfurt", scope: "project" });
       const on = await toolArm(join(root, "on"), { seed, args: { query: "staging cluster zanzibar" } });
       const off = await toolArm(join(root, "off"), { seed, args: { query: "staging cluster" } });
       const listed = on.value?.unmatchedTerms ?? [];
@@ -310,8 +341,20 @@ export const probes = [
     async run(root) {
       const seed = async ({ writer }) => {
         // Exchange subjects come from write-time keywords (the archive's enrichment), not from the body.
-        await writer.remember({ kind: "exchange", content: "user said the team lunch moved to tuesday", keywords: ["team", "lunch"], tRef: "2025-01-01T00:00:00.000Z", scope: "project" });
-        await writer.remember({ kind: "exchange", content: "user said the team lunch moved to thursday", keywords: ["team", "lunch"], tRef: "2025-02-01T00:00:00.000Z", scope: "project" });
+        await writer.remember({
+          kind: "exchange",
+          content: "user said the team lunch moved to tuesday",
+          keywords: ["team", "lunch"],
+          tRef: "2025-01-01T00:00:00.000Z",
+          scope: "project",
+        });
+        await writer.remember({
+          kind: "exchange",
+          content: "user said the team lunch moved to thursday",
+          keywords: ["team", "lunch"],
+          tRef: "2025-02-01T00:00:00.000Z",
+          scope: "project",
+        });
       };
       const args = { query: "team lunch moved", kinds: ["exchange"] };
       const on = await toolArm(join(root, "on"), { seed, args });
@@ -319,7 +362,8 @@ export const probes = [
       const marked = (on.value?.hits ?? []).filter((hit) => hit.supersededBy).length;
       return {
         surface: "tool-result",
-        property: "the default (all) marks an older same-subject exchange as superseded by the newer one; keyed-only marks only keyed notes",
+        property:
+          "the default (all) marks an older same-subject exchange as superseded by the newer one; keyed-only marks only keyed notes",
         fires: marked,
         reaches: on.d !== off.d,
         correct: marked === 1 && (off.value?.hits ?? []).every((hit) => !hit.supersededBy),
@@ -353,9 +397,18 @@ export const probes = [
     async run(root) {
       const seed = async ({ writer }) => {
         for (let i = 0; i < 8; i++)
-          await writer.remember({ kind: "fact", content: `bought a bike part number ${i}`, tRef: `2025-0${i + 1}-01T00:00:00.000Z`, scope: "project" });
+          await writer.remember({
+            kind: "fact",
+            content: `bought a bike part number ${i}`,
+            tRef: `2025-0${i + 1}-01T00:00:00.000Z`,
+            scope: "project",
+          });
       };
-      const on = await toolArm(join(root, "on"), { seed, args: { query: "bought bike part", gather: true }, config: { recall: { gather: true } } });
+      const on = await toolArm(join(root, "on"), {
+        seed,
+        args: { query: "bought bike part", gather: true },
+        config: { recall: { gather: true } },
+      });
       const off = await toolArm(join(root, "off"), { seed, args: { query: "bought bike part" } });
       return {
         surface: "tool-result",
@@ -403,7 +456,8 @@ export const probes = [
       const paged = await arm("session", () => ({ session: "hist-1" }));
       return {
         surface: "tool-result",
-        property: "memory.read around returns the exchange with its same-session ±2 neighbours; session pages a session in reference-time order",
+        property:
+          "memory.read around returns the exchange with its same-session ±2 neighbours; session pages a session in reference-time order",
         fires: on.count,
         reaches: on.d !== off.d,
         correct: on.count === 5 && paged.count === 5,

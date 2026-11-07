@@ -1,7 +1,7 @@
 /** Plan 210 Task 2: note-kind probes (episode view, fact, preference, procedure, decision, file, lessons). */
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { digest, fabricAgent, lastValue, packages, receivedText, resultText, scripted, SCOPE, tailSourceText } from "./harness.mjs";
+import { digest, fabricAgent, lastValue, packages, receivedText, resultText, SCOPE, scripted, tailSourceText } from "./harness.mjs";
 import { lib } from "./lifecycle.mjs";
 import { toolArm } from "./retrieval.mjs";
 
@@ -34,25 +34,44 @@ export const probes = [
       const id = "0b5e00000001";
       const h = await fabricAgent(join(root, "om"), {
         config: { rules: false },
-        extraPackages: [await observation({ id, content: "user debugged the flaky friday deploy", timestamp: "2026-01-01T00:00:00.000Z", relevance: "high", sourceEntryIds: [], tokenCount: 7 })],
+        extraPackages: [
+          await observation({
+            id,
+            content: "user debugged the flaky friday deploy",
+            timestamp: "2026-01-01T00:00:00.000Z",
+            relevance: "high",
+            sourceEntryIds: [],
+            tokenCount: 7,
+          }),
+        ],
       });
       try {
         await h.run("probe", "hello");
         const session = await h.session("probe");
         const before = (await h.stores.vectorStore.getByThread(SCOPE)).length;
-        const viewer = fabric.createMemoryFabric({ memory: h.memory, vectorStore: h.stores.vectorStore, consolidate: false, observational: { session } });
+        const viewer = fabric.createMemoryFabric({
+          memory: h.memory,
+          vectorStore: h.stores.vectorStore,
+          consolidate: false,
+          observational: { session },
+        });
         const view = await viewer.remember({ kind: "episode", id });
         const after = (await h.stores.vectorStore.getByThread(SCOPE)).length;
-        const without = await h.writer.remember({ kind: "episode", id }).then(() => "accepted", (error) => (/requires createMemoryFabric/.test(String(error?.message)) ? "refused" : "other"));
+        const without = await h.writer.remember({ kind: "episode", id }).then(
+          () => "accepted",
+          (error) => (/requires createMemoryFabric/.test(String(error?.message)) ? "refused" : "other"),
+        );
         return {
           surface: "library-result",
-          property: "kind episode is a view of an observational-memory observation: the note carries its content and writes no row; without an OM source it is refused",
+          property:
+            "kind episode is a view of an observational-memory observation: the note carries its content and writes no row; without an OM source it is refused",
           fires: view?.kind === "episode" ? 1 : 0,
           reaches: /flaky friday deploy/.test(view?.content ?? ""),
           correct: view?.content === "user debugged the flaky friday deploy" && after === before && without === "refused",
           on: digest(view?.content),
           off: digest(without),
-          finding: "The package never passes an observational source to its fabric and no tool writes kind episode, so the view is reachable only from a library host; episode rows in the store come only from the consolidation extractor (promote on), which both presets leave off.",
+          finding:
+            "The package never passes an observational source to its fabric and no tool writes kind episode, so the view is reachable only from a library host; episode rows in the store come only from the consolidation extractor (promote on), which both presets leave off.",
         };
       } finally {
         await h.close();
@@ -62,7 +81,8 @@ export const probes = [
   {
     id: "kind.fact",
     async run(root) {
-      const seed = async ({ writer }) => writer.remember({ kind: "fact", content: "the api gateway timeout is thirty seconds", scope: "project" });
+      const seed = async ({ writer }) =>
+        writer.remember({ kind: "fact", content: "the api gateway timeout is thirty seconds", scope: "project" });
       const on = await toolArm(join(root, "on"), { seed, args: { query: "api gateway timeout" } });
       const off = await toolArm(join(root, "off"), { seed, args: { query: "api gateway timeout", kinds: ["preference"] } });
       return {
@@ -79,7 +99,12 @@ export const probes = [
   {
     id: "kind.preference",
     async run() {
-      const l = await lib({ scopes: (make, memory) => [{ level: "project", memory }, { level: "user", memory: make("user") }] });
+      const l = await lib({
+        scopes: (make, memory) => [
+          { level: "project", memory },
+          { level: "user", memory: make("user") },
+        ],
+      });
       const pref = await l.fabric.remember({ kind: "preference", content: "prefer short commit messages" });
       const fact = await l.fabric.remember({ kind: "fact", content: "commit messages follow the template" });
       const userRow = await l.make("user").getEntry(pref.id);
@@ -102,10 +127,15 @@ export const probes = [
       await l.fabric.remember({ kind: "procedure", content: "to release, tag then run the publish job" });
       const lib1 = (await l.fabric.recall("release tag publish job", { minSimilarity: 0 })).hits.length;
       const lib2 = (await l.fabric.recall("release tag publish job", { minSimilarity: 0, kinds: ["procedure"] })).hits.length;
-      const seed = async ({ writer }) => writer.remember({ kind: "procedure", content: "to release, tag then run the publish job", scope: "project" });
+      const seed = async ({ writer }) =>
+        writer.remember({ kind: "procedure", content: "to release, tag then run the publish job", scope: "project" });
       const { blocksOf, tailText } = await import("./harness.mjs");
       const s = scripted();
-      const h = await fabricAgent(join(root, "passive"), { config: { rules: false, inject: { query: "user", minSimilarity: 0 } }, seed, respond: s.respond });
+      const h = await fabricAgent(join(root, "passive"), {
+        config: { rules: false, inject: { query: "user", minSimilarity: 0 } },
+        seed,
+        respond: s.respond,
+      });
       let passive = "";
       try {
         await h.run("probe", "how do I release, tag then publish job");
@@ -128,7 +158,11 @@ export const probes = [
   {
     id: "kind.decision",
     async run(root) {
-      const s = scripted().queue({ calls: [{ name: "memory.insert", args: { kind: "decision", text: "validate api input with zod", rationale: "one validator everywhere" } }] });
+      const s = scripted().queue({
+        calls: [
+          { name: "memory.insert", args: { kind: "decision", text: "validate api input with zod", rationale: "one validator everywhere" } },
+        ],
+      });
       const h = await fabricAgent(join(root, "on"), { config: { rules: false }, respond: s.respond });
       try {
         await h.run("one", "we decided on zod");
@@ -184,11 +218,18 @@ export const probes = [
     async run(root) {
       const arm = async (name, nudge) => {
         const s = scripted();
-        const h = await fabricAgent(join(root, name), { config: { rules: false, exchanges: {}, lessons: { nudge, minTurnsBetweenNudges: 1 } }, respond: s.respond });
+        const h = await fabricAgent(join(root, name), {
+          config: { rules: false, exchanges: {}, lessons: { nudge, minTurnsBetweenNudges: 1 } },
+          respond: s.respond,
+        });
         try {
           await h.run("probe", "Remember that the cache must be warmed before load tests.");
           await h.run("probe", "ok");
-          const texts = h.requests.map((row) => tailSourceText(row.request, "fabric-lesson-nudge") + receivedText({ context: (row.request.context ?? []).filter((block) => block.metadata?.source === "fabric-lesson-nudge") }));
+          const texts = h.requests.map(
+            (row) =>
+              tailSourceText(row.request, "fabric-lesson-nudge") +
+              receivedText({ context: (row.request.context ?? []).filter((block) => block.metadata?.source === "fabric-lesson-nudge") }),
+          );
           return { nudges: texts.filter((text) => text.length > 0).length, d: digest(texts) };
         } finally {
           await h.close();
@@ -198,7 +239,8 @@ export const probes = [
       const off = await arm("off", false);
       return {
         surface: "request",
-        property: "with lessons.nudge and the exchange archive, a remember/correction/fix turn adds one nudge to cite the exchange in a lesson",
+        property:
+          "with lessons.nudge and the exchange archive, a remember/correction/fix turn adds one nudge to cite the exchange in a lesson",
         fires: on.nudges,
         reaches: on.d !== off.d,
         correct: on.nudges >= 1 && off.nudges === 0,

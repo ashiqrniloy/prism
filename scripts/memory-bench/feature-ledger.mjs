@@ -423,7 +423,8 @@ export function buildLedger({ features: rows = FEATURES, closure: closureRows = 
       source: mechanisms === undefined ? null : evidenceEntry(MECHANISMS, problems),
       fixes: fixes.map((fix) => {
         for (const id of fix.features) if (!ids.has(id)) problems.push(`mechanism fix ${fix.id} names an unknown feature: ${id}`);
-        if (fix.test !== undefined && !namedTestExists(fix.test)) problems.push(`mechanism fix ${fix.id}: named test not found: ${fix.test.name}`);
+        if (fix.test !== undefined && !namedTestExists(fix.test))
+          problems.push(`mechanism fix ${fix.id}: named test not found: ${fix.test.name}`);
         if (fix.kind !== "task3" && fix.test === undefined) problems.push(`mechanism fix ${fix.id} has no regression test`);
         return { id: fix.id, kind: fix.kind, features: fix.features, found: fix.found, ...(fix.test ? { test: fix.test } : {}) };
       }),

@@ -36,8 +36,19 @@ export async function runProbes(probes, { log = () => {} } = {}) {
       rows.push(row);
       log(`${row.verdict.padEnd(12)} ${probe.id} fires=${row.fires} reaches=${row.reaches} correct=${row.correct}`);
     } catch (error) {
-      errors.push({ id: probe.id, group: probe.group, error: String(error?.message ?? error).split("\n")[0].slice(0, 240) });
-      log(`ERROR        ${probe.id}: ${String(error?.stack ?? error).split("\n").slice(0, 4).join(" | ")}`);
+      errors.push({
+        id: probe.id,
+        group: probe.group,
+        error: String(error?.message ?? error)
+          .split("\n")[0]
+          .slice(0, 240),
+      });
+      log(
+        `ERROR        ${probe.id}: ${String(error?.stack ?? error)
+          .split("\n")
+          .slice(0, 4)
+          .join(" | ")}`,
+      );
     }
   }
   return { rows, errors };
@@ -45,7 +56,10 @@ export async function runProbes(probes, { log = () => {} } = {}) {
 
 export async function ledgerRows() {
   const ledger = JSON.parse(await readFile(join(root, "docs/_evidence/memory-bench/210/feature-ledger.json"), "utf8"));
-  return { candidates: ledger.features.filter((feature) => feature.candidate).map((feature) => feature.id), known: ledger.features.map((feature) => feature.id) };
+  return {
+    candidates: ledger.features.filter((feature) => feature.candidate).map((feature) => feature.id),
+    known: ledger.features.map((feature) => feature.id),
+  };
 }
 
 if (import.meta.main) {
@@ -68,7 +82,8 @@ if (import.meta.main) {
       const { runReplays } = await import("./replay.mjs");
       const maxSessions = value("--max-sessions");
       replay = await withProbeEnv(() => runReplays(maxSessions === undefined ? {} : { maxSessions: Number(maxSessions) }));
-      for (const row of replay.replays) console.error(`replay      ${row.suite} turns=${row.turns} sessions=${row.sessionsReplayed}/${row.sessionsTotal}`);
+      for (const row of replay.replays)
+        console.error(`replay      ${row.suite} turns=${row.turns} sessions=${row.sessionsReplayed}/${row.sessionsTotal}`);
     }
     const report = await buildReport({ rows, errors, ...(await ledgerRows()), replay });
     report.durationSeconds = Math.round((performance.now() - started) / 1000);

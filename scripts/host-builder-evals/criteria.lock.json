@@ -1,5 +1,5 @@
 {
-  "criteriaHash": "5b665b2fecc041783b80ab768596ff32e08555f6d9fe07249fc3278559b98d6e",
+  "criteriaHash": "ee29e22e5b5fc0b6917962b30c55609a1add7bca1329e60127d323eebf57c2c6",
   "inputs": {
     "workspaces": "sha256:01e6b6bd91ac9a3cacb7bf53dcede244af7cef486f41892139aea3c4bfdf0e5c",
     "hidden": "sha256:b096d72e77abf7968097d14d70886604e0768a01c0b7a201d051b48c6512a47e",
@@ -7,6 +7,6 @@
     "skill": "sha256:d6f77d7615fbca2b917cba158564b59d44fb597e9a891be1751d8803dff44a33",
     "indexes": "sha256:986940dc89d1e1b48ea5301ec8813d775e836fcd1999429cb0900c989742783e"
   },
-  "registeredAt": "2026-11-07T08:24:11.690Z",
-  "gitHead": "a4e09001fd8851214d13a484140bca487c741dc4"
+  "registeredAt": "2026-11-07T09:29:57.121Z",
+  "gitHead": "20119d6ba680bf32c14104e23af20ae97e3832f9"
 }

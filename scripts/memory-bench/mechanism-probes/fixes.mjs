@@ -14,7 +14,8 @@ export const FIXES = Object.freeze([
     found: "never-fires",
     summary:
       "The package built its own tool set without the cross-scope routing createMemoryFabric().tools() has: memory.read { around | session } always returned not_found, memory.replace { id, pin } ignored pin, and a replace or verify of a note outside the narrowest scope missed it.",
-    change: "Shared createNoteNavigator (navigation.ts) used by both tool sets; the package passes navigateNotes, noteMemory and routed pin/verify.",
+    change:
+      "Shared createNoteNavigator (navigation.ts) used by both tool sets; the package passes navigateNotes, noteMemory and routed pin/verify.",
     files: ["packages/memory/fabric/src/navigation.ts", "packages/memory/fabric/src/create.ts", "packages/memory/fabric/src/index.ts"],
     test: { file: `${FT}/session-navigation.test.ts`, name: "package_memory_read_navigates_and_replace_pins_across_scopes" },
   },
@@ -35,8 +36,9 @@ export const FIXES = Object.freeze([
     features: ["delivery.rule-capture"],
     found: "never-fires",
     summary:
-      "rules.capture: \"confirm\" runs inside the exchange archive's task, so without `exchanges` it silently captured nothing. Both presets turn the archive on.",
-    change: "Setup leaves a warning status note and the README states the dependency; making capture independent of the archive is a design change for Task 3.",
+      'rules.capture: "confirm" runs inside the exchange archive\'s task, so without `exchanges` it silently captured nothing. Both presets turn the archive on.',
+    change:
+      "Setup leaves a warning status note and the README states the dependency; making capture independent of the archive is a design change for Task 3.",
     files: ["packages/memory/fabric/src/index.ts", "packages/memory/fabric/README.md"],
     test: { file: `${FT}/package.test.ts`, name: "rules_capture_without_the_exchange_archive_warns_at_setup" },
   },
