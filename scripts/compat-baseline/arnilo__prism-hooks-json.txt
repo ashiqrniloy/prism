@@ -1,35 +1,33 @@
-DEFAULT_ADDITIONAL_CONTEXT_LIMIT	export declare const DEFAULT_ADDITIONAL_CONTEXT_LIMIT = 2500
-DEFAULT_HANDLER_TIMEOUT_SECONDS	export declare const DEFAULT_HANDLER_TIMEOUT_SECONDS = 600
-HOOK_EVENT_NAMES	export declare const HOOK_EVENT_NAMES: readonly ["SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse", "Stop"]
-HooksConfigError	export declare class HooksConfigError extends Error
-compileHooks	export declare function compileHooks(prism: PackageAPI<HooksJsonConfig>, options?: HooksJsonOptions): Promise<void>
-compileMatcher	export declare function compileMatcher(matcher: string | undefined): (candidate: string) => boolean
-createContextQueue	export declare function createContextQueue(limitTokens: number, outputDir?: string): ContextQueue
-default	export default
-defaultHookOutputDir	export declare function defaultHookOutputDir(): string
-estimateContextTokens	export declare function estimateContextTokens(text: string): number
-hookCommandHash	export declare function hookCommandHash(handler: CommandHookHandler, options?:
-hookStdinPayload	export declare function hookStdinPayload(input: HookHandlerInput, cwd: string): Record<string, unknown>
-hooksJson	export declare function hooksJson(options?: HooksJsonOptions &
-parseHookDecision	export declare function parseHookDecision(stdout: string, exitCode: number | null, stderr: string): HookOutcome
-parseHooksConfig	export declare function parseHooksConfig(input: string | object): HooksConfig
-runCommandHandler	export declare function runCommandHandler(handler: CommandHookHandler, input: HookHandlerInput, options?: CommandHandlerOptions): Promise<HookOutcome>
-runMcpToolHandler	export declare function runMcpToolHandler(handler: McpToolHookHandler, input: HookHandlerInput, options?: McpHandlerOptions): Promise<HookOutcome>
-substituteTemplates	export declare function substituteTemplates(value: unknown, scope: Readonly<Record<string, unknown>>, path?: string): unknown
-templateScope	export declare function templateScope(input: HookHandlerInput): Record<string, unknown>
-tokenizeCommand	export declare function tokenizeCommand(command: string): string[]
-type CommandHandlerOptions	export { type CommandHandlerOptions, DEFAULT_HANDLER_TIMEOUT_SECONDS, type HookHandlerInput, type HookOutcome, hookStdinPayload, parseHookDecision, runCommandHandler, tokenizeCommand, } from "./handlers/command.js"
-type CommandHookHandler	export { type CommandHookHandler, DEFAULT_ADDITIONAL_CONTEXT_LIMIT, HOOK_EVENT_NAMES, type HookDefinition, type HookEventName, type HookHandler, type HooksConfig, HooksConfigError, type McpToolHookHandler, } from "./schema.js"
-type ContextQueue	export { type ContextQueue, createContextQueue, defaultHookOutputDir, estimateContextTokens, } from "./async-queue.js"
-type HookDefinition	export { type CommandHookHandler, DEFAULT_ADDITIONAL_CONTEXT_LIMIT, HOOK_EVENT_NAMES, type HookDefinition, type HookEventName, type HookHandler, type HooksConfig, HooksConfigError, type McpToolHookHandler, } from "./schema.js"
-type HookEventName	export { type CommandHookHandler, DEFAULT_ADDITIONAL_CONTEXT_LIMIT, HOOK_EVENT_NAMES, type HookDefinition, type HookEventName, type HookHandler, type HooksConfig, HooksConfigError, type McpToolHookHandler, } from "./schema.js"
-type HookHandler	export { type CommandHookHandler, DEFAULT_ADDITIONAL_CONTEXT_LIMIT, HOOK_EVENT_NAMES, type HookDefinition, type HookEventName, type HookHandler, type HooksConfig, HooksConfigError, type McpToolHookHandler, } from "./schema.js"
-type HookHandlerInput	export { type CommandHandlerOptions, DEFAULT_HANDLER_TIMEOUT_SECONDS, type HookHandlerInput, type HookOutcome, hookStdinPayload, parseHookDecision, runCommandHandler, tokenizeCommand, } from "./handlers/command.js"
-type HookOutcome	export { type CommandHandlerOptions, DEFAULT_HANDLER_TIMEOUT_SECONDS, type HookHandlerInput, type HookOutcome, hookStdinPayload, parseHookDecision, runCommandHandler, tokenizeCommand, } from "./handlers/command.js"
-type HooksConfig	export { type CommandHookHandler, DEFAULT_ADDITIONAL_CONTEXT_LIMIT, HOOK_EVENT_NAMES, type HookDefinition, type HookEventName, type HookHandler, type HooksConfig, HooksConfigError, type McpToolHookHandler, } from "./schema.js"
-type HooksJsonConfig	export { type HooksJsonConfig, type HooksJsonOptions, type HooksWarning, hookCommandHash } from "./compile.js"
-type HooksJsonOptions	export { type HooksJsonConfig, type HooksJsonOptions, type HooksWarning, hookCommandHash } from "./compile.js"
-type HooksWarning	export { type HooksJsonConfig, type HooksJsonOptions, type HooksWarning, hookCommandHash } from "./compile.js"
-type McpHandlerOptions	export { type McpHandlerOptions, type McpToolClient, runMcpToolHandler, substituteTemplates, templateScope, } from "./handlers/mcp.js"
-type McpToolClient	export { type McpHandlerOptions, type McpToolClient, runMcpToolHandler, substituteTemplates, templateScope, } from "./handlers/mcp.js"
-type McpToolHookHandler	export { type CommandHookHandler, DEFAULT_ADDITIONAL_CONTEXT_LIMIT, HOOK_EVENT_NAMES, type HookDefinition, type HookEventName, type HookHandler, type HooksConfig, HooksConfigError, type McpToolHookHandler, } from "./schema.js"
+. CommandHandlerOptions	interface CommandHandlerOptions { readonly cwd?: string; readonly env?: Readonly<Record<string, string>>; }
+. CommandHookHandler	interface CommandHookHandler { readonly additionalContextLimit?: number; readonly args?: readonly string[]; readonly async?: boolean; readonly asyncRewake?: boolean; readonly command: string; readonly statusMessage?: string; readonly timeout?: number; readonly type: "command"; }
+. ContextQueue	interface ContextQueue { add(text: string, limitTokens?: number): void; drain(): string; }
+. DEFAULT_ADDITIONAL_CONTEXT_LIMIT	const DEFAULT_ADDITIONAL_CONTEXT_LIMIT = 2500
+. DEFAULT_HANDLER_TIMEOUT_SECONDS	const DEFAULT_HANDLER_TIMEOUT_SECONDS = 600
+. HOOK_EVENT_NAMES	const HOOK_EVENT_NAMES: readonly ["SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse", "Stop"]
+. HookDefinition	interface HookDefinition { readonly hooks: readonly HookHandler[]; readonly matcher?: string; }
+. HookEventName	type HookEventName = (typeof HOOK_EVENT_NAMES)[number]
+. HookHandler	type HookHandler = CommandHookHandler | McpToolHookHandler
+. HookHandlerInput	interface HookHandlerInput { readonly event: string; readonly payload: Readonly<Record<string, unknown>>; readonly runId?: string; readonly sessionId?: string; }
+. HookOutcome	interface HookOutcome { readonly blocked: boolean; readonly context: string; readonly exitCode: number | null; readonly failed: boolean; readonly reason: string; readonly stopped: boolean; readonly timedOut: boolean; readonly updatedInput?: Readonly<Record<string, unknown>>; }
+. HooksConfig	interface HooksConfig { readonly additionalContextLimit: number; readonly events: Readonly<Partial<Record<HookEventName, readonly HookDefinition[]>>>; }
+. HooksConfigError	class HooksConfigError extends Error { constructor(message: string); readonly code = "ERR_PRISM_HOOKS_CONFIG"; }
+. HooksJsonConfig	interface HooksJsonConfig { readonly PostToolUse?: readonly unknown[]; readonly PreToolUse?: readonly unknown[]; readonly SessionStart?: readonly unknown[]; readonly Stop?: readonly unknown[]; readonly UserPromptSubmit?: readonly unknown[]; readonly additionalContextLimit?: number; readonly allowCommands?: "all" | Readonly<Record<string, string>>; readonly env?: Readonly<Record<string, string>>; readonly hooks?: Readonly<Record<string, unknown>>; }
+. HooksJsonOptions	interface HooksJsonOptions { readonly cwd?: string; readonly hashAlgorithm?: string; readonly hookOutputDir?: string; readonly mcpClient?: McpToolClient; readonly onWarning?: (warning: HooksWarning) => void; }
+. HooksWarning	interface HooksWarning { readonly code: "untrusted_handler" | "trust_all" | "handler_failed" | "handler_timed_out" | "matcher_ignored" | "seam_missing"; readonly event: HookEventName; readonly handler: string; readonly message: string; }
+. McpHandlerOptions	interface McpHandlerOptions { readonly mcpClient?: McpToolClient; }
+. McpToolClient	interface McpToolClient { callTool(request: { readonly server: string; readonly tool: string; readonly arguments: Readonly<Record<string, unknown>>; }): Promise<{ readonly content?: unknown; readonly isError?: boolean; }>; }
+. McpToolHookHandler	interface McpToolHookHandler { readonly additionalContextLimit?: number; readonly async?: boolean; readonly input?: Readonly<Record<string, unknown>>; readonly server: string; readonly timeout?: number; readonly tool: string; readonly type: "mcp_tool"; }
+. compileMatcher	function compileMatcher(matcher: string | undefined): (candidate: string) => boolean
+. createContextQueue	function createContextQueue(limitTokens: number, outputDir?: string): ContextQueue
+. default	const definition: import("@arnilo/prism").PackageDefinition<HooksJsonConfig>
+. defaultHookOutputDir	function defaultHookOutputDir(): string
+. estimateContextTokens	function estimateContextTokens(text: string): number
+. hookCommandHash	function hookCommandHash(handler: CommandHookHandler, options?: { readonly algorithm?: string; }): string
+. hookStdinPayload	function hookStdinPayload(input: HookHandlerInput, cwd: string): Record<string, unknown>
+. hooksJson	function hooksJson(options?: HooksJsonOptions & { readonly config?: HooksJsonConfig; }): PackageInstance
+. parseHookDecision	function parseHookDecision(stdout: string, exitCode: number | null, stderr: string): HookOutcome
+. runCommandHandler	function runCommandHandler(handler: CommandHookHandler, input: HookHandlerInput, options?: CommandHandlerOptions): Promise<HookOutcome>
+. runMcpToolHandler	function runMcpToolHandler(handler: McpToolHookHandler, input: HookHandlerInput, options?: McpHandlerOptions): Promise<HookOutcome>
+. substituteTemplates	function substituteTemplates(value: unknown, scope: Readonly<Record<string, unknown>>, path?: string): unknown
+. templateScope	function templateScope(input: HookHandlerInput): Record<string, unknown>
+. tokenizeCommand	function tokenizeCommand(command: string): string[]

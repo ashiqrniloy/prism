@@ -521,6 +521,7 @@ Sources:
 
 ## Compromises Made
 
+- **Reopened 2026-11-08 by plan 215 Task 24 (one line):** the full coding-task cells now supersede the 4-request probes (Chat 0.848 vs pi 0.779, Responses 0.836 vs 0.739, Messages 0.742 vs 0.680, all `pass`; `docs/_evidence/cache-parity-0.13.0.md`). They also showed that a host must pass `compat.route` and `cache` from the catalog (the reference host dropped them, so Responses ran on Chat and Messages sent no marker), and that Prism's usage mappers ignored Command Code's cache-write counts (fixed in plan 182's mappers). Further Action 1 (the 120-request runner) is done by plan 215 Tasks 23–24.
 - **Task 3 gate:** the three plan-184 cells are measured with the 4-request provider probe on both harnesses and show Prism ≈ pi (≤ 0.4-point difference, no lever or prefix gap), but a strict `Prism ≥ pi` median comparison needs plan 184's 120-request runner, which does not exist in this tree. The cells are amended and the probe evidence recorded; the strict gate is handed to the runner rather than claimed.
 - **Task 2 exemplar:** the plan's Chat exemplar (`deepseek/deepseek-v4-flash-fast`) was swapped for `minimax/minimax-m3.1-flash` after the former began answering 404 from its upstream (Task 2 notes, correction 17).
 - **Task 2 tools cache:** Messages tool definitions still carry no `cache_control` marker even though the gateway accepts one, because the acceptance row requires the reference placement; enabling it is a later parity decision.

@@ -213,7 +213,8 @@ prompt, no completion and no key hash.
 - **Keys.** A virtual key reads its own rows on the pinned proxy (measured both on `/spend/logs` and on
   `/spend/logs/v2` once the key's user is an `internal_user`), so no admin key is needed and none is
   accepted here. A key without an owner gets `401` on v2; the error says so. The key is a
-  `CredentialValueSource`, resolved by the caller — pass a ref-resolved value, never a literal in config.
+  `SecretSource` (`() => Promise<string | undefined>` from `@arnilo/prism/provider-kit`), resolved per call —
+  build it with `refSource()` from an `env:`/`keyring:` ref; a literal string does not type-check.
 - **Cache hits.** LiteLLM stores a cache hit under `"{request_id}_cache_hit{epoch}"` to keep the primary key
   unique; `callId` prefers `litellm_call_id` and otherwise strips that suffix, so a cached call still
   reconciles.

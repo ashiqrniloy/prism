@@ -255,6 +255,55 @@ describe("host ui", () => {
     }
   });
 
+  it("unexpected_host_ui_status_is_unavailable", async () => {
+    // docs/compatibility.md: a host answer whose status the kernel does not know, or an `answered` value of the
+    // wrong shape, reaches the package (and the kernel's own approval path) as `unavailable`.
+    const odd: readonly unknown[] = [
+      { status: "deferred" },
+      { status: "answered", value: "yes" },
+      { status: "answered" },
+      null,
+      "answered",
+      { value: true },
+    ];
+    for (const answer of odd) {
+      const answers: unknown[] = [];
+      const { load } = harness();
+      await load(
+        [pkg("asker", ({ host }) => void host.ui.request(REQUEST_OF.confirm as never).then((r: unknown) => answers.push(r)), { capabilities: ["host-ui"] })],
+        { host: { ui: { request: async () => answer as never } } },
+      );
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      assert.deepEqual(answers, [{ status: "unavailable" }], JSON.stringify(answer));
+    }
+    // Known statuses and well-shaped answers still pass; notify/open-url answers carry no value back.
+    const passes: [HostUiRequestKind, unknown, unknown][] = [
+      ["confirm", { status: "answered", value: false }, { status: "answered", value: false }],
+      ["confirm", { status: "dismissed", extra: 1 }, { status: "dismissed" }],
+      ["select", { status: "answered", value: ["a"] }, { status: "answered", value: ["a"] }],
+      ["select", { status: "answered", value: "a" }, { status: "unavailable" }],
+      ["notify", { status: "answered", value: "leak" }, { status: "answered", value: undefined }],
+    ];
+    for (const [kind, answer, expected] of passes) {
+      const answers: unknown[] = [];
+      const { load } = harness();
+      await load(
+        [pkg("asker", ({ host }) => void host.ui.request(REQUEST_OF[kind] as never).then((r: unknown) => answers.push(r)), { capabilities: ["host-ui"] })],
+        { host: { ui: { request: async () => answer as never } } },
+      );
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      assert.deepEqual(answers, [expected], `${kind} ${JSON.stringify(answer)}`);
+    }
+    // The kernel's own tool approval: an unknown status or a truthy non-boolean never allows the call.
+    for (const answer of [{ status: "approved" }, { status: "answered", value: "yes" }]) {
+      const { agent, calls } = await askAgent({ host: { ui: { request: async () => answer as never } } }, "default");
+      const result = await (await agent.session()).run("go");
+      assert.equal(result.status, "suspended", JSON.stringify(answer));
+      assert.equal(calls(), 0, `${JSON.stringify(answer)} must not run the tool`);
+      await agent.dispose();
+    }
+  });
+
   it("package_conformance_runs_setup_and_commands_against_unavailable", async () => {
     const closed = definePackage<any>({
       name: "@acme/closed",

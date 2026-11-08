@@ -17,8 +17,7 @@ import { createHash } from "node:crypto";
 import type { Message, SecretRedactor, SessionEntry } from "@arnilo/prism";
 import type { MemoryConsentInput } from "@arnilo/prism-memory-core";
 import { lexicalTerms } from "@arnilo/prism-memory-core";
-import { resolveDates } from "./dates.js";
-import { normalizeScopedMemoryContent, scanScopedMemoryContent } from "./scoped/trust.js";
+import { normalizeScopedMemoryContent, scanScopedMemoryContent } from "@arnilo/prism-memory-core";
 import type { MemoryFabric, MemoryFabricWriteOptions, MemoryNoteScope } from "./types.js";
 
 /** Link edges one split part carries; a pathological turn is capped instead of writing a quadratic list. */
@@ -325,7 +324,10 @@ function chunkText(text: string, size: number): readonly string[] {
   return chunks.length > 0 ? chunks : [""];
 }
 
-/** Deterministic index expansion; categories bridge common paraphrases without a model. */
+/**
+ * Deterministic keyword derivation; categories bridge common paraphrases without a model. The exchange archive no longer
+ * writes these (plan 210 Task 7); the ontology tier derives them for evidence notes stored without keywords.
+ */
 export function exchangeKeywords(text: string): readonly string[] {
   const terms = lexicalTerms(text);
   const keywords = new Set<string>();
@@ -397,7 +399,6 @@ export function createExchangeArchive(options: ExchangeArchiveOptions): Exchange
       const present = await Promise.all(ids.map((id) => exists(id)));
       if (present.every(Boolean)) return { ...report, skipped: 1 };
     }
-    const dates = resolveDates(contents.join("\n"), input.user.timestamp);
     let written = 0;
     for (const [part, content] of contents.entries()) {
       // A part links to its siblings so recalling any one expands to the rest; a pathological turn
@@ -417,9 +418,7 @@ export function createExchangeArchive(options: ExchangeArchiveOptions): Exchange
           scope,
           session: sessionId || input.user.sessionId,
           tRef: input.user.timestamp,
-          ...(dates.length === 0 ? {} : { dates }),
           sourceEntryIds: [input.user.id, input.assistant.id],
-          keywords: exchangeKeywords(content),
           ...(fixed ? { tags: ["outcome:fixed"] } : {}),
           ...(contents.length < 2 ? {} : { context: `part ${part + 1} of ${contents.length}` }),
           ...(links === undefined ? {} : { links }),

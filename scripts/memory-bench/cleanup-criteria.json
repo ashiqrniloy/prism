@@ -125,6 +125,15 @@
     }
   },
   "ownerNamedShims": [],
+  "ownerNegativeOverrides": [
+    {
+      "feature": "retrieval.lexical",
+      "decided": "2026-11-08",
+      "by": "owner",
+      "reason": "The only evidence is the memory-off arm, which turns off all of memory and so does not isolate lexical retrieval. Its overall effect is +26 to +60 points on every suite and model. The negative rule fired on a single 12-question LoCoMo `adversarial` stratum (small model), where answering without memory is expected to win. Removing the core search is not a candidate.",
+      "scope": "waives only the per-ability CI trigger of the negative rule; a ledger `negative` status or a safety failure still removes the feature"
+    }
+  ],
   "experimentalTier": {
     "documentedIn": "packages/memory/fabric/README.md `## Compatibility` (and the owning package's README for observational and wiki features)",
     "promise": "outside the API-level-1 promise: an experimental feature can change or be removed in a minor version",
@@ -137,19 +146,10 @@
       "workers.evolution",
       "write.consolidate-model-decider",
       "recall.state-wrapper",
-      "lifecycle.episode-merge",
       "decisions.P1",
       "decisions.P2",
       "decisions.P6",
-      "ontology.binding-extractor",
-      "scoped.policy",
-      "write.om-promotion",
-      "retrieval.decay-per-kind",
-      "lifecycle.verification",
-      "lifecycle.duplicate-merge",
-      "delivery.working-memory",
-      "kind.procedure",
-      "kind.episode"
+      "scoped.policy"
     ],
     "test": "With the feature's code removed, the conversational and coding presets' provider requests and tool schemas are byte-identical on the offline replay fixtures (mock provider). A feature that any shipped preset or reference-host default turns on, or whose test is not byte-identical, needs a paid leave-one-out arm under C-1.",
     "conditional": {
@@ -157,6 +157,104 @@
       "rule": "no-credible-path rows that are active by default outside the presets (similar links are always available; widen and narrow run on the default lifecycle values). The byte-identical-preset test runs first; if it is not byte-identical, the removal needs a paid leave-one-out arm under C-1."
     }
   },
+  "transferred": {
+    "decided": "2026-11-08",
+    "by": "owner (memory model)",
+    "rule": "These features are excluded from this plan's verdicts. Each gets the Task 6 verdict `transferred -> plan NNN`, and that plan writes its final disposition. None of them is removed, kept or fixed here, and none is scored as a miss.",
+    "features": [
+      { "feature": "delivery.working-memory", "plan": 216, "reason": "retired by owner decision (memory model, 2026-11-08)" },
+      { "feature": "kind.episode", "plan": 216, "reason": "retired by owner decision (memory model, 2026-11-08)" },
+      { "feature": "lifecycle.episode-merge", "plan": 216, "reason": "retired by owner decision (memory model, 2026-11-08)" },
+      { "feature": "om.commands", "plan": 216, "reason": "carried into the new package; stays safety-proven" },
+      { "feature": "om.worker-limits", "plan": 216, "reason": "carried into the new package; stays safety-proven" },
+      { "feature": "kind.concept", "plan": 216, "reason": "extracted into the wiki; verdict in plan 222" },
+      { "feature": "ontology.tier", "plan": 216, "reason": "extracted into the wiki; verdict in plan 222" },
+      { "feature": "ontology.binding-deterministic", "plan": 216, "reason": "extracted into the wiki; verdict in plan 222" },
+      { "feature": "ontology.binding-extractor", "plan": 216, "reason": "extracted into the wiki; verdict in plan 222" },
+      { "feature": "ontology.curator-pass", "plan": 216, "reason": "extracted into the wiki; verdict in plan 222" },
+      { "feature": "ontology.trigger.co-read", "plan": 216, "reason": "extracted into the wiki; verdict in plan 222" },
+      { "feature": "ontology.trigger.accumulation", "plan": 216, "reason": "extracted into the wiki; verdict in plan 222" },
+      { "feature": "ontology.trigger.repair", "plan": 216, "reason": "extracted into the wiki; verdict in plan 222" },
+      { "feature": "ontology.concept-prior", "plan": 216, "reason": "extracted into the wiki; verdict in plan 222" },
+      { "feature": "ontology.passive-pointer", "plan": 216, "reason": "extracted into the wiki; verdict in plan 222" },
+      { "feature": "ontology.concept-sharing", "plan": 216, "reason": "extracted into the wiki; verdict in plan 222" },
+      { "feature": "ontology.source-ingest", "plan": 216, "reason": "extracted into the wiki; verdict in plan 222" },
+      { "feature": "ontology.coding-o6", "plan": 216, "reason": "extracted into the wiki; verdict in plan 222" },
+      { "feature": "ontology.claim-lint", "plan": 216, "reason": "moves with the wiki; stays safety-proven" },
+      { "feature": "om.observer", "plan": 217, "reason": "short-term memory" },
+      { "feature": "om.task-state", "plan": 217, "reason": "short-term memory" },
+      { "feature": "om.reflector", "plan": 218, "reason": "working memory" },
+      { "feature": "om.compaction", "plan": 218, "reason": "working memory" },
+      { "feature": "om.pinned-context", "plan": 218, "reason": "working memory" },
+      { "feature": "om.dropper-model", "plan": 219, "reason": "Rehearsal and declarative long-term memory" },
+      { "feature": "om.dropper-lowest-relevance", "plan": 219, "reason": "Rehearsal and declarative long-term memory" },
+      { "feature": "om.recall-tool", "plan": 219, "reason": "Rehearsal and declarative long-term memory" },
+      { "feature": "write.om-promotion", "plan": 219, "reason": "Rehearsal and declarative long-term memory" },
+      { "feature": "write.session-consolidation", "plan": 219, "reason": "Rehearsal and declarative long-term memory" },
+      { "feature": "lifecycle.verification", "plan": 219, "reason": "Rehearsal and declarative long-term memory" },
+      { "feature": "write.exchange-steps", "plan": 219, "reason": "Rehearsal and declarative long-term memory" },
+      { "feature": "kind.procedure", "plan": 220, "reason": "non-declarative long-term memory and priming" },
+      { "feature": "retrieval.decay-per-kind", "plan": 220, "reason": "non-declarative long-term memory and priming" },
+      { "feature": "delivery.passive-tail", "plan": 220, "reason": "non-declarative long-term memory and priming" },
+      { "feature": "delivery.standing-rules", "plan": 220, "reason": "non-declarative long-term memory and priming" },
+      { "feature": "delivery.rule-capture", "plan": 220, "reason": "non-declarative long-term memory and priming" },
+      { "feature": "lessons", "plan": 220, "reason": "non-declarative long-term memory and priming" },
+      { "feature": "lifecycle.duplicate-merge", "plan": 221, "reason": "Sleep" },
+      { "feature": "lifecycle.maintain", "plan": 221, "reason": "Sleep" },
+      { "feature": "lifecycle.archive-revival", "plan": 221, "reason": "Sleep" }
+    ]
+  },
+  "closure": {
+    "decided": "2026-11-08",
+    "by": "owner (gate C-1 amendment 7)",
+    "afterWave": 1,
+    "rule": "Waves 2 and 3 of gate C-1 are cancelled and no job of theirs runs. The report reads wave 1 only and reports a cancelled arm as `cancelled` and a transferred row as `transferred`, never as a miss.",
+    "cancelledArms": {
+      "P+O": { "disposition": "transferred", "plan": "222 Task 3" },
+      "trigger-co-read-loo": { "disposition": "transferred", "plan": "222 Task 3" },
+      "trigger-accumulation-loo": { "disposition": "transferred", "plan": "222 Task 3" },
+      "concept-prior-loo": { "disposition": "transferred", "plan": "222 Task 3" },
+      "concept-pointer-loo": { "disposition": "transferred", "plan": "222 Task 3" },
+      "f4-readtime": { "disposition": "transferred", "plan": "219 Task 7" },
+      "OM": { "disposition": "transferred", "plan": "217 Task 6" },
+      "om-reflector-loo": { "disposition": "not-run", "plan": "218-219 replace the workers" },
+      "om-dropper-deterministic": { "disposition": "not-run", "plan": "218-219 replace the workers" },
+      "oracle": { "disposition": "not-run", "plan": null },
+      "tools-only": { "disposition": "transferred", "plan": "219-220" },
+      "rules-add": { "disposition": "transferred", "plan": "219-220" },
+      "W.P": { "disposition": "transferred", "plan": "219-220" },
+      "W.P+W": { "disposition": "transferred", "plan": "219-220" },
+      "W.steps-loo": { "disposition": "transferred", "plan": "219-220" },
+      "W.rules-loo": { "disposition": "transferred", "plan": "219-220" },
+      "W.lessons-loo": { "disposition": "transferred", "plan": "219-220" },
+      "maintain": { "disposition": "transferred", "plan": "221" },
+      "archive-exchange-exempt": { "disposition": "transferred", "plan": "221" },
+      "gather": { "disposition": "unmeasured", "plan": null },
+      "expansion": { "disposition": "unmeasured", "plan": null },
+      "card-excerpt": { "disposition": "unmeasured", "plan": null },
+      "precision-filter": { "disposition": "unmeasured", "plan": null },
+      "strength-0.15": { "disposition": "unmeasured", "plan": null },
+      "aggregation-loo": { "disposition": "unmeasured", "plan": null },
+      "decisions-p3": { "disposition": "unmeasured", "plan": null },
+      "decisions-p5": { "disposition": "unmeasured", "plan": null },
+      "W.decisions-p4": { "disposition": "unmeasured", "plan": null }
+    }
+  },
+  "amendments": [
+    {
+      "date": "2026-11-08",
+      "by": "owner (memory model; gate C-1 amendment 7)",
+      "text": "Added `transferred` and `closure`, and removed the transferred rows from `inertRemoval`. No rule, threshold or verdict precedence changed for any remaining feature.",
+      "previousHash": "eea138eb71d58408d09c331e55da419ad8caf8bdcc0a1e44536dda0cc55a7a51",
+      "previousInertRemoval": ["retrieval.hybrid", "workers.linker", "workers.evolution", "write.consolidate-model-decider", "recall.state-wrapper", "lifecycle.episode-merge", "decisions.P1", "decisions.P2", "decisions.P6", "ontology.binding-extractor", "scoped.policy", "write.om-promotion", "retrieval.decay-per-kind", "lifecycle.verification", "lifecycle.duplicate-merge", "delivery.working-memory", "kind.procedure", "kind.episode"]
+    },
+    {
+      "date": "2026-11-08",
+      "by": "owner (Task 6 review of the wave-1 report)",
+      "text": "Added `ownerNegativeOverrides` (retrieval.lexical) after the wave-1 report was read, as the negative rule requires: keeping a negative feature is a new owner decision that changes this file. No other rule, threshold or verdict precedence changed.",
+      "previousHash": "de2e1c1a8cf28202ae8aeabef01c640cecb7343b74359320ec19d19ef4d076f3"
+    }
+  ],
   "preRegistered": {
     "f4DiagnosticLeg": {
       "deferredId": "202-task17",

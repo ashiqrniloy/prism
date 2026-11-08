@@ -1,13 +1,12 @@
 import type {
   JsonObject,
   Message,
-  ModelProvider,
   ProviderEvent,
   ProviderRequest,
   Usage,
 } from "../contracts.js";
-import type { CredentialValueSource } from "../credentials/index.js";
-import { createRoutedProvider } from "./routed-provider.js";
+import type { SecretSource } from "./provider-package.js";
+import { createRoutedProvider, type RoutedProvider } from "./routed-provider.js";
 import {
   type OpenAIChatCodecOptions,
   type OpenAIChatEventsOptions,
@@ -21,7 +20,7 @@ export { openAIChatEvents, openAIChatBody, buildOpenAIChatBody, type OpenAIChatE
 export interface OpenAICompatibleProviderOptions {
   readonly id?: string;
   readonly baseUrl: string;
-  readonly apiKey?: CredentialValueSource;
+  readonly apiKey?: SecretSource;
   /** Resolves the key per request, from the request's `ModelSpec`. Wins over `apiKey`. */
   readonly resolveApiKey?: (request: ProviderRequest) => string | undefined | Promise<string | undefined>;
   readonly fetch?: typeof fetch;
@@ -59,7 +58,7 @@ export type OpenAIChatBodyOptions = OpenAIChatCodecOptions;
 /**
  * Creates an OpenAI-compatible provider as a single-route instance of `createRoutedProvider`.
  */
-export function createOpenAICompatibleProvider(options: OpenAICompatibleProviderOptions): ModelProvider {
+export function createOpenAICompatibleProvider(options: OpenAICompatibleProviderOptions): RoutedProvider {
   const providerId = options.id ?? "openai-compatible";
   const auth = options.authStyle ?? "bearer";
 

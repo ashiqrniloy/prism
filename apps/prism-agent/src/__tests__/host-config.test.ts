@@ -100,3 +100,34 @@ test("research_worker_registers_web_fetch_with_search_backend", async () => {
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("host_config_keeps_model_compat_and_cache", () => {
+  // Command Code picks its wire from compat.route and places cache_control only when cache.kind says so; a host
+  // that dropped them ran those models on the default wire with no prompt cache (plan 215 Task 24 finding).
+  const root = mkdtempSync(join(tmpdir(), "prism-agent-config-"));
+  try {
+    const path = join(root, "prism-agent.json");
+    const model = {
+      provider: "commandcode",
+      model: "claude-haiku-5-5",
+      limits: { contextWindow: 64_000, maxOutputTokens: 0 },
+      compat: { route: "anthropic" },
+      cache: { kind: "cache_control", longRetention: false, maxBreakpoints: 4 },
+      capabilities: { reasoning: true },
+    };
+    writeFileSync(
+      path,
+      JSON.stringify({
+        models: { orchestrator: model, coding: model, research: model },
+        storePath: join(root, "sessions.db"),
+        workspace: join(root, "workspace"),
+        approval: "ask",
+        web: { backend: "brave", apiKey: `env:${KEY_ENV}` },
+      }),
+    );
+    const config = loadHostConfig(path);
+    assert.deepEqual(config.models.coding, model);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

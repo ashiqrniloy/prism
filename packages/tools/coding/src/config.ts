@@ -218,7 +218,7 @@ export const toolsCodingConfigSchema: JsonSchema = {
     forge: {
       type: "object",
       properties: {
-        token: { type: "string", minLength: 1, maxLength: 4096, pattern: "^(env|keyring):" },
+        token: { type: "string", minLength: 1, maxLength: 4096, "x-prism-secret": true, description: "An `env:` or `keyring:` ref the credentials slot resolves. A literal token is rejected." },
       },
     },
     sandbox: { type: "string", enum: ["none", "native", "docker", "e2b"], default: "none" },

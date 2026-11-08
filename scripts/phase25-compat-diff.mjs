@@ -5,7 +5,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { BASELINE_DIR, baselineName, diffSurface, extractDeclaredSurface, parseSurface } from "./release-gates.mjs";
+import { extractPackageSurface } from "./compat-shape.mjs";
+import { BASELINE_DIR, baselineName, diffSurface, parseSurface } from "./release-gates.mjs";
 
 const root = process.cwd();
 const pkgPath = process.argv[2] ?? ".";
@@ -16,7 +17,8 @@ if (!existsSync(distDir)) {
   console.error(`no dist/ at ${pkgPath} — run build first`);
   process.exit(2);
 }
-const surface = extractDeclaredSurface(distDir);
+// Plan 215 Task 28: baselines are keyed by entry point; `dist/` mirrors the package root via `types`/`exports`.
+const { surface } = extractPackageSurface(join(root, pkgPath), manifest);
 const baselinePath = join(root, BASELINE_DIR, baselineName(manifest.name));
 if (!existsSync(baselinePath)) {
   console.error(`no baseline at ${baselinePath}`);

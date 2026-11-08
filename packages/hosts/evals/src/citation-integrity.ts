@@ -4,7 +4,7 @@ import {
   type ArtifactRevision,
   citationBindingDigest,
   HARD_CITATION_EXCERPT_BYTES,
-} from "@arnilo/prism";
+} from "@arnilo/prism/artifacts";
 
 export type CitationIntegrityReason =
   | "ok"

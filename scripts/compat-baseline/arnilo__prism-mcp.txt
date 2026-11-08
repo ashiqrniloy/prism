@@ -1,140 +1,120 @@
-AttachMcpToolBridgeOptions	export type { AttachMcpToolBridgeOptions, ConnectedAppBinding, ConnectedAppSelect, ConnectedAppSession, ConnectMcpCapabilitiesOptions, ConnectMcpToolsOptions, CreateConnectedAppSessionOptions, McpAppResource, McpAppsBridge, McpAppTool, McpCapabilityBridge, McpProtectedResource, McpProtocolNegotiation, McpRoot, McpStdioTransport, McpStreamableHttpTransport, McpToolBridge, McpToolEffectPolicy, McpToolEffectPolicyInput, McpTransportConfig, McpUiResourceMetadata, PrismMcpElicitationRequest, PrismMcp
-ConnectMcpCapabilitiesOptions	export type { AttachMcpToolBridgeOptions, ConnectedAppBinding, ConnectedAppSelect, ConnectedAppSession, ConnectMcpCapabilitiesOptions, ConnectMcpToolsOptions, CreateConnectedAppSessionOptions, McpAppResource, McpAppsBridge, McpAppTool, McpCapabilityBridge, McpProtectedResource, McpProtocolNegotiation, McpRoot, McpStdioTransport, McpStreamableHttpTransport, McpToolBridge, McpToolEffectPolicy, McpToolEffectPolicyInput, McpTransportConfig, McpUiResourceMetadata, PrismMcpElicitationRequest, PrismMcp
-ConnectMcpToolsOptions	export type { AttachMcpToolBridgeOptions, ConnectedAppBinding, ConnectedAppSelect, ConnectedAppSession, ConnectMcpCapabilitiesOptions, ConnectMcpToolsOptions, CreateConnectedAppSessionOptions, McpAppResource, McpAppsBridge, McpAppTool, McpCapabilityBridge, McpProtectedResource, McpProtocolNegotiation, McpRoot, McpStdioTransport, McpStreamableHttpTransport, McpToolBridge, McpToolEffectPolicy, McpToolEffectPolicyInput, McpTransportConfig, McpUiResourceMetadata, PrismMcpElicitationRequest, PrismMcp
-ConnectedAppBinding	export type { AttachMcpToolBridgeOptions, ConnectedAppBinding, ConnectedAppSelect, ConnectedAppSession, ConnectMcpCapabilitiesOptions, ConnectMcpToolsOptions, CreateConnectedAppSessionOptions, McpAppResource, McpAppsBridge, McpAppTool, McpCapabilityBridge, McpProtectedResource, McpProtocolNegotiation, McpRoot, McpStdioTransport, McpStreamableHttpTransport, McpToolBridge, McpToolEffectPolicy, McpToolEffectPolicyInput, McpTransportConfig, McpUiResourceMetadata, PrismMcpElicitationRequest, PrismMcp
-ConnectedAppSelect	export type { AttachMcpToolBridgeOptions, ConnectedAppBinding, ConnectedAppSelect, ConnectedAppSession, ConnectMcpCapabilitiesOptions, ConnectMcpToolsOptions, CreateConnectedAppSessionOptions, McpAppResource, McpAppsBridge, McpAppTool, McpCapabilityBridge, McpProtectedResource, McpProtocolNegotiation, McpRoot, McpStdioTransport, McpStreamableHttpTransport, McpToolBridge, McpToolEffectPolicy, McpToolEffectPolicyInput, McpTransportConfig, McpUiResourceMetadata, PrismMcpElicitationRequest, PrismMcp
-ConnectedAppSession	export type { AttachMcpToolBridgeOptions, ConnectedAppBinding, ConnectedAppSelect, ConnectedAppSession, ConnectMcpCapabilitiesOptions, ConnectMcpToolsOptions, CreateConnectedAppSessionOptions, McpAppResource, McpAppsBridge, McpAppTool, McpCapabilityBridge, McpProtectedResource, McpProtocolNegotiation, McpRoot, McpStdioTransport, McpStreamableHttpTransport, McpToolBridge, McpToolEffectPolicy, McpToolEffectPolicyInput, McpTransportConfig, McpUiResourceMetadata, PrismMcpElicitationRequest, PrismMcp
-CreateConnectedAppSessionOptions	export type { AttachMcpToolBridgeOptions, ConnectedAppBinding, ConnectedAppSelect, ConnectedAppSession, ConnectMcpCapabilitiesOptions, ConnectMcpToolsOptions, CreateConnectedAppSessionOptions, McpAppResource, McpAppsBridge, McpAppTool, McpCapabilityBridge, McpProtectedResource, McpProtocolNegotiation, McpRoot, McpStdioTransport, McpStreamableHttpTransport, McpToolBridge, McpToolEffectPolicy, McpToolEffectPolicyInput, McpTransportConfig, McpUiResourceMetadata, PrismMcpElicitationRequest, PrismMcp
-DEFAULT_CALL_TIMEOUT_MS	export declare const DEFAULT_CALL_TIMEOUT_MS = 60000
-DEFAULT_LIST_CACHE_TTL_MS	export declare const DEFAULT_LIST_CACHE_TTL_MS = 30000
-DEFAULT_MAX_CAPABILITY_BYTES	export declare const DEFAULT_MAX_CAPABILITY_BYTES: number
-DEFAULT_MAX_CAPABILITY_ITEMS	export declare const DEFAULT_MAX_CAPABILITY_ITEMS = 500
-DEFAULT_MAX_CAPABILITY_PAGES	export declare const DEFAULT_MAX_CAPABILITY_PAGES = 20
-DEFAULT_MAX_CURSOR_BYTES	export declare const DEFAULT_MAX_CURSOR_BYTES: number
-DEFAULT_MAX_HTTP_RESPONSE_BYTES	export declare const DEFAULT_MAX_HTTP_RESPONSE_BYTES: number
-DEFAULT_MAX_JSON_DEPTH	export declare const DEFAULT_MAX_JSON_DEPTH = 64
-DEFAULT_MAX_JSON_PROPERTIES	export declare const DEFAULT_MAX_JSON_PROPERTIES = 10000
-DEFAULT_MAX_LIST_PAGES	export declare const DEFAULT_MAX_LIST_PAGES = 20
-DEFAULT_MAX_MRTR_ROUNDS	export declare const DEFAULT_MAX_MRTR_ROUNDS = 10
-DEFAULT_MAX_RESULT_BYTES	export declare const DEFAULT_MAX_RESULT_BYTES = 10000000
-DEFAULT_MAX_SESSIONS	export declare const DEFAULT_MAX_SESSIONS = 32
-DEFAULT_MAX_TOOLS	export declare const DEFAULT_MAX_TOOLS = 500
-DEFAULT_MAX_TOOL_DESCRIPTION_BYTES	export declare const DEFAULT_MAX_TOOL_DESCRIPTION_BYTES: number
-DEFAULT_MAX_TOOL_NAME_BYTES	export declare const DEFAULT_MAX_TOOL_NAME_BYTES = 256
-DEFAULT_MAX_TOOL_SCHEMA_BYTES	export declare const DEFAULT_MAX_TOOL_SCHEMA_BYTES: number
-DEFAULT_MAX_TOTAL_TOOL_SCHEMA_BYTES	export declare const DEFAULT_MAX_TOTAL_TOOL_SCHEMA_BYTES: number
-HARD_CALL_TIMEOUT_MS	export declare const HARD_CALL_TIMEOUT_MS: number
-HARD_LIST_CACHE_TTL_MS	export declare const HARD_LIST_CACHE_TTL_MS: number
-HARD_MAX_CAPABILITY_BYTES	export declare const HARD_MAX_CAPABILITY_BYTES: number
-HARD_MAX_CAPABILITY_ITEMS	export declare const HARD_MAX_CAPABILITY_ITEMS = 5000
-HARD_MAX_CAPABILITY_PAGES	export declare const HARD_MAX_CAPABILITY_PAGES = 100
-HARD_MAX_CURSOR_BYTES	export declare const HARD_MAX_CURSOR_BYTES: number
-HARD_MAX_HTTP_RESPONSE_BYTES	export declare const HARD_MAX_HTTP_RESPONSE_BYTES: number
-HARD_MAX_JSON_DEPTH	export declare const HARD_MAX_JSON_DEPTH = 128
-HARD_MAX_JSON_PROPERTIES	export declare const HARD_MAX_JSON_PROPERTIES = 100000
-HARD_MAX_LIST_PAGES	export declare const HARD_MAX_LIST_PAGES = 100
-HARD_MAX_MRTR_ROUNDS	export declare const HARD_MAX_MRTR_ROUNDS = 10
-HARD_MAX_RESULT_BYTES	export declare const HARD_MAX_RESULT_BYTES: number
-HARD_MAX_SESSIONS	export declare const HARD_MAX_SESSIONS = 512
-HARD_MAX_TOOLS	export declare const HARD_MAX_TOOLS = 5000
-HARD_MAX_TOOL_DESCRIPTION_BYTES	export declare const HARD_MAX_TOOL_DESCRIPTION_BYTES: number
-HARD_MAX_TOOL_NAME_BYTES	export declare const HARD_MAX_TOOL_NAME_BYTES = 1024
-HARD_MAX_TOOL_SCHEMA_BYTES	export declare const HARD_MAX_TOOL_SCHEMA_BYTES: number
-HARD_MAX_TOTAL_TOOL_SCHEMA_BYTES	export declare const HARD_MAX_TOTAL_TOOL_SCHEMA_BYTES: number
-JsonBounds	export type { JsonBounds, JsonMeasurement } from "./json-bounds.js"
-JsonMeasurement	export type { JsonBounds, JsonMeasurement } from "./json-bounds.js"
-MAX_MCP_ELICITATION_MESSAGE_BYTES	export declare const MAX_MCP_ELICITATION_MESSAGE_BYTES = 2048
-MAX_MCP_ELICITATION_SCHEMA_BYTES	export declare const MAX_MCP_ELICITATION_SCHEMA_BYTES: number
-McpAppResource	export type { AttachMcpToolBridgeOptions, ConnectedAppBinding, ConnectedAppSelect, ConnectedAppSession, ConnectMcpCapabilitiesOptions, ConnectMcpToolsOptions, CreateConnectedAppSessionOptions, McpAppResource, McpAppsBridge, McpAppTool, McpCapabilityBridge, McpProtectedResource, McpProtocolNegotiation, McpRoot, McpStdioTransport, McpStreamableHttpTransport, McpToolBridge, McpToolEffectPolicy, McpToolEffectPolicyInput, McpTransportConfig, McpUiResourceMetadata, PrismMcpElicitationRequest, PrismMcp
-McpAppTool	export type { AttachMcpToolBridgeOptions, ConnectedAppBinding, ConnectedAppSelect, ConnectedAppSession, ConnectMcpCapabilitiesOptions, ConnectMcpToolsOptions, CreateConnectedAppSessionOptions, McpAppResource, McpAppsBridge, McpAppTool, McpCapabilityBridge, McpProtectedResource, McpProtocolNegotiation, McpRoot, McpStdioTransport, McpStreamableHttpTransport, McpToolBridge, McpToolEffectPolicy, McpToolEffectPolicyInput, McpTransportConfig, McpUiResourceMetadata, PrismMcpElicitationRequest, PrismMcp
-McpAppsBridge	export type { AttachMcpToolBridgeOptions, ConnectedAppBinding, ConnectedAppSelect, ConnectedAppSession, ConnectMcpCapabilitiesOptions, ConnectMcpToolsOptions, CreateConnectedAppSessionOptions, McpAppResource, McpAppsBridge, McpAppTool, McpCapabilityBridge, McpProtectedResource, McpProtocolNegotiation, McpRoot, McpStdioTransport, McpStreamableHttpTransport, McpToolBridge, McpToolEffectPolicy, McpToolEffectPolicyInput, McpTransportConfig, McpUiResourceMetadata, PrismMcpElicitationRequest, PrismMcp
-McpBridgeClosedError	export declare class McpBridgeClosedError extends McpBridgeError
-McpBridgeError	export declare class McpBridgeError extends Error
-McpCapabilityBridge	export type { AttachMcpToolBridgeOptions, ConnectedAppBinding, ConnectedAppSelect, ConnectedAppSession, ConnectMcpCapabilitiesOptions, ConnectMcpToolsOptions, CreateConnectedAppSessionOptions, McpAppResource, McpAppsBridge, McpAppTool, McpCapabilityBridge, McpProtectedResource, McpProtocolNegotiation, McpRoot, McpStdioTransport, McpStreamableHttpTransport, McpToolBridge, McpToolEffectPolicy, McpToolEffectPolicyInput, McpTransportConfig, McpUiResourceMetadata, PrismMcpElicitationRequest, PrismMcp
-McpClientAuth	export type { McpClientAuth, McpClientAuthOptions, McpClientAuthState, McpOAuthLimitsInput, McpOAuthRegistrationStrategy } from "./auth.js"
-McpClientAuthOptions	export type { McpClientAuth, McpClientAuthOptions, McpClientAuthState, McpOAuthLimitsInput, McpOAuthRegistrationStrategy } from "./auth.js"
-McpClientAuthState	export type { McpClientAuth, McpClientAuthOptions, McpClientAuthState, McpOAuthLimitsInput, McpOAuthRegistrationStrategy } from "./auth.js"
-McpClientLimitsInput	export type { McpClientLimitsInput, ResolvedMcpClientLimits } from "./limits.js"
-McpElicitationDecisionOptions	export type { McpElicitationDecisionOptions } from "./elicitation.js"
-McpEnvValue	export type { McpEnvValue, McpHeaderSecretRef, McpHttpServerConfig, McpPackageConfig, McpRawServerConfig, McpServerConfig, McpStdioServerConfig, } from "./config.js"
-McpHeaderSecretRef	export type { McpEnvValue, McpHeaderSecretRef, McpHttpServerConfig, McpPackageConfig, McpRawServerConfig, McpServerConfig, McpStdioServerConfig, } from "./config.js"
-McpHttpServerConfig	export type { McpEnvValue, McpHeaderSecretRef, McpHttpServerConfig, McpPackageConfig, McpRawServerConfig, McpServerConfig, McpStdioServerConfig, } from "./config.js"
-McpOAuthError	export declare class McpOAuthError extends Error
-McpOAuthLimitsInput	export type { McpClientAuth, McpClientAuthOptions, McpClientAuthState, McpOAuthLimitsInput, McpOAuthRegistrationStrategy } from "./auth.js"
-McpOAuthRegistrationStrategy	export type { McpClientAuth, McpClientAuthOptions, McpClientAuthState, McpOAuthLimitsInput, McpOAuthRegistrationStrategy } from "./auth.js"
-McpPackageConfig	export type { McpEnvValue, McpHeaderSecretRef, McpHttpServerConfig, McpPackageConfig, McpRawServerConfig, McpServerConfig, McpStdioServerConfig, } from "./config.js"
-McpProtectedResource	export type { AttachMcpToolBridgeOptions, ConnectedAppBinding, ConnectedAppSelect, ConnectedAppSession, ConnectMcpCapabilitiesOptions, ConnectMcpToolsOptions, CreateConnectedAppSessionOptions, McpAppResource, McpAppsBridge, McpAppTool, McpCapabilityBridge, McpProtectedResource, McpProtocolNegotiation, McpRoot, McpStdioTransport, McpStreamableHttpTransport, McpToolBridge, McpToolEffectPolicy, McpToolEffectPolicyInput, McpTransportConfig, McpUiResourceMetadata, PrismMcpElicitationRequest, PrismMcp
-McpProtocolNegotiation	export type { AttachMcpToolBridgeOptions, ConnectedAppBinding, ConnectedAppSelect, ConnectedAppSession, ConnectMcpCapabilitiesOptions, ConnectMcpToolsOptions, CreateConnectedAppSessionOptions, McpAppResource, McpAppsBridge, McpAppTool, McpCapabilityBridge, McpProtectedResource, McpProtocolNegotiation, McpRoot, McpStdioTransport, McpStreamableHttpTransport, McpToolBridge, McpToolEffectPolicy, McpToolEffectPolicyInput, McpTransportConfig, McpUiResourceMetadata, PrismMcpElicitationRequest, PrismMcp
-McpRawServerConfig	export type { McpEnvValue, McpHeaderSecretRef, McpHttpServerConfig, McpPackageConfig, McpRawServerConfig, McpServerConfig, McpStdioServerConfig, } from "./config.js"
-McpRoot	export type { AttachMcpToolBridgeOptions, ConnectedAppBinding, ConnectedAppSelect, ConnectedAppSession, ConnectMcpCapabilitiesOptions, ConnectMcpToolsOptions, CreateConnectedAppSessionOptions, McpAppResource, McpAppsBridge, McpAppTool, McpCapabilityBridge, McpProtectedResource, McpProtocolNegotiation, McpRoot, McpStdioTransport, McpStreamableHttpTransport, McpToolBridge, McpToolEffectPolicy, McpToolEffectPolicyInput, McpTransportConfig, McpUiResourceMetadata, PrismMcpElicitationRequest, PrismMcp
-McpServerConfig	export type { McpEnvValue, McpHeaderSecretRef, McpHttpServerConfig, McpPackageConfig, McpRawServerConfig, McpServerConfig, McpStdioServerConfig, } from "./config.js"
-McpServerState	export type { McpServerState, McpServerStatus } from "./status.js"
-McpServerStatus	export type { McpServerState, McpServerStatus } from "./status.js"
-McpStdioServerConfig	export type { McpEnvValue, McpHeaderSecretRef, McpHttpServerConfig, McpPackageConfig, McpRawServerConfig, McpServerConfig, McpStdioServerConfig, } from "./config.js"
-McpStdioTransport	export type { AttachMcpToolBridgeOptions, ConnectedAppBinding, ConnectedAppSelect, ConnectedAppSession, ConnectMcpCapabilitiesOptions, ConnectMcpToolsOptions, CreateConnectedAppSessionOptions, McpAppResource, McpAppsBridge, McpAppTool, McpCapabilityBridge, McpProtectedResource, McpProtocolNegotiation, McpRoot, McpStdioTransport, McpStreamableHttpTransport, McpToolBridge, McpToolEffectPolicy, McpToolEffectPolicyInput, McpTransportConfig, McpUiResourceMetadata, PrismMcpElicitationRequest, PrismMcp
-McpStreamableHttpTransport	export type { AttachMcpToolBridgeOptions, ConnectedAppBinding, ConnectedAppSelect, ConnectedAppSession, ConnectMcpCapabilitiesOptions, ConnectMcpToolsOptions, CreateConnectedAppSessionOptions, McpAppResource, McpAppsBridge, McpAppTool, McpCapabilityBridge, McpProtectedResource, McpProtocolNegotiation, McpRoot, McpStdioTransport, McpStreamableHttpTransport, McpToolBridge, McpToolEffectPolicy, McpToolEffectPolicyInput, McpTransportConfig, McpUiResourceMetadata, PrismMcpElicitationRequest, PrismMcp
-McpToolBridge	export type { AttachMcpToolBridgeOptions, ConnectedAppBinding, ConnectedAppSelect, ConnectedAppSession, ConnectMcpCapabilitiesOptions, ConnectMcpToolsOptions, CreateConnectedAppSessionOptions, McpAppResource, McpAppsBridge, McpAppTool, McpCapabilityBridge, McpProtectedResource, McpProtocolNegotiation, McpRoot, McpStdioTransport, McpStreamableHttpTransport, McpToolBridge, McpToolEffectPolicy, McpToolEffectPolicyInput, McpTransportConfig, McpUiResourceMetadata, PrismMcpElicitationRequest, PrismMcp
-McpToolEffectPolicy	export type { AttachMcpToolBridgeOptions, ConnectedAppBinding, ConnectedAppSelect, ConnectedAppSession, ConnectMcpCapabilitiesOptions, ConnectMcpToolsOptions, CreateConnectedAppSessionOptions, McpAppResource, McpAppsBridge, McpAppTool, McpCapabilityBridge, McpProtectedResource, McpProtocolNegotiation, McpRoot, McpStdioTransport, McpStreamableHttpTransport, McpToolBridge, McpToolEffectPolicy, McpToolEffectPolicyInput, McpTransportConfig, McpUiResourceMetadata, PrismMcpElicitationRequest, PrismMcp
-McpToolEffectPolicyInput	export type { AttachMcpToolBridgeOptions, ConnectedAppBinding, ConnectedAppSelect, ConnectedAppSession, ConnectMcpCapabilitiesOptions, ConnectMcpToolsOptions, CreateConnectedAppSessionOptions, McpAppResource, McpAppsBridge, McpAppTool, McpCapabilityBridge, McpProtectedResource, McpProtocolNegotiation, McpRoot, McpStdioTransport, McpStreamableHttpTransport, McpToolBridge, McpToolEffectPolicy, McpToolEffectPolicyInput, McpTransportConfig, McpUiResourceMetadata, PrismMcpElicitationRequest, PrismMcp
-McpToolNameCollisionError	export declare class McpToolNameCollisionError extends McpBridgeError
-McpTransportConfig	export type { AttachMcpToolBridgeOptions, ConnectedAppBinding, ConnectedAppSelect, ConnectedAppSession, ConnectMcpCapabilitiesOptions, ConnectMcpToolsOptions, CreateConnectedAppSessionOptions, McpAppResource, McpAppsBridge, McpAppTool, McpCapabilityBridge, McpProtectedResource, McpProtocolNegotiation, McpRoot, McpStdioTransport, McpStreamableHttpTransport, McpToolBridge, McpToolEffectPolicy, McpToolEffectPolicyInput, McpTransportConfig, McpUiResourceMetadata, PrismMcpElicitationRequest, PrismMcp
-McpUiResourceMetadata	export type { AttachMcpToolBridgeOptions, ConnectedAppBinding, ConnectedAppSelect, ConnectedAppSession, ConnectMcpCapabilitiesOptions, ConnectMcpToolsOptions, CreateConnectedAppSessionOptions, McpAppResource, McpAppsBridge, McpAppTool, McpCapabilityBridge, McpProtectedResource, McpProtocolNegotiation, McpRoot, McpStdioTransport, McpStreamableHttpTransport, McpToolBridge, McpToolEffectPolicy, McpToolEffectPolicyInput, McpTransportConfig, McpUiResourceMetadata, PrismMcpElicitationRequest, PrismMcp
-McpUnsupportedCapabilityError	export declare class McpUnsupportedCapabilityError extends Error
-NormalizedProtectedResource	export type { NormalizedProtectedResource } from "./oauth-metadata.js"
-PrismMcpElicitationRequest	export type { AttachMcpToolBridgeOptions, ConnectedAppBinding, ConnectedAppSelect, ConnectedAppSession, ConnectMcpCapabilitiesOptions, ConnectMcpToolsOptions, CreateConnectedAppSessionOptions, McpAppResource, McpAppsBridge, McpAppTool, McpCapabilityBridge, McpProtectedResource, McpProtocolNegotiation, McpRoot, McpStdioTransport, McpStreamableHttpTransport, McpToolBridge, McpToolEffectPolicy, McpToolEffectPolicyInput, McpTransportConfig, McpUiResourceMetadata, PrismMcpElicitationRequest, PrismMcp
-PrismMcpElicitationResult	export type { AttachMcpToolBridgeOptions, ConnectedAppBinding, ConnectedAppSelect, ConnectedAppSession, ConnectMcpCapabilitiesOptions, ConnectMcpToolsOptions, CreateConnectedAppSessionOptions, McpAppResource, McpAppsBridge, McpAppTool, McpCapabilityBridge, McpProtectedResource, McpProtocolNegotiation, McpRoot, McpStdioTransport, McpStreamableHttpTransport, McpToolBridge, McpToolEffectPolicy, McpToolEffectPolicyInput, McpTransportConfig, McpUiResourceMetadata, PrismMcpElicitationRequest, PrismMcp
-PrismMcpSamplingRequest	export type { AttachMcpToolBridgeOptions, ConnectedAppBinding, ConnectedAppSelect, ConnectedAppSession, ConnectMcpCapabilitiesOptions, ConnectMcpToolsOptions, CreateConnectedAppSessionOptions, McpAppResource, McpAppsBridge, McpAppTool, McpCapabilityBridge, McpProtectedResource, McpProtocolNegotiation, McpRoot, McpStdioTransport, McpStreamableHttpTransport, McpToolBridge, McpToolEffectPolicy, McpToolEffectPolicyInput, McpTransportConfig, McpUiResourceMetadata, PrismMcpElicitationRequest, PrismMcp
-ResolvedMcpClientLimits	export type { McpClientLimitsInput, ResolvedMcpClientLimits } from "./limits.js"
-WELL_KNOWN_OAUTH_PROTECTED_RESOURCE	export declare const WELL_KNOWN_OAUTH_PROTECTED_RESOURCE = "/.well-known/oauth-protected-resource"
-assertMcpContentWithinLimit	export declare function assertMcpContentWithinLimit(content: readonly McpContentBlock[] | undefined, maxResultBytes: number): void
-assertValidServerId	export declare function assertValidServerId(serverId: string): void
-attachMcpCapabilities	export declare function attachMcpCapabilities(client: Client, transport: Transport, options: AttachMcpToolBridgeOptions & Pick<ConnectMcpCapabilitiesOptions, "maxCapabilityBytes">): Promise<McpCapabilityBridge>
-attachMcpToolBridge	export declare function attachMcpToolBridge(client: Client, transport: Transport, options: AttachMcpToolBridgeOptions): Promise<McpToolBridge>
-boundResponse	export { boundResponse, defaultResolver, isLoopbackAddress, normalizeHostname, raceAbort, requestPinned, resolvePinnedAddress, } from "@arnilo/prism"
-boundedMcpErrorMessage	export declare function boundedMcpErrorMessage(error: unknown, maxBytes: number): string
-checkServerTrust	export declare function checkServerTrust(server: McpServerConfig, prism: PackageAPI<McpPackageConfig>, trustedFingerprints: ReadonlySet<string>, knownTrustedServers: Set<string>): Promise<boolean>
-connectMcpCapabilities	export declare function connectMcpCapabilities(options: ConnectMcpCapabilitiesOptions): Promise<McpCapabilityBridge>
-connectMcpTools	export declare function connectMcpTools(options: ConnectMcpToolsOptions): Promise<McpToolBridge>
-createConnectedAppSession	export declare function createConnectedAppSession(options: CreateConnectedAppSessionOptions): ConnectedAppSession
-createMcpCapabilityClient	export declare function createMcpCapabilityClient(options: ConnectMcpCapabilitiesOptions): Client
-createMcpClientAuth	export declare function createMcpClientAuth(options: McpClientAuthOptions, context:
-createMcpCloseCommand	export declare function createMcpCloseCommand(entries: InternalServerEntry[], emitStatus: (data: JsonObject) => void): PackageCommand
-createMcpOAuthFetch	export declare function createMcpOAuthFetch(config: McpStreamableHttpTransport, limits?: ResolvedMcpOAuthLimits): typeof globalThis.fetch
-createMcpOAuthTransport	export declare function createMcpOAuthTransport(config: McpStreamableHttpTransport):
-createMcpReconnectCommand	export declare function createMcpReconnectCommand(entries: InternalServerEntry[], reconnectServer: (entry: InternalServerEntry) => Promise<void>, emitStatus: (data: JsonObject) => void): PackageCommand
-createMcpStatusCommand	export declare function createMcpStatusCommand(entries: InternalServerEntry[], emitStatus: (data: JsonObject) => void): PackageCommand
-createMcpTransport	export declare function createMcpTransport(config: McpTransportConfig): Transport
-createSecureMcpFetch	export declare function createSecureMcpFetch(config: McpStreamableHttpTransport): typeof globalThis.fetch
-default	export default
-defaultMcpNamePrefix	export declare function defaultMcpNamePrefix(serverId: string): string
-defaultResolver	export { boundResponse, defaultResolver, isLoopbackAddress, normalizeHostname, raceAbort, requestPinned, resolvePinnedAddress, } from "@arnilo/prism"
-estimateUtf8Bytes	export declare function estimateUtf8Bytes(value: string): number
-formatMcpToolName	export declare function formatMcpToolName(prefix: string, remoteName: string): string
-isLoopbackAddress	export { boundResponse, defaultResolver, isLoopbackAddress, normalizeHostname, raceAbort, requestPinned, resolvePinnedAddress, } from "@arnilo/prism"
-isServerAllowed	export declare function isServerAllowed(server: McpServerConfig, planeAllow?: string | readonly string[]):
-listAllMcpTools	export declare function listAllMcpTools(client: Client, signal?: AbortSignal, input?: McpClientLimitsInput): Promise<ListedMcpTool[]>
-mapMcpContentToBlocks	export declare function mapMcpContentToBlocks(content: readonly McpContentBlock[] | undefined, options: MapMcpContentOptions): MapMcpContentResult
-mapMcpToolsToDefinitions	export declare function mapMcpToolsToDefinitions(remoteTools: readonly ListedMcpTool[], context:
-mcp	export declare function mcp(config?: McpPackageConfig): PackageInstance
-mcpCallError	export declare function mcpCallError(message: string, code?: string): ErrorInfo
-mcpConfigSchema	export declare const mcpConfigSchema: JsonSchema
-mcpElicitationDecision	export declare function mcpElicitationDecision(approvalId: string, params: unknown, options?: McpElicitationDecisionOptions): PendingDecision
-mcpElicitationResultFromDecision	export declare function mcpElicitationResultFromDecision(decision: Decision, options?:
-mcpPackageDefinition	export declare const mcpPackageDefinition: import("@arnilo/prism").PackageDefinition<McpPackageConfig>
-mcpServerFingerprint	export declare function mcpServerFingerprint(server: McpServerConfig): string
-measureBoundedJson	export declare function measureBoundedJson(value: unknown, bounds: JsonBounds): JsonMeasurement
-normalizeHostname	export { boundResponse, defaultResolver, isLoopbackAddress, normalizeHostname, raceAbort, requestPinned, resolvePinnedAddress, } from "@arnilo/prism"
-normalizeProtectedResource	export declare function normalizeProtectedResource(input: McpProtectedResource): NormalizedProtectedResource
-packageName	export declare const packageName = "@arnilo/prism-mcp"
-parseAllowDestination	export declare function parseAllowDestination(entry: string): AllowDestination | null
-protectedResourceMetadata	export declare function protectedResourceMetadata(resource: NormalizedProtectedResource):
-raceAbort	export { boundResponse, defaultResolver, isLoopbackAddress, normalizeHostname, raceAbort, requestPinned, resolvePinnedAddress, } from "@arnilo/prism"
-redactMcpError	export declare function redactMcpError(server: McpServerConfig, error: unknown): string
-requestPinned	export { boundResponse, defaultResolver, isLoopbackAddress, normalizeHostname, raceAbort, requestPinned, resolvePinnedAddress, } from "@arnilo/prism"
-resolveMcpClientLimits	export declare function resolveMcpClientLimits(input: McpClientLimitsInput, defaults:
-resolveMcpOAuthLimits	export declare function resolveMcpOAuthLimits(input?: McpOAuthLimitsInput): ResolvedMcpOAuthLimits
-resolvePinnedAddress	export { boundResponse, defaultResolver, isLoopbackAddress, normalizeHostname, raceAbort, requestPinned, resolvePinnedAddress, } from "@arnilo/prism"
-summarizeMcpContent	export declare function summarizeMcpContent(content: readonly McpContentBlock[] | undefined, maxBytes?: number): string
-toServerStatus	export declare function toServerStatus(entry: InternalServerEntry): McpServerStatus & JsonObject
-unauthorizedResponse	export declare function unauthorizedResponse(protectedResource: NormalizedProtectedResource | undefined, request: Request): Response
-validateMcpLimit	export declare function validateMcpLimit(name: string, value: number, hardCap: number): number
+. AttachMcpToolBridgeOptions	type AttachMcpToolBridgeOptions = Omit<ConnectMcpToolsOptions, "transport">
+. ConnectMcpCapabilitiesOptions	interface ConnectMcpCapabilitiesOptions extends ConnectMcpToolsOptions { readonly elicitation?: (request: PrismMcpElicitationRequest) => unknown | Promise<unknown>; readonly maxCapabilityBytes?: number; readonly maxMrtrRounds?: number; readonly roots?: () => readonly McpRoot[] | Promise<readonly McpRoot[]>; readonly sampling?: (request: PrismMcpSamplingRequest) => unknown | Promise<unknown>; }
+. ConnectMcpToolsOptions	interface ConnectMcpToolsOptions { readonly callTimeoutMs?: number; readonly effect?: McpToolEffectPolicy; readonly listCacheTtlMs?: number; readonly maxCursorBytes?: number; readonly maxJsonDepth?: number; readonly maxJsonProperties?: number; readonly maxListPages?: number; readonly maxResultBytes?: number; readonly maxToolDescriptionBytes?: number; readonly maxToolNameBytes?: number; readonly maxToolSchemaBytes?: number; readonly maxTools?: number; readonly maxTotalToolSchemaBytes?: number; readonly mcpApps?: boolean; readonly namePrefix?: string; readonly protocolVersion?: McpProtocolNegotiation; readonly serverId: string; readonly signal?: AbortSignal; readonly transport: McpTransportConfig; }
+. ConnectedAppBinding	interface ConnectedAppBinding { readonly allowTools?: readonly string[]; readonly appId: string; readonly effect?: McpToolEffectPolicy; readonly identity?: AgentIdentity; readonly serverId: string; readonly transport: McpTransportConfig; }
+. ConnectedAppSelect	type ConnectedAppSelect = (binding: ConnectedAppBinding & { readonly identity: AgentIdentity; }) => boolean | Promise<boolean>
+. ConnectedAppSession	interface ConnectedAppSession { bind(binding: ConnectedAppBinding): Promise<void>; close(): Promise<void>; list(): readonly { readonly appId: string; readonly serverId: string; readonly tools: readonly string[]; }[]; refresh(): Promise<void>; tools(): readonly ToolDefinition[]; unbind(appId: string): Promise<void>; }
+. CreateConnectedAppSessionOptions	interface CreateConnectedAppSessionOptions { readonly connect?: (options: ConnectMcpToolsOptions) => Promise<McpToolBridge>; readonly effect?: McpToolEffectPolicy; readonly identity: AgentIdentity; readonly maxApps?: number; readonly select: ConnectedAppSelect; }
+. DEFAULT_CALL_TIMEOUT_MS	const DEFAULT_CALL_TIMEOUT_MS = 60000
+. DEFAULT_LIST_CACHE_TTL_MS	const DEFAULT_LIST_CACHE_TTL_MS = 30000
+. DEFAULT_MAX_CAPABILITY_BYTES	const DEFAULT_MAX_CAPABILITY_BYTES: number
+. DEFAULT_MAX_CAPABILITY_ITEMS	const DEFAULT_MAX_CAPABILITY_ITEMS = 500
+. DEFAULT_MAX_CAPABILITY_PAGES	const DEFAULT_MAX_CAPABILITY_PAGES = 20
+. DEFAULT_MAX_CURSOR_BYTES	const DEFAULT_MAX_CURSOR_BYTES: number
+. DEFAULT_MAX_HTTP_RESPONSE_BYTES	const DEFAULT_MAX_HTTP_RESPONSE_BYTES: number
+. DEFAULT_MAX_JSON_DEPTH	const DEFAULT_MAX_JSON_DEPTH = 64
+. DEFAULT_MAX_JSON_PROPERTIES	const DEFAULT_MAX_JSON_PROPERTIES = 10000
+. DEFAULT_MAX_LIST_PAGES	const DEFAULT_MAX_LIST_PAGES = 20
+. DEFAULT_MAX_RESULT_BYTES	const DEFAULT_MAX_RESULT_BYTES = 10000000
+. DEFAULT_MAX_SESSIONS	const DEFAULT_MAX_SESSIONS = 32
+. DEFAULT_MAX_TOOLS	const DEFAULT_MAX_TOOLS = 500
+. DEFAULT_MAX_TOOL_DESCRIPTION_BYTES	const DEFAULT_MAX_TOOL_DESCRIPTION_BYTES: number
+. DEFAULT_MAX_TOOL_NAME_BYTES	const DEFAULT_MAX_TOOL_NAME_BYTES = 256
+. DEFAULT_MAX_TOOL_SCHEMA_BYTES	const DEFAULT_MAX_TOOL_SCHEMA_BYTES: number
+. DEFAULT_MAX_TOTAL_TOOL_SCHEMA_BYTES	const DEFAULT_MAX_TOTAL_TOOL_SCHEMA_BYTES: number
+. HARD_CALL_TIMEOUT_MS	const HARD_CALL_TIMEOUT_MS: number
+. HARD_LIST_CACHE_TTL_MS	const HARD_LIST_CACHE_TTL_MS: number
+. HARD_MAX_CAPABILITY_BYTES	const HARD_MAX_CAPABILITY_BYTES: number
+. HARD_MAX_CAPABILITY_ITEMS	const HARD_MAX_CAPABILITY_ITEMS = 5000
+. HARD_MAX_CAPABILITY_PAGES	const HARD_MAX_CAPABILITY_PAGES = 100
+. HARD_MAX_CURSOR_BYTES	const HARD_MAX_CURSOR_BYTES: number
+. HARD_MAX_HTTP_RESPONSE_BYTES	const HARD_MAX_HTTP_RESPONSE_BYTES: number
+. HARD_MAX_JSON_DEPTH	const HARD_MAX_JSON_DEPTH = 128
+. HARD_MAX_JSON_PROPERTIES	const HARD_MAX_JSON_PROPERTIES = 100000
+. HARD_MAX_LIST_PAGES	const HARD_MAX_LIST_PAGES = 100
+. HARD_MAX_RESULT_BYTES	const HARD_MAX_RESULT_BYTES: number
+. HARD_MAX_SESSIONS	const HARD_MAX_SESSIONS = 512
+. HARD_MAX_TOOLS	const HARD_MAX_TOOLS = 5000
+. HARD_MAX_TOOL_DESCRIPTION_BYTES	const HARD_MAX_TOOL_DESCRIPTION_BYTES: number
+. HARD_MAX_TOOL_NAME_BYTES	const HARD_MAX_TOOL_NAME_BYTES = 1024
+. HARD_MAX_TOOL_SCHEMA_BYTES	const HARD_MAX_TOOL_SCHEMA_BYTES: number
+. HARD_MAX_TOTAL_TOOL_SCHEMA_BYTES	const HARD_MAX_TOTAL_TOOL_SCHEMA_BYTES: number
+. JsonBounds	interface JsonBounds { readonly label?: string; readonly maxBytes: number; readonly maxDepth: number; readonly maxProperties: number; }
+. JsonMeasurement	interface JsonMeasurement { readonly bytes: number; readonly properties: number; }
+. MAX_MCP_ELICITATION_MESSAGE_BYTES	const MAX_MCP_ELICITATION_MESSAGE_BYTES = 2048
+. MAX_MCP_ELICITATION_SCHEMA_BYTES	const MAX_MCP_ELICITATION_SCHEMA_BYTES: number
+. McpAppResource	interface McpAppResource { readonly description?: string; readonly html: string; readonly mimeType: "text/html;profile=mcp-app"; readonly name: string; readonly ui?: McpUiResourceMetadata; readonly uri: string; }
+. McpAppTool	interface McpAppTool { readonly description?: string; readonly inputSchema: JsonObject; readonly name: string; readonly prismName: string; readonly resourceUri?: string; readonly visibility: readonly ("model" | "app")[]; }
+. McpAppsBridge	interface McpAppsBridge { callTool(name: string, args: JsonObject, context: ToolExecutionContext): Promise<ToolResult>; listResources(): Promise<readonly Omit<McpAppResource, "html">[]>; readResource(uri: string): Promise<McpAppResource>; readonly negotiated: true; readonly serverId: string; readonly tools: readonly McpAppTool[]; }
+. McpBridgeClosedError	class McpBridgeClosedError extends McpBridgeError { constructor(); }
+. McpBridgeError	class McpBridgeError extends Error { constructor(message: string, options?: { cause?: unknown; }); }
+. McpCapabilityBridge	interface McpCapabilityBridge extends McpToolBridge { getPrompt(name: string, args?: Readonly<Record<string, string>>): Promise<unknown>; listPrompts(): Promise<readonly unknown[]>; listResources(): Promise<readonly unknown[]>; readResource(uri: string): Promise<unknown>; readonly serverCapabilities: Readonly<Record<string, unknown>>; readonly serverVersion?: Readonly<{ name: string; version: string; }>; }
+. McpClientAuth	interface McpClientAuth { ensureAuthorized(options?: { readonly scope?: string; readonly resourceMetadataUrl?: URL; }): Promise<"AUTHORIZED" | "REDIRECT">; finishAuth(callback: URLSearchParams | string): Promise<void>; getTokens(): Promise<StoredOAuthTokens | undefined>; readonly provider: OAuthClientProvider; revoke(): Promise<void>; }
+. McpClientAuthOptions	interface McpClientAuthOptions { readonly fetch?: typeof fetch; readonly limits?: McpOAuthLimitsInput; readonly now?: () => number; readonly onInsufficientScope?: "reauthorize" | "throw"; readonly onRedirectRequired?: (authorizationUrl: URL) => void | Promise<void>; readonly redirectUri?: string | URL; readonly scopes?: readonly string[]; readonly state: McpClientAuthState; readonly strategy: McpOAuthRegistrationStrategy; }
+. McpClientAuthState	interface McpClientAuthState { clear(scope: "all" | "client" | "tokens" | "verifier" | "discovery" | "authorizationState"): Promise<void>; loadAuthorizationState?(): Promise<{ readonly state: string; readonly authorizationServerUrl?: string; } | undefined>; loadClientInformation(issuer?: string): Promise<StoredOAuthClientInformation | undefined>; loadCodeVerifier(): Promise<string | undefined>; loadDiscovery(): Promise<OAuthDiscoveryState | undefined>; loadTokens(issuer?: string): Promise<StoredOAuthTokens | undefined>; saveAuthorizationState?(record: { readonly state: string; readonly authorizationServerUrl: string; }): Promise<void>; saveClientInformation(info: StoredOAuthClientInformation, issuer?: string): Promise<void>; saveCodeVerifier(verifier: string): Promise<void>; saveDiscovery(state: OAuthDiscoveryState): Promise<void>; saveTokens(tokens: StoredOAuthTokens, issuer?: string): Promise<void>; }
+. McpClientLimitsInput	interface McpClientLimitsInput { readonly callTimeoutMs?: number; readonly listCacheTtlMs?: number; readonly maxCursorBytes?: number; readonly maxJsonDepth?: number; readonly maxJsonProperties?: number; readonly maxListPages?: number; readonly maxResultBytes?: number; readonly maxToolDescriptionBytes?: number; readonly maxToolNameBytes?: number; readonly maxToolSchemaBytes?: number; readonly maxTools?: number; readonly maxTotalToolSchemaBytes?: number; }
+. McpElicitationDecisionOptions	interface McpElicitationDecisionOptions { readonly toolName?: string; }
+. McpEnvValue	type McpEnvValue = string | { readonly ref: string; }
+. McpHeaderSecretRef	interface McpHeaderSecretRef { readonly prefix?: string; readonly ref: string; }
+. McpHttpServerConfig	interface McpHttpServerConfig { readonly allow?: string | readonly string[]; readonly allowedOrigins?: readonly string[]; readonly connectTimeoutMs?: number; readonly enabled?: boolean; readonly headers?: Readonly<Record<string, McpHeaderSecretRef>>; readonly id: string; readonly namePrefix?: string; readonly readOnly?: boolean; readonly transport: "http" | "streamable-http" | "sse"; readonly url: string; }
+. McpOAuthError	class McpOAuthError extends Error { constructor(code: string, message: string, options?: { readonly cause?: unknown; }); readonly code: string; }
+. McpOAuthLimitsInput	interface McpOAuthLimitsInput { readonly discoveryBytes?: number; readonly discoveryCacheEntries?: number; readonly discoveryCacheTtlMs?: number; readonly handshakeTimeoutMs?: number; readonly stateBytes?: number; readonly tokenRecordBytes?: number; }
+. McpOAuthRegistrationStrategy	type McpOAuthRegistrationStrategy = { readonly kind: "static"; readonly clientId: string; readonly clientSecret?: string; } | { readonly kind: "cimd"; readonly clientMetadataUrl: string; } | { readonly kind: "dcr"; readonly clientMetadata: OAuthClientMetadata; }
+. McpPackageConfig	interface McpPackageConfig { readonly allow?: string | readonly string[]; readonly connectTimeoutMs?: number; readonly servers?: readonly McpServerConfig[]; readonly trusted?: readonly string[]; }
+. McpProtectedResource	interface McpProtectedResource { readonly authorizationServers: readonly string[]; readonly resource?: string; readonly scopesSupported?: readonly string[]; }
+. McpProtocolNegotiation	type McpProtocolNegotiation = "legacy" | "auto" | { readonly pin: string; }
+. McpRawServerConfig	interface McpRawServerConfig { readonly allow?: string | readonly string[]; readonly connectTimeoutMs?: number; readonly enabled?: boolean; readonly id: string; readonly namePrefix?: string; readonly readOnly?: boolean; readonly transport: "raw"; }
+. McpRoot	interface McpRoot { readonly name?: string; readonly uri: string; }
+. McpServerConfig	type McpServerConfig = McpStdioServerConfig | McpHttpServerConfig | McpRawServerConfig
+. McpServerState	type McpServerState = "connected" | "failed" | "disabled" | "closed"
+. McpServerStatus	interface McpServerStatus { readonly added?: number; readonly error?: string; readonly id: string; readonly reason?: string; readonly serverId: string; readonly state: McpServerState; readonly toolCount: number; }
+. McpStdioServerConfig	interface McpStdioServerConfig { readonly allow?: string | readonly string[]; readonly args?: readonly string[]; readonly command: string; readonly connectTimeoutMs?: number; readonly cwd?: string; readonly enabled?: boolean; readonly env?: Readonly<Record<string, McpEnvValue>>; readonly id: string; readonly namePrefix?: string; readonly readOnly?: boolean; readonly transport: "stdio"; }
+. McpStdioTransport	interface McpStdioTransport { readonly args?: readonly string[]; readonly command: string; readonly cwd?: string; readonly env?: Readonly<Record<string, string>>; readonly stderr?: "inherit" | "pipe" | "ignore" | "overlapped"; readonly type: "stdio"; }
+. McpStreamableHttpTransport	interface McpStreamableHttpTransport { readonly allowLoopbackHttp?: boolean; readonly allowedOrigins: readonly string[]; readonly auth?: McpClientAuthOptions; readonly maxResponseBytes?: number; readonly requestInit?: RequestInit; readonly resolveHostname?: MediaHostnameResolver; readonly sessionId?: string; readonly type: "streamable-http"; readonly url: string; }
+. McpToolBridge	interface McpToolBridge { close(): Promise<void>; readonly apps?: McpAppsBridge; readonly isClosed?: boolean; readonly protocolEra?: "legacy" | "modern"; readonly protocolVersion?: string; readonly tools: readonly ToolDefinition[]; refresh(): Promise<void>; }
+. McpToolEffectPolicy	type McpToolEffectPolicy = (input: McpToolEffectPolicyInput) => ToolEffectDeclaration | undefined
+. McpToolEffectPolicyInput	interface McpToolEffectPolicyInput { readonly remoteName: string; readonly serverId: string; }
+. McpToolNameCollisionError	class McpToolNameCollisionError extends McpBridgeError { constructor(prefixedName: string, remoteName: string); readonly prefixedName: string; readonly remoteName: string; }
+. McpTransportConfig	type McpTransportConfig = McpStdioTransport | McpStreamableHttpTransport | McpRawTransport
+. McpUiResourceMetadata	interface McpUiResourceMetadata { readonly csp?: Readonly<{ readonly connectDomains?: readonly string[]; readonly resourceDomains?: readonly string[]; readonly frameDomains?: readonly string[]; readonly baseUriDomains?: readonly string[]; }>; readonly domain?: string; readonly permissions?: Readonly<{ readonly camera?: true; readonly microphone?: true; readonly geolocation?: true; readonly clipboardWrite?: true; }>; readonly prefersBorder?: boolean; }
+. McpUnsupportedCapabilityError	class McpUnsupportedCapabilityError extends Error { constructor(capability: string); readonly capability: string; readonly code = "ERR_PRISM_MCP_UNSUPPORTED_CAPABILITY"; }
+. NormalizedProtectedResource	interface NormalizedProtectedResource { readonly authorizationServers: readonly string[]; readonly resource: string; readonly scopesSupported?: readonly string[]; }
+. PrismMcpElicitationRequest	interface PrismMcpElicitationRequest { readonly params: unknown; readonly signal: AbortSignal; }
+. PrismMcpElicitationResult	interface PrismMcpElicitationResult extends Readonly<Record<string, unknown>> { readonly action: "accept" | "decline" | "cancel"; readonly humanInteraction?: true; }
+. PrismMcpSamplingRequest	interface PrismMcpSamplingRequest { readonly params: unknown; readonly signal: AbortSignal; }
+. ResolvedMcpClientLimits	interface ResolvedMcpClientLimits { readonly callTimeoutMs: number; readonly listCacheTtlMs: number; readonly maxCursorBytes: number; readonly maxJsonDepth: number; readonly maxJsonProperties: number; readonly maxListPages: number; readonly maxResultBytes: number; readonly maxToolDescriptionBytes: number; readonly maxToolNameBytes: number; readonly maxToolSchemaBytes: number; readonly maxTools: number; readonly maxTotalToolSchemaBytes: number; }
+. WELL_KNOWN_OAUTH_PROTECTED_RESOURCE	const WELL_KNOWN_OAUTH_PROTECTED_RESOURCE = "/.well-known/oauth-protected-resource"
+. assertValidServerId	function assertValidServerId(serverId: string): void
+. attachMcpCapabilities	function attachMcpCapabilities(client: Client, transport: Transport, options: AttachMcpToolBridgeOptions & Pick<ConnectMcpCapabilitiesOptions, "maxCapabilityBytes">): Promise<McpCapabilityBridge>
+. attachMcpToolBridge	function attachMcpToolBridge(client: Client, transport: Transport, options: AttachMcpToolBridgeOptions): Promise<McpToolBridge>
+. boundedMcpErrorMessage	function boundedMcpErrorMessage(error: unknown, maxBytes: number): string
+. connectMcpCapabilities	function connectMcpCapabilities(options: ConnectMcpCapabilitiesOptions): Promise<McpCapabilityBridge>
+. connectMcpTools	function connectMcpTools(options: ConnectMcpToolsOptions): Promise<McpToolBridge>
+. createConnectedAppSession	function createConnectedAppSession(options: CreateConnectedAppSessionOptions): ConnectedAppSession
+. createMcpCapabilityClient	function createMcpCapabilityClient(options: ConnectMcpCapabilitiesOptions): Client
+. createMcpClientAuth	function createMcpClientAuth(options: McpClientAuthOptions, context: { readonly serverUrl: string | URL; readonly fetch: typeof fetch; readonly limits?: ResolvedMcpOAuthLimits; }): McpClientAuth
+. createMcpOAuthFetch	function createMcpOAuthFetch(config: McpStreamableHttpTransport, limits?: ResolvedMcpOAuthLimits): typeof globalThis.fetch
+. createMcpOAuthTransport	function createMcpOAuthTransport(config: McpStreamableHttpTransport): { readonly transport: Transport; readonly auth: McpClientAuth; }
+. createMcpTransport	function createMcpTransport(config: McpTransportConfig): Transport
+. default	const mcpPackageDefinition: import("@arnilo/prism").PackageDefinition<McpPackageConfig>
+. defaultMcpNamePrefix	function defaultMcpNamePrefix(serverId: string): string
+. estimateUtf8Bytes	function estimateUtf8Bytes(value: string): number
+. formatMcpToolName	function formatMcpToolName(prefix: string, remoteName: string): string
+. isServerAllowed	function isServerAllowed(server: McpServerConfig, planeAllow?: string | readonly string[]): { readonly allowed: boolean; readonly reason?: string; }
+. listAllMcpTools	function listAllMcpTools(client: Client, signal?: AbortSignal, input?: McpClientLimitsInput): Promise<ListedMcpTool[]>
+. mapMcpContentToBlocks	function mapMcpContentToBlocks(content: readonly McpContentBlock[] | undefined, options: MapMcpContentOptions): MapMcpContentResult
+. mapMcpToolsToDefinitions	function mapMcpToolsToDefinitions(remoteTools: readonly ListedMcpTool[], context: { readonly namePrefix: string; readonly serverId: string; readonly callTimeoutMs: number; readonly maxResultBytes: number; readonly isClosed: () => boolean; readonly callRemoteTool: (remoteName: string, args: JsonObject, ctx: ToolExecutionContext, identityDigest?: string) => Promise<ToolResult>; readonly effectForRemoteTool?: (remote: ListedMcpTool) => ToolEffectDeclaration; }): ToolDefinition[]
+. mcp	function mcp(config?: McpPackageConfig): PackageInstance
+. mcpCallError	function mcpCallError(message: string, code?: string): ErrorInfo
+. mcpConfigSchema	const mcpConfigSchema: JsonSchema
+. mcpElicitationDecision	function mcpElicitationDecision(approvalId: string, params: unknown, options?: McpElicitationDecisionOptions): PendingDecision
+. mcpElicitationResultFromDecision	function mcpElicitationResultFromDecision(decision: Decision, options?: { readonly humanInteraction?: boolean; }): PrismMcpElicitationResult
+. mcpPackageDefinition	const mcpPackageDefinition: import("@arnilo/prism").PackageDefinition<McpPackageConfig>
+. mcpServerFingerprint	function mcpServerFingerprint(server: McpServerConfig): string
+. measureBoundedJson	function measureBoundedJson(value: unknown, bounds: JsonBounds): JsonMeasurement
+. normalizeProtectedResource	function normalizeProtectedResource(input: McpProtectedResource): NormalizedProtectedResource
+. packageName	const packageName = "@arnilo/prism-mcp"
+. parseAllowDestination	function parseAllowDestination(entry: string): AllowDestination | null
+. protectedResourceMetadata	function protectedResourceMetadata(resource: NormalizedProtectedResource): { readonly authorization_servers: readonly string[]; readonly resource: string; readonly scopes_supported?: readonly string[]; }
+. summarizeMcpContent	function summarizeMcpContent(content: readonly McpContentBlock[] | undefined, maxBytes?: number): string
+. unauthorizedResponse	function unauthorizedResponse(protectedResource: NormalizedProtectedResource | undefined, request: Request): Response

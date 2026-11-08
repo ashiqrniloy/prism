@@ -32,7 +32,8 @@
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { describe, it } from "bun:test";
-import { MediaContentError, pinnedFetch } from "@arnilo/prism";
+import { MediaContentError } from "@arnilo/prism";
+import { pinnedFetch } from "@arnilo/prism/net";
 import { createOpenAICompatibleProvider, ProviderTransportError, readBoundedResponseJson } from "@arnilo/prism/provider-kit";
 import { createHyperProvider, listHyperModels } from "@arnilo/prism-provider-hyper";
 import { createOpenCodeGoProvider } from "@arnilo/prism-provider-opencode-go";
@@ -59,7 +60,7 @@ describe("phase21 security conformance (plan 021 Task 7, built public entrypoint
   it("T1/T2/T14: truncated streams reject by default; strictCompletion:false is the documented opt-out", async () => {
     const truncated = sseResponse(["data: [DONE]"]);
     const provider = createOpenAICompatibleProvider({
-      apiKey: "key",
+      apiKey: async () => "key",
       baseUrl: "https://api.example.com/v1",
       fetch: async () => truncated,
     });
@@ -76,7 +77,7 @@ describe("phase21 security conformance (plan 021 Task 7, built public entrypoint
 
     // T14: explicit opt-out restores the permissive behavior.
     const permissive = createOpenAICompatibleProvider({
-      apiKey: "key",
+      apiKey: async () => "key",
       baseUrl: "https://api.example.com/v1",
       strictCompletion: false,
       fetch: async () => truncated,
@@ -93,8 +94,8 @@ describe("phase21 security conformance (plan 021 Task 7, built public entrypoint
   it("T1: inheriting adapters reject truncated streams (built constructors)", async () => {
     const truncated = sseResponse(["data: [DONE]"]);
     const adapters = [
-      createHyperProvider({ apiKey: "t", fetch: async () => truncated }),
-      createOpenCodeGoProvider({ apiKey: "t", fetch: async () => truncated }),
+      createHyperProvider({ apiKey: async () => "phase21-truncation-key", fetch: async () => truncated }),
+      createOpenCodeGoProvider({ apiKey: async () => "phase21-truncation-key", fetch: async () => truncated }),
     ];
     for (const provider of adapters) {
       const events = [];
@@ -115,7 +116,7 @@ describe("phase21 security conformance (plan 021 Task 7, built public entrypoint
     // Public discovery entrypoint: an oversized /models body must reject.
     const oversized = new Response(JSON.stringify({ data: Array.from({ length: 40_000 }, (_, i) => ({ id: `m${i}` })) }), { status: 200 });
     await assert.rejects(
-      () => listHyperModels({ apiKey: "k", fetch: async () => oversized }),
+      () => listHyperModels({ apiKey: async () => "k", fetch: async () => oversized }),
       (error) => error instanceof ProviderTransportError && error.code === "response_body_overflow",
     );
 

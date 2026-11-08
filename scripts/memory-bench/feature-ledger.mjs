@@ -15,7 +15,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { memoryFabricConfigSchema } from "@arnilo/prism-memory-fabric";
 import { memoryObservationalConfigSchema } from "@arnilo/prism-memory-observational";
-import wiki from "@arnilo/prism-memory-wiki";
+import wiki from "@arnilo/prism-wiki";
 import { presetFields } from "../../packages/memory/fabric/src/config.ts";
 import {
   CLOSURE_202,
@@ -66,14 +66,14 @@ export function enumerateSurface() {
 
   const fabricTools = [...read("packages/memory/fabric/src/tools.ts").matchAll(/const \w+Name = "(memory\.[a-z]+)";/g)].map((m) => m[1]);
   const omTool = /options\.name \?\? "([a-z_]+)"/.exec(read("packages/memory/observational/src/recall-tool.ts"))?.[1];
-  const wikiTool = /WIKI_INGEST_TOOL_NAME = "([a-z_]+)"/.exec(read("packages/memory/wiki/src/tools/ingest.ts"))?.[1];
+  const wikiTool = /WIKI_INGEST_TOOL_NAME = "([a-z_]+)"/.exec(read("packages/knowledge/wiki/src/tools/ingest.ts"))?.[1];
   if (!omTool || !wikiTool || fabricTools.length === 0) throw new Error("feature-ledger: a tool name was not found in source");
   const tools = [...fabricTools, omTool, wikiTool];
 
   const fabricCommands = [...read("packages/memory/fabric/src/index.ts").matchAll(/name: "(memory(?::[a-z]+)?)",/g)].map((m) => m[1]);
   const omCommands = [...read("packages/memory/observational/src/commands.ts").matchAll(/name: "(om(?::[a-z]+)?)",/g)].map((m) => m[1]);
   const wikiCommands = ["status", "lint", "ingest", "consolidate"].map(
-    (file) => /_COMMAND_NAME = "(wiki:[a-z]+)"/.exec(read(`packages/memory/wiki/src/commands/${file}.ts`))?.[1],
+    (file) => /_COMMAND_NAME = "(wiki:[a-z]+)"/.exec(read(`packages/knowledge/wiki/src/commands/${file}.ts`))?.[1],
   );
   if (wikiCommands.includes(undefined)) throw new Error("feature-ledger: a wiki command name was not found in source");
   const commands = [...new Set([...fabricCommands, ...omCommands, ...wikiCommands])];
@@ -381,7 +381,7 @@ export function buildLedger({ features: rows = FEATURES, closure: closureRows = 
       packages: [
         "@arnilo/prism-memory-fabric",
         "@arnilo/prism-memory-observational",
-        "@arnilo/prism-memory-wiki",
+        "@arnilo/prism-wiki",
         "@arnilo/prism-memory-core (parts only they use)",
       ],
       excluded: EXCLUDED,

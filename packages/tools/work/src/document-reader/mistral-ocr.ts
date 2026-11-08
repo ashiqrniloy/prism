@@ -4,7 +4,8 @@
  * base64 by default so nothing is uploaded to the Files API (no cleanup).
  */
 
-import { assertSsrfAllowedUrl, pinnedFetch, type SsrfPolicy } from "@arnilo/prism";
+import { assertSsrfAllowedUrl, type SsrfPolicy } from "@arnilo/prism";
+import { pinnedFetch } from "@arnilo/prism/net";
 import { DocumentReaderError } from "./errors.js";
 import type { DocumentParser } from "./index.js";
 

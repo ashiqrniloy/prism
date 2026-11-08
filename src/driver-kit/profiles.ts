@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import * as nodeFs from "node:fs/promises";
 import { homedir } from "node:os";
 import { isAbsolute, join, resolve, sep } from "node:path";
+import { requestHostUi } from "../host/response.js";
 import type { HostPort } from "../host/types.js";
 import type { AuthMode, DriverDescriptor } from "./descriptor.js";
 import { DriverError } from "./errors.js";
@@ -191,7 +192,7 @@ export function createProfiles(options: ProfilesOptions): Profiles {
     const command = argv(mode.login);
     const ui = options.host?.ui;
     const env = mode.homeEnv === undefined ? undefined : { [mode.homeEnv]: homeOf(name) };
-    const answer = ui === undefined ? ({ status: "unavailable" } as const) : await ui.request({ kind: "terminal", title: `Sign in (${options.driver.descriptor.vendor})`, command, ...(env ? { env } : {}) });
+    const answer = await requestHostUi(ui, { kind: "terminal", title: `Sign in (${options.driver.descriptor.vendor})`, command, ...(env ? { env } : {}) });
     if (answer.status !== "answered" || answer.value.exitCode !== 0) {
       if (answer.status === "unavailable") {
         await ui?.request({ kind: "notify", level: "warn", message: `Sign in to profile "${name}" by running: ${command.join(" ")}` });

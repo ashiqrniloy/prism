@@ -156,3 +156,91 @@ describe("kernel constraints", () => {
     }
   });
 });
+
+// Plan 215 Task 26: network plumbing moved to `@arnilo/prism/net`, so the root entry's runtime
+// import graph (static, non-type imports only; `content.ts` lazy-loads `pinned-fetch.ts`) must not
+// reach `node:http`/`node:https`, and no first-party caller may import a moved name from the root.
+const RUNTIME_STATIC =
+  /^[ \t]*(?:import|export)\s+(?!type\b)[^;'"`]*?\bfrom[ \t]*["']([^"'\n]+)["']|^[ \t]*import[ \t]*["']([^"'\n]+)["']/gm;
+
+function rootRuntimeGraph(entry: string): { modules: Set<string>; builtins: Map<string, string> } {
+  const modules = new Set<string>();
+  const builtins = new Map<string, string>();
+  const visit = (file: string) => {
+    if (modules.has(file)) return;
+    modules.add(file);
+    const text = readFileSync(file, "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^\s*\/\/.*$/gm, "");
+    for (const match of text.matchAll(RUNTIME_STATIC)) {
+      const specifier = match[1] ?? match[2];
+      if (specifier.startsWith("node:")) {
+        if (!builtins.has(specifier)) builtins.set(specifier, file);
+      } else if (specifier.startsWith(".")) {
+        visit(join(dirname(file), specifier.replace(/\.js$/, ".ts")));
+      }
+    }
+  };
+  visit(entry);
+  return { modules, builtins };
+}
+
+const MOVED_NET_NAMES = [
+  "pinnedFetch",
+  "requestPinned",
+  "resolvePinnedAddress",
+  "defaultResolver",
+  "raceAbort",
+  "boundResponse",
+  "isLoopbackAddress",
+  "isLoopbackHostname",
+  "normalizeHostname",
+  "PinnedFetchOptions",
+];
+
+function sweepFiles(dir: string): string[] {
+  const out: string[] = [];
+  for (const ent of readdirSync(dir, { withFileTypes: true })) {
+    if (ent.name === "node_modules" || ent.name === "dist" || ent.name === "data") continue;
+    const full = join(dir, ent.name);
+    if (ent.isDirectory()) out.push(...sweepFiles(full));
+    else if (/\.(ts|mts|mjs|tsx)$/.test(ent.name)) out.push(full);
+  }
+  return out;
+}
+
+describe("plan 215 Task 26: root surface reduction", () => {
+  it("root_entry_does_not_import_node_http", () => {
+    const { modules, builtins } = rootRuntimeGraph(join(ROOT, "src/index.ts"));
+    assert.ok(modules.size > 50, "the walker must traverse the root graph");
+    assert.equal(builtins.has("node:http"), false, `node:http reached via ${builtins.get("node:http")}`);
+    assert.equal(builtins.has("node:https"), false, `node:https reached via ${builtins.get("node:https")}`);
+    assert.equal(modules.has(join(ROOT, "src/pinned-fetch.ts")), false, "pinned-fetch.ts must load lazily");
+    assert.equal(modules.has(join(ROOT, "src/artifacts/artifacts.ts")), false, "artifacts live on their subpath");
+    assert.equal(rootRuntimeGraph(join(ROOT, "src/net/index.ts")).builtins.has("node:http"), true);
+  });
+
+  it("net_subpath_sweep_leaves_no_root_network_import", () => {
+    // plan 193's `native/fetch.ts` is the caller that did not exist when plan 179 ran: check it first.
+    const first = join(ROOT, "packages/tools/web/src/native/fetch.ts");
+    const files = [
+      first,
+      ...["packages", "apps", "examples", "src"].flatMap((dir) => sweepFiles(join(ROOT, dir))).filter((f) => f !== first),
+    ];
+    const offenders: string[] = [];
+    for (const file of files) {
+      for (const match of readFileSync(file, "utf8").matchAll(/import\s+(?:type\s+)?\{([^}]*)\}\s*from\s*["']@arnilo\/prism["']/g)) {
+        const names = match[1].split(",").map(
+          (part) =>
+            part
+              .trim()
+              .replace(/^type\s+/, "")
+              .split(/\s+as\s+/)[0],
+        );
+        for (const name of names) if (MOVED_NET_NAMES.includes(name)) offenders.push(`${file.slice(ROOT.length + 1)}: ${name}`);
+      }
+    }
+    assert.match(readFileSync(first, "utf8"), /from "@arnilo\/prism\/net"/);
+    assert.deepEqual(offenders, [], `import these from @arnilo/prism/net:\n${offenders.join("\n")}`);
+  });
+});

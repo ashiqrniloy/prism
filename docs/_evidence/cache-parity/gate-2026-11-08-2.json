@@ -1,0 +1,67 @@
+{
+  "schema": "cache-parity-gate/1",
+  "date": "2026-11-08",
+  "cells": [
+    "commandcode/responses",
+    "commandcode/messages"
+  ],
+  "prismCommit": "bc87e539",
+  "pi": "1.5.0",
+  "strict": true,
+  "gate": {
+    "pass": false,
+    "failures": [
+      {
+        "id": "commandcode/messages",
+        "verdict": "behind",
+        "reason": null
+      }
+    ]
+  },
+  "attempts": [
+    {
+      "id": "commandcode/responses",
+      "attempt": 0,
+      "verdict": "pass",
+      "requests": {
+        "used": 38,
+        "ceiling": 120,
+        "perRun": 20
+      }
+    },
+    {
+      "id": "commandcode/messages",
+      "attempt": 0,
+      "verdict": "behind",
+      "requests": {
+        "used": 24,
+        "ceiling": 120,
+        "perRun": 20
+      }
+    }
+  ],
+  "finals": [
+    {
+      "id": "commandcode/responses",
+      "verdict": "pass"
+    },
+    {
+      "id": "commandcode/messages",
+      "verdict": "behind"
+    }
+  ],
+  "deferred": [
+    {
+      "id": "hyper/chat+messages",
+      "reason": "no Hyper credits (402); deferred to after 0.13.0 (owner, 2026-11-08)"
+    },
+    {
+      "id": "opencode-go/chat+messages",
+      "reason": "monthly limit reached (429) and mimo-v2.5 deprecated; deferred to after 0.13.0 (owner, 2026-11-08)"
+    },
+    {
+      "id": "openrouter/anthropic",
+      "reason": "unmeasurable: needs owner authorization and PRISM_LIVE_OPENROUTER_PAID=1; deferred to after 0.13.0"
+    }
+  ]
+}

@@ -44,14 +44,14 @@ test("checked-in fixture validates and stays inside the 150-300 item band", () =
   assert.deepEqual(new Set(items.map((item) => item.category)), new Set(["tool", "route", "tool-result-error", "approval-risk"]));
 });
 
-test("memory-gate fixture has at least 100 labelled items per point and choices are reversed", () => {
+test("memory-gate fixture has at least 100 labelled items per shipped point", () => {
   const items = loadMemoryItems();
   assert.deepEqual(validateMemoryItems(items), []);
-  assert.equal(items.length, 700);
-  for (const point of ["P1", "P2", "P3", "P4", "P5", "P6", "P7"]) {
+  assert.equal(items.length, 400);
+  for (const point of ["P3", "P4", "P5", "P7"]) {
     assert.equal(items.filter((item) => item.point === point).length, 100, point);
   }
-  assert.equal(items.filter((item) => item.point === "P2" && item.reversed === true).length, 50);
+  assert.equal(items.filter((item) => item.point === "P1" || item.point === "P2" || item.point === "P6").length, 0, "removed points have no items");
 });
 
 test("validateItems rejects a bad label and a duplicate id", () => {

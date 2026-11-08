@@ -31,7 +31,7 @@ async function capture(req: ProviderRequest = request, config: Parameters<typeof
   let body: JsonObject = {};
   const provider = createOpenRouterProvider({
     ...config,
-    apiKey: secret,
+    apiKey: async () => secret,
     fetch: (async (_url, init) => {
       headers = new Headers(init?.headers);
       body = JSON.parse(String(init?.body));
@@ -51,7 +51,7 @@ function errorEvent(events: readonly ProviderEvent[]) {
 describe("OpenRouter", () => {
   it("openrouter_package_conformance", async () => {
     assert.equal((await packageConformance(definition)).ok, true);
-    const result = await providerConformance((fetch) => createOpenRouterProvider({ apiKey: secret, fetch }), {
+    const result = await providerConformance((fetch) => createOpenRouterProvider({ apiKey: async () => secret, fetch }), {
       recordings: new URL("./wire/openai/", import.meta.url),
       models: [model, mapOpenRouterModel({ id: "anthropic/claude-haiku-4.5", context_length: 200000 })],
       secrets: [secret],
@@ -140,7 +140,7 @@ describe("OpenRouter", () => {
       [404, "No endpoints found matching your data policy", "permanent", "routing.data_collection"],
     ] as const) {
       const provider = createOpenRouterProvider({
-        apiKey: secret,
+        apiKey: async () => secret,
         fetch: (async () =>
           new Response(JSON.stringify({ error: { code: status, message: `${message} ${secret}` } }), { status })) as typeof fetch,
       });
@@ -153,7 +153,7 @@ describe("OpenRouter", () => {
   it("openrouter_mid_stream_error_is_error_event", async () => {
     const events = await collectProviderEvents(
       createOpenRouterProvider({
-        apiKey: secret,
+        apiKey: async () => secret,
         fetch: (async () => completion({ error: { code: 429, message: "Rate limit exceeded" } })) as typeof fetch,
       }),
       request,
@@ -171,7 +171,7 @@ describe("OpenRouter", () => {
       status: 400,
       responseBody: JSON.stringify({ error: { code: 400, message: "context_length_exceeded" } }),
     };
-    const events = await collectProviderEvents(createOpenRouterProvider({ apiKey: secret, fetch: replayFetch([recording]) }), request);
+    const events = await collectProviderEvents(createOpenRouterProvider({ apiKey: async () => secret, fetch: replayFetch([recording]) }), request);
     assert.equal(errorEvent(events).failureClass, "context_overflow");
     const { openAIOverflowSession } = await import("./overflow-session.js");
     await openAIOverflowSession(recording);
@@ -241,9 +241,41 @@ describe("OpenRouter", () => {
       await assert.rejects(() => createAgent({ model, packages: [openrouter(config as Parameters<typeof openrouter>[0])] }));
     }
   });
+  it("provider_factories_reject_literal_keys", async () => {
+    // Type level: the low-level factory and discovery take a `SecretSource`, never a literal.
+    // @ts-expect-error -- a literal key does not type-check on the factory.
+    const factoryLiteral: Parameters<typeof createOpenRouterProvider>[0] = { apiKey: "sk-literal" };
+    // @ts-expect-error -- nor on discovery.
+    const discoveryLiteral: Parameters<typeof listOpenRouterModels>[0] = { apiKey: "sk-literal" };
+    assert.ok(factoryLiteral && discoveryLiteral);
+    // Runtime: a manifest-built instance rejects a literal `apiKey` and accepts a ref.
+    await assert.rejects(() => createAgent({ model, packages: [openrouter({ apiKey: "sk-literal", models: [model] })] }));
+    const env = "PRISM_TEST_OPENROUTER_LITERAL_GUARD";
+    process.env[env] = secret;
+    let authorization: string | null = null;
+    const agent = await createAgent({
+      model,
+      packages: [
+        openrouter({
+          apiKey: `env:${env}`,
+          fetch: (async (url, init) => {
+            authorization = new Headers(init?.headers).get("authorization");
+            return String(url).endsWith("/models") ? Response.json({ data: [] }) : completion();
+          }) as typeof fetch,
+        }),
+      ],
+    });
+    try {
+      await agent.models.list();
+      assert.equal(authorization, `Bearer ${secret}`, "discovery resolves the ref through refSource");
+    } finally {
+      await agent.dispose();
+      delete process.env[env];
+    }
+  });
   it("openrouter_discovery_errors_are_bounded_redacted_and_fail_closed", async () => {
     await assert.rejects(
-      () => listOpenRouterModels({ apiKey: secret, fetch: (async () => new Response(secret, { status: 401 })) as typeof fetch }),
+      () => listOpenRouterModels({ apiKey: async () => secret, fetch: (async () => new Response(secret, { status: 401 })) as typeof fetch }),
       (error: Error) => !error.message.includes(secret) && error.message.includes("401"),
     );
     await assert.rejects(

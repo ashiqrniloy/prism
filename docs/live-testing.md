@@ -21,8 +21,8 @@ credentials skip suites; secrets stay out of the repo, logs and reports.
 ## Running the matrix
 
 ```sh
-npm run test:live                 # run active suites whose credentials are present
-node scripts/live-matrix.mjs --check   # validate manifest + per-suite skip/run table (no spawns)
+bun run test:live                      # run active suites whose credentials are present
+bun scripts/live-matrix.mjs --check    # validate manifest + per-suite skip/run table (no spawns)
 ```
 
 | knob | effect |
@@ -90,7 +90,7 @@ Set only the rows you want to run; everything else skips. Least-privilege scope 
 | `acp/in-process` | active | — (hermetic leg) | — | In-process serveAcp over TransformStreams. Approval resumes through session/request_permission. | Local only; ≤30s. |
 | `cli/journey` | active | `PRISM_LIVE_PROVIDER_TESTS`; any of: `OPENAI_API_KEY` / `OPENROUTER_API_KEY` / `KIMI_API_KEY` / `ZAI_API_KEY` / `OPENCODE_API_KEY` / `NEURALWATT_API_KEY` / `DASHSCOPE_API_KEY` / `OLLAMA_API_KEY` | — | First init-catalog provider credential present in the environment. | 4-5 one-shot requests on the default catalog model. |
 | `memory/postgres` | active | `PRISM_TEST_POSTGRES_URL` | — | Postgres memory store + pgvector index round-trips on the operator database, including durable deletion propagation (1,000 derived rows tombstoned in one transaction) and grant-change re-pointing. | Bounded insert/query cycles against the configured Postgres. |
-| `memory/wiki` | active | — (hermetic leg) | — | Ontology tier package over the real fabric: the memory.fabric requirement, wiki:status counts, the scripted concept pass (cited edits, fail-closed answers, repair), claim lint and source staging over real fs trees. | Hermetic; no network. |
+| `memory/wiki` | active | — (hermetic leg) | — | The wiki, knowledge outside memory, over the real fabric read through memory.ltm and on its own sources without it: wiki:status counts, the scripted concept pass (cited edits, fail-closed answers, repair), the deletion cascade from memory, claim lint and source staging over real fs trees. | Hermetic; no network. |
 | `coding-tools/lsp-forge` | active | — (hermetic leg) | — | LSP/language-intelligence + forge suites: real child-process spawns over the real LSP/forge wire protocols against fixture binaries. | Hermetic; no network. |
 | `ag-ui/conformance` | active | — (hermetic leg) | — | AG-UI + ACP conformance suites: real-event replay over the acp/a2a/ag-ui protocol surfaces (fixture agents, real event-source wire semantics). | Hermetic; no network. |
 | `provider-kit/conformance` | active | — (hermetic leg) | — | Thinking coverage: first-party reasoning catalog models declare capabilities.thinkingLevels + a compat.thinkingFamily stamp and emit a legal effort field on the wire. | free |
@@ -100,6 +100,7 @@ Set only the rows you want to run; everything else skips. Least-privilege scope 
 | `release/skill-evals` | active | `HYPER_API_KEY` + `OPENCODE_GO_API_KEY`; optional: `OPENROUTER_API_KEY` `KILO_API_KEY` `COMMAND_CODE_API_KEY` | `PRISM_LIVE_SKILL_EVAL_HYPER_MODEL` (default `deepseek-v4-pro-0813`), `PRISM_LIVE_SKILL_EVAL_OPENCODE_MODEL` (default `mimo-v2.5`), `PRISM_LIVE_SKILL_EVAL_OPENROUTER_MODEL` (default `nvidia/nemotron-3-ultra-550b-a55b:free`), `PRISM_LIVE_SKILL_EVAL_KILO_MODEL` (default `nvidia/nemotron-3.5-super-vl:free`), `PRISM_LIVE_SKILL_EVAL_COMMANDCODE_MODEL` (default `Qwen/Qwen3.7-Flash`) | Manual-only paired skill evaluations (plan 215 Task 11): web-research, browser-automation and delegating-work (coding-workflow was removed after the v3 evaluation), each with the skill versus the same agent with it disabled, 15 items x 3 trials x 2 arms, on Hyper, OpenCode Go and the free models of OpenRouter, Kilo and Command Code (owner decision 2026-11-05). Web items run against a loopback fixture, never the live web; the browser runs a local Chromium; coding runs in scratch workspaces. | Free models cost nothing; Hyper and OpenCode Go are estimated from a five-item dry run (bun scripts/skill-evals/run.mjs --dry-run --providers ...) and approved by the owner. The criteria are locked (criteria.lock.json) and committed first; a live run refuses to start otherwise. Router aliases openrouter/free and openrouter/auto are refused. |
 | `release/memory-bench` | active | `PRISM_LIVE_MEMORY_BENCH_MANUAL` + `OPENCODE_GO_API_KEY` | `PRISM_LIVE_MEMORY_BENCH_MODEL` (default `mimo-v2.5`) | Manual-only pinned memory benchmark; full context, OM, fabric, fabric-agentic and OM+fabric over LongMemEval-S, LoCoMo (comparison only), MemoryAgentBench-CR and the lifecycle suite. | One durable campaign journal with a finite ceiling; 12M per LongMemEval arm, 2M per lifecycle arm, 5M elsewhere, plus one-question overshoot; includes workers, judges, retries and warm-cache replays. Every attempt keeps its reservation until a matched report reconciles it; --manifest is dry-run. Never scheduled. |
 | `release/eval-gate` | active | `PRISM_LIVE_EVAL_GATE_MANUAL` + `HYPER_API_KEY` | `PRISM_LIVE_EVAL_GATE_MODEL` (default `deepseek-v4-pro-0813`) | Manual-only reference-host evaluation gate on Hyper over the heldout split (coding approval, denied write, research citations, and web_fetch prompt injection) with trials: 4 and regression comparison against the last stored live report. | 4 heldout items x 4 trials (~32 provider turns); hard ceiling of 2M input tokens enforced by the test. Never scheduled. |
+| `release/cache-parity` | active | `PRISM_LIVE_PROVIDER_TESTS` + `PRISM_LIVE_CACHE_PARITY` + `COMMAND_CODE_API_KEY` + `OLLAMA_API_KEY`; optional: `PRISM_LIVE_OPENROUTER_PAID` `OPENROUTER_API_KEY` | `PRISM_LIVE_PARITY_COMMANDCODE_CHAT_MODEL` (default `minimax/minimax-m3.1-flash`), `PRISM_LIVE_PARITY_COMMANDCODE_RESPONSES_MODEL` (default `gpt-5.6-luna`), `PRISM_LIVE_PARITY_COMMANDCODE_MESSAGES_MODEL` (default `claude-haiku-5-5`), `PRISM_LIVE_PARITY_OLLAMA_MODEL` (default `gemma4:31b`) | Manual-only cache parity against pi (headless) on a real coding task: Command Code chat, Responses and Messages, and Ollama Cloud. Passes when Prism's median hitRate is at least pi's on every conclusive cell with no usage_mismatch; an inconclusive cell is rerun once and fails strict mode. Needs `pi` on PATH with pi-commandcode-provider and pi-ollama-cloud installed (a missing binary or extension skips the row with a reason; strict mode fails it). Hyper, OpenCode Go and the paid OpenRouter Anthropic cell are deferred to after 0.13.0 (owner, 2026-11-08) and recorded as deferred, not failed. | 120 requests per enabled cell (3 runs x 2 harnesses x a 20-request ceiling), so at most 480 requests for the four cells plus at most 120 for each inconclusive rerun; the separate provider probe's `turns` generation requests (default 4) plus catalog discovery for the probe cells. Never scheduled. |
 | `providers/kilo` | active | `PRISM_LIVE_PROVIDER_TESTS` + `KILO_API_KEY` | `PRISM_LIVE_KILO_CHAT_MODEL` (default `google/gemma-4-26b-a4b-it`), `PRISM_LIVE_KILO_RESPONSES_MODEL` (default `openai/gpt-6-luna`), `PRISM_LIVE_KILO_MESSAGES_MODEL` (default `anthropic/claude-haiku-5.5`) | Three Kilo AI Gateway wires: Chat Completions, Responses, Anthropic Messages, one exemplar each. Per route: text, tool loop, structured output, abort, leak scan. The cache probe is separate: the gateway places its own breakpoints (plan 213 Task 1b), so it measures prefix reuse rather than a client lever. | ~25 generation requests across three wires: 2 per text/tool-loop pair plus structured and error, 9 kernel-smoke turns, and the anonymous/data-collection checks. The separate cache probe is 4 generation requests per wire (12 plus catalog discovery, plan 203 fixture). The reference account returned 402 on the paid exemplars (negative balance, 2026-10-31), so the accepted run used free ids (e.g. nvidia/nemotron-3.5-super-vl:free) at $0.00; free models are limited to 200 requests per hour. |
 | `providers/litellm` | active | `PRISM_LIVE_PROVIDER_TESTS` + `LITELLM_API_KEY` | `PRISM_LIVE_LITELLM_MODEL` (default `prism-free/gpt-oss-20b@groq`) | One Chat Completions route against a host-run LiteLLM Proxy: text, tool loop, abort, and a named error, plus the leak scan. The proxy must answer /health/liveliness at PRISM_LIVE_LITELLM_BASE_URL (default http://127.0.0.1:4000) or the suite skips with a reason. | ~8 generation requests at $0.00 on the prism-free pool (Groq, Cloudflare, Gemini, OpenRouter free tiers); a paid backend overall spends whatever the proxy forwards, and this suite makes no extra requests. |
 <!-- generated:live-matrix:end -->
@@ -114,6 +115,117 @@ The scheduled [`live-canaries` workflow](../.github/workflows/live-canaries.yml)
 - Suite costs are bounded and recorded per row; provider model defaults are the cheapest cost-bounded models that satisfy each probe.
 - Per-suite `PRISM_LIVE_SUITE_TIMEOUT_MS` kill timers and opt-in `PRISM_LIVE_CONCURRENCY` parallelism keep a stuck wire from stalling the run.
 - Packaging tests run under `scripts/with-build-lock.mjs` so parallel suites never race the TypeScript build.
+
+## Release acceptance on live providers
+
+### What it does
+
+Release acceptance shows that a release commit works against real provider wires, not just against mocks and recorded fixtures. It uses the matrix runner above in strict mode. A release passes only when every required tier is green, and an operator records the result in an evidence file that the release owner signs.
+
+### When to use it
+
+- On the release commit, before the tag, every release (plan 215 Task 39 repeats it for 0.13.0).
+- After a fix to a provider package, the provider kit, or the kernel's model path, to re-run the affected tier before the release run.
+
+### Inputs
+
+**Tiers.**
+
+| Tier | What runs | Required for a release |
+| --- | --- | --- |
+| T0 | `bun run test`: hermetic, with the mock provider and recorded wire fixtures. Experimental packages (the memory line) are covered here only and have no live row. | green on the release commit |
+| T1 | Wire scenarios per shipped provider, the `providers/` rows. The ten gating rows are `providers/{hyper,opencode-go,typesafe,laya,liquid,liquid-local,openrouter,openai-codex,kilo,litellm}` (nine packages; `liquid` has a hosted and a local row). Each decision provider (Jev, Laya, d1-ultra, d1-3B) passes its `decide` scenario as well as its `generate` scenarios. `providers/commandcode` and `providers/ollama-cloud` run but do not gate 0.13.0; they gate their own later releases. | all ten gating rows green |
+| T2 | The provider-agnostic SDK journey, the `release/journey-hyper` and `release/journey-opencode-go` rows: one scenario file, run once per provider. | green on both providers |
+| T2c | Cache parity against pi run headless, the `release/cache-parity` row (see [Cache parity](#cache-parity)). | run in strict mode, verdict recorded (see the note below) |
+| T3 | The packed post-publish smoke, `bun scripts/post-publish-smoke.mjs` (`--local` before the tag, from the registry after publish). | green after publish |
+
+T2c note: for 0.13.0 the enabled parity cells are Command Code and Ollama Cloud. Their providers do not gate 0.13.0, and the Hyper, OpenCode Go and paid OpenRouter cells are deferred (owner, 2026-11-08). So a missed cell is investigated and reported, and it blocks 0.13.0 only when it points to a `prism` defect in shared code (the kernel, the provider kit, or the reference host's coding worker). Otherwise it gates the provider's own release.
+
+**Entry criteria.** Do not start spending until all of these hold:
+
+- T0 is green on the release commit, and every plan that blocks the release is closed.
+- `bun scripts/live-preflight.mjs --suite providers/` and `bun scripts/live-preflight.mjs --suite release/` both pass. Checking only `release/` does not prove T1 readiness. The `providers/` check covers `providers/openrouter` and `OPENROUTER_API_KEY`.
+- Every key has a spend cap set at the provider.
+- The owner has authorized each selected model. If the pinned model is unavailable, stop and ask. Never silently substitute `openrouter/free` or `openrouter/auto`.
+- `laya-serve` is reachable for the Laya row (`LAYA_BASE_URL`, default `http://127.0.0.1:8000`), and `llama-server` serving `d1-3B` is reachable for the `liquid-local` row (`PRISM_LIVE_LLAMA_SERVER_URL`).
+- `scripts/litellm/up.mjs` has started the local LiteLLM proxy for the `litellm` row. The `openai-codex` grant is signed in to the OS keyring (see [OAuth providers](#oauth-providers)), and the owner has approved Kilo's device login.
+- `pi` is on `PATH` with its provider extensions installed for T2c.
+
+`scripts/live-preflight.mjs` and the `release/journey-*` rows land with plan 215 Tasks 31–33. Until then, the preflight step is a manual check of the same list.
+
+**Credentials.**
+
+- Use one env file outside the repository, `~/.config/prism/live.env`, with mode `0600`. Load it with `export PRISM_LIVE_ENV_FILE=~/.config/prism/live.env`. Start from `scripts/live.env.example`. Every assignment in the template is commented out, so a fresh copy enables nothing.
+- Use one least-privilege, spend-capped key per provider. The release keys are `HYPER_API_KEY`, `OPENCODE_GO_API_KEY`, `TYPESAFE_API_KEY`, `LIQUID_API_KEY`, `OPENROUTER_API_KEY`, `KILO_API_KEY` and `LITELLM_API_KEY`. The local servers need `LAYA_BASE_URL` and `PRISM_LIVE_LLAMA_SERVER_URL`. T2c also needs `COMMAND_CODE_API_KEY` and `OLLAMA_API_KEY`. `openai-codex` uses `keyring:openai-codex`, not an env key.
+- Keys never go in shell history, argv, chat, CI logs, or reports. Add each key with `read -s`:
+
+  ```bash
+  install -d -m 700 ~/.config/prism
+  install -m 600 /dev/null ~/.config/prism/live.env
+  printf 'PRISM_LIVE_PROVIDER_TESTS=1\nPRISM_LIVE_RELEASE_JOURNEY=1\n' >> ~/.config/prism/live.env
+  read -rs HYPER_API_KEY && printf 'HYPER_API_KEY=%s\n' "$HYPER_API_KEY" >> ~/.config/prism/live.env && unset HYPER_API_KEY
+  read -rs OPENCODE_GO_API_KEY && printf 'OPENCODE_GO_API_KEY=%s\n' "$OPENCODE_GO_API_KEY" >> ~/.config/prism/live.env && unset OPENCODE_GO_API_KEY
+  export PRISM_LIVE_ENV_FILE=~/.config/prism/live.env
+  ```
+
+- Rotate a key after a suspected leak, and after every release run.
+- The pi reference for cache parity uses the provider credentials already configured on the machine. The runner never reads, copies, or edits `~/.pi`; it only compares a stat signature of `~/.pi/agent` before and after each run.
+
+**Model selection.** Each journey row reads `PRISM_LIVE_HYPER_JOURNEY_MODEL` or `PRISM_LIVE_OPENCODE_GO_JOURNEY_MODEL`, and each has a manifest default. Choose a model that supports tool calls, and use the cheapest one that passes its provider's T1 tool-loop scenario. T1 rows use their own `PRISM_LIVE_<PROVIDER>_*_MODEL` overrides (see [Model selection](#model-selection)).
+
+**Budget.** The ceilings are enforced inside the tests, not by the operator:
+
+- The journey allows at most 36 provider requests and 80k input tokens per provider per full run. `limits` on every run and a counting `model.call` hook fail the suite on overrun.
+- Each T1 row's request count is in the `cost` column of the table above. OpenRouter's paid cache leg runs only with `PRISM_LIVE_OPENROUTER_PAID=1` and separate owner approval.
+- Cache parity allows at most 120 requests per cell.
+- Spend caps set at the provider are the operator's backstop.
+
+**Provider-agnostic rule.** The journey asserts Prism behaviour, not model quality. If a scenario passes on one provider and fails on the other, triage it as `prism` when the difference is in Prism's handling (codec, usage mapping, routing). Triage it as `provider-behavior` only when the recorded wire shows the model did not do what it was told.
+
+### Procedure
+
+Run these in order, on the release commit:
+
+```bash
+export PRISM_LIVE_ENV_FILE=~/.config/prism/live.env
+bun run test                                                     # T0
+bun scripts/live-preflight.mjs --suite providers/
+bun scripts/live-preflight.mjs --suite release/
+PRISM_LIVE_STRICT=1 PRISM_LIVE_FILTER=providers/ bun run test:live                                     # T1
+PRISM_LIVE_STRICT=1 PRISM_LIVE_FILTER=release/journey- bun run test:live                               # T2
+PRISM_LIVE_STRICT=1 PRISM_LIVE_CACHE_PARITY=1 PRISM_LIVE_FILTER=release/cache-parity bun run test:live # T2c
+```
+
+Then read `docs/_evidence/live-matrix-report.md` (each run overwrites it, so read it after each step) and write the acceptance evidence file, `docs/_evidence/live-release-acceptance-<version>.md`. Run T3 after publish with `bun scripts/post-publish-smoke.mjs --version <version>`.
+
+### Outputs
+
+**Triage and flake policy.** Classify every scenario failure as one of these:
+
+| Class | Meaning | Handling |
+| --- | --- | --- |
+| `transport` | Network error, 5xx or 429, as classified by `isTransientErrorInfo` from `@arnilo/prism`. | The runner may retry once. |
+| `provider-behavior` | The model did not do what it was told, for example it did not call the tool it was told to call. The recorded wire must show this. | Rerun once with the same prompt, then record it as a provider issue. |
+| `prism` | An assertion on Prism behaviour failed. | Never retried. It blocks the release and reopens the owning plan's task, and the run is repeated after the fix. |
+
+A secret-leak finding of any kind stops the run, blocks the release, and triggers key rotation.
+
+**Evidence and sign-off.** The evidence file records:
+
+- the commit;
+- per provider: the model ids, each scenario's status and request count, input tokens, durations, and the leak-scan result;
+- the failure classifications;
+- the T1 summary;
+- the cache-parity table;
+- the operator.
+
+It records every run, not only the last one, and holds no secret: run `assertNoSecretLeak` over it with every key before committing. The release owner signs the evidence in the publish task's note.
+
+### Security and performance notes
+
+- The procedure never asks the operator to print, echo, or paste a key. Keys reach the suites only through the env file and `env:` refs.
+- Strict mode fails the run on any skip, so a missing credential cannot pass as green.
+- Every tier's ceiling is enforced in code, and spend caps at the provider are the backstop. A run that hits a ceiling fails rather than continuing to spend.
 
 ## OAuth providers
 
@@ -168,6 +280,35 @@ bun scripts/decision-bench.mjs                  # full default list (liquid-loca
 - `llama-server` rows read `PRISM_LIVE_LLAMA_SERVER_URL`, or `PRISM_LIVE_LLAMA_SERVER_Q8_URL` / `_Q4_URL` when both quants are served side by side. The report records the build (`PRISM_LIVE_LLAMA_SERVER_BUILD` or `llama-server --version`) and the GGUF hash when `PRISM_LIVE_D1_GGUF_SHA256` is set.
 - Output: accuracy, ECE, Brier, p50/p95 latency, option-reversal flip rate, input-token cost, plus the hosted-vs-local agreement rate, written to `docs/_evidence/decision-bench-<date>.md`.
 - The metric math is pinned by `scripts/__tests__/decision-bench-metrics.test.mjs`.
+
+## Cache parity
+
+`scripts/cache-parity/run.mjs` compares Prism with pi on one real coding task through the wire proxy: three runs per
+harness, the same model, the hit rate read from the proxy's usage log only. It covers the Command Code and Ollama Cloud
+cells (Hyper, OpenCode Go and OpenRouter are deferred to after 0.13.0), costs at most 120 requests per cell, and never
+runs in `release:gate`.
+
+```bash
+export PRISM_LIVE_ENV_FILE=~/.config/prism/live.env PRISM_LIVE_PROVIDER_TESTS=1 PRISM_LIVE_CACHE_PARITY=1
+timeout 3600 bun scripts/cache-parity/run.mjs --provider commandcode --model claude-haiku-5-5 --runs 3
+```
+
+The report goes to `docs/_evidence/cache-parity/<provider>-<model>-<date>.{json,md}` with the commit, pi's version, medians
+and per-run metrics. See `scripts/cache-parity/README.md` for the verdicts, the budget and the isolation rules.
+
+The `release/cache-parity` manifest row runs all four cells and applies the gate (`parityGate` in
+`scripts/cache-parity/metrics.mjs`): Prism's median `hitRate` must be at least pi's on every conclusive cell, with no
+`usage_mismatch` and no tolerance margin. An `inconclusive` cell is rerun once and still fails strict mode; Hyper,
+OpenCode Go and the paid OpenRouter cell are recorded as `deferred`. A missing `pi` binary or pi extension skips the
+row with a reason (strict mode fails it).
+
+```bash
+PRISM_LIVE_STRICT=1 PRISM_LIVE_CACHE_PARITY=1 PRISM_LIVE_FILTER=release/cache-parity bun run test:live
+```
+
+The first run is recorded in `docs/_evidence/cache-parity-0.13.0.md`; every run keeps its own report under
+`docs/_evidence/cache-parity/`. `scripts/cache-parity/kilo-cli-reference.mjs` runs the Kilo CLI headless on plan 203's
+fixture for the free-model Chat cell.
 
 ## Provider cache probe
 
@@ -250,7 +391,7 @@ timeout 600 bun scripts/cache-parity/provider-probe.mjs \
 ## Extension and configuration notes
 
 - Add a suite: write the env-gated test (skip-not-fail), register it in `scripts/live-matrix.json` (`id`, `package`, `status`, `source`, `command`, `cwd`, `requires`/`requiresAny`, model wiring, least-privilege `scope`, `cost`), then run `node scripts/generate-live-docs.mjs --write` to refresh the table above. `scripts/live-doc-check.test.mjs` fails `npm test` when the doc drifts.
-- Add a credential: extend `scripts/live.env.example` and the relevant manifest `requires` list. Prefer `requiresAny` when a probe accepts several interchangeable providers.
+- Add a credential: extend `scripts/live.env.example` (a commented `# NAME=` entry with an empty or placeholder value; `live_env_example_has_no_values` in `scripts/live-matrix.test.mjs` checks the template against the manifest) and the relevant manifest `requires` list. Prefer `requiresAny` when a probe accepts several interchangeable providers.
 
 ## LiteLLM free pool (local, opt-in)
 

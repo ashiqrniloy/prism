@@ -1,0 +1,445 @@
+{
+  "schemaVersion": 1,
+  "plan": 216,
+  "task": 2,
+  "frozen": "2026-11-08",
+  "hashRule": "sha256 over canonical JSON of this file, exposed by memoryModelCriteriaHash() in robustness.mjs and checked by verifyMemoryModelCriteria(); docs/_evidence/memory-bench/memory-model/criteria.json records the frozen hash, every memory-model gate manifest, evidence file and report pins it, and assertMemoryModelPin refuses drift. A change after freezing is an amendment (`amendments` with `previousHash`, the cleanup-criteria.json convention) that adds hashes or fitted values and changes no row.",
+  "ownerDecisions": {
+    "memoryModel": {
+      "date": "2026-11-08",
+      "decision": "one memory system modelled on human memory (STM -> WM -> Rehearsal -> LTM, plus Sleep), in @arnilo/prism-memory-system; the ontology moves to the wiki (@arnilo/prism-wiki), outside memory",
+      "reason": "docs/_evidence/memory-model/design.md; roadmap Phase 11 \"Memory model (owner decision 2026-11-08)\"."
+    },
+    "rulesFirst": {
+      "date": "2026-11-08",
+      "decision": "every row of plans 217-223 (219.1 included) is pre-registered here before any code it measures exists",
+      "reason": "Rows written after earlier tiers' results are known invite tuning to the result; one file frozen first is the discipline of plans 202, 208, 209 and 210. A rule changed after a gate result is read is a new owner decision, not a revision of this file."
+    },
+    "evidenceCoverage": {
+      "date": "2026-11-08",
+      "decision": "every QA row reports all-required evidence coverage per ability beside accuracy",
+      "reason": "Owner retrieval review: a retrieval miss and an answering miss must be told apart (plan 188.8 post-investigation)."
+    },
+    "providers": {
+      "date": "2026-11-08",
+      "decision": "each gate runs on the providers of plan 210 gate C-1 unless the owner names others; never openrouter/free",
+      "reason": "Design section 9; the 0.13.0 release owner decisions."
+    }
+  },
+  "pins": {
+    "robustnessCriteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+    "threeTierCriteriaHash": "3d5a5c10fddda0931d00003aad8f2fccf5bdef2a829fa0b09bfac004b2bd263f",
+    "workOutcomeCriteriaHash": "d30681ec13dfd1e9f01ce9fdfe8ad2caa674b97182210c12788bd0bc77717bd2",
+    "design": "docs/_evidence/memory-model/design.md section 9"
+  },
+  "partitions": {
+    "all": ["dev", "heldout-a", "heldout-b"],
+    "development": ["dev"],
+    "developmentGates": ["M-1", "M-2", "M-3", "M-T", "M-4", "M-5", "K-1"],
+    "acceptance": {
+      "gate": "A",
+      "reads": ["heldout-a"],
+      "remediation": "heldout-b",
+      "remediationRounds": 1,
+      "rule": "Gate A in plan 223 reads heldout-a for the first time. One remediation round reads heldout-b once; there is never a second."
+    },
+    "rule": "Gates M-1 ... M-5, M-T and K-1 read development partitions only. A gate evidence file naming another partition is refused."
+  },
+  "statistics": {
+    "ci": 0.95,
+    "method": "paired cluster analysis of scripts/memory-bench/stats.mjs (plan 198 statistics), clustered by source conversation, haystack, persona or session, every arm paired against its comparator on identical items",
+    "pairedAnalysisVersion": "202-paired-cluster-v1",
+    "perAnswerModel": true,
+    "unit": "points: percentage points of the metric (accuracy, coverage, task success or W-row rate x 100); ratios, shares and latencies are stated per test",
+    "orientation": "evidence carries the paired improvement, oriented so positive is better: (comparator - candidate) for lower-is-better metrics, (candidate - comparator) otherwise",
+    "nonInferiorPoints": 2,
+    "gainCiLowAbove": 0,
+    "answerModels": "a gain needs the CI lower bound above 0 on at least one answer model and no answer model with a CI upper bound below 0; non-inferiority (CI lower bound >= -2 points) must hold on every answer model",
+    "missing": "a missing measurement, model or ability is never a pass: the row is `missing` and the gate cannot pass"
+  },
+  "testKinds": {
+    "gain": "paired improvement: CI lower bound > gainCiLowAbove on some answer model, no answer model CI upper bound < 0",
+    "nonInferior": "paired improvement: CI lower bound >= -nonInferiorPoints on every answer model",
+    "pooledGainNoAbilityBelow": "pooled paired improvement is a gain and every ability's point estimate is >= -points",
+    "anyGainNoneRegress": "at least one named metric is a gain and every named metric is non-inferior",
+    "exact": "the measured value equals `value` exactly",
+    "atMost": "the measured value is <= `value`",
+    "atLeast": "the measured value is >= `value`",
+    "atMostOrJustified": "the measured value is <= `value`, or the evidence carries a written justification",
+    "atMostTargetPlus": "the measured value is <= the evidence's `target` + `margin`",
+    "withinBudget": "the measured value is <= the budget the gate record states",
+    "pass": "the named suite reports pass"
+  },
+  "arms": {
+    "OM-before": "pre-redesign observational memory: plan 210 Task 5's `OM` arm (config `om`), transferred to plan 217, run from the revision recorded in baselines.omBefore",
+    "P": "plan 210's slimmed fabric product with exchanges (baselines.P)",
+    "memory-off": "no memory package",
+    "STM": "the `session` profile with WM and Rehearsal at their plan-216 behaviour, so the comparison isolates the encoder (plan 217)",
+    "STM-only": "the `stm` profile: STM without WM (plan 218)",
+    "WM": "STM + WM (plan 218)",
+    "session": "the `session` profile: STM + WM, no Rehearsal and no LTM writes from the session",
+    "full": "the `full` profile at the gate's revision; at gate M-5, plan 220's +all with a sleep every 3 sessions",
+    "full-r": "the plan 219 product: stm + wm + rehearsal + ltm; store snapshots kept for plan 219.1",
+    "RT": "plan 219.1's retrieval at the stage under test (RT, RT-cues, RT-time, RT-context, RT-assoc, RT-modes, RT-meta)",
+    "+procedural / +triggers / +priming / +all": "plan 220's add-one arms over RT (procedural memory, conditioned triggers, priming) and all three",
+    "no-sleep": "plan 221's `full` (plan 220's +all with a sleep every 3 sessions) without Sleep"
+  },
+  "baselines": {
+    "record": "docs/_evidence/memory-bench/memory-model/baselines.json",
+    "omBefore": {
+      "arm": "OM-before",
+      "source": "docs/_evidence/memory-bench/210/ablations/c1-manifest.json `transfers.OM` (disposition transferred, plan 217 Task 6)",
+      "config": "om",
+      "jobDefinitions": "plan 210 Task 5's OM arm: development cohort, the C-1 answer models (large, small), judge panel and caps, unchanged",
+      "suites": ["beam-1m", "longmemeval-m"],
+      "revisionRule": "the last revision before plan 216 Task 4 (which moves the session tiers and lands plan 210 Task 7.2's fixes). Task 4's first step records it in the baselines record as `revision` (a commit) and `productHash` (sourceFingerprint over packages/memory/observational/src). Plan 217 runs the arm with PRISM_MEMORY_BENCH_SOURCE set to that revision.",
+      "runBy": "plan 217 Task 6"
+    },
+    "P": {
+      "arm": "P",
+      "record": "docs/_evidence/memory-bench/210/slimmed/record.json",
+      "productHash": "867f82771643fe716c4d214c0ff26250cd842d1da6ee44dac5aabfdefed8759c",
+      "rule": "the hash plan 210 Task 7 recorded for the slimmed product; a gate comparing against P runs that product"
+    }
+  },
+  "gates": {
+    "M-1": { "plan": 217, "component": "STM", "record": "docs/_evidence/memory-bench/217/gates/owner-gate-m1.json", "rows": ["S1", "S2", "S3", "S4"] },
+    "M-2": { "plan": 218, "component": "WM", "record": "docs/_evidence/memory-bench/218/gates/owner-gate-m2.json", "rows": ["M1", "M2", "M3", "M4", "M5"] },
+    "M-3": { "plan": 219, "component": "Rehearsal", "record": "docs/_evidence/memory-bench/219/gates/owner-gate-m3.json", "rows": ["R1", "R2", "R3", "R4", "R5", "R6"] },
+    "M-T": { "plan": "219.1", "component": "Retrieval", "record": "docs/_evidence/memory-bench/219.1/gates/owner-gate-mt.json", "rows": ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8"] },
+    "M-4": { "plan": 220, "component": "Non-declarative", "record": "docs/_evidence/memory-bench/220/gates/owner-gate-m4.json", "rows": ["L1", "L2", "L3", "L4"] },
+    "M-5": { "plan": 221, "component": "Sleep", "record": "docs/_evidence/memory-bench/221/gates/owner-gate-m5.json", "rows": ["Z1", "Z2", "Z3", "Z4"] },
+    "K-1": { "plan": 222, "component": "Wiki", "criteria": "three-tier-criteria.json", "record": "docs/_evidence/memory-bench/222/gates/owner-gate-k1.json", "rows": ["O1", "O2", "O3", "O4", "O5", "O6", "O7", "O8"], "report": "acceptance-report.mjs --plan 208 --gate K-1" },
+    "A": { "plan": 223, "component": "Acceptance", "record": "docs/_evidence/memory-bench/223/gates/owner-gate-a.json", "rows": ["S1", "S3", "M1", "M5", "R2", "R5", "R6", "L1", "L2", "L3", "L4", "Z1"] },
+    "rule": "Each gate starts only on the owner's word, recorded in the gate's record (gates.<gate>.record) before the first job. A miss is reported as a miss and goes to the owner with per-row evidence; one fix round on development partitions is allowed, with its own amended gate."
+  },
+  "qaRows": ["S3", "M5", "R5", "R6", "T7", "L4", "Z1"],
+  "evidenceCoverage": {
+    "metric": "all-required evidence coverage per ability",
+    "rule": "every QA row reports it beside accuracy for every ability; a QA row without it is `missing`, never a pass"
+  },
+  "rows": {
+    "S1": {
+      "gate": "M-1", "component": "STM",
+      "metric": "re-derivation calls (grep/read/bash that re-derive an earlier task's changes) per related task",
+      "unit": "calls per related task", "direction": "lower",
+      "arms": { "candidate": "STM", "vs": ["OM-before"] },
+      "scope": { "live": ["long-session"] },
+      "tests": [{ "id": "vs-om-before", "vs": "OM-before", "kind": "gain" }]
+    },
+    "S2": {
+      "gate": "M-1", "component": "STM",
+      "metric": "verbatim chunk recall: share of recalled chunks byte-equal to their source, with no other tool run",
+      "unit": "share", "direction": "higher",
+      "arms": { "candidate": "STM" },
+      "scope": { "offline": ["long-session-replay"] },
+      "tests": [{ "id": "byte-equal", "kind": "exact", "value": 1 }, { "id": "other-tool-runs", "metric": "otherToolRuns", "kind": "exact", "value": 0 }]
+    },
+    "S3": {
+      "gate": "M-1", "component": "STM",
+      "metric": "QA accuracy", "unit": "points", "direction": "higher",
+      "arms": { "candidate": "STM", "vs": ["OM-before"] },
+      "scope": { "suites": ["beam-1m", "longmemeval-m"] },
+      "tests": [{ "id": "vs-om-before", "vs": "OM-before", "kind": "nonInferior" }]
+    },
+    "S4": {
+      "gate": "M-1", "component": "STM",
+      "metric": "worker tokens per 10k eligible tokens, relative to OM-before",
+      "unit": "ratio", "direction": "lower",
+      "arms": { "candidate": "STM", "vs": ["OM-before"] },
+      "scope": { "suites": ["beam-1m", "longmemeval-m"], "live": ["long-session"] },
+      "tests": [{ "id": "token-ratio", "vs": "OM-before", "kind": "atMostOrJustified", "value": 1.25 }]
+    },
+    "M1": {
+      "gate": "M-2", "component": "WM",
+      "metric": "task success on tasks after a mid-episode re-plan", "unit": "points", "direction": "higher",
+      "arms": { "candidate": "WM", "vs": ["STM-only", "OM-before"] },
+      "scope": { "live": ["re-plan"] },
+      "tests": [
+        { "id": "vs-stm-only", "vs": "STM-only", "kind": "nonInferior" },
+        { "id": "vs-om-before", "vs": "OM-before", "kind": "gain" }
+      ]
+    },
+    "M2": {
+      "gate": "M-2", "component": "WM",
+      "metric": "protected items lost across compactions", "unit": "count", "direction": "lower",
+      "arms": { "candidate": "WM" },
+      "scope": { "offline": ["long-session-replay"] },
+      "tests": [{ "id": "loss", "kind": "exact", "value": 0 }]
+    },
+    "M3": {
+      "gate": "M-2", "component": "WM",
+      "metric": "median achieved surface ratio when the protected share is below the target", "unit": "ratio", "direction": "lower",
+      "arms": { "candidate": "WM" },
+      "scope": { "offline": ["long-session-replay"] },
+      "tests": [{ "id": "ratio", "kind": "atMostTargetPlus", "target": "targetRatio", "margin": 0.1 }]
+    },
+    "M4": {
+      "gate": "M-2", "component": "WM",
+      "metric": "prefix bytes between compactions", "unit": "identical", "direction": "exact",
+      "arms": { "candidate": "WM" },
+      "scope": { "offline": ["long-session-replay"] },
+      "tests": [{ "id": "prefix", "kind": "exact", "value": "byte-identical" }]
+    },
+    "M5": {
+      "gate": "M-2", "component": "WM",
+      "metric": "QA accuracy", "unit": "points", "direction": "higher",
+      "arms": { "candidate": "WM", "vs": ["STM-only"] },
+      "scope": { "suites": ["beam-1m", "longmemeval-m"] },
+      "tests": [{ "id": "vs-stm-only", "vs": "STM-only", "kind": "nonInferior" }]
+    },
+    "R1": {
+      "gate": "M-3", "component": "Rehearsal",
+      "metric": "use-verified share of Rehearsal's LTM writes over a multi-session lifecycle", "unit": "share", "direction": "higher",
+      "arms": { "candidate": "full-r", "baseline": "0 (plan 202 Task 16, docs/_evidence/memory-bench/202/observational/role.json: verifiedShare 0 on every arm)" },
+      "scope": { "offline": ["multi-session-lifecycle"] },
+      "tests": [{ "id": "verified-share", "kind": "atLeast", "value": 0.2, "minWrites": 32 }],
+      "power": {
+        "tool": "scripts/memory-bench/power.mjs minDetectableDifference",
+        "design": "against a baseline of 0, every verified write is a discordant pair, so discordance = the share; alpha 0.05, power 0.8",
+        "minWrites": 32,
+        "minDetectableAtMinWrites": 0.1985,
+        "reference": "plan 202 Task 16's om+fabric+promotion arm wrote 42 notes over 7 seeds (6 per 24-session lifecycle), minimum detectable 0.1775",
+        "rule": "fewer than minWrites writes makes the row `missing`, never a pass"
+      }
+    },
+    "R2": {
+      "gate": "M-3", "component": "Rehearsal",
+      "metric": "W1 corrected-mistake repeats, W2 convention adherence, W3 re-asked questions (work-outcome-criteria.json rows)", "unit": "points", "direction": "higher",
+      "arms": { "candidate": "full-r", "vs": ["session"] },
+      "scope": { "live": ["work-outcome"] },
+      "tests": [{ "id": "w1-w3", "vs": "session", "kind": "anyGainNoneRegress", "metrics": ["W1", "W2", "W3"] }]
+    },
+    "R3": {
+      "gate": "M-3", "component": "Rehearsal",
+      "metric": "claim support of LTM writes", "unit": "share", "direction": "higher",
+      "arms": { "candidate": "full-r" },
+      "scope": { "panel": "the claim-support panel, once calibrated (plan 210 Task 3.2, recalibrated in plan 222)" },
+      "tests": [{ "id": "supported", "kind": "atLeast", "value": 0.9, "requiresPanelCalibrated": true }]
+    },
+    "R4": {
+      "gate": "M-3", "component": "Rehearsal",
+      "metric": "plan 202's safety suite", "unit": "pass", "direction": "pass",
+      "arms": { "candidate": "full-r" },
+      "scope": { "offline": ["plan-202-safety"], "live": ["plan-202-safety"] },
+      "tests": [{ "id": "offline", "metric": "offline", "kind": "pass" }, { "id": "live", "metric": "live", "kind": "pass" }]
+    },
+    "R5": {
+      "gate": "M-3", "component": "Rehearsal",
+      "metric": "multi-session QA accuracy (longmemeval-m multi-session ability)", "unit": "points", "direction": "higher",
+      "arms": { "candidate": "full-r", "vs": ["P"] },
+      "scope": { "suites": ["longmemeval-m"], "abilities": ["multi-session"] },
+      "tests": [{ "id": "vs-p", "vs": "P", "kind": "nonInferior" }]
+    },
+    "R6": {
+      "gate": "M-3", "component": "Rehearsal",
+      "metric": "QA accuracy on the temporal-reasoning ability strata", "unit": "points", "direction": "higher",
+      "arms": { "candidate": "full-r", "vs": ["P"] },
+      "scope": { "suites": ["longmemeval-m", "beam-1m", "locomo"], "abilities": ["temporal-reasoning", "temporal_reasoning", "temporal"] },
+      "tests": [{ "id": "vs-p", "vs": "P", "kind": "gain" }]
+    },
+    "T1": {
+      "gate": "M-T", "component": "Retrieval",
+      "metric": "all-required evidence coverage of the shown result, per ability (offline; question as query; fine gold)", "unit": "points", "direction": "higher",
+      "arms": { "candidate": "RT", "vs": ["full-r", "P"] },
+      "scope": { "offline": ["exchange-ingest", "full-r-snapshots"], "suites": ["longmemeval-m", "beam-1m", "locomo"] },
+      "tests": [
+        { "id": "vs-full-r", "vs": "full-r", "kind": "pooledGainNoAbilityBelow", "points": 2 },
+        { "id": "vs-p", "vs": "P", "kind": "pooledGainNoAbilityBelow", "points": 2 }
+      ]
+    },
+    "T2": {
+      "gate": "M-T", "component": "Retrieval",
+      "metric": "candidate recall@32", "unit": "points", "direction": "higher",
+      "arms": { "candidate": "RT", "vs": ["full-r", "P"] },
+      "scope": { "offline": ["exchange-ingest", "full-r-snapshots"], "suites": ["longmemeval-m", "beam-1m", "locomo"] },
+      "tests": [
+        { "id": "vs-full-r", "vs": "full-r", "kind": "nonInferior" },
+        { "id": "vs-p", "vs": "P", "kind": "nonInferior" }
+      ]
+    },
+    "T3": {
+      "gate": "M-T", "component": "Retrieval",
+      "metric": "ranking invariant violations (I13): a prior overtaking beyond the band; single- vs multi-scope disagreement", "unit": "count", "direction": "lower",
+      "arms": { "candidate": "RT" },
+      "scope": { "offline": ["ranking-property-suite"] },
+      "tests": [{ "id": "violations", "kind": "exact", "value": 0 }]
+    },
+    "T4": {
+      "gate": "M-T", "component": "Retrieval",
+      "metric": "store parity (I14): ordered top-32 ids across SQLite, Postgres, markdown index and in-memory", "unit": "identical", "direction": "exact",
+      "arms": { "candidate": "RT" },
+      "scope": { "fixtures": ["parity"] },
+      "tests": [{ "id": "parity", "kind": "exact", "value": "identical" }]
+    },
+    "T5": {
+      "gate": "M-T", "component": "Retrieval",
+      "metric": "hit@5 on the paraphrase set; hit@5 on the non-English set", "unit": "points / share", "direction": "higher",
+      "arms": { "candidate": "RT", "vs": ["P"] },
+      "scope": { "fixtures": ["paraphrase", "non-english"] },
+      "tests": [
+        { "id": "paraphrase", "metric": "paraphraseHit5", "vs": "P", "kind": "gain" },
+        { "id": "non-english", "metric": "nonEnglishHit5", "kind": "atLeast", "value": 0.8 }
+      ]
+    },
+    "T6": {
+      "gate": "M-T", "component": "Retrieval",
+      "metric": "confidence separates answerable from unanswerable (AUROC); false abstentions on answerable items at the frozen thresholds", "unit": "points", "direction": "higher AUROC, fewer false abstentions",
+      "arms": { "candidate": "RT", "vs": ["P"] },
+      "scope": { "fixtures": ["abstention"] },
+      "tests": [
+        { "id": "auroc", "metric": "auroc", "vs": "P", "kind": "gain" },
+        { "id": "false-abstentions", "metric": "falseAbstentions", "vs": "P", "kind": "gain" }
+      ]
+    },
+    "T7": {
+      "gate": "M-T", "component": "Retrieval",
+      "metric": "QA accuracy per ability, with all-required evidence coverage; leave-one-out per stage", "unit": "points", "direction": "higher",
+      "arms": { "candidate": "RT", "vs": ["full-r"] },
+      "scope": { "suites": ["longmemeval-m", "beam-1m", "locomo"] },
+      "tests": [{ "id": "abilities", "vs": "full-r", "kind": "anyGainNoneRegress", "metrics": ["multi-session", "temporal", "event-ordering", "knowledge-update"], "noneRegressOver": "every ability reported" }]
+    },
+    "T8": {
+      "gate": "M-T", "component": "Retrieval",
+      "metric": "recall p95 at 10k and 100k notes relative to P; Rehearsal cue tokens per episode as a share of Rehearsal output tokens", "unit": "ratio / share", "direction": "lower",
+      "arms": { "candidate": "RT", "vs": ["P"] },
+      "scope": { "offline": ["growth-10k", "growth-100k"], "live": ["multi-session-lifecycle"] },
+      "tests": [
+        { "id": "p95-10k", "metric": "p95Ratio10k", "vs": "P", "kind": "atMost", "value": 1.5 },
+        { "id": "p95-100k", "metric": "p95Ratio100k", "vs": "P", "kind": "atMost", "value": 1.5 },
+        { "id": "cue-share", "metric": "cueTokenShare", "kind": "atMost", "value": 0.15 }
+      ]
+    },
+    "L1": {
+      "gate": "M-4", "component": "Non-declarative",
+      "metric": "W1 corrected-mistake repeats", "unit": "points", "direction": "lower",
+      "arms": { "candidate": "+procedural", "vs": ["RT"] },
+      "scope": { "live": ["work-outcome"] },
+      "tests": [{ "id": "w1", "vs": "RT", "kind": "gain" }]
+    },
+    "L2": {
+      "gate": "M-4", "component": "Non-declarative",
+      "metric": "failure-signature recurrence after acquisition; false-trigger rate; extinction", "unit": "points / share / exact", "direction": "lower",
+      "arms": { "candidate": "+triggers", "vs": ["RT"] },
+      "scope": { "live": ["recurring-failure"], "offline": ["long-session-replay"] },
+      "tests": [
+        { "id": "recurrence", "metric": "recurrence", "vs": "RT", "kind": "gain" },
+        { "id": "false-trigger", "metric": "falseTriggerRate", "kind": "atMost", "value": 0.05 },
+        { "id": "extinction", "metric": "extinction", "kind": "exact", "value": "extinguished" }
+      ]
+    },
+    "L3": {
+      "gate": "M-4", "component": "Non-declarative",
+      "metric": "W4 orientation cost; prefix stability within an epoch", "unit": "points / identical", "direction": "lower",
+      "arms": { "candidate": "+priming", "vs": ["RT"] },
+      "scope": { "live": ["work-outcome"], "offline": ["long-session-replay"] },
+      "tests": [
+        { "id": "w4", "metric": "W4", "vs": "RT", "kind": "gain" },
+        { "id": "prefix", "metric": "prefix", "kind": "exact", "value": "byte-identical" }
+      ]
+    },
+    "L4": {
+      "gate": "M-4", "component": "Non-declarative",
+      "metric": "QA accuracy", "unit": "points", "direction": "higher",
+      "arms": { "candidate": "+all", "vs": ["RT"] },
+      "scope": { "suites": ["beam-1m", "longmemeval-m"] },
+      "tests": [{ "id": "qa", "vs": "RT", "kind": "nonInferior" }]
+    },
+    "Z1": {
+      "gate": "M-5", "component": "Sleep",
+      "metric": "cross-session W1-W4 and multi-session QA over a multi-session lifecycle", "unit": "points", "direction": "higher",
+      "arms": { "candidate": "full", "vs": ["no-sleep"] },
+      "scope": { "live": ["work-outcome", "recurring-failure", "multi-session-lifecycle"], "suites": ["longmemeval-m", "beam-1m"] },
+      "tests": [{ "id": "cross-session", "vs": "no-sleep", "kind": "anyGainNoneRegress", "metrics": ["W1", "W2", "W3", "W4", "multi-session-qa"] }]
+    },
+    "Z2": {
+      "gate": "M-5", "component": "Sleep",
+      "metric": "semanticization precision (claim support of semantic notes Sleep writes)", "unit": "share", "direction": "higher",
+      "arms": { "candidate": "full" },
+      "scope": { "panel": "the calibrated claim-support panel" },
+      "tests": [{ "id": "supported", "kind": "atLeast", "value": 0.9, "requiresPanelCalibrated": true }]
+    },
+    "Z3": {
+      "gate": "M-5", "component": "Sleep",
+      "metric": "month-12 growth: retrieval quality and store bytes", "unit": "points", "direction": "higher retrieval, fewer bytes",
+      "arms": { "candidate": "full", "vs": ["no-sleep"] },
+      "scope": { "offline": ["growth-simulation"] },
+      "tests": [
+        { "id": "retrieval", "metric": "retrieval", "vs": "no-sleep", "kind": "nonInferior" },
+        { "id": "store-bytes", "metric": "storeBytes", "vs": "no-sleep", "kind": "nonInferior" }
+      ]
+    },
+    "Z4": {
+      "gate": "M-5", "component": "Sleep",
+      "metric": "model calls and tokens per sleep run", "unit": "calls / tokens", "direction": "lower",
+      "arms": { "candidate": "full" },
+      "scope": { "budget": "the per-run budget plan 221's gate record states" },
+      "tests": [
+        { "id": "calls", "metric": "calls", "kind": "withinBudget" },
+        { "id": "tokens", "metric": "tokens", "kind": "withinBudget" }
+      ]
+    }
+  },
+  "retrievalSets": {
+    "builtBy": "plan 219.1 Task 2, before its first product change",
+    "amendment": "plan 219.1 adds each set's hash (and, in its Task 8, the fitted thresholds) as an amendment with previousHash; no row and no rule here changes",
+    "rules": {
+      "paraphrase": "development questions only; named entities kept; every other content term replaced, so the query shares no analyzed non-entity term with its gold evidence (checked by script); rewrites written once and stored with their hash",
+      "non-english": "Chinese, Japanese and accented-Latin notes and queries, written for the fixture, with gold ids",
+      "parity": "about 500 notes over three scopes, with keys, used by every store adapter",
+      "abstention": "answerable and unanswerable development items from the abstention and adversarial strata"
+    },
+    "thresholdFit": {
+      "set": "abstention",
+      "rule": "the confidence thresholds are fitted once on the development abstention set by maximum F1 of answerable versus unanswerable, with a false abstention weighted x2, and frozen before gate M-T",
+      "falseAbstentionWeight": 2
+    },
+    "hashes": { "paraphrase": null, "non-english": null, "parity": null, "abstention": null },
+    "thresholds": null
+  },
+  "wiki": {
+    "criteriaFile": "scripts/memory-bench/three-tier-criteria.json",
+    "criteriaHash": "3d5a5c10fddda0931d00003aad8f2fccf5bdef2a829fa0b09bfac004b2bd263f",
+    "rows": "plan 208's O1-O8, used unchanged and referenced by hash, never copied",
+    "gates": ["K-1", "A"],
+    "armMapping": {
+      "P+O": "ltm+wiki",
+      "conversational+O": "ltm+wiki",
+      "coding+O": "coding+wiki"
+    },
+    "mappingRule": "`ltm+wiki` is the `ltm` profile of @arnilo/prism-memory-system with @arnilo/prism-wiki; the base arm of each pairing is the same configuration without the wiki"
+  },
+  "acceptance": {
+    "gate": "A",
+    "plan": 223,
+    "pinsCriteria": {
+      "robustness-criteria.json": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+      "three-tier-criteria.json": "3d5a5c10fddda0931d00003aad8f2fccf5bdef2a829fa0b09bfac004b2bd263f",
+      "work-outcome-criteria.json": "d30681ec13dfd1e9f01ce9fdfe8ad2caa674b97182210c12788bd0bc77717bd2",
+      "memory-model-criteria.json": "self: the hash recorded in docs/_evidence/memory-bench/memory-model/criteria.json"
+    },
+    "rule": "the one gate A manifest pins all four hashes and assertMemoryModelPin verifies each; live memory-model rows run on heldout-a with the arms named here"
+  },
+  "fixtures": {
+    "rule": "each fixture is built by its owner plan, frozen, and its hash added by an amendment before the gate that reads it; dataset-derived text stays in the gitignored bench cache, evidence holds hashes",
+    "index": [
+      { "id": "long-session-replay", "kind": "offline", "plan": 217, "spec": "offline long-session coding replay, >= 6 tasks and >= 200 entries", "extendedBy": { "218": ["re-plan", "protected items"], "219": ["preference stated once", "superseded fact"], "220": ["repeated benign event", "repeated failure"], "221": ["episode:end"] }, "hash": null },
+      { "id": "long-session", "kind": "live", "plan": 217, "spec": "live long-session coding family, added to the work-outcome runner", "hash": null },
+      { "id": "re-plan", "kind": "live", "plan": 218, "spec": "live re-plan family (a mid-episode re-plan), added to the work-outcome runner", "hash": null },
+      { "id": "recurring-failure", "kind": "live", "plan": 220, "spec": "live recurring-failure family (a repeated failure signature), added to the work-outcome runner", "hash": null },
+      { "id": "multi-session-lifecycle", "kind": "offline+live", "plan": "219, 221", "spec": "multi-session lifecycle built on plan 202 Task 16's offline lifecycle suite (scripts/memory-bench/lifecycle)", "hash": null },
+      { "id": "paraphrase", "kind": "offline", "plan": "219.1", "spec": "retrievalSets.rules.paraphrase", "hash": null },
+      { "id": "non-english", "kind": "offline", "plan": "219.1", "spec": "retrievalSets.rules.non-english", "hash": null },
+      { "id": "parity", "kind": "offline", "plan": "219.1", "spec": "retrievalSets.rules.parity", "hash": null },
+      { "id": "abstention", "kind": "offline", "plan": "219.1", "spec": "retrievalSets.rules.abstention", "hash": null },
+      { "id": "full-r-snapshots", "kind": "offline", "plan": 219, "spec": "plan 219's full-r store snapshots, kept locally (bench cache), hashes in evidence", "hash": null }
+    ]
+  },
+  "gateRecord": {
+    "template": "docs/_evidence/memory-bench/memory-model/gates/README.md",
+    "path": "gates.<gate>.record: docs/_evidence/memory-bench/<plan>/gates/owner-gate-<gate>.json, as each plan names it",
+    "fields": ["gate", "plan", "approved", "approvedAt", "approvedBy", "text", "budget", "models", "arms", "partitions", "caps", "memoryModelCriteriaHash", "criteriaHash"],
+    "models": "the providers of plan 210 gate C-1 (docs/_evidence/memory-bench/210/gates/owner-gate-c1.json scope) unless the owner names others; never openrouter/free"
+  },
+  "noTextRule": "Evidence and reports carry ids, labels, counts, rates, scores and hashes; never question, gold, note, chunk, claim or corpus text."
+}

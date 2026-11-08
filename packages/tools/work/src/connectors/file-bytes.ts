@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { basename, isAbsolute } from "node:path";
-import type { ArtifactBodyRef, ArtifactBodyStore, JsonObject } from "@arnilo/prism";
+import type { JsonObject } from "@arnilo/prism";
+import type { ArtifactBodyRef, ArtifactBodyStore } from "@arnilo/prism/artifacts";
 import { WorkToolError } from "./errors.js";
 
 export interface UploadBytes {

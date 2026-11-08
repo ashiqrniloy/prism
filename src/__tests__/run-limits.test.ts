@@ -1,26 +1,27 @@
-import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
 import {
   type AgentEvent,
-  type ModelProvider,
-  createAgent,
   askEveryTool,
+  createAgent,
   createMemorySessionStore,
   HARD_RUN_LIMITS,
   type LoopStrategy,
+  type ModelProvider,
   providerDone,
   providerTextDelta,
   providerToolCall,
   providerUsage,
   type RunLimitBreach,
   RunLimitError,
-  RunLimitTracker,
   resolveRunLimits,
   type ToolDefinition,
   toolCallContent,
 } from "../index.js";
-import { mockProvider } from "../testing/index.js";
 import { providerPackage } from "../provider-kit/index.js";
+// The tracker class is kernel-internal since plan 215 Task 26; the root exports its type and factory.
+import { RunLimitTracker } from "../run-limits.js";
+import { mockProvider } from "../testing/index.js";
 
 async function collect(iterable: AsyncIterable<AgentEvent>): Promise<AgentEvent[]> {
   const events: AgentEvent[] = [];

@@ -30,7 +30,7 @@ it("cache_levers_match_pi_openrouter", async () => {
   for (const expected of reference.models) {
     const bodies: JsonObject[] = [];
     const provider = createOpenRouterProvider({
-      apiKey: "offline-fixture",
+      apiKey: async () => "offline-fixture",
       fetch: (async (_url, init) => {
         const headers = new Headers(init?.headers);
         assert.equal(headers.get("x-session-id"), reference.sessionId);

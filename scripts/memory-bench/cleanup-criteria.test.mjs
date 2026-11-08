@@ -68,7 +68,7 @@ test("cleanup_criteria_hash_pinned_by_manifests", () => {
         edited((c) => c.inertRemoval.features.pop()),
         files(),
       ),
-    /no-credible-path row kind\.episode has no removal route/,
+    /no-credible-path row scoped\.policy has no removal route/,
   );
   const member = files();
   member.ledger.features.find((row) => row.id === "retrieval.hybrid").presets.conversational = "member";
@@ -179,5 +179,105 @@ test("owner_hold_routes_to_experimental_tier", () => {
         files(),
       ),
     /navigation\.agentic-lexical must carry/,
+  );
+});
+
+const withoutOwnerOverrides = (criteria) => {
+  const copy = structuredClone(criteria);
+  delete copy.ownerNegativeOverrides;
+  copy.amendments = copy.amendments.slice(0, 1);
+  return copy;
+};
+const withoutTransfer = (criteria) => {
+  const copy = withoutOwnerOverrides(criteria);
+  copy.inertRemoval.features = [...copy.amendments[0].previousInertRemoval];
+  delete copy.transferred;
+  delete copy.closure;
+  delete copy.amendments;
+  return copy;
+};
+
+test("cleanup_criteria_transfer_changes_no_rule_for_remaining_features", () => {
+  // Undoing an amendment's additions must reproduce the hash it names, so nothing but the amended lists changed.
+  const [transfer, override] = CLEANUP_CRITERIA.amendments;
+  assert.equal(cleanupCriteriaHash(withoutOwnerOverrides(CLEANUP_CRITERIA)), override.previousHash);
+  assert.equal(cleanupCriteriaHash(withoutTransfer(CLEANUP_CRITERIA)), transfer.previousHash);
+
+  // Only the membership of `transferred` and `inertRemoval` differs from the previous list.
+  const transferred = CLEANUP_CRITERIA.transferred.features.map((row) => row.feature);
+  const inert = CLEANUP_CRITERIA.inertRemoval.features;
+  assert.deepEqual(
+    [...inert, ...transferred.filter((id) => transfer.previousInertRemoval.includes(id))].sort(),
+    [...transfer.previousInertRemoval].sort(),
+  );
+  assert.equal(inert.length, 9);
+  for (const id of inert) assert.ok(!transferred.includes(id), `${id} is both inert and transferred`);
+
+  // The rules, thresholds and verdict precedence are untouched.
+  const before = withoutTransfer(CLEANUP_CRITERIA);
+  for (const key of ["rules", "verdicts", "statistics", "pins", "partitions", "preRegistered", "experimentalTier"])
+    assert.deepEqual(CLEANUP_CRITERIA[key], before[key], `${key} changed`);
+
+  // The list is checked: a transferred feature cannot also be removed as inert, or be unknown.
+  const files = () => ({
+    gapPredictions: repo("docs/_evidence/memory-bench/210/gap-predictions.json"),
+    plan202Task5: repo("docs/_evidence/memory-bench/202/task5/development-comparison-manifest.json"),
+    ledger: repo("docs/_evidence/memory-bench/210/feature-ledger.json"),
+  });
+  assert.throws(
+    () =>
+      verifyCleanupCriteria(
+        edited((c) => c.transferred.features.push({ feature: "retrieval.hybrid", plan: 216, reason: "x" })),
+        files(),
+      ),
+    /transferred and cannot also be an inert removal/,
+  );
+  assert.throws(
+    () =>
+      verifyCleanupCriteria(
+        edited((c) => c.transferred.features.push({ feature: "no.such.row", plan: 216, reason: "x" })),
+        files(),
+      ),
+    /not a ledger feature/,
+  );
+  assert.throws(
+    () =>
+      verifyCleanupCriteria(
+        edited((c) => (c.transferred.features[0].plan = "216")),
+        files(),
+      ),
+    /destination plan/,
+  );
+  assert.throws(
+    () =>
+      verifyCleanupCriteria(
+        edited((c) => (c.closure.afterWave = 2)),
+        files(),
+      ),
+    /closed after wave 1/,
+  );
+});
+
+test("owner_negative_override_waives_only_the_ability_ci_trigger", () => {
+  const evidence = { feature: "retrieval.lexical", status: "unmeasured", abilities: [{ ciHigh: -11 }], benefit: [{ ciLow: 26 }] };
+  assert.equal(cleanupVerdict(evidence).verdict, "keep");
+  const unwaived = withoutOwnerOverrides(CLEANUP_CRITERIA);
+  assert.deepEqual(cleanupVerdict(evidence, unwaived), {
+    feature: "retrieval.lexical",
+    verdict: "remove",
+    tier: "removed",
+    reason: "negative",
+  });
+  // A ledger `negative` status and a safety failure are never waived, and another feature is not covered.
+  assert.equal(cleanupVerdict({ ...evidence, status: "negative" }).verdict, "remove");
+  assert.equal(cleanupVerdict({ ...evidence, safetyFailure: true }).verdict, "remove");
+  assert.equal(cleanupVerdict({ ...evidence, feature: "timeline" }).verdict, "remove");
+  assert.throws(
+    () =>
+      verifyCleanupCriteria(
+        edited((c) => (c.ownerNegativeOverrides[0].reason = " ")),
+        files(),
+      ),
+    /needs a feature, a date and a written reason/,
   );
 });

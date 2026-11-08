@@ -1237,6 +1237,7 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 
 ## Decide the ontology default and keep the tier honest
 
+- Re-pointed (2026-11-08, plan 216 Task 3): the ontology is now `@arnilo/prism-wiki`, outside memory. Plans 222 (the wiki screen) and 223 (the combined check, held-out acceptance and defaults) own this decision; the memory-model criteria file is unchanged.
 - Section: Further Actions
 - Priority: P1
 - Source: plans/207-Phase-11-Part-O13-Memory-Three-Tier-Architecture-Ontology-Wiki-Over-The-Fabric.md
@@ -1245,6 +1246,7 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 
 ## Cache evidence for a concept written mid-session
 
+- Re-pointed (2026-11-08, plan 216 Task 3): inherited by plan 222 (the wiki screen). The concept pointer is now the wiki's own `context.build` block, computed once per user turn; a concept written mid-session reaches it on the next turn.
 - Section: Further Actions
 - Priority: P2
 - Source: plans/207-Phase-11-Part-O13-Memory-Three-Tier-Architecture-Ontology-Wiki-Over-The-Fabric.md
@@ -1253,6 +1255,7 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 
 ## Decide whether the concept curator may cite exchanges
 
+- Re-pointed (2026-11-08, plan 216 Task 3): inherited by plan 222. Citing LTM exchange ids stays possible: the wiki reads them through the read-only `memory.ltm` port, which also derives keywords for an exchange stored without them.
 - Section: Further Actions
 - Priority: P3
 - Source: plans/207-Phase-11-Part-O13-Memory-Three-Tier-Architecture-Ontology-Wiki-Over-The-Fabric.md
@@ -1265,8 +1268,9 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Section: Further Actions
 - Priority: P4
 - Source: plans/207-Phase-11-Part-O13-Memory-Three-Tier-Architecture-Ontology-Wiki-Over-The-Fabric.md
-- What: A `wiki:lint` check or an ingest rollback for a `sources/<id>/` directory with no indexed `extract.md`.
-- Why: Staging is not atomic with indexing; a failed ingest leaves an orphan directory and a flagged source is staged but not indexed.
+- What: A `wiki:lint` check or an ingest rollback for a `<wiki.root>/sources/<id>/` directory with no `source.json` record, or one whose record carries `refused`.
+- Re-scoped (2026-11-08, plan 216 Task 3): sources are the wiki's own store now (`<wiki.root>/sources/<id>/{source.*, extract.md, source.json}`), never memory notes, so this is a `wiki:lint` item over that store.
+- Why: Staging is not atomic with recording; a failed ingest leaves an orphan directory, and a flagged source is staged but never citable.
 
 ## Clear the inherited release-gate blockers
 
@@ -1279,6 +1283,7 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 
 ## Revisit sources counted as minNotes notes
 
+- Re-pointed (2026-11-08, plan 216 Task 3): kept, not removed. Sources are no longer memory notes, but the wiki's accumulation trigger still weighs its own source as `minNotes` notes (the move preserved behaviour). Inherited by plan 222.
 - Section: Compromises Made
 - Priority: P3
 - Source: plans/207-Phase-11-Part-O13-Memory-Three-Tier-Architecture-Ontology-Wiki-Over-The-Fabric.md
@@ -1287,6 +1292,7 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 
 ## Revisit closing the 208 screen on a partial run
 
+- Re-pointed (2026-11-08, plan 216 Task 3): inherited by plans 222–223 (the ontology is the wiki now; `P+O` reads as `ltm+wiki`).
 - Section: Compromises Made
 - Priority: P2
 - Source: plans/208-Phase-11-Part-O14-Memory-Three-Tier-Evaluation-Claim-Support-And-Default-Decision.md
@@ -1295,6 +1301,7 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 
 ## Treat the O3 early read as development evidence only
 
+- Re-pointed (2026-11-08, plan 216 Task 3): inherited by plans 222–223; the criteria file is unchanged.
 - Section: Compromises Made
 - Priority: P1
 - Source: plans/208-Phase-11-Part-O14-Memory-Three-Tier-Evaluation-Claim-Support-And-Default-Decision.md

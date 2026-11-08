@@ -104,7 +104,7 @@ describe("@arnilo/prism-provider-openai-codex package", () => {
   });
 
   it("openai_codex_passes_recorded_conformance", async () => {
-    const result = await providerConformance((fetchImpl) => createOpenAICodexProvider({ apiKey: KEY, fetch: fetchImpl }), {
+    const result = await providerConformance((fetchImpl) => createOpenAICodexProvider({ apiKey: async () => KEY, fetch: fetchImpl }), {
       recordings: new URL("./wire/", import.meta.url),
       models: openAICodexModels,
       secrets: [KEY],
@@ -131,7 +131,7 @@ describe("@arnilo/prism-provider-openai-codex package", () => {
   it("openai_codex_omits_siwc_unsupported_fields", async () => {
     let body: Record<string, unknown> | undefined;
     const provider = createOpenAICodexProvider({
-      apiKey: KEY,
+      apiKey: async () => KEY,
       fetch: (async (_input: unknown, init: RequestInit) => {
         body = JSON.parse(String(init.body)) as Record<string, unknown>;
         return completed("ok");
@@ -151,7 +151,7 @@ describe("@arnilo/prism-provider-openai-codex package", () => {
   });
 
   it("openai_codex_rejects_max_output_tokens_below_the_route_minimum", async () => {
-    const provider = createOpenAICodexProvider({ apiKey: KEY, fetch: (async () => completed("ok")) as typeof fetch });
+    const provider = createOpenAICodexProvider({ apiKey: async () => KEY, fetch: (async () => completed("ok")) as typeof fetch });
     const events = await collect(provider, request({ model: { ...model, parameters: { max_output_tokens: 8 } } }));
     const terminal = events.at(-1);
     assert.equal(terminal?.type, "error");
@@ -162,7 +162,7 @@ describe("@arnilo/prism-provider-openai-codex package", () => {
     let headers: Headers | undefined;
     let body: Record<string, unknown> | undefined;
     const provider = createOpenAICodexProvider({
-      apiKey: KEY,
+      apiKey: async () => KEY,
       fetch: (async (_input: unknown, init: RequestInit) => {
         headers = new Headers(init.headers);
         body = JSON.parse(String(init.body)) as Record<string, unknown>;
@@ -206,7 +206,7 @@ describe("@arnilo/prism-provider-openai-codex package", () => {
     ];
     for (const testCase of cases) {
       const provider = createOpenAICodexProvider({
-        apiKey: KEY,
+        apiKey: async () => KEY,
         fetch: (async () => failure(testCase.status, testCase.body)) as typeof fetch,
       });
       const events = await collect(provider, request());
@@ -218,7 +218,7 @@ describe("@arnilo/prism-provider-openai-codex package", () => {
     }
 
     const reauth = createOpenAICodexProvider({
-      apiKey: KEY,
+      apiKey: async () => KEY,
       fetch: (async () => failure(401, { code: "subscription_sharing_invalid_user" })) as typeof fetch,
     });
     const terminal = (await collect(reauth, request())).at(-1);
@@ -230,7 +230,7 @@ describe("@arnilo/prism-provider-openai-codex package", () => {
   it("openai_codex_usage_limit_not_retried", async () => {
     const calls: unknown[] = [];
     const provider = createOpenAICodexProvider({
-      apiKey: KEY,
+      apiKey: async () => KEY,
       fetch: (async (_input: unknown, init: RequestInit) => {
         calls.push(init);
         return failure(429, { detail: "usage limit", code: "subscription_sharing_usage_limit_exceeded" });
@@ -251,7 +251,7 @@ describe("@arnilo/prism-provider-openai-codex package", () => {
 
   it("openai_codex_overflow_body_classifies_context_overflow", async () => {
     const provider = createOpenAICodexProvider({
-      apiKey: KEY,
+      apiKey: async () => KEY,
       fetch: (async () =>
         failure(400, { error: { code: "context_length_exceeded", message: "Your input exceeds the context window." } })) as typeof fetch,
     });
@@ -328,7 +328,7 @@ describe("@arnilo/prism-provider-openai-codex package", () => {
   it("list_openai_codex_models_filters_visibility", async () => {
     let url = "";
     const listed = await listOpenAICodexModels({
-      apiKey: KEY,
+      apiKey: async () => KEY,
       fetch: (async (input: unknown) => {
         url = String(input);
         return new Response(
@@ -384,7 +384,7 @@ describe("@arnilo/prism-provider-openai-codex package", () => {
     const catalog = JSON.stringify({ models: [entry("gpt-6-luna"), entry("gpt-6.1-sol")] });
     assert.equal(catalog.length > 64 * 1024, true);
     const listed = await listOpenAICodexModels({
-      apiKey: KEY,
+      apiKey: async () => KEY,
       fetch: (async () => new Response(catalog, { status: 200, headers: { "content-type": "application/json" } })) as typeof fetch,
     });
     assert.deepEqual(
@@ -394,7 +394,7 @@ describe("@arnilo/prism-provider-openai-codex package", () => {
     await assert.rejects(
       () =>
         listOpenAICodexModels({
-          apiKey: KEY,
+          apiKey: async () => KEY,
           fetch: (async () =>
             new Response("x".repeat(OPENAI_CODEX_MODELS_MAX_BODY_BYTES + 1), {
               status: 200,
@@ -422,7 +422,7 @@ describe("@arnilo/prism-provider-openai-codex package", () => {
 
     let body: Record<string, unknown> | undefined;
     const provider = createOpenAICodexProvider({
-      apiKey: KEY,
+      apiKey: async () => KEY,
       fetch: (async (_input: unknown, init: RequestInit) => {
         body = JSON.parse(String(init.body)) as Record<string, unknown>;
         return completed("ok");
@@ -453,7 +453,7 @@ describe("@arnilo/prism-provider-openai-codex package", () => {
     // The same block sent to another provider is dropped: the payload is provider-bound.
     let foreignBody: Record<string, unknown> | undefined;
     const foreign = createOpenAICodexProvider({
-      apiKey: KEY,
+      apiKey: async () => KEY,
       fetch: (async (_input: unknown, init: RequestInit) => {
         foreignBody = JSON.parse(String(init.body)) as Record<string, unknown>;
         return completed("ok");

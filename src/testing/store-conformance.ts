@@ -31,6 +31,7 @@ export const STORE_CONFORMANCE_STEPS = [
   "package-state-log",
   "external-state",
   "suspended-run",
+  "unknown-entry-kind",
   "search",
   "title",
   "list-and-delete",
@@ -67,7 +68,7 @@ type MergeSessionMetadata = (sessionId: string, patch: Readonly<Record<string, u
 /**
  * Assert that a `SessionStore` implementation satisfies the full adapter contract: append/list order,
  * `get`, append-conflict rules (duplicate id, `expectedParentId`, `idempotencyKey`), branch and fork
- * isolation, `package_state` and `suspended_run` round-trips, the append-only `package_state` record
+ * isolation, `package_state`, `suspended_run` and unknown-kind entry round-trips, the append-only `package_state` record
  * log, `searchSessions`, the session title,
  * `agent.sessions` list/delete over the store's declared capabilities, and durable survival when a
  * `reopen` factory is given. Throws on the first violation; returns silently when the store conforms.
@@ -368,6 +369,37 @@ export async function storeConformance(factory: StoreConformanceFactory, options
     }
   });
 
+  // unknown_entry_kind_round_trips (docs/compatibility.md, store rules): an entry of a kind this build does not
+  // know, written by a later minor, is persisted and returned unchanged, and never makes the session unreadable.
+  const unknownEntry = {
+    id: "unknown-kind",
+    parentId: undefined as string | undefined,
+    sessionId,
+    timestamp: now(35),
+    kind: "conformance_future_kind",
+    data: { note: "from a later minor", nested: { n: 1, list: ["a", null] } },
+    metadata: { origin: "conformance" },
+  } satisfies SessionEntry;
+  await leg("unknown-entry-kind", async () => {
+    const parentId = await tip();
+    const written: SessionEntry = { ...unknownEntry, parentId };
+    unknownEntry.parentId = parentId;
+    await store.append(written);
+    const rows = await store.list(sessionId);
+    const stored = rows.find((row) => row.id === written.id);
+    if (!stored) throw new Error("unknown_entry_kind_round_trips: a session store must persist an entry of an unknown kind");
+    if (JSON.stringify(stripUndefined(stored)) !== JSON.stringify(stripUndefined(written))) {
+      throw new Error(`unknown_entry_kind_round_trips: an unknown-kind entry must come back unchanged; got ${JSON.stringify(stored)}`);
+    }
+    if (typeof store.get === "function" && (await store.get(written.id))?.kind !== written.kind) {
+      throw new Error("unknown_entry_kind_round_trips: get must return an unknown-kind entry");
+    }
+    if (typeof store.readBranchPath === "function") {
+      const chain = await chainOf(written.id);
+      if (chain.at(-1) !== written.id) throw new Error("unknown_entry_kind_round_trips: an unknown-kind entry must be part of the branch path");
+    }
+  });
+
   await leg("search", async () => {
     if (!claimed.has("searchSessions")) {
       await reject(() => sessions.search({ limit: 5 }), isUnsupportedStoreCapability, unclaimed("searchSessions", "search"));
@@ -576,6 +608,10 @@ export async function storeConformance(factory: StoreConformanceFactory, options
           throw new Error("a suspended_run entry and the entry that hides it must survive reopen as one branch");
         }
       }
+      const unknownAfter = after.find((row) => row.id === unknownEntry.id);
+      if (!unknownAfter || JSON.stringify(stripUndefined(unknownAfter)) !== JSON.stringify(stripUndefined(unknownEntry))) {
+        throw new Error("unknown_entry_kind_round_trips: an unknown-kind entry must survive reopen unchanged");
+      }
       if (after.find((row) => row.id === "title-entry")?.metadata?.[SESSION_TITLE_METADATA_KEY] !== title) {
         throw new Error("entry metadata must survive reopen");
       }
@@ -694,6 +730,16 @@ async function assertSessionStoreSearchSessions(store: SessionStore, token: stri
   if (owned.items.length > unscoped.items.length) {
     throw new Error("searchSessions ownership filter must not return more hits than an unscoped search");
   }
+}
+
+/** Drop `undefined` fields (a SQL row maps an absent column to `undefined`) and sort keys, for a shape comparison. */
+function stripUndefined(entry: SessionEntry): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of Object.keys(entry).sort()) {
+    const value = (entry as unknown as Record<string, unknown>)[key];
+    if (value !== undefined) out[key] = value;
+  }
+  return out;
 }
 
 function unclaimed(capability: SessionStoreCapability, method: string): string {

@@ -25,7 +25,7 @@ import {
 } from "@arnilo/prism-memory-core";
 import { memoryWriteVersion } from "../directory.js";
 import { isActiveNote, normalizeNoteStatus, type StorageWeights, storageStrength } from "../lifecycle/index.js";
-import { scanScopedMemoryContent } from "../scoped/trust.js";
+import { scanScopedMemoryContent } from "@arnilo/prism-memory-core";
 import {
   isMemoryNoteValidAt,
   type MemoryFabricRememberInput,
@@ -829,7 +829,7 @@ export interface RuleCaptureInput {
  * `validTo` set). Nothing is asked or written when the turn carries no cue or the gate refuses it.
  */
 export async function captureAndConfirmRule(input: RuleCaptureInput): Promise<{ readonly proposed: boolean; readonly activated: boolean }> {
-  if (input.gate?.durable === false || input.gate?.instructionLike === true) return { proposed: false, activated: false };
+  if (input.gate?.instructionLike === true) return { proposed: false, activated: false };
   const proposal = captureRule(input.userText, [input.userEntryId, input.assistantEntryId]);
   if (proposal === undefined) return { proposed: false, activated: false };
   const note = await input.remember(

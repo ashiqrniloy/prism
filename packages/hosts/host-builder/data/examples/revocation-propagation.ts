@@ -36,7 +36,7 @@ import {
   foldObservationalMemoryLedger,
   OBSERVATIONS_RECORDED,
 } from "@arnilo/prism-memory-observational";
-import { chunkMarkdown, createRagDeletionHandler, indexChunks, retrieveContext } from "@arnilo/prism-memory-rag";
+import { chunkMarkdown, createRagDeletionHandler, indexChunks, retrieveContext } from "@arnilo/prism-rag";
 import { mockProvider } from "@arnilo/prism/testing";
 
 const TENANT = "t1";

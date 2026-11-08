@@ -1,4 +1,5 @@
-import { isLoopbackHostname, type JsonValue, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
+import { type JsonValue, redactSecrets } from "@arnilo/prism";
+import { isLoopbackHostname } from "@arnilo/prism/net";
 import { resolveWebLimits } from "./limits.js";
 import type { ResolvedWebLimits, WebAdapterOptions, WebProvider, WebProviderMetadata } from "./types.js";
 
@@ -67,7 +68,10 @@ export function createWebTransport(
       parsed.hash ||
       value !== parsed.origin
     )
-      throw new WebToolError("ERR_PRISM_WEB_ORIGIN", "Provider API origins must be exact HTTPS origins (loopback HTTP only with allowLoopback)");
+      throw new WebToolError(
+        "ERR_PRISM_WEB_ORIGIN",
+        "Provider API origins must be exact HTTPS origins (loopback HTTP only with allowLoopback)",
+      );
     return parsed.origin;
   });
   if (!allowed.includes(origin)) throw new WebToolError("ERR_PRISM_WEB_ORIGIN", `Required ${provider} API origin is not allowed`);
@@ -152,7 +156,7 @@ export function createWebTransport(
       let credential: string | undefined;
       if (transport.auth !== "none") {
         try {
-          credential = await resolveCredentialValue(options.credentials, { provider, name: credentialName });
+          credential = await options.credentials();
         } catch {
           throw new WebToolError("ERR_PRISM_WEB_CREDENTIAL", `${provider} credential resolution failed`);
         }

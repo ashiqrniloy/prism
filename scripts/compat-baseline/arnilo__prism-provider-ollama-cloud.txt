@@ -1,36 +1,38 @@
-OLLAMA_CLOUD_CHAT_ROUTE	export declare const OLLAMA_CLOUD_CHAT_ROUTE: RoutedProviderRoute<"openai-chat">
-OLLAMA_CLOUD_DEFAULT_API_KEY_REF	export declare const OLLAMA_CLOUD_DEFAULT_API_KEY_REF = "env:OLLAMA_API_KEY"
-OLLAMA_CLOUD_DEFAULT_BASE_URL	export declare const OLLAMA_CLOUD_DEFAULT_BASE_URL = "https://ollama.com"
-OLLAMA_CLOUD_MAX_LINE_BYTES	export declare const OLLAMA_CLOUD_MAX_LINE_BYTES = 1048576
-OLLAMA_CLOUD_NATIVE_ROUTE	export declare const OLLAMA_CLOUD_NATIVE_ROUTE:
-OLLAMA_CLOUD_SYSTEMONE_PATH	export declare const OLLAMA_CLOUD_SYSTEMONE_PATH = "/v1/systemone"
-contextLength	export declare function contextLength(modelInfo: Readonly<Record<string, unknown>> | undefined): number | undefined
-createOllamaCloudProvider	export declare function createOllamaCloudProvider(options?: OllamaCloudProviderOptions): ModelProvider
-default	export default
-defineOllamaCloudDecisionModel	export declare function defineOllamaCloudDecisionModel(config: OllamaCloudModelConfig): ModelConfig
-defineOllamaCloudModel	export declare function defineOllamaCloudModel(config: OllamaCloudModelConfig): ModelConfig
-listOllamaCloudModels	export declare function listOllamaCloudModels(options?: ListOllamaCloudModelsOptions): Promise<ModelConfig[]>
-mapOllamaCloudModel	export declare function mapOllamaCloudModel(entry: OllamaCloudModelEntry, show?: OllamaCloudShowEntry, options?:
-ollamaCloud	export declare function ollamaCloud(options?: OllamaCloudProviderPackageOptions & OllamaCloudProviderConfig): PackageInstance
-ollamaCloudBalance	export declare function ollamaCloudBalance(options?: OllamaCloudBalanceOptions): Promise<OllamaCloudBalance>
-ollamaCloudHttpError	export declare function ollamaCloudHttpError(response: Response, bodyText: string, secrets: readonly (string | undefined)[]): Error
-ollamaCloudModels	export declare const ollamaCloudModels: readonly ModelConfig[]
-ollamaCloudNativeBody	export declare function ollamaCloudNativeBody(request: ProviderRequest): Promise<OllamaCloudNativePreparedRequest>
-ollamaCloudNativeEvents	export declare function ollamaCloudNativeEvents(request: ProviderRequest, options:
-ollamaCloudThink	export declare function ollamaCloudThink(request:
-ollamaCloudThinkingIsBoolean	export declare function ollamaCloudThinkingIsBoolean(values: readonly JsonValue[] | undefined): boolean
-ollamaCloudThinkingLevels	export declare function ollamaCloudThinkingLevels(values: readonly JsonValue[] | undefined): readonly string[] | undefined
-routeForOllamaCloudRequest	export declare function routeForOllamaCloudRequest(request: ProviderRequest, fallback?: OllamaCloudRoute): OllamaCloudRoute
-stripJsonFence	export declare function stripJsonFence(text: string): string
-thinkingValues	export declare function thinkingValues(model: ModelConfig): readonly JsonValue[] | undefined
-type ListOllamaCloudModelsOptions	export { contextLength, defineOllamaCloudDecisionModel, defineOllamaCloudModel, type ListOllamaCloudModelsOptions, listOllamaCloudModels, mapOllamaCloudModel, OLLAMA_CLOUD_DEFAULT_BASE_URL, type OllamaCloudBalance, type OllamaCloudBalanceOptions, type OllamaCloudBalanceWindow, type OllamaCloudIncludedBalance, type OllamaCloudModelConfig, type OllamaCloudModelEntry, type OllamaCloudRoute, type OllamaCloudShowEntry, ollamaCloudBalance, ollamaCloudModels, ollamaCloudThink, ollamaCloudThinkingIsBool
-type OllamaCloudBalance	export { contextLength, defineOllamaCloudDecisionModel, defineOllamaCloudModel, type ListOllamaCloudModelsOptions, listOllamaCloudModels, mapOllamaCloudModel, OLLAMA_CLOUD_DEFAULT_BASE_URL, type OllamaCloudBalance, type OllamaCloudBalanceOptions, type OllamaCloudBalanceWindow, type OllamaCloudIncludedBalance, type OllamaCloudModelConfig, type OllamaCloudModelEntry, type OllamaCloudRoute, type OllamaCloudShowEntry, ollamaCloudBalance, ollamaCloudModels, ollamaCloudThink, ollamaCloudThinkingIsBool
-type OllamaCloudBalanceOptions	export { contextLength, defineOllamaCloudDecisionModel, defineOllamaCloudModel, type ListOllamaCloudModelsOptions, listOllamaCloudModels, mapOllamaCloudModel, OLLAMA_CLOUD_DEFAULT_BASE_URL, type OllamaCloudBalance, type OllamaCloudBalanceOptions, type OllamaCloudBalanceWindow, type OllamaCloudIncludedBalance, type OllamaCloudModelConfig, type OllamaCloudModelEntry, type OllamaCloudRoute, type OllamaCloudShowEntry, ollamaCloudBalance, ollamaCloudModels, ollamaCloudThink, ollamaCloudThinkingIsBool
-type OllamaCloudBalanceWindow	export { contextLength, defineOllamaCloudDecisionModel, defineOllamaCloudModel, type ListOllamaCloudModelsOptions, listOllamaCloudModels, mapOllamaCloudModel, OLLAMA_CLOUD_DEFAULT_BASE_URL, type OllamaCloudBalance, type OllamaCloudBalanceOptions, type OllamaCloudBalanceWindow, type OllamaCloudIncludedBalance, type OllamaCloudModelConfig, type OllamaCloudModelEntry, type OllamaCloudRoute, type OllamaCloudShowEntry, ollamaCloudBalance, ollamaCloudModels, ollamaCloudThink, ollamaCloudThinkingIsBool
-type OllamaCloudIncludedBalance	export { contextLength, defineOllamaCloudDecisionModel, defineOllamaCloudModel, type ListOllamaCloudModelsOptions, listOllamaCloudModels, mapOllamaCloudModel, OLLAMA_CLOUD_DEFAULT_BASE_URL, type OllamaCloudBalance, type OllamaCloudBalanceOptions, type OllamaCloudBalanceWindow, type OllamaCloudIncludedBalance, type OllamaCloudModelConfig, type OllamaCloudModelEntry, type OllamaCloudRoute, type OllamaCloudShowEntry, ollamaCloudBalance, ollamaCloudModels, ollamaCloudThink, ollamaCloudThinkingIsBool
-type OllamaCloudModelConfig	export { contextLength, defineOllamaCloudDecisionModel, defineOllamaCloudModel, type ListOllamaCloudModelsOptions, listOllamaCloudModels, mapOllamaCloudModel, OLLAMA_CLOUD_DEFAULT_BASE_URL, type OllamaCloudBalance, type OllamaCloudBalanceOptions, type OllamaCloudBalanceWindow, type OllamaCloudIncludedBalance, type OllamaCloudModelConfig, type OllamaCloudModelEntry, type OllamaCloudRoute, type OllamaCloudShowEntry, ollamaCloudBalance, ollamaCloudModels, ollamaCloudThink, ollamaCloudThinkingIsBool
-type OllamaCloudModelEntry	export { contextLength, defineOllamaCloudDecisionModel, defineOllamaCloudModel, type ListOllamaCloudModelsOptions, listOllamaCloudModels, mapOllamaCloudModel, OLLAMA_CLOUD_DEFAULT_BASE_URL, type OllamaCloudBalance, type OllamaCloudBalanceOptions, type OllamaCloudBalanceWindow, type OllamaCloudIncludedBalance, type OllamaCloudModelConfig, type OllamaCloudModelEntry, type OllamaCloudRoute, type OllamaCloudShowEntry, ollamaCloudBalance, ollamaCloudModels, ollamaCloudThink, ollamaCloudThinkingIsBool
-type OllamaCloudNativePreparedRequest	export { OLLAMA_CLOUD_MAX_LINE_BYTES, type OllamaCloudNativePreparedRequest, ollamaCloudHttpError, ollamaCloudNativeBody, ollamaCloudNativeEvents, stripJsonFence, } from "./native.js"
-type OllamaCloudProviderOptions	export { createOllamaCloudProvider, OLLAMA_CLOUD_CHAT_ROUTE, OLLAMA_CLOUD_NATIVE_ROUTE, OLLAMA_CLOUD_SYSTEMONE_PATH, type OllamaCloudProviderOptions, routeForOllamaCloudRequest, } from "./provider.js"
-type OllamaCloudRoute	export { contextLength, defineOllamaCloudDecisionModel, defineOllamaCloudModel, type ListOllamaCloudModelsOptions, listOllamaCloudModels, mapOllamaCloudModel, OLLAMA_CLOUD_DEFAULT_BASE_URL, type OllamaCloudBalance, type OllamaCloudBalanceOptions, type OllamaCloudBalanceWindow, type OllamaCloudIncludedBalance, type OllamaCloudModelConfig, type OllamaCloudModelEntry, type OllamaCloudRoute, type OllamaCloudShowEntry, ollamaCloudBalance, ollamaCloudModels, ollamaCloudThink, ollamaCloudThinkingIsBool
-type OllamaCloudShowEntry	export { contextLength, defineOllamaCloudDecisionModel, defineOllamaCloudModel, type ListOllamaCloudModelsOptions, listOllamaCloudModels, mapOllamaCloudModel, OLLAMA_CLOUD_DEFAULT_BASE_URL, type OllamaCloudBalance, type OllamaCloudBalanceOptions, type OllamaCloudBalanceWindow, type OllamaCloudIncludedBalance, type OllamaCloudModelConfig, type OllamaCloudModelEntry, type OllamaCloudRoute, type OllamaCloudShowEntry, ollamaCloudBalance, ollamaCloudModels, ollamaCloudThink, ollamaCloudThinkingIsBool
+. ListOllamaCloudModelsOptions	interface ListOllamaCloudModelsOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly headers?: Readonly<Record<string, string>>; readonly provider?: string; readonly signal?: AbortSignal; }
+. OLLAMA_CLOUD_CHAT_ROUTE	const OLLAMA_CLOUD_CHAT_ROUTE: RoutedProviderRoute<"openai-chat">
+. OLLAMA_CLOUD_DEFAULT_API_KEY_REF	const OLLAMA_CLOUD_DEFAULT_API_KEY_REF = "env:OLLAMA_API_KEY"
+. OLLAMA_CLOUD_DEFAULT_BASE_URL	const OLLAMA_CLOUD_DEFAULT_BASE_URL = "https://ollama.com"
+. OLLAMA_CLOUD_MAX_LINE_BYTES	const OLLAMA_CLOUD_MAX_LINE_BYTES = 1048576
+. OLLAMA_CLOUD_NATIVE_ROUTE	const OLLAMA_CLOUD_NATIVE_ROUTE: { readonly format: "native"; readonly path: "/api/chat"; }
+. OLLAMA_CLOUD_SYSTEMONE_PATH	const OLLAMA_CLOUD_SYSTEMONE_PATH = "/v1/systemone"
+. OllamaCloudBalance	interface OllamaCloudBalance { readonly included?: OllamaCloudIncludedBalance; readonly purchasedUsd?: number; readonly session?: OllamaCloudBalanceWindow; readonly weekly?: OllamaCloudBalanceWindow; }
+. OllamaCloudBalanceOptions	interface OllamaCloudBalanceOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly headers?: Readonly<Record<string, string>>; readonly provider?: string; readonly signal?: AbortSignal; }
+. OllamaCloudBalanceWindow	interface OllamaCloudBalanceWindow { readonly remainingPercent: number; readonly resetsAt: string; }
+. OllamaCloudIncludedBalance	interface OllamaCloudIncludedBalance { readonly allowanceUsd?: number; readonly balanceUsd: number; readonly periodFrom?: string; readonly periodUntil?: string; }
+. OllamaCloudModelConfig	interface OllamaCloudModelConfig extends Omit<ModelConfig, "provider" | "compat"> { readonly compat?: JsonObject & { readonly route?: OllamaCloudRoute; readonly thinkingValues?: JsonValue; readonly thinkingDefault?: JsonValue; readonly thinkingFamily?: ThinkingCompatFamily; readonly preserveThinking?: boolean; }; readonly provider?: "ollama-cloud"; }
+. OllamaCloudModelEntry	interface OllamaCloudModelEntry { readonly capabilities?: readonly string[]; readonly details?: JsonObject; readonly digest?: string; readonly model?: string; readonly modified_at?: string; readonly name?: string; readonly size?: number; }
+. OllamaCloudNativePreparedRequest	interface OllamaCloudNativePreparedRequest { readonly body: JsonObject; readonly toolNames: ToolNameMap; }
+. OllamaCloudProviderConfig	interface OllamaCloudProviderConfig { readonly apiKey?: string; readonly baseUrl?: string; readonly models?: readonly ModelConfig[]; readonly route?: "native" | "openai"; }
+. OllamaCloudProviderOptions	interface OllamaCloudProviderOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly id?: string; readonly route?: OllamaCloudRoute; }
+. OllamaCloudProviderPackageOptions	interface OllamaCloudProviderPackageOptions { readonly fetch?: typeof fetch; readonly id?: string; }
+. OllamaCloudRoute	type OllamaCloudRoute = "native" | "openai"
+. OllamaCloudShowEntry	interface OllamaCloudShowEntry { readonly capabilities?: readonly string[]; readonly details?: JsonObject; readonly model_info?: Readonly<Record<string, unknown>>; readonly thinking?: { readonly values?: readonly JsonValue[]; readonly default?: JsonValue; } | null; }
+. contextLength	function contextLength(modelInfo: Readonly<Record<string, unknown>> | undefined): number | undefined
+. createOllamaCloudProvider	function createOllamaCloudProvider(options?: OllamaCloudProviderOptions): ModelProvider
+. default	const definition: import("@arnilo/prism").PackageDefinition<OllamaCloudProviderConfig>
+. defineOllamaCloudDecisionModel	function defineOllamaCloudDecisionModel(config: OllamaCloudModelConfig): ModelConfig
+. defineOllamaCloudModel	function defineOllamaCloudModel(config: OllamaCloudModelConfig): ModelConfig
+. listOllamaCloudModels	function listOllamaCloudModels(options?: ListOllamaCloudModelsOptions): Promise<ModelConfig[]>
+. mapOllamaCloudModel	function mapOllamaCloudModel(entry: OllamaCloudModelEntry, show?: OllamaCloudShowEntry, options?: { readonly provider?: string; }): ModelConfig
+. ollamaCloud	function ollamaCloud(options?: OllamaCloudProviderPackageOptions & OllamaCloudProviderConfig): PackageInstance
+. ollamaCloudBalance	function ollamaCloudBalance(options?: OllamaCloudBalanceOptions): Promise<OllamaCloudBalance>
+. ollamaCloudHttpError	function ollamaCloudHttpError(response: Response, bodyText: string, secrets: readonly (string | undefined)[]): Error
+. ollamaCloudModels	const ollamaCloudModels: readonly ModelConfig[]
+. ollamaCloudNativeBody	function ollamaCloudNativeBody(request: ProviderRequest): Promise<OllamaCloudNativePreparedRequest>
+. ollamaCloudNativeEvents	function ollamaCloudNativeEvents(request: ProviderRequest, options: { readonly id: string; readonly baseUrl: string; readonly apiKey?: Parameters<typeof resolveProviderApiKey>[0]; readonly fetch?: typeof fetch; }): AsyncIterable<ProviderEvent>
+. ollamaCloudThink	function ollamaCloudThink(request: { readonly model: ModelConfig; readonly options?: { readonly compat?: JsonObject; }; }): boolean | string | undefined
+. ollamaCloudThinkingIsBoolean	function ollamaCloudThinkingIsBoolean(values: readonly JsonValue[] | undefined): boolean
+. ollamaCloudThinkingLevels	function ollamaCloudThinkingLevels(values: readonly JsonValue[] | undefined): readonly string[] | undefined
+. routeForOllamaCloudRequest	function routeForOllamaCloudRequest(request: ProviderRequest, fallback?: OllamaCloudRoute): OllamaCloudRoute
+. stripJsonFence	function stripJsonFence(text: string): string
+. thinkingValues	function thinkingValues(model: ModelConfig): readonly JsonValue[] | undefined

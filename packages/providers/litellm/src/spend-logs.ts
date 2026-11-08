@@ -1,5 +1,5 @@
-import { type CredentialValueSource, redactSecrets, resolveCredentialValue, trimTrailingSlashes } from "@arnilo/prism";
-import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/provider-kit";
+import { redactSecrets, trimTrailingSlashes } from "@arnilo/prism";
+import { readBoundedResponseJson, readBoundedResponseText, type SecretSource } from "@arnilo/prism/provider-kit";
 import { assertLiteLLMBaseUrl } from "./base-url.js";
 import { LITELLM_DEFAULT_BASE_URL } from "./models.js";
 
@@ -36,7 +36,7 @@ export interface LiteLLMSpendRow {
 
 export interface LiteLLMSpendLogsOptions {
   readonly baseUrl?: string;
-  readonly apiKey?: CredentialValueSource;
+  readonly apiKey?: SecretSource;
   /** Omit to read a date range instead. */
   readonly callIds?: readonly string[];
   /** Defaults to one hour before `until`. */
@@ -129,7 +129,7 @@ export async function litellmSpendLogs(options: LiteLLMSpendLogsOptions = {}): P
   const provider = options.provider ?? "litellm";
   const baseUrl = trimTrailingSlashes(options.baseUrl ?? LITELLM_DEFAULT_BASE_URL);
   assertLiteLLMBaseUrl(baseUrl);
-  const token = await resolveCredentialValue(options.apiKey, { provider, name: "apiKey" });
+  const token = await options.apiKey?.();
   if (token === undefined || token.trim() === "")
     throw new Error("ERR_LITELLM_SPEND_LOGS: no API key; a virtual key can read its own rows, a proxy without one cannot");
   const fetchImpl = options.fetch ?? fetch;

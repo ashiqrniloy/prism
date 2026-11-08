@@ -61,7 +61,7 @@ bun add @arnilo/prism-memory-fabric@experimental
 ```
 
 Say in your report that the host depends on an experimental package. Use `@arnilo/prism-memory-compaction` unless
-the product needs more. Examples: `examples/long-term-memory.ts`, `examples/three-tier-memory.ts`.
+the product needs more. Examples: `examples/long-term-memory.ts`, `examples/memory-and-wiki.ts`.
 
 ## Approval and governance
 

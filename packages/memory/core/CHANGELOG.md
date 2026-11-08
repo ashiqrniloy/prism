@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **The memory worker loop, its limits and the trust scan move here (plan 216 Task 3).** `runMemoryWorkerLoop`, `resolveMemoryWorkerLimits`, `measureWorkerJson`, `joinWorkerText`, `truncateWorkerText`, the worker `DEFAULT_*`/`HARD_*` caps and their types (from `@arnilo/prism-memory-observational`), with `MemoryWorkerError`/`MemoryWorkerLimitError`; `scanScopedMemoryContent`, `normalizeScopedMemoryContent` and `gateScopedMemoryContent` (from the fabric). The OKF codec and layout no longer know the `concept` kind.
+
 - **Experimental in 0.13.0 (plan 215 Task 4).** The README opens with the experimental notice: install with `bun add @arnilo/prism-memory-core@experimental`, outside the stability promise of the stable packages, and the API, config, preset contents and defaults may change or be removed in any release until the package graduates.
 
 ### Added

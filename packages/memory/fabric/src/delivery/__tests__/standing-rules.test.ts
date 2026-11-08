@@ -29,7 +29,6 @@ import {
   type CreateFabricRulesOptions,
   createFabricRules,
   type MemoryFabricRulesConfig,
-  parseRulesFile,
   type ResolvedFabricRulesOptions,
   reconcileRulesFile,
   resolveFabricRulesOptions,

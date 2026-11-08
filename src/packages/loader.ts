@@ -17,6 +17,7 @@ import type {
 import { assertDecisionRequest, DecisionsError, modelSupportsDecisions } from "../contracts-core/decisions.js";
 import { EmbeddingsError, modelSupportsEmbeddings } from "../contracts-core/embeddings.js";
 import type { HookBus, HookRegistrar } from "../hooks/index.js";
+import { requestHostUi } from "../host/response.js";
 import type { HostPort, HostUiRequest, HostUiRequestKind, HostUiResponse, HostUiSecretRequest, HostUiTerminalRequest, Logger } from "../host/types.js";
 import { BUILTIN_PROVIDER_ID, createBuiltinProvider } from "../models/builtin.js";
 import { CredentialRefNotWritableError, CredentialStoreUnavailableError } from "../credentials/errors.js";
@@ -446,7 +447,7 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
     const assigned = (options.slotAssignments ?? {}) as Partial<Record<SlotName, unknown>>;
     const resolver = slots.resolve("credentials", assigned.credentials as never);
     if (!resolver.store) return { status: "unavailable" };
-    const response = await hostUi.request({ ...request, package: owner, sessionId });
+    const response = await requestHostUi(hostUi, { ...request, package: owner, sessionId });
     if (response.status !== "answered") return response;
     const value = response.value;
     if (value !== undefined && value !== "") {
@@ -475,7 +476,7 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
           }
           if (!hostUi) return { status: "unavailable" };
           // `package` and `sessionId` are kernel-set: a package cannot name another package or session.
-          const response = await hostUi.request({ ...request, package: owner, sessionId } as Extract<HostUiRequest, { kind: K }>);
+          const response = await requestHostUi(hostUi, { ...request, package: owner, sessionId } as Extract<HostUiRequest, { kind: K }>);
           // The terminal's I/O never reaches a package: only the exit code is forwarded, whatever the host returned.
           if ((request as HostUiRequest).kind === "terminal" && response.status === "answered") {
             const exitCode = (response.value as { exitCode?: unknown } | undefined)?.exitCode;

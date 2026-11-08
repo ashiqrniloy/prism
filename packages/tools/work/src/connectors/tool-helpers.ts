@@ -1,16 +1,11 @@
-import {
-  UNTRUSTED_EXTERNAL_TRUST,
-  type ArtifactBodyRef,
-  type JsonObject,
-  type ToolDefinition,
-  type ToolExecutionContext,
-  type ToolResult,
-} from "@arnilo/prism";
+import { type JsonObject, type ToolDefinition, type ToolExecutionContext, type ToolResult, UNTRUSTED_EXTERNAL_TRUST } from "@arnilo/prism";
+import { type ArtifactBodyRef } from "@arnilo/prism/artifacts";
 import { resolveSandboxPath } from "../tools/filesystem.js";
 import { computePayloadDigest, extractDraftRecipients, validateApproval } from "./drafts.js";
 import { WorkToolError } from "./errors.js";
 import { artifactRef, readUploadBytes, sha256 } from "./file-bytes.js";
 import { identityKey } from "./idempotency.js";
+import { assertIdentityActive } from "./identity.js";
 import { resolveWorkLimits } from "./limits.js";
 import type {
   GoogleWorkspaceAdapter,
@@ -22,7 +17,6 @@ import type {
   WorkProvider,
   WorkToolsOptions,
 } from "./types.js";
-import { assertIdentityActive } from "./identity.js";
 export function objectSchema(properties: JsonObject, required: readonly string[]): JsonObject {
   return { type: "object", properties, required: [...required], additionalProperties: false };
 }

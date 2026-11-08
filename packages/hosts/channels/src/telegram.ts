@@ -10,7 +10,7 @@ import { bindChannelHostUi } from "./host-ui.js";
 import { retryableAdmission } from "./admission.js";
 import { DEFAULT_CHANNEL_LIMITS, HARD_CHANNEL_LIMITS } from "./limits.js";
 import { createChannelStateStore } from "./state.js";
-import { resolveChannelSecretRef, createChannelRedactor } from "./secret-ref.js";
+import { type ChannelSecretSource, resolveChannelSecretRef, createChannelRedactor } from "./secret-ref.js";
 import { createMemoryCheckpointStore, createMemoryLeaseStore } from "./memory-stores.js";
 import { createChannelRuntime } from "./runtime.js";
 import type {
@@ -28,14 +28,7 @@ import type {
 } from "./types.js";
 
 export type { ChannelConnectionHandle };
-export type CredentialValueSource = string | (() => Promise<string> | string) | { readonly secret: string };
-
-async function resolveTokenValue(source: CredentialValueSource): Promise<string> {
-  if (typeof source === "string") return source;
-  if (typeof source === "function") return await source();
-  if (source && typeof source === "object" && "secret" in source && typeof source.secret === "string") return source.secret;
-  throw new Error("Invalid credential value source");
-}
+export type { ChannelSecretSource };
 
 const DEFAULT_API_ORIGIN = "https://api.telegram.org";
 const DEFAULT_POLL_TIMEOUT_SECONDS = 30;
@@ -65,7 +58,7 @@ export interface TelegramAdapterOptions {
   /** Stable host-selected connection id; it is never read from Telegram input. */
   readonly connectionId: string;
   /** Resolved only immediately before a Bot API request; the adapter never reads environment variables. */
-  readonly botToken: CredentialValueSource;
+  readonly botToken: ChannelSecretSource;
   /** Durable service-owned polling cursor. Required: memory-only polling is not restart-safe. */
   readonly checkpoints: CheckpointStore;
   /** One receiver per connection. Required to fence concurrent pollers and webhook workers. */
@@ -119,8 +112,9 @@ export interface TelegramAdapterOptions {
 
 export interface TelegramWebhookHandlerOptions {
   readonly connectionId: string;
-  readonly botToken: CredentialValueSource;
-  readonly webhookSecret: string;
+  readonly botToken: ChannelSecretSource;
+  /** Resolved once on the first request; must yield 1-256 URL-safe characters or every request fails closed. */
+  readonly webhookSecret: ChannelSecretSource;
   readonly admit: ChannelReceive;
   readonly leases: LeaseStore;
   readonly cursorOwnership: OwnershipScope;
@@ -575,7 +569,7 @@ interface TelegramApi {
 }
 
 function telegramApi(options: {
-  readonly botToken: CredentialValueSource;
+  readonly botToken: ChannelSecretSource;
   readonly apiOrigin?: string;
   readonly fetch?: typeof globalThis.fetch;
   readonly maxResponseBytes: number;
@@ -584,7 +578,7 @@ function telegramApi(options: {
   const fetcher = options.fetch ?? globalThis.fetch;
 
   async function credential(): Promise<string> {
-    const token = await resolveTokenValue(options.botToken);
+    const token = await options.botToken();
     if (!token || Buffer.byteLength(token, "utf8") > 1024) throw new TelegramApiError({ kind: "credential" });
     return token;
   }
@@ -1079,7 +1073,13 @@ export function createTelegramWebhookHandler(options: TelegramWebhookHandlerOpti
   ) {
     throw new TypeError("Telegram connectionId must be a bounded non-empty string");
   }
-  if (!validWebhookSecret(options.webhookSecret)) throw new TypeError("Telegram webhookSecret must be 1-256 URL-safe characters");
+  if (typeof options.webhookSecret !== "function") throw new TypeError("Telegram webhookSecret must be a secret source, not a literal");
+  let webhookSecret: Promise<string> | undefined;
+  const expectedSecret = (): Promise<string> =>
+    (webhookSecret ??= options.webhookSecret().then((value) => {
+      if (!validWebhookSecret(value)) throw new TypeError("Telegram webhookSecret must be 1-256 URL-safe characters");
+      return value;
+    }));
   const leaseTtlMs = boundedInteger(options.leaseTtlMs, DEFAULT_LEASE_TTL_MS, 5_000, 300_000, "leaseTtlMs");
   const maxRequestBytes = boundedInteger(
     options.maxRequestBytes,
@@ -1118,7 +1118,7 @@ export function createTelegramWebhookHandler(options: TelegramWebhookHandlerOpti
     if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
       return new Response("Unsupported media type", { status: 415 });
     }
-    if (!constantTimeEqual(options.webhookSecret, request.headers.get("x-telegram-bot-api-secret-token"))) {
+    if (!constantTimeEqual(await expectedSecret(), request.headers.get("x-telegram-bot-api-secret-token"))) {
       return new Response("Unauthorized", { status: 401 });
     }
     const ownerId = `telegram-webhook-${randomUUID()}`;
@@ -1188,12 +1188,19 @@ export interface TelegramConnectOptions {
   readonly extractDocumentText?: (bytes: Uint8Array, mimeType: string | undefined, signal?: AbortSignal) => Promise<string>;
   readonly apiOrigin?: string;
   readonly fetch?: typeof globalThis.fetch;
+  /** Webhook secret reference (env: or keyring:). Literal string throws ChannelTokenLiteralError. */
   readonly webhookSecret?: string;
 }
 
 export async function connectTelegram(agent: Agent, options: TelegramConnectOptions): Promise<ChannelConnectionHandle> {
   const resolvedToken = await resolveChannelSecretRef(agent, options.token);
-  const secretRedactor = createChannelRedactor(resolvedToken, agent.config?.redactor);
+  const resolvedWebhookSecret =
+    options.webhookSecret === undefined ? undefined : await resolveChannelSecretRef(agent, options.webhookSecret);
+  const secretRedactor = createChannelRedactor(
+    resolvedWebhookSecret === undefined ? resolvedToken : [resolvedToken, resolvedWebhookSecret],
+    agent.config?.redactor,
+  );
+  const botToken: ChannelSecretSource = async () => resolvedToken;
   const connectionId = options.connectionId ?? "telegram-default";
   const checkpoints = options.checkpoints ?? createMemoryCheckpointStore();
   const leases = options.leases ?? createMemoryLeaseStore();
@@ -1201,7 +1208,7 @@ export async function connectTelegram(agent: Agent, options: TelegramConnectOpti
 
   const adapter = createTelegramAdapter({
     connectionId,
-    botToken: resolvedToken,
+    botToken,
     checkpoints,
     leases,
     cursorOwnership,
@@ -1226,11 +1233,12 @@ export async function connectTelegram(agent: Agent, options: TelegramConnectOpti
     fetchAttachment: (ref) => adapter.fetchAttachment(ref),
   });
 
-  const webhookHandler = options.webhookSecret
+  const webhookHandler =
+    resolvedWebhookSecret !== undefined
     ? createTelegramWebhookHandler({
         connectionId,
-        botToken: resolvedToken,
-        webhookSecret: options.webhookSecret,
+        botToken,
+        webhookSecret: async () => resolvedWebhookSecret,
         admit: (event) => runtime.admit(event),
         leases,
         cursorOwnership,
@@ -1244,7 +1252,7 @@ export async function connectTelegram(agent: Agent, options: TelegramConnectOpti
     : undefined;
 
   const api = telegramApi({
-    botToken: resolvedToken,
+    botToken,
     apiOrigin: options.apiOrigin,
     fetch: options.fetch,
     maxResponseBytes: DEFAULT_MAX_REQUEST_BYTES,

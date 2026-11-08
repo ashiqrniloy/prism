@@ -19,8 +19,8 @@ import {
   type MemoryVectorRecord,
 } from "@arnilo/prism-memory-core";
 import { createMemory } from "@arnilo/prism-memory-fabric";
-import type { RagScope } from "@arnilo/prism-memory-rag";
-import { chunkText, createRagDeletionHandler, replaceSource, retrieveContext } from "@arnilo/prism-memory-rag";
+import type { RagScope } from "@arnilo/prism-rag";
+import { chunkText, createRagDeletionHandler, replaceSource, retrieveContext } from "@arnilo/prism-rag";
 
 const scope: Required<MemoryScope> = { tenantId: "t1", resourceId: "r1", threadId: "th1" };
 const authority = { tenantId: "t1", principalId: "p1", groupIds: ["eng"] };

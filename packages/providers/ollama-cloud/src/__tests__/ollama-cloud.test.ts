@@ -56,7 +56,7 @@ async function capture(model: ModelConfig, extra: Partial<ProviderRequest> = {},
   let captured: Headers | undefined;
   let url = "";
   const provider = createOllamaCloudProvider({
-    apiKey: secret,
+    apiKey: async () => secret,
     ...config,
     fetch: (async (input, init) => {
       url = String(input);
@@ -79,7 +79,7 @@ function terminalError(events: readonly ProviderEvent[]) {
 describe("@arnilo/prism-provider-ollama-cloud native route", () => {
   it("ollama_cloud_native_conformance", async () => {
     const recording = fixture("native/text.json") as RecordedExchange;
-    const provider = createOllamaCloudProvider({ apiKey: secret, fetch: replayFetch(recording) });
+    const provider = createOllamaCloudProvider({ apiKey: async () => secret, fetch: replayFetch(recording) });
     const events = await assertRecordedStreamConforms({
       provider,
       request: request(),
@@ -92,7 +92,7 @@ describe("@arnilo/prism-provider-ollama-cloud native route", () => {
 
   it("ollama_native_usage_maps_cached_count", async () => {
     const recording = fixture("native/cache.json") as RecordedExchange[];
-    const provider = createOllamaCloudProvider({ apiKey: secret, fetch: replayFetch(recording) });
+    const provider = createOllamaCloudProvider({ apiKey: async () => secret, fetch: replayFetch(recording) });
     const events = await collectProviderEvents(provider, request());
     const done = events.at(-1);
     assert.equal(done?.type, "done");
@@ -106,7 +106,7 @@ describe("@arnilo/prism-provider-ollama-cloud native route", () => {
 
   it("ollama_native_tool_calls_get_stable_ids_and_replay", async () => {
     const recording = fixture("native/tool-loop.json") as RecordedExchange[];
-    const provider = createOllamaCloudProvider({ apiKey: secret, fetch: replayFetch(recording[0]!) });
+    const provider = createOllamaCloudProvider({ apiKey: async () => secret, fetch: replayFetch(recording[0]!) });
     const events = await collectProviderEvents(provider, request(gemma, { tools: [weatherTool()] }));
     const call = events.find((event) => event.type === "tool_call");
     assert.equal(call?.type, "tool_call");
@@ -166,7 +166,7 @@ describe("@arnilo/prism-provider-ollama-cloud native route", () => {
         cancelled = true;
       },
     });
-    const provider = createOllamaCloudProvider({ apiKey: secret, fetch: (async () => ok(body)) as typeof fetch });
+    const provider = createOllamaCloudProvider({ apiKey: async () => secret, fetch: (async () => ok(body)) as typeof fetch });
     await collectProviderEvents(provider, request());
     assert.equal(cancelled, true);
     assert.equal(body.locked, false);
@@ -174,7 +174,7 @@ describe("@arnilo/prism-provider-ollama-cloud native route", () => {
 
   it("ollama_native_missing_done_is_error", async () => {
     const body = ndjson([{ model: gemma.model, message: { role: "assistant", content: "partial" }, done: false }]);
-    const provider = createOllamaCloudProvider({ apiKey: secret, fetch: (async () => ok(body)) as typeof fetch });
+    const provider = createOllamaCloudProvider({ apiKey: async () => secret, fetch: (async () => ok(body)) as typeof fetch });
     const error = terminalError(await collectProviderEvents(provider, request()));
     assert.match(error.message, /without a done frame/);
   });
@@ -182,7 +182,7 @@ describe("@arnilo/prism-provider-ollama-cloud native route", () => {
   it("ollama_native_line_bound_enforced", async () => {
     const huge = JSON.stringify({ model: gemma.model, message: { content: "x".repeat(1_048_600) }, done: false });
     const provider = createOllamaCloudProvider({
-      apiKey: secret,
+      apiKey: async () => secret,
       fetch: (async () => new Response(`${huge}\n`, { status: 200, headers: { "content-type": "application/x-ndjson" } })) as typeof fetch,
     });
     const error = terminalError(await collectProviderEvents(provider, request()));
@@ -191,7 +191,7 @@ describe("@arnilo/prism-provider-ollama-cloud native route", () => {
 
   it("ollama_native_structured_output_buffer_is_bounded", async () => {
     const body = ndjson(Array.from({ length: 3 }, () => ({ message: { content: "x".repeat(262_144) }, done: false })));
-    const provider = createOllamaCloudProvider({ apiKey: secret, fetch: (async () => ok(body)) as typeof fetch });
+    const provider = createOllamaCloudProvider({ apiKey: async () => secret, fetch: (async () => ok(body)) as typeof fetch });
     const error = terminalError(
       await collectProviderEvents(
         provider,
@@ -206,7 +206,7 @@ describe("@arnilo/prism-provider-ollama-cloud native route", () => {
   it("ollama_native_structured_output_strips_measured_fence", async () => {
     const recording = fixture("native/structured-output.json") as RecordedExchange;
     const structured = { ...gemma, capabilities: { ...gemma.capabilities, structuredOutput: "json_schema" as const } };
-    const provider = createOllamaCloudProvider({ apiKey: secret, fetch: replayFetch(recording) });
+    const provider = createOllamaCloudProvider({ apiKey: async () => secret, fetch: replayFetch(recording) });
     const events = await collectProviderEvents(
       provider,
       request(structured, {
@@ -225,7 +225,7 @@ describe("@arnilo/prism-provider-ollama-cloud native route", () => {
 
   it("ollama_native_images_are_base64_only", async () => {
     const recording = fixture("native/image.json") as RecordedExchange;
-    const provider = createOllamaCloudProvider({ apiKey: secret, fetch: replayFetch(recording) });
+    const provider = createOllamaCloudProvider({ apiKey: async () => secret, fetch: replayFetch(recording) });
     const events = await collectProviderEvents(
       provider,
       request(gemma, {
@@ -273,7 +273,7 @@ describe("@arnilo/prism-provider-ollama-cloud routes and options", () => {
       });
     const frame = (content: string) => JSON.stringify({ choices: [{ delta: { content }, finish_reason: null }] });
     const provider = createOllamaCloudProvider({
-      apiKey: secret,
+      apiKey: async () => secret,
       fetch: (async () =>
         sse([
           frame("```json\n"),
@@ -317,7 +317,7 @@ describe("@arnilo/prism-provider-ollama-cloud routes and options", () => {
     ];
     for (const [status, bodyText, expected] of cases) {
       const provider = createOllamaCloudProvider({
-        apiKey: secret,
+        apiKey: async () => secret,
         fetch: (async () => new Response(bodyText, { status, headers: { "content-type": "application/json" } })) as typeof fetch,
       });
       const error = terminalError(await collectProviderEvents(provider, request()));
@@ -325,7 +325,7 @@ describe("@arnilo/prism-provider-ollama-cloud routes and options", () => {
       assert.equal(error.message.includes(secret), false);
     }
     const notFoundProvider = createOllamaCloudProvider({
-      apiKey: secret,
+      apiKey: async () => secret,
       fetch: (async () => new Response('{"error":"model \'gone\' not found"}', { status: 404 })) as typeof fetch,
     });
     assert.match(terminalError(await collectProviderEvents(notFoundProvider, request())).message, /\/api\/tags/);
@@ -339,7 +339,7 @@ describe("@arnilo/prism-provider-ollama-cloud routes and options", () => {
       responseBody: '{"error":"prompt too long; exceeded max context length by 28996 tokens (ref: 2497bd9e-fdfc-4b65-b909-0e9b8d0d5b5c)"}',
     };
     const provider = createOllamaCloudProvider({
-      apiKey: secret,
+      apiKey: async () => secret,
       fetch: (async () =>
         new Response(overflow.responseBody, { status: 400, headers: { "content-type": "application/json" } })) as typeof fetch,
     });
@@ -363,7 +363,7 @@ describe("@arnilo/prism-provider-ollama-cloud routes and options", () => {
       },
     ]);
     const recovering = createOllamaCloudProvider({
-      apiKey: secret,
+      apiKey: async () => secret,
       fetch: (async (input, init) => {
         calls++;
         return replay(input, init);
@@ -407,7 +407,7 @@ describe("@arnilo/prism-provider-ollama-cloud discovery and balance", () => {
     const urls: string[] = [];
     const entries = Array.from({ length: 10 }, (_, index) => ({ model: `model-${index}`, capabilities: ["completion"] }));
     const models = await listOllamaCloudModels({
-      apiKey: "test-key",
+      apiKey: async () => "test-key",
       fetch: (async (input) => {
         urls.push(String(input));
         if (String(input).endsWith("/api/tags")) return new Response(JSON.stringify({ models: entries }));
@@ -428,7 +428,7 @@ describe("@arnilo/prism-provider-ollama-cloud discovery and balance", () => {
 
   it("ollama_cloud_balance_parses_and_hides_key", async () => {
     const balance = await ollamaCloudBalance({
-      apiKey: secret,
+      apiKey: async () => secret,
       fetch: (async () =>
         new Response(
           JSON.stringify({
@@ -449,7 +449,7 @@ describe("@arnilo/prism-provider-ollama-cloud discovery and balance", () => {
     await assert.rejects(
       () =>
         ollamaCloudBalance({
-          apiKey: secret,
+          apiKey: async () => secret,
           fetch: (async () => new Response(`{"error":"bad key ${secret}"}`, { status: 401 })) as typeof fetch,
         }),
       (error: Error) => !error.message.includes(secret),
@@ -458,7 +458,7 @@ describe("@arnilo/prism-provider-ollama-cloud discovery and balance", () => {
 
   it("ollama_cloud_balance_reads_current_plan_included_credit", async () => {
     const balance = await ollamaCloudBalance({
-      apiKey: secret,
+      apiKey: async () => secret,
       fetch: (async () =>
         Response.json({
           included: {
@@ -506,7 +506,7 @@ describe("@arnilo/prism-provider-ollama-cloud decision models", () => {
         usage: { input_tokens: 155, output_tokens: 0 },
       });
     }) as typeof fetch;
-    const provider = createOllamaCloudProvider({ apiKey: secret, fetch: fetchImpl });
+    const provider = createOllamaCloudProvider({ apiKey: async () => secret, fetch: fetchImpl });
     const result = await provider.decisions!().decide({
       model: "clef:27b",
       state: { ticket: "I was charged twice." },
@@ -521,7 +521,7 @@ describe("@arnilo/prism-provider-ollama-cloud decision models", () => {
     await assert.rejects(
       () =>
         createOllamaCloudProvider({
-          apiKey: secret,
+          apiKey: async () => secret,
           fetch: (async () => new Response(`{"error":"bad key ${secret}"}`, { status: 401 })) as typeof fetch,
         }).decisions!().decide({ model: "clef:27b", questions: { q: { type: "noul", instructions: "x?" } } }),
       (error: Error) => !error.message.includes(secret),
@@ -534,7 +534,7 @@ describe("@arnilo/prism-provider-ollama-cloud decision models", () => {
       urls.push(String(input));
       return Response.json({ model: "clef:27b", answers: { refund: { type: "noul", noul: 0.9 } }, usage: { input_tokens: 40 } });
     }) as typeof fetch;
-    const provider = createOllamaCloudProvider({ apiKey: secret, fetch: fetchImpl });
+    const provider = createOllamaCloudProvider({ apiKey: async () => secret, fetch: fetchImpl });
     const events = await collectProviderEvents(provider, {
       model: clef,
       messages: [{ role: "user", content: [{ type: "text", text: "I was charged twice." }] }],

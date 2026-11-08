@@ -128,7 +128,7 @@ test("provider_probe_openrouter_wire_keeps_marked_prefix_stable", async () => {
   const bodies = [],
     sessions = [];
   const provider = create({
-    apiKey: "offline-fixture",
+    apiKey: async () => "offline-fixture",
     fetch: async (_url, init) => {
       sessions.push(new Headers(init.headers).get("x-session-id"));
       bodies.push(JSON.parse(String(init.body)));

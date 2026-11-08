@@ -7,7 +7,7 @@ it.skipIf(!live || !process.env.PRISM_BRAVE_SEARCH_TOKEN)(
   "Brave least-privilege live search",
   async () => {
     const result = await createBraveSearch({
-      credentials: () => process.env.PRISM_BRAVE_SEARCH_TOKEN,
+      credentials: async () => process.env.PRISM_BRAVE_SEARCH_TOKEN,
       limits: { maxResults: 1, timeoutMs: 20_000 },
     }).search("Prism TypeScript SDK", { count: 1 });
     assert.ok(result.results.length <= 1);
@@ -18,7 +18,7 @@ it.skipIf(!live || !process.env.PRISM_EXA_API_KEY)(
   "Exa least-privilege live search",
   async () => {
     const result = await createExaSearch({
-      credentials: () => process.env.PRISM_EXA_API_KEY,
+      credentials: async () => process.env.PRISM_EXA_API_KEY,
       limits: { maxResults: 1, timeoutMs: 20_000 },
     }).search("Prism TypeScript SDK", { count: 1 });
     assert.ok(result.results.length <= 1);
@@ -29,7 +29,7 @@ it.skipIf(!live || !process.env.PRISM_FIRECRAWL_API_KEY)(
   "Firecrawl least-privilege live fetch",
   async () => {
     const result = await createFirecrawlFetch({
-      credentials: () => process.env.PRISM_FIRECRAWL_API_KEY,
+      credentials: async () => process.env.PRISM_FIRECRAWL_API_KEY,
       limits: { maxMarkdownBytes: 64 * 1024, timeoutMs: 20_000 },
     }).fetch("https://example.com/");
     assert.equal(result.untrusted, true);
@@ -43,7 +43,7 @@ it.skipIf(!live || !process.env.PRISM_SEARXNG_ORIGIN)(
     const key = process.env.PRISM_SEARXNG_API_KEY;
     const result = await createSearxngSearch({
       origin: process.env.PRISM_SEARXNG_ORIGIN!,
-      ...(key === undefined ? {} : { credentials: () => key }),
+      ...(key === undefined ? {} : { credentials: async () => key }),
       limits: { maxResults: 1, timeoutMs: 20_000 },
     }).search("Prism TypeScript SDK", { count: 1 });
     assert.ok(result.results.length >= 1, "a configured instance returns at least one result");
@@ -54,7 +54,7 @@ it.skipIf(!live || !process.env.PRISM_TAVILY_API_KEY)(
   "Tavily least-privilege live search",
   async () => {
     const result = await createTavilySearch({
-      credentials: () => process.env.PRISM_TAVILY_API_KEY,
+      credentials: async () => process.env.PRISM_TAVILY_API_KEY,
       limits: { maxResults: 1, timeoutMs: 20_000 },
     }).search("Prism TypeScript SDK", { count: 1 });
     assert.ok(result.results.length >= 1);
@@ -65,7 +65,7 @@ it.skipIf(!live || !process.env.PRISM_KAGI_API_KEY)(
   "Kagi v1 least-privilege live search",
   async () => {
     const result = await createKagiSearch({
-      credentials: () => process.env.PRISM_KAGI_API_KEY,
+      credentials: async () => process.env.PRISM_KAGI_API_KEY,
       limits: { maxResults: 1, timeoutMs: 20_000 },
     }).search("Prism TypeScript SDK", { count: 1 });
     assert.ok(result.results.length >= 1);

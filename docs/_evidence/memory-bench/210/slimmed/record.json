@@ -1,0 +1,339 @@
+{
+  "kind": "210-slimmed-product-record",
+  "version": 1,
+  "plan": 210,
+  "task": 7,
+  "productHash": "867f82771643fe716c4d214c0ff26250cd842d1da6ee44dac5aabfdefed8759c",
+  "harnessHash": "9d333d3988df6bee748f39b829430cbef297c16e7f64c313dc90997bfdbc799f",
+  "productPaths": [
+    "packages/memory/fabric/src"
+  ],
+  "removals": [
+    {
+      "feature": "retrieval.hybrid",
+      "section": "inert-removal",
+      "verdict": "remove",
+      "reason": "removal non-inferior",
+      "evidence": {
+        "kind": "inert removal",
+        "approvedBy": "Approve all 11: the 9 inert features (retrieval.hybrid, workers.linker, workers.evolution, write.consolidate-model-decider, recall.state-wrapper, decisions.P1, decisions.P2, decisions.P6, scoped.policy) and the 2 conditional ones (retrieval.similar-links, lifecycle.widen-narrow), each as `remove` pending the byte-identical-preset test that Task 7 builds.",
+        "condition": "Task 7 byte-identical-preset test on the conversational and coding presets"
+      },
+      "presets": {
+        "effect": "byte-identical"
+      }
+    },
+    {
+      "feature": "retrieval.similar-links",
+      "section": "inert-removal",
+      "verdict": "remove",
+      "reason": "removal non-inferior",
+      "conditional": true,
+      "evidence": {
+        "kind": "inert removal",
+        "approvedBy": "Approve all 11: the 9 inert features (retrieval.hybrid, workers.linker, workers.evolution, write.consolidate-model-decider, recall.state-wrapper, decisions.P1, decisions.P2, decisions.P6, scoped.policy) and the 2 conditional ones (retrieval.similar-links, lifecycle.widen-narrow), each as `remove` pending the byte-identical-preset test that Task 7 builds.",
+        "condition": "Task 7 byte-identical-preset test; a failure waits for a paid arm (none is open: gate C-1 is closed), so the owner decides then"
+      },
+      "presets": {
+        "effect": "re-pinned",
+        "requests": [
+          10,
+          11,
+          12
+        ],
+        "why": "a near-duplicate memory.insert result no longer carries the `similar` link",
+        "approvedBy": "owner, 2026-11-08 (Task 7 question 1)"
+      }
+    },
+    {
+      "feature": "workers.linker",
+      "section": "inert-removal",
+      "verdict": "remove",
+      "reason": "removal non-inferior",
+      "evidence": {
+        "kind": "inert removal",
+        "approvedBy": "Approve all 11: the 9 inert features (retrieval.hybrid, workers.linker, workers.evolution, write.consolidate-model-decider, recall.state-wrapper, decisions.P1, decisions.P2, decisions.P6, scoped.policy) and the 2 conditional ones (retrieval.similar-links, lifecycle.widen-narrow), each as `remove` pending the byte-identical-preset test that Task 7 builds.",
+        "condition": "Task 7 byte-identical-preset test on the conversational and coding presets"
+      },
+      "presets": {
+        "effect": "byte-identical"
+      }
+    },
+    {
+      "feature": "workers.evolution",
+      "section": "inert-removal",
+      "verdict": "remove",
+      "reason": "removal non-inferior",
+      "evidence": {
+        "kind": "inert removal",
+        "approvedBy": "Approve all 11: the 9 inert features (retrieval.hybrid, workers.linker, workers.evolution, write.consolidate-model-decider, recall.state-wrapper, decisions.P1, decisions.P2, decisions.P6, scoped.policy) and the 2 conditional ones (retrieval.similar-links, lifecycle.widen-narrow), each as `remove` pending the byte-identical-preset test that Task 7 builds.",
+        "condition": "Task 7 byte-identical-preset test on the conversational and coding presets"
+      },
+      "presets": {
+        "effect": "byte-identical"
+      }
+    },
+    {
+      "feature": "recall.supersession-hint",
+      "section": "measured",
+      "verdict": "remove",
+      "reason": "negative",
+      "evidence": {
+        "kind": "wave-1 leave-one-out / add arm",
+        "arms": [
+          "supersession-keyed-only"
+        ],
+        "cells": 6
+      },
+      "presets": {
+        "effect": "byte-identical",
+        "note": "the default `all` marker is the behaviour that remains"
+      }
+    },
+    {
+      "feature": "write.consolidate-model-decider",
+      "section": "inert-removal",
+      "verdict": "remove",
+      "reason": "removal non-inferior",
+      "evidence": {
+        "kind": "inert removal",
+        "approvedBy": "Approve all 11: the 9 inert features (retrieval.hybrid, workers.linker, workers.evolution, write.consolidate-model-decider, recall.state-wrapper, decisions.P1, decisions.P2, decisions.P6, scoped.policy) and the 2 conditional ones (retrieval.similar-links, lifecycle.widen-narrow), each as `remove` pending the byte-identical-preset test that Task 7 builds.",
+        "condition": "Task 7 byte-identical-preset test on the conversational and coding presets"
+      },
+      "presets": {
+        "effect": "byte-identical"
+      }
+    },
+    {
+      "feature": "write.keyword-enrichment",
+      "section": "measured",
+      "verdict": "remove",
+      "reason": "negative",
+      "evidence": {
+        "kind": "wave-1 leave-one-out / add arm",
+        "arms": [
+          "enrichment-loo"
+        ],
+        "cells": 10
+      },
+      "presets": {
+        "effect": "re-pinned",
+        "requests": [
+          11,
+          12
+        ],
+        "why": "memory.recall results for exchange notes no longer carry the enrichment keywords"
+      }
+    },
+    {
+      "feature": "timeline",
+      "section": "measured",
+      "verdict": "remove",
+      "reason": "negative",
+      "evidence": {
+        "kind": "wave-1 leave-one-out / add arm",
+        "arms": [
+          "timeline-loo"
+        ],
+        "cells": 4
+      },
+      "presets": {
+        "effect": "re-pinned",
+        "requests": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "why": "the memory.recall tool schema lost from, to and order (every request carries the tool schema)"
+      }
+    },
+    {
+      "feature": "recall.state-wrapper",
+      "section": "inert-removal",
+      "verdict": "remove",
+      "reason": "removal non-inferior",
+      "evidence": {
+        "kind": "inert removal",
+        "approvedBy": "Approve all 11: the 9 inert features (retrieval.hybrid, workers.linker, workers.evolution, write.consolidate-model-decider, recall.state-wrapper, decisions.P1, decisions.P2, decisions.P6, scoped.policy) and the 2 conditional ones (retrieval.similar-links, lifecycle.widen-narrow), each as `remove` pending the byte-identical-preset test that Task 7 builds.",
+        "condition": "Task 7 byte-identical-preset test on the conversational and coding presets"
+      },
+      "presets": {
+        "effect": "byte-identical"
+      }
+    },
+    {
+      "feature": "lifecycle.widen-narrow",
+      "section": "inert-removal",
+      "verdict": "remove",
+      "reason": "removal non-inferior",
+      "conditional": true,
+      "evidence": {
+        "kind": "inert removal",
+        "approvedBy": "Approve all 11: the 9 inert features (retrieval.hybrid, workers.linker, workers.evolution, write.consolidate-model-decider, recall.state-wrapper, decisions.P1, decisions.P2, decisions.P6, scoped.policy) and the 2 conditional ones (retrieval.similar-links, lifecycle.widen-narrow), each as `remove` pending the byte-identical-preset test that Task 7 builds.",
+        "condition": "Task 7 byte-identical-preset test; a failure waits for a paid arm (none is open: gate C-1 is closed), so the owner decides then"
+      },
+      "presets": {
+        "effect": "re-pinned",
+        "requests": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "why": "two model-visible strings changed: the `key` parameter description and the agent-scope write error",
+        "approvedBy": "owner, 2026-11-08 (Task 7 question 2)"
+      }
+    },
+    {
+      "feature": "decisions.P1",
+      "section": "inert-removal",
+      "verdict": "remove",
+      "reason": "removal non-inferior",
+      "evidence": {
+        "kind": "inert removal",
+        "approvedBy": "Approve all 11: the 9 inert features (retrieval.hybrid, workers.linker, workers.evolution, write.consolidate-model-decider, recall.state-wrapper, decisions.P1, decisions.P2, decisions.P6, scoped.policy) and the 2 conditional ones (retrieval.similar-links, lifecycle.widen-narrow), each as `remove` pending the byte-identical-preset test that Task 7 builds.",
+        "condition": "Task 7 byte-identical-preset test on the conversational and coding presets"
+      },
+      "presets": {
+        "effect": "byte-identical"
+      }
+    },
+    {
+      "feature": "decisions.P2",
+      "section": "inert-removal",
+      "verdict": "remove",
+      "reason": "removal non-inferior",
+      "evidence": {
+        "kind": "inert removal",
+        "approvedBy": "Approve all 11: the 9 inert features (retrieval.hybrid, workers.linker, workers.evolution, write.consolidate-model-decider, recall.state-wrapper, decisions.P1, decisions.P2, decisions.P6, scoped.policy) and the 2 conditional ones (retrieval.similar-links, lifecycle.widen-narrow), each as `remove` pending the byte-identical-preset test that Task 7 builds.",
+        "condition": "Task 7 byte-identical-preset test on the conversational and coding presets"
+      },
+      "presets": {
+        "effect": "byte-identical"
+      }
+    },
+    {
+      "feature": "decisions.P6",
+      "section": "inert-removal",
+      "verdict": "remove",
+      "reason": "removal non-inferior",
+      "evidence": {
+        "kind": "inert removal",
+        "approvedBy": "Approve all 11: the 9 inert features (retrieval.hybrid, workers.linker, workers.evolution, write.consolidate-model-decider, recall.state-wrapper, decisions.P1, decisions.P2, decisions.P6, scoped.policy) and the 2 conditional ones (retrieval.similar-links, lifecycle.widen-narrow), each as `remove` pending the byte-identical-preset test that Task 7 builds.",
+        "condition": "Task 7 byte-identical-preset test on the conversational and coding presets"
+      },
+      "presets": {
+        "effect": "byte-identical"
+      }
+    },
+    {
+      "feature": "scoped.policy",
+      "section": "inert-removal",
+      "verdict": "remove",
+      "reason": "removal non-inferior",
+      "evidence": {
+        "kind": "inert removal",
+        "approvedBy": "Approve all 11: the 9 inert features (retrieval.hybrid, workers.linker, workers.evolution, write.consolidate-model-decider, recall.state-wrapper, decisions.P1, decisions.P2, decisions.P6, scoped.policy) and the 2 conditional ones (retrieval.similar-links, lifecycle.widen-narrow), each as `remove` pending the byte-identical-preset test that Task 7 builds.",
+        "condition": "Task 7 byte-identical-preset test on the conversational and coding presets"
+      },
+      "presets": {
+        "effect": "byte-identical"
+      }
+    }
+  ],
+  "experimental": [
+    "recall.multi-query",
+    "recall.unmatched-terms",
+    "recall.state-grouping",
+    "delivery.directory",
+    "navigation.agentic-lexical"
+  ],
+  "byteIdenticalTest": {
+    "file": "packages/memory/fabric/src/__tests__/fixtures/removal-byte-identical.json",
+    "sha256": "6ee12dbd48ebe5c14b5c7a5d420d53109aa965e4e91cfac869177f39c316456b",
+    "repinned": [
+      {
+        "by": "plan 216 Task 3 (2026-11-08)",
+        "previousSha256": "ac549c747c77edc7048a59241a6fadf6d05c8571f19ce5354929665f72730b1e",
+        "reason": "the ontology left memory: memory.recall no longer names the concept kind (its kinds enum and description); all 12 tool-schema hashes per preset changed, context blocks unchanged"
+      }
+    ]
+  },
+  "cacheStability": {
+    "status": "passed",
+    "suite": {
+      "files": [
+        "packages/memory/fabric/src/__tests__/prefix-stability.test.ts",
+        "scripts/memory-bench/prefix-probe.test.mjs"
+      ],
+      "pass": 29,
+      "fail": 0,
+      "skip": 0,
+      "passed": [
+        "prefix_probe_detects_a_seeded_prefix_change",
+        "prefix_probe_is_deterministic",
+        "prefix_probe_report_carries_no_note_text",
+        "equivalence_mismatch_lists_arms_to_rerun_and_never_merges_cells",
+        "answer_path_capture_is_deterministic_and_holds_hashes_only",
+        "fabric_prefix_is_identical_across_ten_turns_without_writes",
+        "fabric_prefix_survives_insert_and_lifecycle_writes",
+        "forget_breaks_the_epoch_on_the_next_request",
+        "revoke_breaks_the_epoch_on_the_next_request",
+        "correct_breaks_the_epoch_on_the_next_request",
+        "archive_breaks_the_epoch_on_the_next_request",
+        "retire_breaks_the_epoch_on_the_next_request",
+        "validity_breaks_the_epoch_on_the_next_request",
+        "flags_breaks_the_epoch_on_the_next_request",
+        "retention_breaks_the_epoch_on_the_next_request",
+        "new_session_and_refresh_see_writes_from_another_memory_instance",
+        "epoch_snapshot_is_evicted_on_session_closed",
+        "working_memory_update_reaches_the_tail_not_the_prefix",
+        "conversational_prefix_passes_provider_visible_conformance",
+        "compaction_completed_starts_a_new_epoch_with_new_notes",
+        "single_turn_answer_path_context_bytes_unchanged",
+        "imported_tombstones_break_an_existing_epoch",
+        "working_tail_follows_the_transcript_across_first_and_second_turns_and_tool_updates",
+        "candidate_inserts_and_evidence_patches_stay_reachable_without_retracting",
+        "tail_cache_is_evicted_on_session_closed",
+        "another_instances_forget_leaves_the_prefix_on_the_next_request",
+        "another_instances_additive_write_keeps_the_prefix_pinned",
+        "revalidation_failure_drops_the_core_block_instead_of_resending_it",
+        "revalidation_abort_propagates"
+      ]
+    },
+    "equivalence": {
+      "file": "docs/_evidence/memory-bench/202/cache-stability/equivalence.json",
+      "sha256": "fe4124e83406105915e14e972cfa1756fcdcdf7ee91aaea63379205e5acd9bec",
+      "status": "different",
+      "differingArms": [
+        "preset-r1",
+        "passive-only"
+      ],
+      "rerunArms": [
+        "preset-r1",
+        "passive-only"
+      ],
+      "mergeWithPreChangeCells": false,
+      "base": "bc87e53904fb104737a8186df94c2f5e7f909c03",
+      "baseProductHash": "10aa2ce6d80c93be00ae1a63baf04b7b151b11937ac53f434f486374c346aa58"
+    }
+  },
+  "note": "Plans 216-223 compare against this product. A later change to packages/memory/fabric/src moves the hash; rerun `readiness.mjs --slimmed` for a new record, never edit this one."
+}

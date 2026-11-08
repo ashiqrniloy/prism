@@ -24,7 +24,7 @@
   "devDependencies": {
     "@arnilo/prism-evals": "file:../../hosts/evals",
     "@arnilo/prism-memory-core": "file:../../memory/core",
-    "@arnilo/prism-memory-rag": "file:../../memory/rag",
+    "@arnilo/prism-rag": "file:../../knowledge/rag",
     "@arnilo/prism-workflows": "file:../workflows",
     "@types/node": "^22.20.0",
     "typescript": "^7.0.2",

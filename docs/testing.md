@@ -59,6 +59,26 @@ stream verification, multi-turn wire recording replay, and safety contract asser
 
 Both live runners automatically skip with a clean reason when credentials or opt-in flags are absent, satisfying the live-testing contract in [Live testing](live-testing.md).
 
+### Prefix stability (`@arnilo/prism/testing/prefix-stability-conformance`)
+
+`runPrefixStabilityConformance({ host, skills, ... })` drives a real session through staggered skill loads against a fixture provider and asserts that each provider request keeps a byte-identical leading prefix with its predecessor. `turns` (default `2`, two requests each) lengthens the tool loop: `turns: 5` is ten requests, the turns after the two skill loads calling a runner-owned no-op tool.
+
+**Wire mode.** Pass `encode: (request) => Promise<JsonObject>` to also check what the upstream cache actually keys on. Every captured request goes through your encoder (a routed provider's `encode` method; swap the real `ModelConfig` into `request.model`, since the fixture's is a stand-in), and each consecutive pair must keep:
+
+- `tools` equal;
+- `system` equal;
+- every message below the earlier request's last index byte-equal, where only `cache_control` markers may move.
+
+Comparing the whole body as a byte prefix is not used: `tools` follows `messages` in an OpenAI Chat body, so a growing message list always shifts later bytes. A failure names the segment, the message index and the first differing byte offset. `segments: (body) => { tools?, system?, messages }` replaces the default splitter (`defaultWireSegments`: an Anthropic Messages body when it has a top-level `system`, otherwise OpenAI Chat with the leading `system` / `developer` messages as the system segment); `anthropicSegments`, `openAIChatSegments` and `assertWireSegmentsStable(previous, next)` are exported for custom bodies such as OpenAI Responses. The result's `wirePairs` counts the pairs that passed (`0` without `encode`).
+
+```ts
+const provider = createHyperProvider({ apiKey: async () => "unused" });
+await runPrefixStabilityConformance({
+  host, skills: [alpha, beta], reasoningFixture: true, turns: 5,
+  encode: (request) => provider.encode({ ...request, model: hyperModel }),
+});
+```
+
 ## When to use it
 
 Use `packageConformance` as the Done check for a package. Use `loopConformance` when a custom loop

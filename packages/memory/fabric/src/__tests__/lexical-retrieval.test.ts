@@ -1,12 +1,10 @@
 import { afterAll as after, describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { rm } from "node:fs/promises";
 import type { ContextDraft, HookContext, JsonObject, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import { createMemoryVectorStore, type Embedder, MemoryValidationError, type VectorStore } from "@arnilo/prism-memory-core";
 import { createFabricContext } from "../context.js";
-import { createMemory, createMemoryFabric, createMemoryWorkingStore, createScopedMemoryPolicy } from "../index.js";
+import { createMemory, createMemoryFabric, createMemoryWorkingStore } from "../index.js";
 
 const scope = { tenantId: "t1", resourceId: "u1", threadId: "th1" };
 const tempDirs: string[] = [];
@@ -48,10 +46,9 @@ describe("fabric lexical retrieval", () => {
 
   it("consolidation_uses_dice_in_lexical_mode_and_cosine_in_hybrid", async () => {
     const lexical = createMemoryFabric({ memory: lexicalMemory(), consolidate: { threshold: 0.9 } });
-    const anchor = await lexical.remember({ kind: "fact", content: "alpha beta gamma delta" });
-    const unrelated = await lexical.remember({ kind: "fact", content: "zulu yankee xray whiskey" });
-    assert.equal(unrelated.links, undefined, "Dice 0 is below the 0.9 lexical threshold");
-    assert.notEqual(unrelated.id, anchor.id);
+    const anchor = await lexical.remember({ kind: "file", path: "notes/a.md", content: "alpha beta gamma delta" });
+    const unrelated = await lexical.remember({ kind: "file", path: "notes/a.md", content: "zulu yankee xray whiskey" });
+    assert.notEqual(unrelated.id, anchor.id, "Dice 0 is below the 0.9 lexical threshold, so the path is not refreshed in place");
 
     const flat: Embedder = {
       id: "flat",
@@ -68,13 +65,9 @@ describe("fabric lexical retrieval", () => {
     });
     assert.equal(hybridMemory.retrieval, "hybrid");
     const hybrid = createMemoryFabric({ memory: hybridMemory, consolidate: { threshold: 0.9 } });
-    const hybridAnchor = await hybrid.remember({ kind: "fact", content: "alpha beta gamma delta" });
-    const hybridUnrelated = await hybrid.remember({ kind: "fact", content: "zulu yankee xray whiskey" });
-    assert.deepEqual(
-      hybridUnrelated.links?.map((link) => link.id),
-      [hybridAnchor.id],
-      "cosine 1 clears the hybrid threshold",
-    );
+    const hybridAnchor = await hybrid.remember({ kind: "file", path: "notes/a.md", content: "alpha beta gamma delta" });
+    const hybridUnrelated = await hybrid.remember({ kind: "file", path: "notes/a.md", content: "zulu yankee xray whiskey" });
+    assert.equal(hybridUnrelated.id, hybridAnchor.id, "cosine 1 clears the hybrid threshold, so the path is refreshed in place");
   });
 
   it("inject_floor_uses_coverage_in_lexical_mode", async () => {
@@ -134,25 +127,6 @@ describe("fabric lexical retrieval", () => {
     assert.ok(!hits.some((hit) => hit.id === old.id), "a historical value is not returned as current");
   });
 
-  it("scoped_read_policy_applies_coverage_floor_to_lexical_hits", async () => {
-    const scopeRoot = await mkdtemp(join(tmpdir(), "fabric-scoped-lexical-"));
-    tempDirs.push(scopeRoot);
-    // The vector leg misses the identifier; the lexical leg matches it with full coverage.
-    const embedder: Embedder = {
-      id: "orthogonal",
-      dimensions: 2,
-      async embed(texts) {
-        return texts.map((text) => (text.includes("needle") ? [0, 1] : [1, 0]));
-      },
-    };
-    const memory = createMemory({ tenantId: "t", resourceId: scopeRoot, threadId: "s", embedder, vectorStore: createMemoryVectorStore() });
-    const fabric = createMemoryFabric({ memory, consolidate: false });
-    await fabric.remember({ kind: "fact", content: "needle XQ_9917" });
-    const policy = createScopedMemoryPolicy({ memory, fabric, scopeRoot, policy: { activation: { topK: 3, minSimilarity: 0.9 } } });
-    const hit = await policy.recall("XQ_9917");
-    assert.equal(hit.abstained, true, "an RRF-fused lexical hit below the activation floor abstains");
-    assert.deepEqual(hit.hits, []);
-  });
 });
 
 describe("memory.recall tool: multi-query, snippets, budget", () => {

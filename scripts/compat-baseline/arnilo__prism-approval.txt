@@ -1,10 +1,11 @@
-ApprovalConfig	export type { ApprovalConfig, ApprovalMode, ApprovalRule } from "./config.js"
-ApprovalMode	export type { ApprovalConfig, ApprovalMode, ApprovalRule } from "./config.js"
-ApprovalRule	export type { ApprovalConfig, ApprovalMode, ApprovalRule } from "./config.js"
-approvalConfigSchema	export declare const approvalConfigSchema: JsonSchema
-approvalControls	export declare function approvalControls(instance: PackageInstance): ApprovalControls | undefined
-approvalPackage	export declare function approvalPackage(config?: ApprovalConfig): PackageInstance
-commandPrefix	export declare function commandPrefix(command: string): string
-decideApproval	export declare function decideApproval(input:
-default	export default
-grantKey	export declare function grantKey(tool: string, command?: string): string
+. ApprovalConfig	interface ApprovalConfig { readonly mode?: ApprovalMode; readonly roots?: readonly string[]; readonly rules?: readonly ApprovalRule[]; readonly timeoutMs?: number; }
+. ApprovalControls	interface ApprovalControls { addRule(rule: ApprovalRule): void; getMode(): ApprovalMode; listRules(): readonly ApprovalRule[]; removeRule(index: number): ApprovalRule | undefined; setMode(mode: ApprovalMode): void; }
+. ApprovalMode	type ApprovalMode = "deny" | "ask" | "edits" | "auto"
+. ApprovalRule	interface ApprovalRule { readonly commandPrefix?: string; readonly tool: string; }
+. approvalConfigSchema	const approvalConfigSchema: JsonSchema
+. approvalControls	function approvalControls(instance: PackageInstance): ApprovalControls | undefined
+. approvalPackage	function approvalPackage(config?: ApprovalConfig): PackageInstance
+. commandPrefix	function commandPrefix(command: string): string
+. decideApproval	function decideApproval(input: { readonly mode: ApprovalMode; readonly effects: readonly string[]; readonly inside: boolean; readonly granted: boolean; }): ApprovalCell
+. default	const definition: import("@arnilo/prism").PackageDefinition<ApprovalConfig>
+. grantKey	function grantKey(tool: string, command?: string): string

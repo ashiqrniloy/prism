@@ -1,7 +1,7 @@
 /**
  * The shared provider-package surface: the pieces every `@arnilo/prism-provider-<vendor>` package
  * repeats verbatim — the ref-only secret property, the base-URL and static-catalog properties, the
- * `CredentialValueSource` wrappers, the `definePackage` envelope, and the named-factory split
+ * `SecretSource` wrappers, the `definePackage` envelope, and the named-factory split
  * between factory-only options and validated config.
  *
  * Nothing here is vendor-specific: a package supplies its own config schema, provider factory, and
@@ -68,7 +68,14 @@ export function modelsProperty(description?: string): JsonSchema {
   };
 }
 
-/** A `CredentialValueSource` that resolves `ref` through the credentials slot on every call. */
+/**
+ * A lazily resolved secret: the only shape a low-level provider factory, discovery helper, or kit
+ * client accepts for a credential. A literal string does not type-check; build one with
+ * {@link refSource} / {@link optionalRefSource} from an `env:`/`keyring:` ref.
+ */
+export type SecretSource = () => Promise<string | undefined>;
+
+/** A `SecretSource` that resolves `ref` through the credentials slot on every call. */
 export function refSource(resolve: (ref: string) => Promise<Secret | undefined>, ref: string): () => Promise<string> {
   return async () => {
     const secret = await resolve(ref);

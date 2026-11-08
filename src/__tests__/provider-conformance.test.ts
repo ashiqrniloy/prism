@@ -227,11 +227,11 @@ void describe("provider conformance", () => {
   it("conformance_replays_recordings_and_reports_scenario", async () => {
     const hyperSpec = "../../packages/providers/hyper/src/index.js";
     const { createHyperProvider, hyperModels } = (await import(hyperSpec)) as {
-      createHyperProvider: (opts: { apiKey: string }) => ModelProvider;
+      createHyperProvider: (opts: { apiKey: () => Promise<string> }) => ModelProvider;
       hyperModels: readonly { provider: string; model: string }[];
     };
     const result = await providerConformance(
-      () => createHyperProvider({ apiKey: "fake-hyper-key" }),
+      () => createHyperProvider({ apiKey: async () => "fake-hyper-key" }),
       {
         recordings: new URL("../../packages/providers/hyper/src/__tests__/wire/anthropic", import.meta.url),
         models: hyperModels,

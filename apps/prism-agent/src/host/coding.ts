@@ -32,6 +32,7 @@ export async function createCodingWorker(config: HostConfig, deps: HostDeps = {}
     principal: { kind: "user", id: "prism-agent" },
     ownership: { tenantId: "prism-agent", userId: "prism-agent" },
     ...(host === undefined ? {} : { host }),
+    ...(deps.limits === undefined ? {} : { limits: deps.limits }),
     ...(deps.hooks === undefined ? {} : { hooks: deps.hooks }),
     // Compaction and the observational memory (opt-in) both claim the compaction slot. The assignment is the SDK's conflict resolution.
     slots: { compaction: COMPACTION },

@@ -1,12 +1,10 @@
 import {
-  type CredentialValueSource,
   type JsonObject,
   type ModelConfig,
   redactSecrets,
-  resolveCredentialValue,
   trimTrailingSlashes,
 } from "@arnilo/prism";
-import { readBoundedResponseJson, readBoundedResponseText, THINKING_LEVELS } from "@arnilo/prism/provider-kit";
+import { readBoundedResponseJson, readBoundedResponseText, THINKING_LEVELS, type SecretSource } from "@arnilo/prism/provider-kit";
 import { type OpenAICodexCredentialSlot, openAICodexApiKey } from "./oauth.js";
 
 /** The base a Sign in with ChatGPT grant is scoped to (`POST /responses`, `GET /models`). */
@@ -29,7 +27,7 @@ export interface OpenAICodexModelConfig extends Omit<ModelConfig, "provider" | "
 export const OPENAI_CODEX_MODELS_MAX_BODY_BYTES = 2_000_000;
 
 export interface ListOpenAICodexModelsOptions {
-  readonly apiKey?: CredentialValueSource;
+  readonly apiKey?: SecretSource;
   /** A writable `keyring:` ref holding the grant; used with {@link credentialSource} when no `apiKey` is given. */
   readonly credential?: string;
   /** The slot {@link credential} is read from and rotated into. */
@@ -189,7 +187,7 @@ export async function listOpenAICodexModels(options: ListOpenAICodexModelsOption
           ...(options.fetch ? { fetch: options.fetch } : {}),
         })
       : undefined);
-  const apiKey = await resolveCredentialValue(source, { provider: options.provider ?? "openai-codex", name: "apiKey" });
+  const apiKey = await source?.();
   const headers: Record<string, string> = { ...(options.headers ?? {}) };
   if (apiKey) headers.authorization = `Bearer ${apiKey}`;
   const response = await (options.fetch ?? fetch)(`${baseUrl}/models`, { method: "GET", headers, signal: options.signal });

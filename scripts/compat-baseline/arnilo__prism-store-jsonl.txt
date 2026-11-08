@@ -1,7 +1,11 @@
-JSONL_BYTES_READ	export declare const JSONL_BYTES_READ: unique symbol
-JSONL_FILE_READS	export declare const JSONL_FILE_READS: unique symbol
-JsonlSessionStoreError	export declare class JsonlSessionStoreError extends Error
-createJsonlSessionStore	export declare function createJsonlSessionStore(options: JsonlSessionStoreOptions): SessionStore
-default	export default
-jsonlStore	export declare function jsonlStore(config: JsonlStoreConfig): PackageInstance
-readJsonlSessionEntries	export declare function readJsonlSessionEntries(path: string, onBytesRead?: (bytes: number) => void): Promise<SessionEntryReadResult>
+. JSONL_BYTES_READ	const JSONL_BYTES_READ: unique symbol
+. JSONL_FILE_READS	const JSONL_FILE_READS: unique symbol
+. JsonlSessionStoreError	class JsonlSessionStoreError extends Error { constructor(code: "invalid_session_id", message: string); readonly code: "invalid_session_id"; }
+. JsonlSessionStoreOptions	interface JsonlSessionStoreOptions { readonly dir: string; readonly logger?: Pick<Logger, "warn">; }
+. JsonlStoreConfig	interface JsonlStoreConfig { readonly dir: string; }
+. SessionEntryParseError	interface SessionEntryParseError { readonly line: number; readonly message: string; readonly raw?: string; }
+. SessionEntryReadResult	interface SessionEntryReadResult { readonly entries: SessionEntry[]; readonly errors: SessionEntryParseError[]; }
+. createJsonlSessionStore	function createJsonlSessionStore(options: JsonlSessionStoreOptions): SessionStore
+. default	const definition: import("@arnilo/prism").PackageDefinition<JsonlStoreConfig>
+. jsonlStore	function jsonlStore(config: JsonlStoreConfig): PackageInstance
+. readJsonlSessionEntries	function readJsonlSessionEntries(path: string, onBytesRead?: (bytes: number) => void): Promise<SessionEntryReadResult>

@@ -64,7 +64,7 @@ const definition = definePackage<JsonlStoreConfig>({
     if (typeof dir !== "string" || dir.length === 0) {
       throw new Error("prism-store-jsonl: config needs dir (the directory holding one JSONL file per session)");
     }
-    prism.slots.store.provide(createJsonlSessionStore({ dir }));
+    prism.slots.store.provide(createJsonlSessionStore({ dir, logger: prism.log }));
   },
 });
 

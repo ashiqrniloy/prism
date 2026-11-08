@@ -1,7 +1,8 @@
-import { pinnedFetch } from "@arnilo/prism";
+import { pinnedFetch } from "@arnilo/prism/net";
 import { WorkToolError } from "./errors.js";
-import type { ResolvedWorkLimits, WorkTokenProvider } from "./types.js";
 import { type AgentIdentity } from "./identity.js";
+import type { ResolvedWorkLimits, WorkTokenProvider } from "./types.js";
+
 interface WorkHttpClientOptions {
   readonly identity: AgentIdentity;
   readonly tokenProvider: WorkTokenProvider;

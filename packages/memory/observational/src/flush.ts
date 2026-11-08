@@ -16,7 +16,7 @@ import {
   unscannedEntries,
 } from "./coverage-helpers.js";
 import { activeObservations, activeReflections, type ObservationalMemoryRecord } from "./ledger.js";
-import { resolveMemoryWorkerLimits, truncateWorkerText } from "./limits.js";
+import { resolveMemoryWorkerLimits, truncateWorkerText } from "@arnilo/prism-memory-core";
 import { ledgerOf, type ObservationalMemoryState } from "./state.js";
 import { OBSERVATIONS_DROPPED, OBSERVATIONS_RECORDED, REFLECTIONS_RECORDED } from "./types.js";
 import { dropObservationsToTarget, runDropper } from "./workers/dropper.js";

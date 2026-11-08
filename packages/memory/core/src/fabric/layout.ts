@@ -16,7 +16,6 @@ export const KIND_DIRECTORIES: Readonly<Record<string, string>> = Object.freeze(
   procedure: "procedures",
   episode: "episodes",
   exchange: "exchanges",
-  concept: "concepts",
 });
 export const DEFAULT_DIRECTORY = "entries";
 export const ARCHIVE_DIRECTORY = "archive";

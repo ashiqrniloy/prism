@@ -15,7 +15,7 @@ describe("transport queue", () => {
       peak = 0,
       requests = 0;
     const search = createBraveSearch({
-      credentials: "key",
+      credentials: async () => "key",
       limits: { maxConcurrency: 4 },
       fetch: async () => {
         requests++;
@@ -39,7 +39,7 @@ describe("transport queue", () => {
       release = resolve;
     });
     const search = createBraveSearch({
-      credentials: "key",
+      credentials: async () => "key",
       limits: { maxConcurrency: 1, maxQueued: 1 },
       fetch: async () => {
         await gate;
@@ -62,7 +62,7 @@ describe("transport queue", () => {
     });
     const urls: string[] = [];
     const search = createBraveSearch({
-      credentials: "key",
+      credentials: async () => "key",
       limits: { maxConcurrency: 1, maxQueued: 4 },
       fetch: async (request) => {
         urls.push(new URL(String(request)).searchParams.get("q") ?? "");
@@ -88,7 +88,7 @@ describe("transport retries", () => {
   it("firecrawl_scrape_not_retried_on_500", async () => {
     let calls = 0;
     const fetch = createFirecrawlFetch({
-      credentials: "key",
+      credentials: async () => "key",
       fetch: async () => {
         calls++;
         return json({ error: "boom" }, 500);
@@ -102,7 +102,7 @@ describe("transport retries", () => {
     let calls = 0;
     const delays: number[] = [];
     const fetch = createFirecrawlFetch({
-      credentials: "key",
+      credentials: async () => "key",
       sleep: async (ms) => {
         delays.push(ms);
       },
@@ -120,7 +120,7 @@ describe("transport retries", () => {
   it("firecrawl_extract_create_never_retried", async () => {
     let calls = 0;
     const extractor = createFirecrawlExtractor({
-      credentials: "key",
+      credentials: async () => "key",
       schema: { type: "object", properties: { title: { type: "string" } } },
       validator: { validate: () => ({ ok: true, value: {} }) },
       fetch: async () => {
@@ -136,7 +136,7 @@ describe("transport retries", () => {
     const delays: number[] = [];
     let calls = 0;
     const fetch = createFirecrawlFetch({
-      credentials: "key",
+      credentials: async () => "key",
       limits: { maxRateLimitDelayMs: 5_000 },
       sleep: async (ms) => {
         delays.push(ms);
@@ -156,7 +156,7 @@ describe("transport retries", () => {
     const delays: number[] = [];
     let calls = 0;
     const fetch = createFirecrawlFetch({
-      credentials: "key",
+      credentials: async () => "key",
       sleep: async (ms) => {
         delays.push(ms);
       },
@@ -174,7 +174,7 @@ describe("transport retries", () => {
     const delays: number[] = [];
     let calls = 0;
     const fetch = createFirecrawlFetch({
-      credentials: "key",
+      credentials: async () => "key",
       limits: { maxRateLimitDelayMs: 1_000 },
       sleep: async (ms) => {
         delays.push(ms);

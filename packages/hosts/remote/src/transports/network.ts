@@ -1,4 +1,5 @@
-import { isLoopbackHostname, type JsonObject, type Principal } from "@arnilo/prism";
+import { type JsonObject, type Principal } from "@arnilo/prism";
+import { isLoopbackHostname } from "@arnilo/prism/net";
 import { serve } from "bun";
 import { bearerMatches, resolveToken } from "../auth.js";
 import { createChannel } from "../channel.js";

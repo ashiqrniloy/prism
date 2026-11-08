@@ -11,8 +11,9 @@ import {
   createChannelPairingStore,
   connectTelegram,
   connectSignal,
+  resolveChannelSecretRef,
 } from "../index.js";
-import type { TelegramAdapterOptions } from "../telegram.js";
+import { createTelegramWebhookHandler, type TelegramAdapterOptions, type TelegramWebhookHandlerOptions } from "../telegram.js";
 
 function textProvider(calls: { count: number }, answer = (n: number) => `answer ${n}`): ModelProvider {
   return {
@@ -427,6 +428,48 @@ describe("connectTelegram and connectSignal host bindings", () => {
         assert.equal((err as ChannelTokenLiteralError).code, CHANNEL_TOKEN_LITERAL_CODE);
         return true;
       },
+    );
+  });
+
+  it("channels_secret_fields_are_ref_only: webhookSecret and bot token reject literals and resolve refs through the credentials slot", async () => {
+    const keyring = new Map([
+      ["keyring:telegram-webhook", "hook-secret-from-keyring"],
+      ["keyring:telegram-token", "123456:keyring-token"],
+    ]);
+    const agent = await createAgent({
+      id: "ref-only-agent",
+      model: { provider: "mock", model: "demo" },
+      slots: {
+        store: createMemorySessionStore(),
+        credentials: { resolve: (ref) => (keyring.has(ref) ? { type: "api_key", value: keyring.get(ref)! } : undefined) },
+      },
+      packages: [providerPackage("test-provider", [textProvider({ count: 0 })])],
+    });
+    process.env.TEST_TG_REF_ONLY_TOKEN = "123456:env-token";
+    try {
+      await assert.rejects(
+        connectTelegram(agent, { token: "keyring:telegram-token", webhookSecret: "literal-webhook-secret" }),
+        (err: unknown) => err instanceof ChannelTokenLiteralError && err.code === CHANNEL_TOKEN_LITERAL_CODE,
+      );
+      // An assigned slot owns every ref: it answers keyring refs (`Secret.value`), and an env ref it does not know fails closed.
+      assert.equal(await resolveChannelSecretRef(agent, "keyring:telegram-webhook"), "hook-secret-from-keyring");
+      await assert.rejects(resolveChannelSecretRef(agent, "env:TEST_TG_REF_ONLY_TOKEN"), /Failed to resolve/);
+      await assert.rejects(resolveChannelSecretRef(agent, "keyring:missing"), /Failed to resolve/);
+    } finally {
+      delete process.env.TEST_TG_REF_ONLY_TOKEN;
+    }
+    const literal = { webhookSecret: "literal" } as unknown as Pick<TelegramWebhookHandlerOptions, "webhookSecret">;
+    assert.throws(
+      () =>
+        createTelegramWebhookHandler({
+          connectionId: "c",
+          botToken: async () => "t",
+          ...literal,
+          admit: async () => ({ status: "duplicate" }) as never,
+          leases: createMemoryLeaseStore(),
+          cursorOwnership: { tenantId: "t", accountId: "a", userId: "u" },
+        }),
+      /secret source, not a literal/,
     );
   });
 

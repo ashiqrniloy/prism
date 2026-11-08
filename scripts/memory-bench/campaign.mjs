@@ -257,6 +257,12 @@ export function freeRouteRetryCause(attempt) {
   return attempt?.cause === "transient" || attempt?.cause === "quota-window" || attempt?.cause === "quota-daily";
 }
 
+/** Plan 210: on retrying routes an attempt abandoned by an interruption (host kill, owner stop) costs only wall time,
+ * so it never counts toward `maxAttempts`; the supervisor's own run limit bounds a job that keeps killing its host. */
+export function retryUncounted(spec, attempt) {
+  return Boolean(spec.freeRouteRetries) && (freeRouteRetryCause(attempt) || attempt?.status === "abandoned");
+}
+
 /** A 4xx that names an input problem is deterministic: the same arm on the same question will be
  * refused again, so the campaign records it once and stops. `429` and transport errors stay retryable.
  */
@@ -581,7 +587,6 @@ export function campaignJobs() {
     ["fabric.inject=off", "fabric.directory=off"],
     ["fabric.inject=off", "fabric.directory={}"],
     ["fabric.crossSourceDedup=off"],
-    ["fabric.consolidate.decider=model"],
   ])
     add("fabric", "memoryagentbench-cr", "fabric", specs);
   for (const specs of [
@@ -1167,8 +1172,7 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
       // A spent quota window says nothing about the arm; those attempts are re-run, not counted.
       if (
         journal.attempts.filter(
-          (attempt) =>
-            attempt.jobId === job.id && !isBudgetQuotaCause(attempt.cause) && !(spec.freeRouteRetries && freeRouteRetryCause(attempt)),
+          (attempt) => attempt.jobId === job.id && !isBudgetQuotaCause(attempt.cause) && !retryUncounted(spec, attempt),
         ).length >= spec.maxAttempts
       ) {
         pushResult({ id: job.id, status: "attempts-exhausted" });
@@ -1225,8 +1229,9 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
           ? retained
           : JSON.parse(await readFile(candidateSource, "utf8"))
         : null;
-      // A changed product revision changes the protocol hash, so its checkpoints must not be resumed.
-      const armRevision = manifest.productRevision?.[job.role];
+      // A changed product revision changes the protocol hash, so its checkpoints must not be resumed. A run that pins
+      // its source label (PRISM_MEMORY_BENCH_SOURCE, plan 210 C-1) drops checkpoints stamped with another label too.
+      const armRevision = manifest.productRevision?.[job.role] ?? process.env.PRISM_MEMORY_BENCH_SOURCE;
       const staleResume = Boolean(candidateReport) && armRevision && candidateReport.sourceRevision !== armRevision;
       if (staleResume)
         console.log(

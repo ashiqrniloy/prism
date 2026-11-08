@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { join, relative, sep } from "node:path";
 import type { Memory, VectorStore } from "@arnilo/prism-memory-core";
 import { createFabricFileJail } from "./files.js";
-import { scanScopedMemoryContent } from "./scoped/trust.js";
+import { scanScopedMemoryContent } from "@arnilo/prism-memory-core";
 import { encodeMemoryNoteMetadata, MEMORY_NOTE_METADATA_KEY, parseMemoryNoteMetadata, stampProvenance } from "./types.js";
 
 /** A SQLite file with its `-wal`/`-shm` siblings, in any of the excluded locations. */

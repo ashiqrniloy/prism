@@ -231,12 +231,12 @@ await section("@arnilo/prism-memory-fabric: working and semantic memory", async 
   assert.equal(working.record?.patch?.note ?? working.patch?.note ?? true, true);
 });
 
-await section("@arnilo/prism-memory-rag: rag + loaders + parsers", async () => {
-  const rag = await import("@arnilo/prism-memory-rag");
+await section("@arnilo/prism-rag: rag + loaders + parsers", async () => {
+  const rag = await import("@arnilo/prism-rag");
   assert.ok(Object.keys(rag).length > 0);
-  const loaders = await import("@arnilo/prism-memory-rag");
+  const loaders = await import("@arnilo/prism-rag");
   assert.equal(typeof loaders.createResourceDocumentLoader, "function");
-  const parsers = await import("@arnilo/prism-memory-rag");
+  const parsers = await import("@arnilo/prism-rag");
   assert.ok(parsers.textParser && parsers.markdownParser, "rag parsers must be exported");
 });
 
@@ -250,10 +250,11 @@ await section("@arnilo/prism-memory-compaction: compaction strategies", async ()
   assert.equal(typeof om.foldObservationalMemoryLedger, "function", "observational memory must export the ledger fold");
 });
 
-await section("@arnilo/prism-memory-wiki: ontology tier", async () => {
-  const wiki = await import("@arnilo/prism-memory-wiki");
-  assert.equal(typeof wiki.memoryWiki, "function");
-  assert.deepEqual(wiki.default.requires?.services, ["memory.fabric"], "the ontology tier requires the fabric service");
+await section("@arnilo/prism-wiki: knowledge outside memory", async () => {
+  const wiki = await import("@arnilo/prism-wiki");
+  assert.equal(typeof wiki.wiki, "function");
+  assert.equal(wiki.default.requires?.services, undefined, "the wiki requires no service: it runs without memory");
+  assert.equal(wiki.MEMORY_LTM_SERVICE, "memory.ltm", "it reads memory, when installed, through the read-only port");
 });
 
 await section("@arnilo/prism-workflows: .", async () => {
@@ -422,7 +423,7 @@ await section("@arnilo/prism-channels", async () => {
   assert.equal(typeof telegram.createTelegramAdapter, "function");
   const adapter = telegram.createTelegramAdapter({
     connectionId: "probe-telegram",
-    botToken: "not-a-live-token",
+    botToken: async () => "not-a-live-token",
     checkpoints,
     leases: channels.createMemoryLeaseStore(),
     cursorOwnership: ownership,
@@ -460,7 +461,7 @@ await section("provider packages: adapter surfaces", async () => {
   const prismRoot = await import("@arnilo/prism/provider-kit");
   let opencodeFetches = 0;
   const opencodeProvider = opencodeGo.createOpenCodeGoProvider({
-    apiKey: "fake-opencode-key",
+    apiKey: async () => "fake-opencode-key",
     fetch: async () => {
       opencodeFetches += 1;
       throw new Error("fail-fast must fire before any fetch");

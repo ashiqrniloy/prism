@@ -5,13 +5,8 @@
  */
 import { type ChildProcess, spawn } from "node:child_process";
 import { isIP } from "node:net";
-import {
-  assertSsrfAllowedUrl,
-  defaultResolver,
-  type MediaHostAddress,
-  type MediaHostnameResolver,
-  normalizeHostname,
-} from "@arnilo/prism";
+import { assertSsrfAllowedUrl, type MediaHostAddress, type MediaHostnameResolver } from "@arnilo/prism";
+import { defaultResolver, normalizeHostname } from "@arnilo/prism/net";
 import { ObscuraError } from "./errors.js";
 import type { ObscuraProcessLimits } from "./limits.js";
 import { resolveObscuraProcessLimits } from "./limits.js";
@@ -199,14 +194,8 @@ function isStringArray(value: unknown): value is readonly string[] {
 }
 
 /** Public HTTP(S) URL validation and DNS pre-resolution for anything handed to the Obscura CLI. */
-export async function validateObscuraWebUrl(
-  input: string,
-  options?: readonly string[] | ValidateObscuraUrlOptions,
-): Promise<string> {
-  const opts: ValidateObscuraUrlOptions =
-    options === undefined || isStringArray(options)
-      ? { allowedHostnames: options }
-      : options;
+export async function validateObscuraWebUrl(input: string, options?: readonly string[] | ValidateObscuraUrlOptions): Promise<string> {
+  const opts: ValidateObscuraUrlOptions = options === undefined || isStringArray(options) ? { allowedHostnames: options } : options;
   const allowedHostnames = opts.allowedHostnames;
   const resolver = opts.resolver ?? defaultResolver;
   const signal = opts.signal;

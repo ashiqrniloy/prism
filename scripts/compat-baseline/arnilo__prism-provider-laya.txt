@@ -1,10 +1,12 @@
-LAYA_API_KEY_ENV	export declare const LAYA_API_KEY_ENV = "LAYA_API_KEY"
-LAYA_DEFAULT_API_KEY_REF	export declare const LAYA_DEFAULT_API_KEY_REF = "env:LAYA_API_KEY"
-LAYA_DEFAULT_BASE_URL	export declare const LAYA_DEFAULT_BASE_URL = "http://localhost:8000"
-createLayaProvider	export declare function createLayaProvider(options?: LayaProviderOptions): ModelProvider
-default	export default
-defineLayaModel	export declare function defineLayaModel(config: LayaModelConfig): ModelConfig
-laya	export declare function laya(options?: LayaProviderPackageOptions & LayaProviderConfig): PackageInstance
-layaModels	export declare const layaModels: readonly ModelConfig[]
-type LayaModelConfig	export { defineLayaModel, type LayaModelConfig, layaModels, LAYA_API_KEY_ENV, LAYA_DEFAULT_API_KEY_REF, LAYA_DEFAULT_BASE_URL, } from "./models.js"
-type LayaProviderOptions	export { createLayaProvider, type LayaProviderOptions } from "./provider.js"
+. LAYA_API_KEY_ENV	const LAYA_API_KEY_ENV = "LAYA_API_KEY"
+. LAYA_DEFAULT_API_KEY_REF	const LAYA_DEFAULT_API_KEY_REF = "env:LAYA_API_KEY"
+. LAYA_DEFAULT_BASE_URL	const LAYA_DEFAULT_BASE_URL = "http://localhost:8000"
+. LayaModelConfig	interface LayaModelConfig extends Omit<ModelConfig, "provider"> { readonly compat?: JsonObject; readonly provider?: "laya"; }
+. LayaProviderConfig	type LayaProviderConfig = SystemOneProviderConfig
+. LayaProviderOptions	interface LayaProviderOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly id?: string; readonly maxRetries?: number; readonly path?: string; readonly warn?: (message: string) => void; }
+. LayaProviderPackageOptions	type LayaProviderPackageOptions = SystemOneProviderPackageOptions
+. createLayaProvider	function createLayaProvider(options?: LayaProviderOptions): ModelProvider
+. default	const _default: import("@arnilo/prism").PackageDefinition<SystemOneProviderConfig>
+. defineLayaModel	function defineLayaModel(config: LayaModelConfig): ModelConfig
+. laya	function laya(options?: LayaProviderPackageOptions & LayaProviderConfig): PackageInstance
+. layaModels	const layaModels: readonly ModelConfig[]

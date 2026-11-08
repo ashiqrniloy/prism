@@ -436,6 +436,8 @@ describe("provider-kit", () => {
       "docs/provider-caching.md", // `formerly` alias annotations
       "docs/thinking-and-reasoning.md", // `formerly` alias annotations
       "docs/providers/decisions.md", // records the retired /decisions subpath
+      // The host-builder skill's 0.12 → 0.13 replacement table, the skill-side twin of docs/migrate-to-0.13.md.
+      "packages/hosts/host-builder/skills/prism-host-builder/references/upgrading.md",
     ]);
     const allowed = (path: string): boolean =>
       allowedFiles.has(path) || allowedDocs.has(path) || /\/CHANGELOG\.md$/.test(path) || /^docs\/migrate-to-[^/]+\.md$/.test(path);
@@ -542,7 +544,7 @@ describe("providerConformance", () => {
         baseUrl: "http://fake.test",
         fetch: fetchImpl,
         extraHeaders: (r) => ({ ...(r.options?.headers as Record<string, string>) }),
-        apiKey: KEY,
+        apiKey: async () => KEY,
         authStyle: "none",
       });
     await assert.rejects(kit.providerConformance(leaky, options(captured)), /overrode provider-owned|got/);

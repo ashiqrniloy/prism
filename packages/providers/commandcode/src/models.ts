@@ -1,13 +1,11 @@
 import {
-  type CredentialValueSource,
   type JsonObject,
   type ModelConfig,
   type ModelCost,
   redactSecrets,
-  resolveCredentialValue,
   trimTrailingSlashes,
 } from "@arnilo/prism";
-import { readBoundedResponseJson, readBoundedResponseText, type ThinkingCompatFamily } from "@arnilo/prism/provider-kit";
+import { readBoundedResponseJson, readBoundedResponseText, type ThinkingCompatFamily, type SecretSource } from "@arnilo/prism/provider-kit";
 
 /** Official Command Code Provider API base (`/chat/completions`, `/responses`, `/messages`, `/models`). */
 export const COMMAND_CODE_DEFAULT_BASE_URL = "https://api.commandcode.ai/provider/v1";
@@ -41,7 +39,7 @@ export interface CommandCodeModelConfig extends Omit<ModelConfig, "provider" | "
 }
 
 export interface ListCommandCodeModelsOptions {
-  readonly apiKey?: CredentialValueSource;
+  readonly apiKey?: SecretSource;
   readonly fetch?: typeof fetch;
   /** Defaults to official `https://api.commandcode.ai/provider/v1`. */
   readonly baseUrl?: string;
@@ -174,7 +172,7 @@ export function defineCommandCodeModel(config: CommandCodeModelConfig): ModelCon
 export async function listCommandCodeModels(options: ListCommandCodeModelsOptions = {}): Promise<ModelConfig[]> {
   const provider = options.provider ?? "commandcode";
   const baseUrl = trimTrailingSlashes(options.baseUrl ?? COMMAND_CODE_DEFAULT_BASE_URL);
-  const token = await resolveCredentialValue(options.apiKey, { provider, name: "apiKey" });
+  const token = await options.apiKey?.();
   const response = await (options.fetch ?? fetch)(`${baseUrl}/models`, {
     method: "GET",
     headers: { ...options.headers, ...(token ? { authorization: `Bearer ${token}` } : {}) },

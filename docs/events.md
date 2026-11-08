@@ -122,8 +122,10 @@ for await (const event of session.resume(decisions)) resumed.push(event.type);
 
 ## Extension notes
 
-- Adding an event type means editing `AgentEventPayload`, `OBSERVE_HOOKS`, this page, and the
-  frozen catalog test in one change.
+- Adding an event type means editing `AgentEventPayload`, `OBSERVE_HOOKS`, the known-type table behind
+  `isKnownAgentEventType` (the build fails until it is listed), this page, and the frozen catalog test in one change.
+- A later minor may add event types and fields. A host ignores a type or field it does not know, or filters with
+  `isKnownAgentEventType(type)`; see [compatibility.md](compatibility.md).
 - Kernel modules that emit through `package.event` are listed in the migration table in
   `CHANGELOG.md`; each moves to a dedicated name when its phase lands.
 

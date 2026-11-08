@@ -64,6 +64,28 @@ export interface PrefixStabilityConformanceOptions {
    * generated text, never host content.
    */
   readonly reasoningFixture?: boolean;
+  /**
+   * Wire mode. Serialize every captured request with the provider's own encoder (for a routed
+   * provider, its `encode` method; the request's `model` is the fixture's, so the callback must
+   * swap in the real `ModelConfig`) and assert that consecutive bodies keep their cacheable
+   * segments: `tools` and `system` equal, and every message below the earlier request's last index
+   * byte-equal. Only `cache_control` markers may move. Unset: no wire check.
+   */
+  readonly encode?: (request: ProviderRequest) => Promise<JsonObject>;
+  /** Splits an encoded body into `tools` / `system` / `messages`. Default: `defaultWireSegments` (Anthropic-shaped when the body has a top-level `system`, otherwise OpenAI Chat). */
+  readonly segments?: (body: JsonObject) => WireSegments;
+  /**
+   * User turns the fixture runs (default `2`, two provider requests each). Turns beyond the two
+   * skill loads call a runner-owned no-op tool, so `turns: 5` is a ten-request tool loop.
+   */
+  readonly turns?: number;
+}
+
+/** The three segments an upstream prompt cache keys on. */
+export interface WireSegments {
+  readonly tools?: unknown;
+  readonly system?: unknown;
+  readonly messages: readonly unknown[];
 }
 
 export interface PrefixStabilityConformanceResult {
@@ -88,6 +110,8 @@ export interface PrefixStabilityConformanceResult {
    * `cacheableFraction` is the tail-excluded fraction for that pair. Empty when `resets` is.
    */
   readonly resetDetails: readonly PrefixStabilityResetDetail[];
+  /** Consecutive encoded pairs that passed the wire check; `0` when `encode` was not given. */
+  readonly wirePairs: number;
 }
 
 export interface ScorePrefixStabilityOptions {
@@ -188,13 +212,21 @@ export async function runPrefixStabilityConformance(options: PrefixStabilityConf
     foldableBytes === undefined || (Number.isSafeInteger(foldableBytes) && foldableBytes > 0),
     "prefix stability conformance foldableToolResultBytes must be a positive safe integer",
   );
+  const turns = options.turns ?? 2;
+  assert.ok(Number.isSafeInteger(turns) && turns >= 2, "prefix stability conformance turns must be a safe integer of at least 2");
   const registry = createSkillRegistry([...skills]);
   const hostTools: readonly ToolDefinition[] = host.tools?.add ?? [];
   const fixture = fixtureProvider(requests, [first.name, second.name], options.reasoningFixture === true, foldableBytes !== undefined);
   const agent = await createAgent({
     ...host,
     skills: { add: registry.list(), disclosure: options.skillsDisclosure },
-    tools: { add: [...hostTools, ...(foldableBytes === undefined ? [] : [createFoldableToolResultTool(foldableBytes)])] },
+    tools: {
+      add: [
+        ...hostTools,
+        ...(foldableBytes === undefined ? [] : [createFoldableToolResultTool(foldableBytes)]),
+        ...(turns > 2 ? [createPingTool()] : []),
+      ],
+    },
     model: { ...parseModelRef(host.model as ModelRef), provider: fixture.id },
     packages: [...(host.packages ?? []), providerPackage("prefix-stability-fixture", [fixture])],
   });
@@ -205,11 +237,14 @@ export async function runPrefixStabilityConformance(options: PrefixStabilityConf
   // as a confusing "0 provider requests". Name the run's own error instead.
   assertRunSucceeded(await session.run(firstInput, runOptions), "first");
   assertRunSucceeded(await session.run(secondInput, runOptions), "second");
+  for (let turn = 3; turn <= turns; turn += 1) {
+    assertRunSucceeded(await session.run(`Prefix stability turn ${turn}`, runOptions), String(turn));
+  }
 
   assert.equal(
     requests.length,
-    4,
-    `prefix stability conformance expected 4 provider requests (2 per staggered turn), captured ${requests.length}`,
+    turns * 2,
+    `prefix stability conformance expected ${turns * 2} provider requests (2 per turn), captured ${requests.length}`,
   );
   // The session's own map holds the exact `Message` objects `appendTailSegment` allocated, so the
   // classification is exact rather than a heuristic over host-authored content. (`tailSegments` is
@@ -273,13 +308,102 @@ export async function runPrefixStabilityConformance(options: PrefixStabilityConf
         "The fixture was supposed to invalidate the prefix at those boundaries — drop allowedResets for an append-only assembly, or check the fold trigger or eviction condition actually fired.",
     );
   }
+  const wirePairs = options.encode === undefined ? 0 : await assertWirePrefixStable(requests, options.encode, options.segments);
   return {
     requests: requests.length,
     minContinuity: observed,
     cacheableContinuity: cacheableObserved,
     resets,
     resetDetails: sample.resetDetails,
+    wirePairs,
   };
+}
+
+/** Anthropic Messages body: `tools`, top-level `system`, `messages`. */
+export function anthropicSegments(body: JsonObject): WireSegments {
+  return { tools: body.tools, system: body.system, messages: Array.isArray(body.messages) ? body.messages : [] };
+}
+
+/** OpenAI Chat body: `tools`; the leading `system` / `developer` messages are the system segment. */
+export function openAIChatSegments(body: JsonObject): WireSegments {
+  const all = Array.isArray(body.messages) ? body.messages : [];
+  let lead = 0;
+  while (lead < all.length && isSystemRole((all[lead] as JsonObject | undefined)?.role)) lead += 1;
+  return { tools: body.tools, system: all.slice(0, lead), messages: all.slice(lead) };
+}
+
+/** A body with a top-level `system` is Anthropic-shaped; everything else is read as OpenAI Chat. */
+export function defaultWireSegments(body: JsonObject): WireSegments {
+  return "system" in body ? anthropicSegments(body) : openAIChatSegments(body);
+}
+
+function isSystemRole(role: unknown): boolean {
+  return role === "system" || role === "developer";
+}
+
+/**
+ * Assert that `next` keeps the cacheable segments of `previous`: `tools` and `system` equal, and every
+ * message below the earlier request's last index byte-equal once `cache_control` markers are removed
+ * (a marker may move; nothing else may). Throws naming the segment, the index and the first
+ * differing byte offset of the two serialized values.
+ */
+export function assertWireSegmentsStable(previous: WireSegments, next: WireSegments, label = "wire prefix"): void {
+  assertSegmentEqual("tools", undefined, previous.tools, next.tools, label);
+  assertSegmentEqual("system", undefined, previous.system, next.system, label);
+  const lastIndex = previous.messages.length - 1;
+  if (next.messages.length < lastIndex) {
+    assert.fail(`${label}: messages shrank from ${previous.messages.length} to ${next.messages.length}; earlier messages cannot stay byte-equal`);
+  }
+  for (let index = 0; index < lastIndex; index += 1) {
+    assertSegmentEqual("messages", index, stripCacheMarkers(previous.messages[index]), stripCacheMarkers(next.messages[index]), label);
+  }
+}
+
+function assertSegmentEqual(segment: string, index: number | undefined, before: unknown, after: unknown, label: string): void {
+  const left = JSON.stringify(before) ?? "undefined";
+  const right = JSON.stringify(after) ?? "undefined";
+  if (left === right) return;
+  const offset = firstDifferingByte(left, right);
+  assert.fail(
+    `${label}: segment '${segment}'${index === undefined ? "" : ` index ${index}`} changed between consecutive requests ` +
+      `(first differing byte ${offset} of ${Buffer.byteLength(left)} → ${Buffer.byteLength(right)}). ` +
+      "The upstream prefix cache keys on these bytes; keep earlier segments byte-stable and append.",
+  );
+}
+
+function firstDifferingByte(left: string, right: string): number {
+  const a = Buffer.from(left, "utf8");
+  const b = Buffer.from(right, "utf8");
+  const limit = Math.min(a.length, b.length);
+  let at = 0;
+  while (at < limit && a[at] === b[at]) at += 1;
+  return at;
+}
+
+/** Deep copy without `cache_control` keys, so a moved marker is not a difference. */
+function stripCacheMarkers(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stripCacheMarkers);
+  if (value !== null && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [key, entry] of Object.entries(value)) if (key !== "cache_control") out[key] = stripCacheMarkers(entry);
+    return out;
+  }
+  return value;
+}
+
+/** Encode every captured request with the provider's encoder and check each consecutive pair. Returns the pair count. */
+async function assertWirePrefixStable(
+  requests: readonly ProviderRequest[],
+  encode: (request: ProviderRequest) => Promise<JsonObject>,
+  segments: ((body: JsonObject) => WireSegments) | undefined,
+): Promise<number> {
+  const split = segments ?? defaultWireSegments;
+  const bodies: WireSegments[] = [];
+  for (const request of requests) bodies.push(split(await encode(request)));
+  for (let index = 1; index < bodies.length; index += 1) {
+    assertWireSegmentsStable(bodies[index - 1]!, bodies[index]!, `prefix stability conformance (wire): request ${index} → ${index + 1}`);
+  }
+  return bodies.length - 1;
 }
 
 /** One gap row. `fraction` is the metric the caller selected; `cacheableFraction` stays the tail-excluded pair. */
@@ -332,6 +456,20 @@ function createFoldableToolResultTool(bytes: number): ToolDefinition {
   };
 }
 
+/** Runner-owned no-op tool for the turns beyond the two skill loads. */
+const PREFIX_STABILITY_PING_TOOL_NAME = "prefix_stability_ping" as const;
+
+function createPingTool(): ToolDefinition {
+  return {
+    name: PREFIX_STABILITY_PING_TOOL_NAME,
+    description: "Deterministic no-op for the extra fixture turns.",
+    parameters: { type: "object", properties: {} } as JsonObject,
+    execute(_args, context) {
+      return { toolCallId: context.toolCallId, name: PREFIX_STABILITY_PING_TOOL_NAME, value: "pong", content: [{ type: "text", text: "pong" }] };
+    },
+  };
+}
+
 /**
  * Fixture provider: turn 1 loads `skillNames[0]`, turn 2 loads `skillNames[1]`, everything else
  * completes. With `reasoning` each skill-load round also carries a thinking block, so a host stage
@@ -347,6 +485,11 @@ function fixtureProvider(requests: ProviderRequest[], skillNames: readonly strin
       const index = call;
       call += 1;
       const skillName = skillNames[index >> 1];
+      if (index % 2 === 0 && skillName === undefined) {
+        if (reasoning) yield providerThinkingDelta(FIXTURE_THINKING);
+        yield { type: "tool_call" as const, call: toolCallContent(`prefix-stability-${index}`, PREFIX_STABILITY_PING_TOOL_NAME, {}) };
+        return;
+      }
       if (index % 2 === 0 && skillName !== undefined) {
         if (reasoning) yield providerThinkingDelta(FIXTURE_THINKING);
         yield { type: "tool_call" as const, call: toolCallContent(`prefix-stability-${index}`, "load_skill", { name: skillName }) };

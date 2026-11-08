@@ -42,7 +42,7 @@ describe("Kilo package", () => {
   });
 
   it("kilo_package_conformance_three_routes", async () => {
-    const result = await providerConformance((fetch) => createKiloProvider({ apiKey: secret, fetch }), {
+    const result = await providerConformance((fetch) => createKiloProvider({ apiKey: async () => secret, fetch }), {
       recordings: new URL("./wire/", import.meta.url),
       models: [chatModel, responsesModel, messagesModel],
       secrets: [secret],

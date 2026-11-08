@@ -89,37 +89,12 @@ describe("memory fabric tools", () => {
     assert.equal((await memory.getEntry(note.id))?.lastAccessedAt, undefined);
   });
 
-  it("recall_tool_accepts_a_time_window_and_time_order", async () => {
-    const memory = makeMemory();
-    const { fabric, tools } = attached(memory);
-    const older = await fabric.remember({
-      kind: "fact",
-      content: "checkup january booking",
-      tRef: "2026-01-01T00:00:00.000Z",
-      dates: [{ text: "in January", resolved: "2026-01-01T00:00:00.000Z", precision: "month" }],
-    });
-    const newer = await fabric.remember({
-      kind: "fact",
-      content: "checkup february booking",
-      tRef: "2026-02-01T00:00:00.000Z",
-      dates: [{ text: "last month", resolved: "2026-02-01T00:00:00.000Z", precision: "month" }],
-    });
-    const recall = find(tools, "memory.recall");
-    const schema = recall.parameters as { properties: { from?: unknown; to?: unknown; order?: { enum: string[] } } };
-    assert.ok(schema.properties.from !== undefined && schema.properties.to !== undefined);
-    assert.deepEqual(schema.properties.order?.enum, ["relevance", "time"]);
 
-    const february = await recall.execute({ query: "checkup booking", from: "2026-02-01", to: "2026-02-28", order: "time" });
-    assert.deepEqual(
-      (february.value as { hits: Array<{ id: string }> }).hits.map((hit) => hit.id),
-      [newer.id],
-    );
-    const ordered = await recall.execute({ query: "checkup booking", order: "time" });
-    assert.deepEqual(
-      (ordered.value as { hits: Array<{ id: string }> }).hits.map((hit) => hit.id),
-      [older.id, newer.id],
-    );
-    assert.match(text(ordered), /tRef=.*dates=2026-01-01\/month/s);
+  it("recall_tool_has_no_time_window_or_order_parameters", () => {
+    // Plan 210 Task 7 removed the timeline (resolved event dates, `from`/`to` windows and `order: "time"`) from the tool.
+    const recall = find(attached(makeMemory()).tools, "memory.recall");
+    const properties = (recall.parameters as { properties: Record<string, unknown> }).properties;
+    for (const name of ["from", "to", "order"]) assert.equal(properties[name], undefined, name);
   });
 
   it("memory_recall_prints_note_path", async () => {

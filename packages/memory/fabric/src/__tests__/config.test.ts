@@ -1,19 +1,16 @@
 import { afterEach, describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { validateJsonSchema } from "@arnilo/prism";
 import {
   MemoryValidationError,
-  createHashEmbedder,
 } from "@arnilo/prism-memory-core";
 
-import { createMemory, memoryFabricConfigSchema, resolveMemoryFabricConfig } from "../index.js";
+import { memoryFabricConfigSchema, resolveMemoryFabricConfig } from "../index.js";
 import { projectResourceId, resolveProjectIdentity } from "../scope/identity.js";
-import { createMemoryFabric } from "../create.js";
-import { createScopedMemoryPolicy } from "../scoped/policy.js";
 
 const dirs: string[] = [];
 afterEach(async () => {
@@ -82,21 +79,4 @@ describe("fabric scopes config (plan 188.2 Task 2)", () => {
     assert.equal(config.scopes.active[0]?.level, "project");
   });
 
-  it("scoped_policy_binds_to_project_scope", async () => {
-    const ledgerRoot = await mkdtemp(join(tmpdir(), "fabric-scope-policy-"));
-    dirs.push(ledgerRoot);
-    const memory = createMemory({
-      tenantId: "t",
-      resourceId: "projects/demo--0123abcd",
-      threadId: "default",
-      embedder: createHashEmbedder({ dimensions: 8 }),
-    });
-    const fabric = createMemoryFabric({ memory, consolidate: false });
-    const policy = createScopedMemoryPolicy({ memory, fabric, scopeRoot: ledgerRoot });
-    assert.equal(policy.scopeRoot, ledgerRoot);
-    await policy.rememberFact("the deploy gate runs on fridays");
-    const working = await memory.getWorking();
-    assert.match(JSON.stringify(working), /deploy gate runs on fridays/);
-    assert.equal(memory.scope.resourceId, "projects/demo--0123abcd");
-  });
 });

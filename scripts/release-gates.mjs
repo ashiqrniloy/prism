@@ -4,10 +4,11 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
-
 import { checkHostBuilderBudget, checkKernelBudget, loadBudgets, measureExportCounts, measureKernelSourceLines } from "./budget-gates.mjs";
+import { classifyChange, displayKey, extractPackageSurface, PRODUCER_ONLY_TYPES, shapeDiff } from "./compat-shape.mjs";
 
 export const BASELINE_DIR = "scripts/compat-baseline";
+export { PRODUCER_ONLY_TYPES };
 
 // Paths that must never appear in a published tarball.
 export const TARBALL_DENY_PATTERNS = [
@@ -300,13 +301,14 @@ function sourceEntry(manifest) {
  * `dist/` when the package builds, otherwise a declaration emit for a TypeScript-source export.
  * Plan 174 Task 8: the kernel is a TypeScript-source package too, so `@arnilo/prism` takes the
  * emit path — there is no `dist/` for it any more.
- * Returns `{ distDir }`, `{}` (manifest-only) or `{ error }`; never throws, so one gate run reports
+ * Returns `{ distDir, declRoot }`, `{}` (manifest-only) or `{ error }`; never throws, so one gate run reports
  * every package that fails to emit instead of stopping at the first. The caller owns `cleanup` and
  * must run it in a `finally`, so `<pkg>/.types/` and the temp tsconfig never survive a run.
  */
 export function declarationDir(root, pkg) {
   const distDir = join(root, pkg.path, "dist");
-  if (existsSync(distDir)) return { distDir };
+  // `declRoot` mirrors the package root, so an `exports` target maps to its declaration file under it.
+  if (existsSync(distDir)) return { distDir, declRoot: join(root, pkg.path) };
   const entry = sourceEntry(pkg.manifest);
   if (!entry) return {};
   const pkgDir = join(root, pkg.path);
@@ -344,7 +346,7 @@ export function declarationDir(root, pkg) {
   if (result.status !== 0) {
     return { error: `compat: ${pkg.manifest.name} declaration emit failed:\n${result.stdout}\n${result.stderr}`, cleanup };
   }
-  return { distDir: join(out, pkg.path), cleanup };
+  return { distDir: join(out, pkg.path), declRoot: join(out, pkg.path), cleanup };
 }
 
 export function serializeSurface(surface) {
@@ -364,20 +366,45 @@ export function parseSurface(text) {
   return surface;
 }
 
-export function diffSurface(current, baseline) {
+/**
+ * Per-name surface diff (plan 215 Task 28). `changed` holds breaking changes only; a change that is
+ * additive by rule (new optional member, new overload, new member of a producer-only union) lands in
+ * `compatible`. `diffs` maps every changed or compatible name to a unified diff of its normalized text.
+ */
+export function diffSurface(current, baseline, { producerOnly = PRODUCER_ONLY_TYPES } = {}) {
   const removed = [];
   const changed = [];
+  const compatible = [];
   const added = [];
+  const diffs = new Map();
   for (const [name, signature] of baseline) {
     if (!current.has(name)) removed.push(name);
-    else if (current.get(name) !== signature) changed.push(name);
+    else if (current.get(name) !== signature) {
+      (classifyChange(name, signature, current.get(name), producerOnly) === "compatible" ? compatible : changed).push(name);
+      diffs.set(name, shapeDiff(signature, current.get(name)));
+    }
   }
   for (const name of current.keys()) if (!baseline.has(name)) added.push(name);
   return {
     removed: removed.sort(),
     changed: changed.sort(),
+    compatible: compatible.sort(),
     added: added.sort(),
+    diffs,
   };
+}
+
+/** Readable gate detail for a diff: names plus the unified diff of every breaking change. */
+export function describeBreak(diff) {
+  const names = (keys) => keys.map(displayKey).join(", ");
+  const summary = [
+    diff.removed.length ? `removed: ${names(diff.removed)}` : "",
+    diff.changed.length ? `changed: ${names(diff.changed)}` : "",
+  ]
+    .filter(Boolean)
+    .join("; ");
+  const detail = diff.changed.map((key) => `  @@ ${displayKey(key)}\n${diff.diffs.get(key).replace(/^/gm, "  ")}`).join("\n");
+  return { summary, detail };
 }
 
 export function migrationMentionsVersion(root, version) {
@@ -479,7 +506,11 @@ export function runGates({
         errors.push(`compat: ${pkg.manifest.name} has no dist/ and no TypeScript-source export — run bun run build first`);
         continue;
       }
-      const surface = extractDeclaredSurface(distDir);
+      const { surface, missing } = extractPackageSurface(emitted.declRoot ?? distDir, pkg.manifest);
+      if (missing.length) {
+        errors.push(`compat: ${pkg.manifest.name} entries without a declaration file: ${missing.join(", ")}`);
+        continue;
+      }
       const baselinePath = join(release.root, BASELINE_DIR, baselineName(pkg.manifest.name));
       if (updateBaseline) {
         mkdirSync(dirname(baselinePath), { recursive: true });
@@ -491,14 +522,17 @@ export function runGates({
         continue;
       }
       const diff = diffSurface(surface, parseSurface(readFileSync(baselinePath, "utf8")));
+      if (diff.compatible.length || diff.added.length) {
+        const parts = [
+          diff.compatible.length ? `compatible: ${diff.compatible.map(displayKey).join(", ")}` : "",
+          diff.added.length ? `added: ${diff.added.map(displayKey).join(", ")}` : "",
+        ];
+        console.log(`compat (additive): ${pkg.manifest.name} ${parts.filter(Boolean).join("; ")}`);
+      }
       if (diff.removed.length || diff.changed.length) {
         const noted = version ? migrationMentionsVersion(release.root, version) : true;
-        const detail = [
-          diff.removed.length ? `removed: ${diff.removed.join(", ")}` : "",
-          diff.changed.length ? `changed: ${diff.changed.join(", ")}` : "",
-        ]
-          .filter(Boolean)
-          .join("; ");
+        const { summary: detail, detail: shapes } = describeBreak(diff);
+        if (shapes) console.log(`compat: ${pkg.manifest.name} shape diff:\n${shapes}`);
         if (pkg.experimental) {
           experimental.push(`${pkg.manifest.name} ${detail}`);
           console.log(`compat (experimental, not gated): ${pkg.manifest.name} ${detail}`);

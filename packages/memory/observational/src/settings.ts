@@ -1,6 +1,7 @@
 import type { ModelConfig, ProviderRequestOptions, SettingsProvider } from "@arnilo/prism";
 import { DEFAULT_COMPACT_AT_RATIO, type ResolvedCompactAt } from "./config.js";
-import { DEFAULT_RECALL_PAGE_LIMIT, HARD_MAX_WORKER_TURNS } from "./limits.js";
+import { HARD_MAX_WORKER_TURNS } from "@arnilo/prism-memory-core";
+import { DEFAULT_RECALL_PAGE_LIMIT } from "./limits.js";
 
 export interface ObservationalMemoryObservationSettings {
   readonly messageTokens: number;

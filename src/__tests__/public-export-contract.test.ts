@@ -27,16 +27,12 @@ function readTree(dir: string, suffix: string): string {
 const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "AGENT_DISPOSED_CODE",
   "AGENT_RUN_STATE_SCHEMA_VERSION",
-  "ARTIFACT_BODY_ERROR_CODES",
-  "ARTIFACT_CHECKPOINT_NAMESPACE",
   "AgentDisposedError",
   "AgentDecisionError",
   "AgentDelegationSuspendedError",
   "AgentEventSourceError",
   "AgentLoopStateError",
   "AgentRunStateError",
-  "ArtifactBodyStoreError",
-  "ArtifactError",
   "ContextOverflowError",
   "CredentialRefNotWritableError",
   "CredentialStoreUnavailableError",
@@ -74,9 +70,7 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "EMPTY_TOOL_RESULT_TEXT",
   "UNTRUSTED_EXTERNAL_TRUST",
   "EmbeddingsError",
-  "EventSubscriber",
   "GuardrailError",
-  "HARD_CITATION_EXCERPT_BYTES",
   "HARD_MAX_ACTION_CONSTRAINTS",
   "HARD_MAX_ACTION_CONSTRAINT_BYTES",
   "HARD_MAX_AGENT_RUN_STATE_BYTES",
@@ -117,7 +111,6 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "MAX_PERSISTED_SKILL_BODY_BYTES",
   "MAX_PERSISTED_SKILL_BODY_NAME_CHARS",
   "MAX_SESSION_LINK_ID_LENGTH",
-  "MODEL_FAMILY_TOKENS",
   "MODEL_INPUT_CAPABILITIES",
   "MediaContentError",
   "ModelRefError",
@@ -125,7 +118,6 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "OWNERSHIP_WIDEN_CODE",
   "PermissionDeniedError",
   "RunLimitError",
-  "RunLimitTracker",
   "SESSION_APPEND_CONFLICT_CODE",
   "SESSION_ENTRY_KINDS",
   "SESSION_ENTRY_SCHEMA_VERSION",
@@ -157,8 +149,6 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "UnsupportedStoreCapabilityError",
   "agentFingerprint",
   "applyRestoredSkillBodies",
-  "artifactApprovalState",
-  "artifactCheckpointKey",
   "askEveryTool",
   "assembleProviderInput",
   "assertCompactionTrigger",
@@ -177,9 +167,7 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "assertSessionMetadataKey",
   "assertSsrfAllowedUrl",
   "assertTrusted",
-  "boundResponse",
   "checkPermission",
-  "citationBindingDigest",
   "collectMessageContentBlocks",
   "composeSystemPrompt",
   "contentBlockInputModality",
@@ -209,7 +197,6 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "createToolParameterValidator",
   "createToolRegistry",
   "defaultLoop",
-  "defaultResolver",
   "definePackage",
   "denialToErrorInfo",
   "description",
@@ -227,8 +214,7 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "isCompactionEntryData",
   "isFlushableRunLedger",
   "isJsonObject",
-  "isLoopbackAddress",
-  "isLoopbackHostname",
+  "isKnownAgentEventType",
   "isPathInside",
   "isPathInsideReal",
   "isSessionAppendConflict",
@@ -254,12 +240,10 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "modelSupportsDecisions",
   "modelSupportsEmbeddings",
   "name",
-  "normalizeHostname",
   "parseAgentFile",
   "parseModelRef",
   "parseSkillFile",
   "parseSuspendedRunEntry",
-  "pinnedFetch",
   "providerContentDelta",
   "providerContinuationRequired",
   "providerDone",
@@ -269,7 +253,6 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "providerToolCall",
   "providerToolCallDelta",
   "providerUsage",
-  "raceAbort",
   "readProviderHttpStatus",
   "rebuildSessionContext",
   "redactAgentEvent",
@@ -280,14 +263,10 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "redactSessionEntry",
   "registerContextSources",
   "renderPromptTemplate",
-  "requestPinned",
   "resolveActiveSkills",
-  "resolveCredentialValue",
   "resolveInputCap",
   "resolveMediaContentBlock",
   "resolveMediaContentBlocks",
-  "resolveModelFamily",
-  "resolvePinnedAddress",
   "resolveRedactor",
   "resolveRunLimits",
   "resolveSessionSearchQuery",
@@ -405,25 +384,12 @@ const FROZEN_TYPE_EXPORTS: readonly string[] = [
   "ApprovalOutcome",
   "AroundHook",
   "AroundHookName",
-  "ArtifactApproval",
-  "ArtifactApprovalState",
-  "ArtifactBodyErrorCode",
-  "ArtifactBodyPresignOptions",
-  "ArtifactBodyRef",
-  "ArtifactBodyStore",
-  "ArtifactBodyTransferOptions",
-  "ArtifactCitation",
-  "ArtifactDecisionState",
-  "ArtifactDeliveryToken",
-  "ArtifactRecord",
-  "ArtifactRevision",
   "AssembleProviderInputOptions",
   "AudioContent",
   "BudgetExhaustionAttribution",
   "Capability",
   "CheckpointRestoreAudit",
   "CheckpointRestoreAuditEntry",
-  "CitationSupport",
   "CompactionTrigger",
   "CompactionTriggerContext",
   "CompactionWhenDecision",
@@ -440,7 +406,6 @@ const FROZEN_TYPE_EXPORTS: readonly string[] = [
   "CreateMemorySessionStoreOptions",
   "CreateSessionEntryOptions",
   "CredentialRecord",
-  "CredentialValueSource",
   "DecideHook",
   "DecideHookName",
   "Decision",
@@ -509,7 +474,6 @@ const FROZEN_TYPE_EXPORTS: readonly string[] = [
   "MemorySessionSearchMode",
   "ModelClient",
   "ModelFamily",
-  "ModelFamilyTokens",
   "ModelInputCapability",
   "ModelRegistry",
   "ModelRegistryOptions",
@@ -541,7 +505,6 @@ const FROZEN_TYPE_EXPORTS: readonly string[] = [
   "PermissionDecision",
   "PermissionPolicy",
   "PermissionRequest",
-  "PinnedFetchOptions",
   "Principal",
   "PromptInstruction",
   "PromptTemplateOptions",
@@ -562,6 +525,7 @@ const FROZEN_TYPE_EXPORTS: readonly string[] = [
   "RunGuardrailListOptions",
   "RunLimitCounters",
   "RunLimitName",
+  "RunLimitTracker",
   "RunLimitTrackerOptions",
   "RunTurnOptions",
   "RunTurnResult",
@@ -792,6 +756,30 @@ const FROZEN_PROVIDER_KIT_EXPORTS: readonly string[] = [
   "warnIfPlaintextRemote",
   "wireToolName",
   "withoutStructuredOutput",
+];
+
+// Plan 215 Task 26: network plumbing and artifact records moved off the root onto their own subpaths.
+const FROZEN_NET_EXPORTS: readonly string[] = [
+  "boundResponse",
+  "defaultResolver",
+  "isLoopbackAddress",
+  "isLoopbackHostname",
+  "normalizeHostname",
+  "pinnedFetch",
+  "raceAbort",
+  "requestPinned",
+  "resolvePinnedAddress",
+];
+
+const FROZEN_ARTIFACTS_EXPORTS: readonly string[] = [
+  "ARTIFACT_BODY_ERROR_CODES",
+  "ARTIFACT_CHECKPOINT_NAMESPACE",
+  "ArtifactBodyStoreError",
+  "ArtifactError",
+  "HARD_CITATION_EXCERPT_BYTES",
+  "artifactApprovalState",
+  "artifactCheckpointKey",
+  "citationBindingDigest",
 ];
 
 const FROZEN_DRIVER_KIT_EXPORTS: readonly string[] = [
@@ -1199,6 +1187,20 @@ describe("public-export contract (build-time, pre-pack)", () => {
       frozen: FROZEN_PROVIDER_KIT_EXPORTS,
     },
     {
+      label: "net",
+      subpath: "./net",
+      target: "./src/net/index.ts",
+      entry: "../net/index.ts",
+      frozen: FROZEN_NET_EXPORTS,
+    },
+    {
+      label: "artifacts",
+      subpath: "./artifacts",
+      target: "./src/artifacts/index.ts",
+      entry: "../artifacts/index.ts",
+      frozen: FROZEN_ARTIFACTS_EXPORTS,
+    },
+    {
       label: "driver_kit",
       subpath: "./driver-kit",
       target: "./src/driver-kit/index.ts",
@@ -1331,5 +1333,65 @@ describe("public-export contract (build-time, pre-pack)", () => {
     );
     const prism = (await import("../index.js")) as Record<string, unknown>;
     for (const name of exported) assert.notEqual(prism[name], undefined, `${name} must resolve at runtime`);
+  });
+});
+
+// Plan 215 Task 26 (plan 179 Task 1 (c), refreshed by Task 25): the reviewed root-surface table.
+describe("plan 215 Task 26: reviewed root surface", () => {
+  const movedToNet = [...FROZEN_NET_EXPORTS, "PinnedFetchOptions"];
+  const movedToArtifacts = [
+    ...FROZEN_ARTIFACTS_EXPORTS,
+    "ArtifactApproval",
+    "ArtifactApprovalState",
+    "ArtifactBodyErrorCode",
+    "ArtifactBodyPresignOptions",
+    "ArtifactBodyRef",
+    "ArtifactBodyStore",
+    "ArtifactBodyTransferOptions",
+    "ArtifactCitation",
+    "ArtifactDecisionState",
+    "ArtifactDeliveryToken",
+    "ArtifactRecord",
+    "ArtifactRevision",
+    "CitationSupport",
+  ];
+  const deleted = ["MODEL_FAMILY_TOKENS", "ModelFamilyTokens", "resolveModelFamily", "EventSubscriber"];
+
+  it("root_surface_matches_reviewed_table", () => {
+    const root = extractIndexExports(readFileSync(join(repoRoot, "src/index.ts"), "utf8"));
+    for (const name of [...movedToNet, ...movedToArtifacts, ...deleted]) {
+      assert.equal(root.value.has(name) || root.type.has(name), false, `${name} must not be a root export`);
+    }
+    // Kept at the root by the table: the SSRF gate hosts call, the shared context helpers, and the
+    // tracker type public signatures (`RunController.limits`) name; the class is no longer a value.
+    for (const name of [
+      "assertSsrfAllowedUrl",
+      "registerContextSources",
+      "withContextBlocks",
+      "createRunLimitTracker",
+      "trimTrailingSlashes",
+    ]) {
+      assert.ok(root.value.has(name), `${name} stays a root value export`);
+    }
+    assert.ok(root.type.has("RunLimitTracker") && !root.value.has("RunLimitTracker"));
+    assert.ok(root.type.has("ContextSource"));
+  });
+
+  it("net_subpath_exports_pinned_fetch", async () => {
+    const net = (await importSource("../net/index.ts")) as Record<string, unknown>;
+    assert.equal(readPkg(".").exports?.["./net"], "./src/net/index.ts");
+    for (const name of ["pinnedFetch", "requestPinned", "resolvePinnedAddress", "defaultResolver"])
+      assert.equal(typeof net[name], "function");
+    assert.match(readFileSync(join(repoRoot, "src/net/index.ts"), "utf8"), /only supported SSRF-safe fetch/);
+  });
+
+  it("artifacts_subpath_exports_records", async () => {
+    const artifacts = (await importSource("../artifacts/index.ts")) as Record<string, unknown>;
+    assert.equal(readPkg(".").exports?.["./artifacts"], "./src/artifacts/index.ts");
+    assert.equal(typeof artifacts.citationBindingDigest, "function");
+    assert.equal(artifacts.HARD_CITATION_EXCERPT_BYTES, 8192);
+    const source = readFileSync(join(repoRoot, "src/artifacts/index.ts"), "utf8");
+    for (const name of ["ArtifactRecord", "ArtifactBodyStore", "ArtifactCitation", "ArtifactRevision"])
+      assert.match(source, new RegExp(`\\b${name}\\b`));
   });
 });

@@ -37,7 +37,7 @@ describe("openai-compatible provider", () => {
     let headers = new Headers();
     const provider = createOpenAICompatibleProvider({
       baseUrl: "https://example.test/v1",
-      apiKey: "real-key",
+      apiKey: async () => "real-key",
       fetch: (async (_input, init) => {
         headers = new Headers(init?.headers);
         return new Response(sse(["[DONE]"]), { status: 200 });
@@ -184,7 +184,7 @@ describe("openai-compatible provider", () => {
   it("redacts api key from errors", async () => {
     const provider = createOpenAICompatibleProvider({
       baseUrl: "https://example.test/v1",
-      apiKey: "sk-test-123",
+      apiKey: async () => "sk-test-123",
       fetch: (async () => new Response("bad sk-test-123", { status: 401 })) as typeof fetch,
     });
 
@@ -334,7 +334,7 @@ describe("openai-compatible provider", () => {
     let headers = new Headers();
     const provider = createOpenAICompatibleProvider({
       baseUrl: "https://example.test/v1",
-      apiKey: "real-key",
+      apiKey: async () => "real-key",
       extraHeaders: () => ({ "http-referer": "https://app.example", "x-title": "app", authorization: "Bearer attacker" }),
       fetch: (async (_input, init) => {
         headers = new Headers(init?.headers);

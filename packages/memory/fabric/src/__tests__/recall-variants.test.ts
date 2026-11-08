@@ -25,54 +25,21 @@ function hit(id: string, tRef: string, extra: Partial<MemoryNoteHit> = {}): Memo
 }
 
 describe("plan 210 Task 3.1 recall variants", () => {
-  // `recall.supersessionHint`: the read-time grouping marks an older member "superseded by" a newer one. For a keyed
-  // update that is the point; for conversation exchanges joined only by shared subject terms it is a mislabel.
-  it("supersession_hint_keyed_only_shows_the_label_for_key_and_supersedes_groups_only", () => {
+  // The read-time grouping marks an older member "superseded by" a newer one (plan 210 Task 7 removed the second mode).
+  it("supersession_hint_marks_every_older_group_member", () => {
     const keyedOld = hit("fact-old", "2023-01-01T00:00:00.000Z", { kind: "fact", key: "budget" });
     const keyedNew = hit("fact-new", "2023-03-01T00:00:00.000Z", { kind: "fact", key: "budget" });
     const chatA = hit("chat-a", "2023-01-05T00:00:00.000Z");
     const chatB = hit("chat-b", "2023-02-05T00:00:00.000Z");
-    const input = [keyedNew, keyedOld, chatB, chatA];
-
-    const all = groupRecallHits(input);
-    const byIdAll = new Map(all.map((item) => [item.id, item]));
-    assert.equal(byIdAll.get("fact-old")?.supersededBy?.id, "fact-new", "the default marks the keyed update");
-    assert.equal(byIdAll.get("chat-a")?.supersededBy?.id, "chat-b", "the default also marks a similarity-only group");
-
-    const keyed = groupRecallHits(input, { supersessionHint: "keyed-only" });
-    const byId = new Map(keyed.map((item) => [item.id, item]));
-    assert.equal(byId.get("fact-old")?.supersededBy?.id, "fact-new", "a keyed update keeps its label");
-    assert.equal(byId.get("chat-a")?.supersededBy, undefined, "exchanges joined only by subject terms lose it");
-    assert.deepEqual(
-      keyed.map((item) => item.id),
-      all.map((item) => item.id),
-      "the order is the default's: only the label changes",
-    );
-  });
-
-  it("supersession_hint_keyed_only_honours_an_explicit_supersedes_edge", () => {
-    const older = hit("note-old", "2023-01-01T00:00:00.000Z", { kind: "fact" });
-    const newer = hit("note-new", "2023-02-01T00:00:00.000Z", { kind: "fact", supersedes: "note-old" });
-    const out = groupRecallHits([newer, older], { supersessionHint: "keyed-only" });
-    assert.equal(out.find((item) => item.id === "note-old")?.supersededBy?.id, "note-new");
-  });
-
-  it("supersession_hint_all_is_byte_identical_to_the_unset_default", () => {
-    const input = [
-      hit("a", "2023-03-01T00:00:00.000Z"),
-      hit("b", "2023-02-01T00:00:00.000Z"),
-      hit("c", "2023-01-01T00:00:00.000Z", { kind: "fact", key: "k" }),
-      hit("d", "2023-02-20T00:00:00.000Z", { kind: "fact", key: "k" }),
-    ];
-    assert.deepEqual(groupRecallHits(input, { supersessionHint: "all" }), groupRecallHits(input));
-    assert.deepEqual(groupRecallHits(input, {}), groupRecallHits(input));
+    const byId = new Map(groupRecallHits([keyedNew, keyedOld, chatB, chatA]).map((item) => [item.id, item]));
+    assert.equal(byId.get("fact-old")?.supersededBy?.id, "fact-new", "the grouping marks the keyed update");
+    assert.equal(byId.get("chat-a")?.supersededBy?.id, "chat-b", "and a similarity-only group");
   });
 
   it("recall_variant_fields_default_off_and_fail_closed_on_unknown_values", () => {
     const base = resolveMemoryFabricConfig({});
-    assert.deepEqual(base.recall, { supersessionHint: "all", expansion: false, gather: false });
-    assert.equal(resolveMemoryFabricConfig({ recall: { supersessionHint: "keyed-only" } }).recall.supersessionHint, "keyed-only");
-    assert.throws(() => resolveMemoryFabricConfig({ recall: { supersessionHint: "never" as never } }), /recall\.supersessionHint/);
+    assert.deepEqual(base.recall, { expansion: false, gather: false });
+    assert.throws(() => resolveMemoryFabricConfig({ recall: { expansion: "yes" as never } }), /recall\.expansion/);
   });
   // `inject.cardExcerpt`: a pointer card shows the first 120 characters of the user half. `query` centres the same width
   // on the query terms across both halves, so a detail past the head of the message can be seen.
@@ -286,7 +253,7 @@ describe("plan 210 Task 3.1 recall variants", () => {
     };
     const unset = make({});
     // Every variant field named, each at its default: the same fabric as one that names none.
-    const named = make({ supersessionHint: "all", queryExpansion: false, gather: false });
+    const named = make({ queryExpansion: false, gather: false });
     for (const fabric of [unset, named]) {
       await fabric.remember({ kind: "fact", content: "project budget is 600 dollars", key: "budget", tags: ["budget"] });
       await fabric.remember({ kind: "fact", content: "project budget is 450 dollars", key: "budget", tags: ["budget"] });

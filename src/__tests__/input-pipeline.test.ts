@@ -135,23 +135,6 @@ describe("default input builder", () => {
     assert.equal(text(messages[3]!)!, "Now");
   });
 
-  it("legacy layout restores prior input-before-attachments order", async () => {
-    const messages = await createDefaultInputBuilder().build("Now", {
-      inputLayout: "legacy",
-      summaries: ["Earlier"],
-      history: [{ role: "assistant", content: [{ type: "text", text: "old" }] }],
-      attachments: [{ name: "notes.md", text: "notes" }],
-    });
-
-    assert.deepEqual(
-      messages.map((message) => message.role),
-      ["system", "assistant", "user", "user"],
-    );
-    assert.match(text(messages[0]!)!, /Summary:\nEarlier/);
-    assert.equal(text(messages[2]!)!, "Now");
-    assert.match(text(messages[3]!)!, /Attachment notes\.md:\nnotes/);
-  });
-
   it("cache-aware layout puts stable attachments resources summaries and history before current input", async () => {
     const calls: string[] = [];
     const resourceLoader: ResourceLoader = {
@@ -658,35 +641,6 @@ describe("prompt composition", () => {
     assert.ok(updatedMessage, "updated resource message must exist in the tail");
     assert.match(text(updatedMessage) ?? "", /second body/);
     assert.equal(tailSegments.size, 1);
-  });
-
-  it("legacy prompt layout preserves prior whole-prompt ordering", async () => {
-    const tool: ToolDefinition = { name: "echo", execute: () => ({ toolCallId: "c", name: "echo" }) };
-    const request = await assembleProviderInput({
-      model: { provider: "mock", model: "demo", capabilities: { tools: true } },
-      inputLayout: "legacy",
-      input: "Ask",
-      systemInstructions: "Rules",
-      skills: [{ name: "brief", instructions: "Be brief" }],
-      skillsDisclosure: "eager",
-      summaries: ["Summary"],
-      history: [{ role: "assistant", content: [{ type: "text", text: "old" }] }],
-      attachments: [{ name: "notes.md", text: "notes" }],
-      toolResults: [{ toolCallId: "c", name: "echo", value: "ok" }],
-      tools: [tool],
-    });
-
-    assert.deepEqual(
-      request.messages.map((message) => message.role),
-      ["system", "system", "system", "assistant", "user", "user", "tool"],
-    );
-    // Legacy keeps the old whole-prompt order: context, skills, tools, then the message groups.
-    assert.equal(text(request.messages[0]!), "Skill brief:\nBe brief");
-    assert.equal(text(request.messages[1]!), "System instruction:\nRules");
-    assert.equal(text(request.messages[2]!), "Summary:\nSummary");
-    assert.equal(text(request.messages[4]!), "Ask");
-    assert.equal(text(request.messages[5]!), "Attachment notes.md:\nnotes");
-    assert.deepEqual(request.tools, [tool]);
   });
 
   it("assembles provider input without calling provider or executing tools", async () => {

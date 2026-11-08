@@ -59,7 +59,7 @@ describe("@arnilo/prism-provider-typesafe package", () => {
       captured = new Headers(init.headers);
       return ok(completion());
     }) as typeof fetch;
-    await providerConformance(() => createTypeSafeProvider({ apiKey: key, fetch: fetchImpl }), {
+    await providerConformance(() => createTypeSafeProvider({ apiKey: async () => key, fetch: fetchImpl }), {
       request,
       secrets: [key],
       headers: {
@@ -196,7 +196,7 @@ describe("@arnilo/prism-provider-typesafe package", () => {
       // A decision request (the only shape this vendor serves) reaches the vendor transport with a key
       // read from the same ref the package resolves.
       const events = await collectProviderEvents(
-        createTypeSafeProvider({ apiKey: () => process.env.PRISM_TEST_TYPESAFE_KEY, fetch: fetchImpl }),
+        createTypeSafeProvider({ apiKey: async () => process.env.PRISM_TEST_TYPESAFE_KEY, fetch: fetchImpl }),
         request,
       );
       assert.match(url, /\/v1\/systemone$/);

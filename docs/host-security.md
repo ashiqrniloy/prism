@@ -19,7 +19,7 @@ Start from explicit host inputs. Do not let runtime code discover security state
 | Security input | Host-owned source | Prism API / page |
 | --- | --- | --- |
 | Settings | app config object or caller-named files | `createStaticSettingsProvider`, `loadSettingsFiles()` |
-| Credentials | runtime override, memory store, vault/env object | `createExplicitCredentialResolver`, `createEnvCredentialResolver`, `resolveCredentialValue()` |
+| Credentials | `env:`/`keyring:` refs resolved by the credentials slot | `AgentConfig.slots.credentials`, `createEnvRefCredentialResolver`, `SecretSource` / `refSource()` ([Credentials](credentials-and-redaction.md)) |
 | Redaction values | exact known credential strings | `createSecretRedactor`, `redactSecrets()` |
 | Trust roots | app-selected directories/resources | `createPathTrustPolicy`, `assertTrusted()` |
 | Permission decisions | allow/deny rules or approval UI result | `createStaticPermissionPolicy`, `assertPermission()` |
@@ -57,7 +57,7 @@ These checks are explicit function calls during load, assembly, dispatch, append
 
 ```json
 {
-  "credentialSource": "caller-owned env object",
+  "credentialSource": "env:DEMO_API_KEY",
   "trustedRoots": ["/workspace/app"],
   "allowedActions": ["tool:notes/read:execute", "extension:acme:setup"],
   "activeTools": ["notes/read"],
@@ -72,21 +72,21 @@ The JSON above is an app security plan, not a Prism config format. Hosts transla
 
 ```ts
 import {
-  createEnvCredentialResolver,
+  createEnvRefCredentialResolver,
   createSecretRedactor,
   createStaticPermissionPolicy,
   createToolRegistry,
   filterTools,
-  resolveCredentialValue,
   type ToolDefinition,
   type ToolValidator,
 } from "@arnilo/prism";
 import { createPathTrustPolicy } from "@arnilo/prism/node/trust";
+import { refSource } from "@arnilo/prism/provider-kit";
 
 const workspaceRoot = "/workspace/app";
 const env = { DEMO_API_KEY: "fake-demo-key" }; // docs-only placeholder
-const credentials = createEnvCredentialResolver(env, { demo: "DEMO_API_KEY" });
-const apiKey = await resolveCredentialValue(credentials, { provider: "demo", name: "apiKey" });
+const credentials = createEnvRefCredentialResolver(env);
+const apiKey = await refSource(async (ref) => credentials.resolve(ref, {}), "env:DEMO_API_KEY")();
 
 const redactor = createSecretRedactor([apiKey]);
 const permission = createStaticPermissionPolicy({
@@ -112,7 +112,7 @@ const tools = createToolRegistry(filterTools([readNotes], { allow: ["notes/read"
 void { apiKey, redactor, permission, trust, tools, validate };
 ```
 
-Wire those values where they matter: provider adapters receive the resolved credential, agents/runs receive `redactor`, tool dispatch receives `trust`, `permission`, and `validate`, resource/extension loaders receive `trust` and `permission`, and durable adapters receive already-redacted entries/records. `createSecureAgent()` is an opt-in shortcut that requires these agent/tool seams, strict schemas, finite limits, exact ownership, and durable approval before every tool side effect; low-level `createAgent()` stays explicit.
+Wire those values where they matter: assign `credentials` to `AgentConfig.slots.credentials` (packages resolve refs through it per request; a low-level provider factory takes the `refSource()` result as its `SecretSource`), agents/runs receive `redactor`, tool dispatch receives `trust`, `permission`, and `validate`, resource/extension loaders receive `trust` and `permission`, and durable adapters receive already-redacted entries/records. `createSecureAgent()` is an opt-in shortcut that requires these agent/tool seams, strict schemas, finite limits, exact ownership, and durable approval before every tool side effect; low-level `createAgent()` stays explicit.
 
 ## Multi-user hosts on one agent
 
@@ -139,10 +139,9 @@ When serving a multi-user agent over `@arnilo/prism-remote`, `serveAgent` partit
 
 ## Extension and configuration notes
 
-- Keep security state explicit. Settings and credentials are host-owned outside `AgentConfig`; `createAgent()` and `session.run()` do not automatically call `settings.get()` or `credentials.resolve()`.
+- Keep security state explicit. Credentials are `env:`/`keyring:` refs the credentials slot resolves; `createAgent()` and `session.run()` never resolve one eagerly — packages call `PackageAPI.credentials.resolve(ref)` per request.
 - Resolve credentials at the provider/request edge, as late as possible. Do not put resolved credentials in configs, manifests, registries, prompts, messages, events, session entries, run ledgers, idempotency keys, cache keys, or logs.
-- Use `createExplicitCredentialResolver()` to document source order such as runtime override → stored credential → caller-supplied env object → fallback.
-- Use `createEnvCredentialResolver()` only with an object the host passes in. Prism does not read `process.env` for credentials.
+- Assign `AgentConfig.slots.credentials` to choose the resolver (the default `createEnvRefCredentialResolver()` answers `env:` refs; `@arnilo/prism-credentials-keyring` answers `keyring:` refs). Every secret-bearing package config field rejects a literal with `literal_secret`, and a low-level provider factory accepts only a `SecretSource`.
 - Do not treat a local vendor CLI credential file, setup token, browser session, or consumer subscription as a Prism credential source. In 0.0.12 only OpenAI Codex has a first-party subscription OAuth flow; Anthropic and Google providers remain API-key-only under their published third-party restrictions. See [Credentials and redaction](credentials-and-redaction.md#subscription-oauth-eligibility).
 - Use `createPathTrustPolicy()` for workspace/resource roots and fail closed on symlink escapes.
 - Use `createContributionRegistries({ duplicate: "error" })` and prefixed names for third-party packages to prevent silent shadowing.
@@ -178,7 +177,7 @@ When serving a multi-user agent over `@arnilo/prism-remote`, `serveAgent` partit
 - Optional `@arnilo/prism-tools-web` requires a host-supplied Playwright Browser (`playwright-core@1.63.0` peer). Import is inert. One non-persistent context belongs to one run; actions serialize; refs are snapshot-scoped; CSS/evaluate/CDP/persistent profiles are denied. Context routing + `serviceWorkers: "block"` deny file/data/blob/devtools/private/loopback by default and require contained-proxy attestation for external egress (Playwright routing is defense in depth, not DNS containment). Uploads are realpath-rooted; downloads quarantine with hash/MIME until host `approveRelease`; screenshots return bounded `ImageContent`. Observation vs mutation/high-impact actions map to `ExecutionPolicy`. Treat snapshot/page text as untrusted external content. Close contexts with `browser_close` or `manager.closeRun(runId)` on abort/terminal. Browser control endpoint, binary/image pin, and real egress firewall/proxy remain host-owned. Shared sandbox: `createSharedSandboxBrowserOptions()` + `assertBrowserSandboxNetwork()`.
 - Browser verified-state checkpoints (0.0.14, `createBrowserCheckpointLedger()`) store URL + domain-state hash + host data refs only — never serialized browser internals (cookies/storage/contexts). After any resume/interruption the ledger fails closed (`assertVerifiedBeforeSideEffect`) until the host reloads + verifies, so side effects never replay on stale state.
 - Device adapters (0.0.14, `resolveDevicePolicy`/`assertDeviceAdmit`) are deny-by-default: admission fails closed without explicit `enabled`, an explicit sandbox, approval (when required), an under-budget session count, and shared `RunLimits`. Stream chunks over the frozen cap are dropped with a marker; telemetry is redacted before emit/persist. No vendor voice/desktop package ships in 0.0.14 (demand-gated 0.1.x); device adapters cannot broaden consent/memory/network/file/browser/connector/tool permissions (gate 8).
-- Optional `@arnilo/prism-memory-wiki` is the ontology tier over the fabric and stores nothing of its own: it requires the `memory.fabric` service and fails closed without it. Its only agent-facing tool, `wiki_ingest`, treats the input as untrusted: a `path` must `realpath`-resolve inside the workspace root, a `url` is SSRF-checked (http(s), no credentials, no private hosts) before the host `web.fetch` service runs and fails closed without that service, the staged tree lives under the fabric's `tools.root` (`sources/`, refused if it is a symlink out of the root) and fails closed when the fabric has none, and the staged extract is labeled `untrusted_external`, is scanned before it is indexed as a `file` note (a flagged source is staged but never indexed) and is evidence, never instructions. Input and extract sizes are capped (32 MiB and 2 MiB; config can only lower them), titles collapse to one line and slugs are allow-listed to `[a-z0-9-_]`. Concept notes are written only through the fabric port, which scans every write for injected instructions and refuses a claim with no citation. See [the ontology tier](../packages/memory/wiki/README.md).
+- Optional `@arnilo/prism-wiki` is knowledge outside memory: it keeps its own store (files 0600, directories 0700 under `wiki.root`), reads long-term memory only through the read-only `memory.ltm` service (no write member, the same scope, consent and invalidation filters as `memory.read`), and fails closed with `MemoryScopeError` when its root belongs to another project's memory. Its read tools `wiki.search` and `wiki.read` never render a claim whose citation is unreadable. Its ingest tool, `wiki_ingest`, treats the input as untrusted: a `path` must `realpath`-resolve inside the workspace root, a `url` is SSRF-checked (http(s), no credentials, no private hosts) before the host `web.fetch` service runs and fails closed without that service, the staged tree lives under the fabric's `tools.root` (`sources/`, refused if it is a symlink out of the root) and fails closed when the fabric has none, and the staged extract is labeled `untrusted_external`, is scanned before it is indexed as a `file` note (a flagged source is staged but never indexed) and is evidence, never instructions. Input and extract sizes are capped (32 MiB and 2 MiB; config can only lower them), titles collapse to one line and slugs are allow-listed to `[a-z0-9-_]`. Concept notes are written only through the fabric port, which scans every write for injected instructions and refuses a claim with no citation. See [the ontology tier](../packages/knowledge/wiki/README.md).
 - `@arnilo/prism-credentials-keyring` rejects oversized/malformed envelopes and excessive scrypt work before KDF allocation, uses async scrypt, and requires restrictive existing/new Unix vault modes. Keep vault ownership and parent-directory access host-controlled; review before `chmod 600`, never auto-weaken a file policy. Keychain calls use abort-aware native async work with finite timeout/payload caps and sanitized errors. OS prompts, service availability, and whether a native backend promptly honors cancellation remain host/platform boundaries; no plaintext fallback is attempted.
 - LLM compaction always sends finite summary `maxTokens`, retains bounded deltas/events, and bounds/redacts provider/factory/policy error detail. Observational-memory workers cap turns, calls, arguments, results, transcript, and surfaced errors; unknown tools fail before execution, while invalid results can only be rejected after a host tool returns and may therefore follow side effects. Pass all known provider/credential/tool secrets into compaction/runtime options; exact replacement is not secret discovery.
 - Default remote-media loading resolves every DNS answer, rejects the hostname if any address is non-public, and pins one validated address through the request. Explicit `allowedHostnames` can trust private destinations; `allowedCidrs` trusts IP ranges instead (checked after the hostname/denied-name lists, applied to literals and resolved answers, and bypassing only the private-IP block — metadata-style names and malformed ranges fail closed). A host-supplied `fetch` owns DNS/rebinding/proxy/redirect safety; a custom `requestUrl` must connect to its supplied validated address.
@@ -199,6 +198,19 @@ When serving a multi-user agent over `@arnilo/prism-remote`, `serveAgent` partit
 - Threat suites pass for parameterized SQL/tenant isolation, HTTP URL/SSRF rejection, realpath/symlink containment, shell-metacharacter approval, schema prototype-pollution/remote-reference bounds, OAuth polling/abort/redaction, credential tamper/wrong-key/KDF floors, MCP result bounds/timeouts, and coding approval/path policy. `security:threat-suites` also gates CodeQL-remediation regressions (plan 038): linear `trimTrailingSlashes`/parsers with no environment regex evaluation, single-pass HTML sanitization, crypto (not `Math.random`) fixture identifiers, and no clear-text error logging on password-handling paths.
 
 PostgreSQL TLS/network policy, MCP endpoint trust/credentials and egress policy beyond package origin/DNS pinning, provider base URLs, OS keychain availability, process sandboxing, workflow tenant identity, and ANSI/control-sequence sanitization in any host terminal renderer remain host boundaries. Prism 0.0.4 ships JSON-line RPC, not an interactive TUI; hosts must render untrusted model/tool text safely. Credential-gated PostgreSQL/provider/keychain tests are separate operator/CI gates, not silently replaced by mocks.
+
+## Outbound network: `@arnilo/prism/net`
+
+`pinnedFetch` from `@arnilo/prism/net` is the only supported SSRF-safe fetch. It resolves the host once, checks every address with `assertSsrfAllowedUrl` before connecting, pins the socket to that address so DNS rebinding cannot redirect it, rejects 3xx responses, and bounds the body. A caller that must follow redirects (web tools, MCP OAuth discovery) builds on `resolvePinnedAddress` + `requestPinned` and re-checks every hop. `defaultResolver`, `boundResponse`, `raceAbort`, `isLoopbackHostname`, `isLoopbackAddress` and `normalizeHostname` are the shared pieces.
+
+```ts
+import { assertSsrfAllowedUrl, MediaContentError } from "@arnilo/prism";
+import { pinnedFetch } from "@arnilo/prism/net";
+
+const response = await pinnedFetch(new URL(url), { signal }, { errorPrefix: "Webhook", ssrf: { denyPrivateHosts: true } });
+```
+
+The SSRF gate itself (`assertSsrfAllowedUrl`, `SsrfPolicy`, `MediaContentError`) stays on the root entry. Importing `@arnilo/prism/net` loads `node:http`/`node:https`; the root entry does not (the kernel's default media fetch imports it lazily on first use). Artifact review records and citation binding (`ArtifactRecord`, `ArtifactBodyStore`, `ArtifactCitation`, `citationBindingDigest`, `HARD_CITATION_EXCERPT_BYTES`) moved the same way to `@arnilo/prism/artifacts`.
 
 ## Supervisor and A2A boundaries
 

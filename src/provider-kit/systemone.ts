@@ -8,10 +8,9 @@
  * vendor constants: base URLs, model ids and env var names stay in the provider packages.
  */
 import type { JsonObject, Usage } from "../contracts.js";
-import type { CredentialValueSource } from "../credentials/index.js";
+import type { SecretSource } from "./provider-package.js";
 import { createDefaultRetryPolicy, waitForRetry } from "../models/retry.js";
 import { isJsonObject } from "../config.js";
-import { resolveCredentialValue } from "../credentials/index.js";
 import { trimTrailingSlashes } from "../trim-trailing-slashes.js";
 import { readBoundedResponseJson, readBoundedResponseText } from "./transport.js";
 import { parseErrorBody, providerHttpError, readRetryAfterMs } from "./retry-http.js";
@@ -154,7 +153,7 @@ export interface SystemOneClientOptions {
   /** Endpoint path, appended to `baseUrl`. Default: {@link DEFAULT_SYSTEMONE_PATH}. Must start with `/`. */
   readonly path?: string;
   /** Bearer credential; omitted → no `Authorization` header (anonymous `laya-serve`). */
-  readonly apiKey?: CredentialValueSource;
+  readonly apiKey?: SecretSource;
   /** Fetch implementation; defaults to global `fetch` (tests inject a fake). */
   readonly fetch?: typeof fetch;
   /** Retries after the first attempt. Default: {@link DEFAULT_SYSTEMONE_MAX_RETRIES}. */
@@ -250,7 +249,7 @@ export async function postSystemOne(
 ): Promise<SystemOneResponse> {
   signal?.throwIfAborted();
   const fetchImpl = options.fetch ?? fetch;
-  const apiKey = await resolveCredentialValue(options.apiKey, { provider: options.provider, name: "apiKey" });
+  const apiKey = await options.apiKey?.();
   const secrets = [apiKey];
   const url = `${trimTrailingSlashes(options.baseUrl)}${normalizeSystemOnePath(options.path)}`;
   const headers: Record<string, string> = { "content-type": "application/json" };

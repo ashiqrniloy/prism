@@ -17,7 +17,7 @@ const fakeFetch: typeof fetch = async (input) => {
     return reply({ success: true, data: { markdown: "# Prism", metadata: { sourceURL: "https://example.com/prism" } } });
   return reply({ success: true, data: { title: "Prism" } });
 };
-const common = { credentials: "fake-example-key", fetch: fakeFetch };
+const common = { credentials: async () => "fake-example-key", fetch: fakeFetch };
 const search = createBraveSearch(common);
 const fetchDocument = createFirecrawlFetch(common);
 const extract = createFirecrawlExtractor({

@@ -1,11 +1,12 @@
-import { type ArtifactBodyStore, type JsonObject } from "@arnilo/prism";
+import { type JsonObject } from "@arnilo/prism";
+import { type ArtifactBodyStore } from "@arnilo/prism/artifacts";
 import type { CheckpointStore } from "@arnilo/prism-workflows";
 import { assertSafeArgv, createCliRunner, parseCliJson } from "./cli.js";
 import { createCheckpointWorkDraftStore, createMemoryWorkDraftStore } from "./drafts.js";
 import { WorkToolError } from "./errors.js";
+import { type AgentIdentity, assertIdentityActive } from "./identity.js";
 import { resolveWorkLimits } from "./limits.js";
 import type { Microsoft365Adapter, Microsoft365Op, WorkCliRunner, WorkDraftStore, WorkLimits, WorkTokenProvider } from "./types.js";
-import { type AgentIdentity, assertIdentityActive } from "./identity.js";
 /** Default ops enabled without capability gates. Teams/Planner/To Do stay opt-in. */
 export const DEFAULT_M365_OPS: readonly Microsoft365Op[] = [
   "version",

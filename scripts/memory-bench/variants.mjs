@@ -29,18 +29,18 @@ export const VARIANT_PATHS = {
   ...Object.fromEntries(signals.map((name) => [`promote.signal.${name}=off`, [`${fabric}consolidation/score.ts`]])),
   // Plan 210 Task 5: test-only switches for the candidates that have no config field (never a product field).
   "fabric.unmatchedTerms=off": [`${fabric}tools.ts`],
-  "fabric.enrichment=off": [`${fabric}exchanges.ts`],
   "fabric.navigation=off": [`${fabric}tools.ts`],
-  "fabric.timeline=off": [`${fabric}exchanges.ts`, `${fabric}tools.ts`],
   "fabric.grouping=off": [`${fabric}recall.ts`],
   "fabric.aggregation=off": [`${fabric}tools.ts`],
-  "ontology.pointer=off": [`${fabric}context.ts`],
+  // Plan 216 Task 3: the passive concept pointer moved into the wiki's own context block.
+  "ontology.pointer=off": ["packages/knowledge/wiki/src/context.ts"],
   "om.reflector=off": [`${om}flush.ts`],
   "lifecycle.exchangeExempt=on": [`${fabric}lifecycle/maintain.ts`],
 };
 
 /** Plan 210 Task 5: the switches that change what the write side stores (a snapshot keyed by config must include them). */
-export const WRITE_SIDE_VARIANTS = Object.freeze(["fabric.enrichment=off", "fabric.timeline=off"]);
+// Plan 210 Task 7 removed the two write-side switches (keyword enrichment, the timeline) with the features they ablated.
+export const WRITE_SIDE_VARIANTS = Object.freeze([]);
 
 export function parseVariantSpecs(value = []) {
   if (!Array.isArray(value)) throw new Error("MemoryBenchVariant: expected array");
@@ -190,8 +190,9 @@ export function transformVariantSource(path, source, input = []) {
   if (active("fabric.crossSourceDedup=off")) replace("const duplicate = visibleMemory(draft, entries);", "const duplicate = () => false;");
   if (active("lifecycle.verification=retrieval")) replace("return state ? [...state.cited] : [];", "return state ? [...state.shown] : [];");
   if (active("lifecycle.promotion=every-reflection")) {
-    // The current source already imports the trust scan; only historical sources need the line.
-    if (!source.includes('import { scanScopedMemoryContent } from "./scoped/trust.js";')) {
+    // The current source already imports the trust scan (from memory-core since plan 216 Task 3); only historical
+    // sources need the line.
+    if (!source.includes('import { scanScopedMemoryContent } from "./scoped/trust.js";') && !source.includes("scanScopedMemoryContent")) {
       replace(
         'import { randomUUID } from "node:crypto";',
         'import { randomUUID } from "node:crypto";\nimport { scanScopedMemoryContent } from "./scoped/trust.js";',
@@ -298,33 +299,6 @@ export function benchmarkCalendarClock(): number {
     );
     replace("              unmatchedTerms,\n              page,", "              page,");
   }
-  if (active("fabric.enrichment=off")) replace("          keywords: exchangeKeywords(content),\n", "");
-  if (active("fabric.timeline=off")) {
-    if (path === `${fabric}exchanges.ts`)
-      replace(
-        'const dates = resolveDates(contents.join("\\n"), input.user.timestamp);',
-        "const dates: ReturnType<typeof resolveDates> = [];",
-      );
-    else {
-      replace(
-        `            from: { type: "string", description: "ISO date/time; only notes dated on or after it. A date covers that whole UTC day." },
-            to: { type: "string", description: "ISO date/time; only notes dated on or before it. A date covers that whole UTC day." },
-            order: {
-              type: "string",
-              enum: ["relevance", "time"],
-              description: "relevance (default) keeps the ranked order; time orders resolved dates oldest first.",
-            },
-`,
-        "",
-      );
-      replace(
-        `            ...(typeof args.from === "string" ? { from: args.from } : {}),
-            ...(typeof args.to === "string" ? { to: args.to } : {}),
-            ...(args.order === "time" || (gather && args.order === undefined) ? { order: "time" as const } : {}),`,
-        `            ...(gather ? { order: "time" as const } : {}),`,
-      );
-    }
-  }
   if (active("fabric.navigation=off")) {
     replace(
       "Pass exactly one of `path`, `id`, `ids` (1-8), `around` (same-session ±2 exchanges), or `session` (8 exchanges per zero-based page).",
@@ -359,7 +333,7 @@ export function benchmarkCalendarClock(): number {
     replace("if (hits.length > 0 && top >= RECALL_NO_MATCH_CONFIDENCE) {", "if (hits.length < 0) {");
     replace("          if (top < RECALL_NO_MATCH_CONFIDENCE) {", "          if (hits.length < 0) {");
   }
-  if (active("ontology.pointer=off")) replace("            conceptPointer = top;\n", "");
+  if (active("ontology.pointer=off")) replace("            if (!conceptInPlay(record, terms, touched)) continue;", "            continue;");
   if (active("om.reflector=off"))
     replace("if (uncovered.length && uncoveredTokens >= config.reflector.observationTokens) {", "if (uncovered.length < 0) {");
   if (active("lifecycle.exchangeExempt=on"))

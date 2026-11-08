@@ -1,0 +1,214 @@
+{
+  "schema": "cache-parity/1",
+  "date": "2026-11-08",
+  "provider": "ollama-cloud",
+  "model": "gemma4:31b",
+  "route": "native (Prism) / chat completions (pi)",
+  "thinking": "medium",
+  "prismCommit": "bc87e539",
+  "harnessVersions": {
+    "prism": "bc87e539",
+    "pi": "1.5.0"
+  },
+  "cell": {
+    "verdict": "pass",
+    "prism": {
+      "runs": 3,
+      "solved": 3,
+      "comparedRuns": 3,
+      "hitRate": {
+        "median": 0.8663414634146341,
+        "spread": {
+          "min": 0.843868834389639,
+          "max": 0.8912761761667762
+        }
+      },
+      "firstTurnExcludedHitRate": {
+        "median": 0.946582968139287,
+        "spread": {
+          "min": 0.9234944663912428,
+          "max": 0.9469420333233562
+        }
+      },
+      "requests": {
+        "median": 9,
+        "spread": {
+          "min": 8,
+          "max": 12
+        }
+      }
+    },
+    "pi": {
+      "runs": 3,
+      "solved": 3,
+      "comparedRuns": 3,
+      "hitRate": {
+        "median": 0.8600997691906783,
+        "spread": {
+          "min": 0.8133985475025938,
+          "max": 0.9007771552503163
+        }
+      },
+      "firstTurnExcludedHitRate": {
+        "median": 0.9083836795497807,
+        "spread": {
+          "min": 0.903523213697728,
+          "max": 0.9315305778761488
+        }
+      },
+      "requests": {
+        "median": 6,
+        "spread": {
+          "min": 6,
+          "max": 9
+        }
+      }
+    }
+  },
+  "runs": {
+    "prism": [
+      {
+        "harness": "prism",
+        "index": 0,
+        "status": "ok",
+        "metrics": {
+          "requests": 8,
+          "failedRequests": 0,
+          "promptTokens": 36290,
+          "cacheRead": 30624,
+          "cacheWrite": 0,
+          "hitRate": 0.843868834389639,
+          "firstTurnExcludedHitRate": 0.9234944663912428,
+          "taskSolved": true
+        },
+        "forwarded": 8,
+        "ceiling": false,
+        "exitCode": 0,
+        "models": [
+          "gemma4:31b"
+        ]
+      },
+      {
+        "harness": "prism",
+        "index": 1,
+        "status": "ok",
+        "metrics": {
+          "requests": 9,
+          "failedRequests": 0,
+          "promptTokens": 36900,
+          "cacheRead": 31968,
+          "cacheWrite": 0,
+          "hitRate": 0.8663414634146341,
+          "firstTurnExcludedHitRate": 0.946582968139287,
+          "taskSolved": true
+        },
+        "forwarded": 9,
+        "ceiling": false,
+        "exitCode": 0,
+        "models": [
+          "gemma4:31b"
+        ]
+      },
+      {
+        "harness": "prism",
+        "index": 2,
+        "status": "ok",
+        "metrics": {
+          "requests": 12,
+          "failedRequests": 0,
+          "promptTokens": 53245,
+          "cacheRead": 47456,
+          "cacheWrite": 0,
+          "hitRate": 0.8912761761667762,
+          "firstTurnExcludedHitRate": 0.9469420333233562,
+          "taskSolved": true
+        },
+        "forwarded": 12,
+        "ceiling": false,
+        "exitCode": 0,
+        "models": [
+          "gemma4:31b"
+        ]
+      }
+    ],
+    "pi": [
+      {
+        "harness": "pi",
+        "index": 0,
+        "status": "ok",
+        "metrics": {
+          "requests": 6,
+          "failedRequests": 0,
+          "promptTokens": 13494,
+          "cacheRead": 10976,
+          "cacheWrite": 0,
+          "hitRate": 0.8133985475025938,
+          "firstTurnExcludedHitRate": 0.903523213697728,
+          "taskSolved": true
+        },
+        "forwarded": 6,
+        "ceiling": false,
+        "exitCode": 0,
+        "models": [
+          "gemma4:31b"
+        ],
+        "piCrossCheck": "match"
+      },
+      {
+        "harness": "pi",
+        "index": 1,
+        "status": "ok",
+        "metrics": {
+          "requests": 9,
+          "failedRequests": 0,
+          "promptTokens": 22132,
+          "cacheRead": 19936,
+          "cacheWrite": 0,
+          "hitRate": 0.9007771552503163,
+          "firstTurnExcludedHitRate": 0.9315305778761488,
+          "taskSolved": true
+        },
+        "forwarded": 9,
+        "ceiling": false,
+        "exitCode": 0,
+        "models": [
+          "gemma4:31b"
+        ],
+        "piCrossCheck": "match"
+      },
+      {
+        "harness": "pi",
+        "index": 2,
+        "status": "ok",
+        "metrics": {
+          "requests": 6,
+          "failedRequests": 0,
+          "promptTokens": 13431,
+          "cacheRead": 11552,
+          "cacheWrite": 0,
+          "hitRate": 0.8600997691906783,
+          "firstTurnExcludedHitRate": 0.9083836795497807,
+          "taskSolved": true
+        },
+        "forwarded": 6,
+        "ceiling": false,
+        "exitCode": 0,
+        "models": [
+          "gemma4:31b"
+        ],
+        "piCrossCheck": "match"
+      }
+    ]
+  },
+  "requests": {
+    "used": 50,
+    "ceiling": 120,
+    "perRun": 20
+  },
+  "notes": [
+    "Metrics come from the wire proxy's usage log only; Prism's own usage events are cross-checked against it per request.",
+    "The system prompt carries a per-run id (Prism: workspace AGENTS.md; pi: --append-system-prompt) so a prefix cached by an earlier run cannot score the first request.",
+    "pi-ollama-cloud ignores every base-URL override, so pi ran a run-scoped copy of the extension with its single base-URL constant changed to the proxy; models, compat and request building are the extension's own."
+  ],
+  "attempt": 0
+}

@@ -86,6 +86,18 @@
         ],
         "mode": ""
       },
+      "./net": {
+        "suites": [
+          "src/__tests__/index.test.ts"
+        ],
+        "mode": ""
+      },
+      "./artifacts": {
+        "suites": [
+          "src/__tests__/index.test.ts"
+        ],
+        "mode": ""
+      },
       "./driver-kit": {
         "suites": [
           "src/__tests__/index.test.ts"
@@ -325,24 +337,6 @@
         "mode": ""
       }
     },
-    "@arnilo/prism-host-builder": {
-      ".": {
-        "suites": [
-          "examples/host-builder-agent.ts",
-          "packages/hosts/host-builder/src/__tests__/bin.test.ts",
-          "packages/hosts/host-builder/src/__tests__/check-runner.test.ts",
-          "packages/hosts/host-builder/src/__tests__/check-tools.test.ts",
-          "packages/hosts/host-builder/src/__tests__/indexes.test.ts",
-          "packages/hosts/host-builder/src/__tests__/install.test.ts",
-          "packages/hosts/host-builder/src/__tests__/lookup.test.ts",
-          "packages/hosts/host-builder/src/__tests__/server.test.ts",
-          "packages/hosts/host-builder/src/__tests__/version.test.ts",
-          "scripts/host-builder-evals/run.test.mjs",
-          "scripts/host-builder-index.test.mjs"
-        ],
-        "mode": ""
-      }
-    },
     "@arnilo/prism-remote": {
       ".": {
         "suites": [
@@ -375,6 +369,24 @@
           "packages/hosts/headless/src/__tests__/scheduler-leases.test.ts",
           "packages/hosts/headless/src/__tests__/scheduler-missed.test.ts",
           "packages/hosts/headless/src/__tests__/scheduler.test.ts"
+        ],
+        "mode": ""
+      }
+    },
+    "@arnilo/prism-host-builder": {
+      ".": {
+        "suites": [
+          "examples/host-builder-agent.ts",
+          "packages/hosts/host-builder/src/__tests__/bin.test.ts",
+          "packages/hosts/host-builder/src/__tests__/check-runner.test.ts",
+          "packages/hosts/host-builder/src/__tests__/check-tools.test.ts",
+          "packages/hosts/host-builder/src/__tests__/indexes.test.ts",
+          "packages/hosts/host-builder/src/__tests__/install.test.ts",
+          "packages/hosts/host-builder/src/__tests__/lookup.test.ts",
+          "packages/hosts/host-builder/src/__tests__/server.test.ts",
+          "packages/hosts/host-builder/src/__tests__/version.test.ts",
+          "scripts/host-builder-evals/run.test.mjs",
+          "scripts/host-builder-index.test.mjs"
         ],
         "mode": ""
       }
@@ -475,6 +487,40 @@
         "mode": ""
       }
     },
+    "@arnilo/prism-wiki": {
+      ".": {
+        "suites": [
+          "examples/memory-and-wiki.ts",
+          "packages/knowledge/wiki/src/__tests__/commands.test.ts",
+          "packages/knowledge/wiki/src/__tests__/ingest.test.ts",
+          "packages/knowledge/wiki/src/__tests__/package.test.ts",
+          "packages/knowledge/wiki/src/__tests__/retired-names.test.ts",
+          "packages/knowledge/wiki/src/__tests__/tools.test.ts"
+        ],
+        "mode": ""
+      }
+    },
+    "@arnilo/prism-rag": {
+      ".": {
+        "suites": [
+          "packages/knowledge/rag/src/__tests__/access-recheck.test.ts",
+          "packages/knowledge/rag/src/__tests__/citations.test.ts",
+          "packages/knowledge/rag/src/__tests__/fusion.test.ts",
+          "packages/knowledge/rag/src/__tests__/google-drive-live.test.ts",
+          "packages/knowledge/rag/src/__tests__/google-drive.test.ts",
+          "packages/knowledge/rag/src/__tests__/hosted-rerankers.test.ts",
+          "packages/knowledge/rag/src/__tests__/live.test.ts",
+          "packages/knowledge/rag/src/__tests__/local-reranker-live.test.ts",
+          "packages/knowledge/rag/src/__tests__/local-reranker.test.ts",
+          "packages/knowledge/rag/src/__tests__/package.test.ts",
+          "packages/knowledge/rag/src/__tests__/rag.test.ts",
+          "packages/knowledge/rag/src/__tests__/sync.test.ts",
+          "packages/knowledge/rag/src/__tests__/tei-reranker.test.ts",
+          "packages/knowledge/rag/src/__tests__/telemetry.test.ts"
+        ],
+        "mode": ""
+      }
+    },
     "@arnilo/prism-memory-compaction": {
       ".": {
         "suites": [
@@ -518,6 +564,7 @@
           "packages/memory/core/src/__tests__/package.test.ts",
           "packages/memory/core/src/__tests__/scoring-helpers.test.ts",
           "packages/memory/core/src/__tests__/sqlite.test.ts",
+          "packages/memory/core/src/__tests__/trust.test.ts",
           "packages/memory/core/src/__tests__/util-merge.test.ts",
           "packages/memory/core/src/fabric/__tests__/markdown.test.ts"
         ],
@@ -536,27 +583,6 @@
       "./sqlite": {
         "suites": [
           "packages/memory/core/src/__tests__/sqlite.test.ts"
-        ],
-        "mode": ""
-      }
-    },
-    "@arnilo/prism-memory-rag": {
-      ".": {
-        "suites": [
-          "packages/memory/rag/src/__tests__/access-recheck.test.ts",
-          "packages/memory/rag/src/__tests__/citations.test.ts",
-          "packages/memory/rag/src/__tests__/fusion.test.ts",
-          "packages/memory/rag/src/__tests__/google-drive-live.test.ts",
-          "packages/memory/rag/src/__tests__/google-drive.test.ts",
-          "packages/memory/rag/src/__tests__/hosted-rerankers.test.ts",
-          "packages/memory/rag/src/__tests__/live.test.ts",
-          "packages/memory/rag/src/__tests__/local-reranker-live.test.ts",
-          "packages/memory/rag/src/__tests__/local-reranker.test.ts",
-          "packages/memory/rag/src/__tests__/package.test.ts",
-          "packages/memory/rag/src/__tests__/rag.test.ts",
-          "packages/memory/rag/src/__tests__/sync.test.ts",
-          "packages/memory/rag/src/__tests__/tei-reranker.test.ts",
-          "packages/memory/rag/src/__tests__/telemetry.test.ts"
         ],
         "mode": ""
       }
@@ -594,27 +620,7 @@
           "packages/memory/fabric/src/__tests__/selective-recall.test.ts",
           "packages/memory/fabric/src/__tests__/source-repoint.test.ts",
           "packages/memory/fabric/src/__tests__/tools.test.ts",
-          "packages/memory/fabric/src/__tests__/touch.test.ts",
-          "packages/memory/fabric/src/scoped/__tests__/eval.test.ts",
-          "packages/memory/fabric/src/scoped/__tests__/lifecycle.test.ts",
-          "packages/memory/fabric/src/scoped/__tests__/mirror.test.ts",
-          "packages/memory/fabric/src/scoped/__tests__/policy.test.ts",
-          "packages/memory/fabric/src/scoped/__tests__/read-policy.test.ts",
-          "packages/memory/fabric/src/scoped/__tests__/reviewer.test.ts",
-          "packages/memory/fabric/src/scoped/__tests__/trust.test.ts"
-        ],
-        "mode": ""
-      }
-    },
-    "@arnilo/prism-memory-wiki": {
-      ".": {
-        "suites": [
-          "examples/three-tier-memory.ts",
-          "packages/memory/wiki/src/__tests__/commands.test.ts",
-          "packages/memory/wiki/src/__tests__/ingest.test.ts",
-          "packages/memory/wiki/src/__tests__/package.test.ts",
-          "packages/memory/wiki/src/__tests__/retired-names.test.ts",
-          "packages/memory/wiki/src/__tests__/tools.test.ts"
+          "packages/memory/fabric/src/__tests__/touch.test.ts"
         ],
         "mode": ""
       }
@@ -764,6 +770,16 @@
           "packages/providers/litellm/src/__tests__/live.test.ts",
           "packages/providers/litellm/src/__tests__/package.test.ts",
           "packages/providers/litellm/src/__tests__/spend-logs.test.ts"
+        ],
+        "mode": ""
+      }
+    },
+    "@arnilo/prism-provider-ollama-cloud": {
+      ".": {
+        "suites": [
+          "packages/providers/ollama-cloud/src/__tests__/live.test.ts",
+          "packages/providers/ollama-cloud/src/__tests__/ollama-cloud.test.ts",
+          "packages/providers/ollama-cloud/src/__tests__/package.test.ts"
         ],
         "mode": ""
       }
@@ -1062,16 +1078,6 @@
           "packages/tools/research/src/__tests__/check.test.ts",
           "packages/tools/research/src/__tests__/ledger.test.ts",
           "packages/tools/research/src/__tests__/package.test.ts"
-        ],
-        "mode": ""
-      }
-    },
-    "@arnilo/prism-provider-ollama-cloud": {
-      ".": {
-        "suites": [
-          "packages/providers/ollama-cloud/src/__tests__/live.test.ts",
-          "packages/providers/ollama-cloud/src/__tests__/ollama-cloud.test.ts",
-          "packages/providers/ollama-cloud/src/__tests__/package.test.ts"
         ],
         "mode": ""
       }

@@ -364,31 +364,6 @@ test("two_rate_limited_answers_fork_from_the_forked_session_leaf", async () => {
   assert.equal(result.answer, "cobalt");
 }, 30_000);
 
-test("retry_ingests_once_and_accounts_all_attempts", async () => {
-  const state = benchState();
-  let embeddingsWhenFirstAnswerFailed;
-  const provider = truncatingProvider(state, () => {
-    embeddingsWhenFirstAnswerFailed ??= state.calls.embedding;
-  });
-  const result = await replay(
-    retryQuestion,
-    {
-      config: "fabric-hybrid",
-      suite: "longmemeval-s",
-      offline: true,
-      embeddings: "mock/embeddings",
-      modelConfig: { provider: "mock", model: "m" },
-      inputCap: 128000,
-    },
-    [provider],
-    state,
-  );
-  assert.equal(result.answerRetries, 1);
-  assert.ok(embeddingsWhenFirstAnswerFailed > 0, "ingestion embedded the corpus");
-  assert.equal(state.embeddingPhases.ingest, 1, "the retry did not ingest again");
-  assert.equal(state.embeddingPhases.answer, 2, "both answer attempts are accounted");
-  assert.equal(result.storage.fabric, "disposable");
-});
 
 test("retry_does_not_duplicate_om_workers_or_promotions", async () => {
   const state = benchState();
@@ -1301,14 +1276,14 @@ test("mock_agentic_question_converges_in_three_turns", async () => {
   assert.notEqual(row.outcome, "run_limit");
 });
 
-test("memory_bench_fabric_hybrid_requires_embeddings", async () => {
-  await assert.rejects(runBench({ offline: true, config: "fabric-hybrid" }), /fabric-hybrid requires --embeddings/);
+test("memory_bench_fabric_hybrid_arm_was_removed", async () => {
+  // Plan 210 Task 7 removed `retrieval: "hybrid"`: the fabric package is lexical, so there is no embeddings arm.
+  await assert.rejects(runBench({ offline: true, config: "fabric-hybrid", embeddings: "mock/embeddings" }), /fabric-hybrid was removed/);
 });
 
 test("memory_bench_fabric_configs_offline_smoke", async () => {
   const configs = [
     { config: "fabric" },
-    { config: "fabric-hybrid", embeddings: "mock/embeddings" },
     { config: "fabric-agentic" },
     { config: "om+fabric" },
   ];
@@ -1324,10 +1299,6 @@ test("memory_bench_fabric_configs_offline_smoke", async () => {
       assert.ok(report.toolCalls > 0);
       assert.ok(report.recallCalls > 0);
       assert.equal(report.calls.embedding, 0);
-    } else if (opt.config === "fabric-hybrid") {
-      assert.ok(report.calls.embedding > 0);
-      assert.equal(report.toolCalls, 0);
-      assert.equal(report.recallCalls, 2);
     } else if (opt.config === "om+fabric") {
       assert.ok(report.calls.observer > 0, "OM ingests dated history");
       assert.equal(report.toolCalls, 0, "combined public arm stays passive");
@@ -1972,7 +1943,7 @@ test("named_month_resolves_against_question_date_in_replay", async () => {
 
 test("full_and_memory_arms_render_the_same_dated_question", async () => {
   const questions = [];
-  for (const config of ["full", "om", "fabric", "fabric-hybrid", "fabric-agentic", "om+fabric"]) {
+  for (const config of ["full", "om", "fabric", "fabric-agentic", "om+fabric"]) {
     const state = benchState();
     const base = mockProvider(state);
     const provider = {
@@ -3247,7 +3218,7 @@ test("provider_list_includes_the_litellm_pool", async () => {
   // The refusal text names every supported provider, so a typo does not read as "unknown host".
   await assert.rejects(
     liveProviders([{ provider: "nope", model: "x" }], "/tmp"),
-    /hyper, opencode-go, openrouter, commandcode, kilo and litellm/,
+    /hyper, opencode-go, openrouter, commandcode, kilo, litellm and ollama-cloud/,
   );
 });
 

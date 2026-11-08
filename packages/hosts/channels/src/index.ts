@@ -14,7 +14,13 @@ export { createChannelPairingStore, DEFAULT_PAIRING_TTL_MS, HARD_PAIRING_TTL_MS 
 export type { ChannelApprovalStore } from "./approvals.js";
 export { createChannelApprovalStore } from "./approvals.js";
 export { createMemoryCheckpointStore, createMemoryLeaseStore } from "./memory-stores.js";
-export { ChannelTokenLiteralError, CHANNEL_TOKEN_LITERAL_CODE, resolveChannelSecretRef, createChannelRedactor } from "./secret-ref.js";
+export {
+  ChannelTokenLiteralError,
+  CHANNEL_TOKEN_LITERAL_CODE,
+  type ChannelSecretSource,
+  resolveChannelSecretRef,
+  createChannelRedactor,
+} from "./secret-ref.js";
 export { createChannelRuntime } from "./runtime.js";
 export type {
   ChannelBindingKeyInput,

@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed
+
+- `rowToSessionEntry` keeps any numeric `schema_version` instead of dropping everything but `1`, so a SQL store
+  returns an entry from a newer schema unchanged (plan 215 Task 29, `docs/compatibility.md`).
+
 ### Added
 
 - `@arnilo/prism-store-codecs` (plan 153 Task 4): the row codecs, cursor codecs, ownership-scope

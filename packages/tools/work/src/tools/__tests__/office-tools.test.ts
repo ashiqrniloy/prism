@@ -1,6 +1,7 @@
 import { test } from "bun:test";
 import assert from "node:assert/strict";
-import type { ArtifactBodyRef, ArtifactBodyStore, JsonObject, ToolDefinition, ToolExecutionContext } from "@arnilo/prism";
+import type { JsonObject, ToolDefinition, ToolExecutionContext } from "@arnilo/prism";
+import type { ArtifactBodyRef, ArtifactBodyStore } from "@arnilo/prism/artifacts";
 import { createOfficeTools } from "../index.js";
 
 const model = {

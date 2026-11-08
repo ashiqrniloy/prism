@@ -12,6 +12,7 @@ import {
   readRetryAfterMs,
   resolveReasoningObject,
   sanitizeCacheKey,
+  type SecretSource,
 } from "@arnilo/prism/provider-kit";
 import { KILO_DEFAULT_BASE_URL, routeForKiloModel } from "./models.js";
 
@@ -153,7 +154,7 @@ export function kiloHttpError(response: Response, bodyText: string, secrets: rea
 export interface KiloProviderOptions {
   readonly id?: string;
   readonly baseUrl?: string;
-  readonly apiKey?: string;
+  readonly apiKey?: SecretSource;
   /** Resolves the key then the login credential, per request. */
   readonly resolveApiKey?: (request: ProviderRequest) => string | undefined | Promise<string | undefined>;
   readonly organizationId?: string;

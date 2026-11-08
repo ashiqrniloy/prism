@@ -28,6 +28,7 @@
 
 This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-part 14), following plan 207 under the owner decision of 2026-10-31. It runs as release step **17d**, after plan 207 and before plan 209 (17e). The memory train is strictly sequential (owner decision 2026-10-31): 202 → 207 → 208 → 209 → 210 → 184 → 185.
 
+- **Amended 2026-11-08 (owner, memory model).** Plan 210 Tasks 9–10 moved to plan 223 Tasks 2–4. Read every "plan 210 Task 9" below as plan 223 Task 2 (gate A), and "plan 210 Task 10" as plan 223 Task 3. The ontology has left memory: it is now the wiki (`@arnilo/prism-wiki`, plan 216 Task 3), so `P+O` is re-pointed to `ltm+wiki` (plan 216 Task 2). The development screen of the ontology arms and the panel calibration are plan 222. `three-tier-criteria.json` is unchanged.
 - **Tasks 6 and 7 moved to plan 210 on 2026-10-31.** The held-out ontology arms are plan 210 Task 9, and the default, the published claim and the outcome-class mapping are plan 210 Task 10. This plan ends at Task 5 with development evidence.
 - O8 (work outcomes) needs plan 209's suite, which is built after this plan. O8's thresholds are pre-registered here; plan 209 Task 6 reports it on development partitions and plan 210 Task 9 on held-out partitions.
 - Plan 210 then audits every ontology feature whose rows did not pass, and removes what it cannot justify before the held-out read.

@@ -24,11 +24,10 @@ import type { FabricDecisions } from "./decisions.js";
 import { ruleCandidateRows, type FabricRules } from "./delivery/rules.js";
 import type { FabricCueDuplicate, FabricCues } from "./delivery/cues.js";
 import { type FabricDirectoryHandle, memoryRetractionVersion, renderFabricDirectory } from "./directory.js";
-import { fitInjection, PREAMBLE } from "./excerpt.js";
-import { conceptInPlay, conceptPointerLine } from "./ontology/pointer.js";
+import { fitInjection } from "./excerpt.js";
 import type { LessonNudges } from "./lessons.js";
 import { isActiveNote } from "./lifecycle/index.js";
-import { isMemoryDecisionDeliverable, type MemoryFabric, type MemoryFabricRecallOptions, type MemoryNoteHit } from "./types.js";
+import { isMemoryDecisionDeliverable, type MemoryFabric, type MemoryFabricRecallOptions } from "./types.js";
 
 /** Tracks notes shown to the model in each session and records citations in assistant text. */
 export interface FabricCitationTracker {
@@ -362,8 +361,6 @@ interface SessionTail {
   /** Cue lines already added for this user turn, kept so a rebuild of the same turn is byte-identical. */
   readonly cueLines: string[];
   readonly cueIds: string[];
-  /** The tail already carries its one concept pointer for this turn; a path cue adds no second. */
-  readonly concept: boolean;
 }
 
 export function createFabricContext(
@@ -449,7 +446,6 @@ export function createFabricContext(
         let lines: string[] = [];
         let ids: string[] = [];
         let coverageById: Record<string, number> = {};
-        let conceptPointer: MemoryNoteHit | undefined;
         if (inject) {
           const latest =
             (typeof options.query === "function" ? options.query({ messages: draft.messages }) : options.query) ??
@@ -486,17 +482,6 @@ export function createFabricContext(
           let eligible = result.hits.filter(
             (hit) => isActiveNote(hit, { asOfMs }) && (hit.flags?.length ?? 0) === 0 && isMemoryDecisionDeliverable(hit) && !duplicate(hit),
           );
-          // Concepts are pulled, not pushed (plan 207 Task 4): at most one, as a pointer, when it is the top fused hit and
-          // its subject is in play. No concept text ever enters the passive block.
-          const top = eligible[0];
-          if (
-            top !== undefined &&
-            top.kind === "concept" &&
-            conceptInPlay(top, lexicalTerms(latest), touchedPaths === undefined ? [] : touchedPaths(sessionId))
-          ) {
-            conceptPointer = top;
-          }
-          eligible = eligible.filter((hit) => hit.kind !== "concept");
           // P4/P3 share one call (plan 202 Task 12): skip injection when memory is clearly not needed,
           // and drop only candidates the model places clearly below the relevance band.
           if (decisions !== undefined && (decisions.enabled("P4") || decisions.enabled("P3")) && eligible.length > 0) {
@@ -524,16 +509,9 @@ export function createFabricContext(
             ids = hits.map((hit) => hit.id);
             coverageById = Object.fromEntries(hits.filter((hit) => hit.coverage !== undefined).map((hit) => [hit.id, hit.coverage!]));
           }
-          if (conceptPointer !== undefined) {
-            lines =
-              lines.length > 0
-                ? [...lines, conceptPointerLine(conceptPointer.id, conceptPointer.subject)]
-                : [PREAMBLE, conceptPointerLine(conceptPointer.id, conceptPointer.subject)];
-            ids = [...ids, conceptPointer.id];
-          }
           if (ids.length > 0) tracker.show(sessionId, ids);
         }
-        tail = { key: user.id, lines, ids, coverageById, cueLines: [], cueIds: [], concept: conceptPointer !== undefined };
+        tail = { key: user.id, lines, ids, coverageById, cueLines: [], cueIds: [] };
         cache.set(sessionId, tail);
       }
       // Path cues arrive after the topic block and join the same tail block; they show once per session.
@@ -543,7 +521,6 @@ export function createFabricContext(
           : await cues.render(context.session!, touchedPaths(sessionId), {
               turnKey: user.id,
               exclude: () => new Set([...pinned.ids, ...tail.ids, ...tail.cueIds]),
-              conceptTaken: tail.concept,
               duplicate: () => visibleMemory(draft, entries),
               ...(turnText === undefined ? {} : { query: turnText }),
               signal: context.signal,

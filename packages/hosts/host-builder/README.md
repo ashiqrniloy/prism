@@ -205,6 +205,36 @@ reported without the query).
 - **No targets.** Without `--entry` or `--package` the tools still list; they return a `guidance` field naming the flag.
   An unknown `entry` returns the configured names. The server never guesses.
 
+## What it changes
+
+**No measured claim yet.** This package publishes a claim only when `compareExperiments` shows a significant
+improvement at alpha .05, with multiple-comparison correction, on a pre-registered evaluation
+(`scripts/host-builder-evals/`, 7 build tasks x 3 arms x 3 trials, graded by hidden tests and checks the builder never
+sees). None passed, so the skill and the MCP server are not claimed to improve anything.
+
+What the evidence does show, with `gemma4:31b` as the builder, is a direction and not a result:
+
+| Run | `none` | `skill` | `skill+mcp` | Verdict |
+| --- | --- | --- | --- | --- |
+| Acceptance tests pass, kit-v1, natural loading | 0.19 | 0.57 | 0.52 | no claims |
+| Acceptance tests pass, kit-v1, skill preloaded | 0.43 | 0.52 | 0.43 | no claims |
+| Acceptance tests pass, kit-v2, natural loading | 0.24 | 0.67 | 0.62 | no claims (skill over `none` +0.43, q 0.125) |
+| Acceptance tests pass, kit-v2, skill preloaded | 0.29 | 0.57 | 0.67 | inconclusive (2 of 63 runs lost to network errors) |
+
+- The `skill` arm scored higher than `none` in every complete run, but 21 records per arm cannot separate that from noise at the
+  pre-registered bar. The MCP server added nothing over the skill alone (skill+mcp over skill: no significant
+  difference in any run).
+- The kit-v1 to kit-v2 change came from diagnosing the first run: interfaces had no member lists in `data/api.json`,
+  the skill never mentioned that tools with durable effects need a `principal`, and the upgrade page called the retired
+  `identity` field valid. After the fix, the 0.12 upgrade task went from 0 of 3 to 3 of 3 with the skill.
+- `beam` wrote no files in most runs and `gpt-oss:120b` lost many runs to server errors, so neither gave a usable
+  comparison. Only `gemma4:31b` was run on kit-v2.
+
+Evidence: [`docs/_evidence/host-builder/212/`](../../../docs/_evidence/host-builder/212/) holds the kit-v2 runs
+(`ollama-gemma4.md`, `ollama-gemma4.preload.md`), the earlier kit-v1 runs (`kit-v1/`) and the inconclusive attempt
+(`attempts/`). The criteria, claim rules and registered input hashes are `scripts/host-builder-evals/criteria.json` and
+`criteria.lock.json`.
+
 ## Cost
 
 No model calls and no network from the lookup tools. Everything they return is read from files inside this package. A

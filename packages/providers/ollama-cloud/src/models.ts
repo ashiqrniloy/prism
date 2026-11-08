@@ -1,10 +1,8 @@
 import {
-  type CredentialValueSource,
   type JsonObject,
   type JsonValue,
   type ModelConfig,
   redactSecrets,
-  resolveCredentialValue,
   trimTrailingSlashes,
 } from "@arnilo/prism";
 import {
@@ -14,6 +12,7 @@ import {
   readRetryAfterMs,
   snapThinkingLevel,
   type ThinkingCompatFamily,
+  type SecretSource,
 } from "@arnilo/prism/provider-kit";
 
 /** Ollama Cloud host root; the native route uses `/api/chat`, the compat route `/v1/chat/completions`. */
@@ -36,7 +35,7 @@ export interface OllamaCloudModelConfig extends Omit<ModelConfig, "provider" | "
 }
 
 export interface ListOllamaCloudModelsOptions {
-  readonly apiKey?: CredentialValueSource;
+  readonly apiKey?: SecretSource;
   readonly fetch?: typeof fetch;
   readonly baseUrl?: string;
   readonly signal?: AbortSignal;
@@ -249,7 +248,7 @@ export function contextLength(modelInfo: Readonly<Record<string, unknown>> | und
 export async function listOllamaCloudModels(options: ListOllamaCloudModelsOptions = {}): Promise<ModelConfig[]> {
   const provider = options.provider ?? "ollama-cloud";
   const baseUrl = trimTrailingSlashes(options.baseUrl ?? OLLAMA_CLOUD_DEFAULT_BASE_URL);
-  const token = await resolveCredentialValue(options.apiKey, { provider, name: "apiKey" });
+  const token = await options.apiKey?.();
   const headers = {
     ...options.headers,
     ...(token ? { authorization: `Bearer ${token}` } : {}),
@@ -309,7 +308,7 @@ export interface OllamaCloudBalance {
 }
 
 export interface OllamaCloudBalanceOptions {
-  readonly apiKey?: CredentialValueSource;
+  readonly apiKey?: SecretSource;
   readonly fetch?: typeof fetch;
   readonly baseUrl?: string;
   readonly signal?: AbortSignal;
@@ -321,7 +320,7 @@ export interface OllamaCloudBalanceOptions {
 export async function ollamaCloudBalance(options: OllamaCloudBalanceOptions = {}): Promise<OllamaCloudBalance> {
   const provider = options.provider ?? "ollama-cloud";
   const baseUrl = trimTrailingSlashes(options.baseUrl ?? OLLAMA_CLOUD_DEFAULT_BASE_URL);
-  const token = await resolveCredentialValue(options.apiKey, { provider, name: "apiKey" });
+  const token = await options.apiKey?.();
   const payload = await requestJson<{
     readonly included?: {
       readonly session?: unknown;

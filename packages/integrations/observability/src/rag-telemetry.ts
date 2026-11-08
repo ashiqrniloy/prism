@@ -1,7 +1,7 @@
 import type { PrismMeter, PrismSpan, PrismTracer } from "./instrumentation.js";
 
 /*
- * The telemetry seam `@arnilo/prism-memory-rag` accepts, declared structurally. This stable package must not
+ * The telemetry seam `@arnilo/prism-rag` accepts, declared structurally. This stable package must not
  * import the experimental memory line (plan 215 Task 3), so the shape lives here and a test in this package
  * asserts memory-rag's own types stay assignable to it. Keep it identical to memory-rag's `telemetry.ts`.
  */

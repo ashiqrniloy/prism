@@ -35,7 +35,7 @@ export const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ENV_NAME = /^[A-Z][A-Z0-9_]*$/;
 const SUITE_ID = /^[a-z0-9][a-z0-9/_-]*$/i;
 // Credential-shaped values must never appear in the manifest (names only).
-const SECRET_SHAPED = /(?:sk-|sk-ant-|xai-)[A-Za-z0-9_-]{10,}|Bearer\s+[A-Za-z0-9._-]{8,}|(?:api[_-]?key|secret|token)\s*=/i;
+export const SECRET_SHAPED = /(?:sk-|sk-ant-|xai-)[A-Za-z0-9_-]{10,}|Bearer\s+[A-Za-z0-9._-]{8,}|(?:api[_-]?key|secret|token)\s*=/i;
 
 const SUITE_KEYS = new Set([
   "id",

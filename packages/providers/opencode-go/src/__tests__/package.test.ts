@@ -59,7 +59,7 @@ describe("@arnilo/prism-provider-opencode-go package", () => {
       captured = new Headers(init.headers);
       return ok(completion());
     }) as typeof fetch;
-    await providerConformance(() => createOpenCodeGoProvider({ apiKey: key, fetch: fetchImpl }), {
+    await providerConformance(() => createOpenCodeGoProvider({ apiKey: async () => key, fetch: fetchImpl }), {
       request,
       secrets: [key],
       headers: {
@@ -73,7 +73,7 @@ describe("@arnilo/prism-provider-opencode-go package", () => {
 
   it("opencode_go_passes_recorded_conformance", async () => {
     const key = "sk-opencode-conformance-key-should-not-surface";
-    const result = await providerConformance((fetchImpl) => createOpenCodeGoProvider({ apiKey: key, fetch: fetchImpl }), {
+    const result = await providerConformance((fetchImpl) => createOpenCodeGoProvider({ apiKey: async () => key, fetch: fetchImpl }), {
       recordings: new URL("./wire/", import.meta.url),
       models: openCodeGoModels,
       secrets: [key],

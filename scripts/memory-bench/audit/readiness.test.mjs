@@ -228,3 +228,57 @@ test("readiness_refuses_product_hash_without_cache_stability_record", async () =
   const xml = `<testsuite><testcase name="a" /><testcase name="b"><failure message="x" /></testcase><testcase name="c"><skipped /></testcase></testsuite>`;
   assert.deepEqual(parseJunit(xml), { pass: 1, fail: 1, skip: 1, passed: ["a"] });
 });
+
+test("slimmed_record_lists_every_removal_and_passes_cache_pin", async () => {
+  const { CACHE_STABILITY, REMOVAL_GOLDEN, SLIMMED, SLIMMED_OUTCOMES, cacheStabilityBlockers, slimmedRecordBlockers } = await import(
+    "./readiness.mjs"
+  );
+  const { createHash } = await import("node:crypto");
+  const sha = (text) => createHash("sha256").update(text).digest("hex");
+  const read = (file) => readFile(file, "utf8");
+  const record = JSON.parse(await read(`${SLIMMED}/record.json`));
+  const decisions = JSON.parse(await read("docs/_evidence/memory-bench/210/decisions.json"));
+  const equivalenceText = await read(`${CACHE_STABILITY}/equivalence.json`);
+  const input = {
+    record,
+    decisions,
+    goldenSha256: sha(await read(REMOVAL_GOLDEN)),
+    equivalenceSha256: sha(equivalenceText),
+  };
+  assert.deepEqual(slimmedRecordBlockers(input), []);
+  // Every one of the 14 removals is listed once, with its evidence and its effect on the presets.
+  assert.equal(record.removals.length, 14);
+  assert.deepEqual(Object.keys(SLIMMED_OUTCOMES).sort(), [...decisions.removals].sort());
+  // The record pins a product, and the 202 cache-stability pin accepts it: the prefix suite is green and the equivalence
+  // attestation names this product hash.
+  const equivalence = JSON.parse(equivalenceText);
+  assert.equal(equivalence.post.productHash, record.productHash);
+  assert.deepEqual(
+    cacheStabilityBlockers({
+      record: {
+        status: record.cacheStability.status,
+        suite: record.cacheStability.suite,
+        productHash: record.productHash,
+        equivalence: record.cacheStability.equivalence,
+      },
+      equivalence,
+      equivalenceSha256: sha(equivalenceText),
+      productHash: record.productHash,
+    }),
+    [],
+  );
+  // A dropped removal, an edited golden or a failed pin is named.
+  assert.ok(
+    slimmedRecordBlockers({ ...input, record: { ...record, removals: record.removals.slice(1) } }).includes(
+      "slimmed-removals-differ-from-the-decision-record",
+    ),
+  );
+  assert.ok(slimmedRecordBlockers({ ...input, goldenSha256: "other" }).includes("slimmed-golden-changed"));
+  assert.ok(
+    slimmedRecordBlockers({ ...input, record: { ...record, cacheStability: { ...record.cacheStability, status: "failed" } } }).includes(
+      "slimmed-cache-pin-failed",
+    ),
+  );
+  assert.ok(slimmedRecordBlockers({ ...input, equivalenceSha256: "other" }).includes("slimmed-cache-pin-failed"));
+  assert.deepEqual(slimmedRecordBlockers({ ...input, record: undefined }), ["slimmed-record-missing"]);
+});

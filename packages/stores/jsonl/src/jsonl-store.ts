@@ -7,6 +7,7 @@ import {
   HARD_MAX_SESSION_LIST_LIMIT,
   isSessionEntryKind,
   type Message,
+  type Logger,
   type ModelConfig,
   type OwnershipScope,
   type PersistencePage,
@@ -47,6 +48,11 @@ export class JsonlSessionStoreError extends Error {
 export interface JsonlSessionStoreOptions {
   /** Directory holding one JSONL file per session (`<dir>/<sessionId>.jsonl`). Resolved against the cwd. */
   readonly dir: string;
+  /**
+   * Where the store reports readable-but-newer data: once per store, a `warn` when a line carries a
+   * `schemaVersion` greater than this build's `SESSION_ENTRY_SCHEMA_VERSION`. The package passes its own logger.
+   */
+  readonly logger?: Pick<Logger, "warn">;
 }
 
 export interface SessionEntryParseError {
@@ -114,13 +120,22 @@ export function createJsonlSessionStore(options: JsonlSessionStoreOptions): Sess
   let fileReads = 0;
   let bytesRead = 0;
 
+  let warnedFutureSchema = false;
+
   const countBytes = (bytes: number): void => {
     bytesRead += bytes;
   };
 
   async function readParsed(path: string): Promise<SessionEntryReadResult> {
     fileReads++;
-    return readJsonlSessionEntries(path, countBytes);
+    const result = await readJsonlSessionEntries(path, countBytes);
+    if (!warnedFutureSchema && result.entries.some(isFutureSchemaEntry)) {
+      warnedFutureSchema = true;
+      options.logger?.warn("session store holds entries from a newer schema version; they are returned unchanged", {
+        schemaVersion: SESSION_ENTRY_SCHEMA_VERSION,
+      });
+    }
+    return result;
   }
 
   async function readEntries(sessionId: string): Promise<SessionEntry[]> {
@@ -482,12 +497,14 @@ function validateSessionEntry(
     return { ok: false, error: { line: lineNumber, message: "Invalid parentId: expected string", raw } };
   }
   const schemaVersion = entry.schemaVersion ?? SESSION_ENTRY_SCHEMA_VERSION;
-  if (typeof schemaVersion !== "number" || schemaVersion !== SESSION_ENTRY_SCHEMA_VERSION) {
+  if (typeof schemaVersion !== "number" || !Number.isInteger(schemaVersion) || schemaVersion < SESSION_ENTRY_SCHEMA_VERSION) {
     return { ok: false, error: { line: lineNumber, message: `Unsupported session entry schema version: ${schemaVersion}`, raw } };
   }
+  // Forward compatibility (docs/compatibility.md): an entry from a newer schema, or of a kind this build does not
+  // know, keeps a valid envelope and is returned unchanged as an opaque entry. Only known kinds are checked further.
   const kind = entry.kind;
-  if (!isSessionEntryKind(kind)) {
-    return { ok: false, error: { line: lineNumber, message: `Unknown session entry kind: ${kind}`, raw } };
+  if (schemaVersion > SESSION_ENTRY_SCHEMA_VERSION || !isSessionEntryKind(kind)) {
+    return { ok: true, entry: entry as unknown as SessionEntry };
   }
   switch (kind) {
     case "message":
@@ -548,6 +565,10 @@ function validateSessionEntry(
       break;
   }
   return { ok: true, entry: entry as unknown as SessionEntry };
+}
+
+function isFutureSchemaEntry(entry: SessionEntry): boolean {
+  return typeof entry.schemaVersion === "number" && entry.schemaVersion > SESSION_ENTRY_SCHEMA_VERSION;
 }
 
 function isBasicSessionEntry(value: unknown): value is Record<string, unknown> {

@@ -10,7 +10,7 @@ import {
   type RagTelemetrySpan,
   RagValidationError,
   retrieveContext,
-} from "@arnilo/prism-memory-rag";
+} from "@arnilo/prism-rag";
 
 const scope = { tenantId: "tenant-a", resourceId: "docs", corpusId: "handbook" };
 const thread = { tenantId: scope.tenantId, resourceId: scope.resourceId, threadId: scope.corpusId };

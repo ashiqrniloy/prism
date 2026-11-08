@@ -1,7 +1,9 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import { type ArtifactBodyRef, type ArtifactBodyStore, type ToolExecutionContext } from "@arnilo/prism";
+import { type ToolExecutionContext } from "@arnilo/prism";
+import { type ArtifactBodyRef, type ArtifactBodyStore } from "@arnilo/prism/artifacts";
 import { createMemoryCheckpointStore } from "@arnilo/prism-workflows";
+import { type AgentIdentity } from "../identity.js";
 import {
   canonicalJson,
   computePayloadDigest,
@@ -17,7 +19,7 @@ import {
   type WorkDraft,
   type WorkDraftApproval,
 } from "../index.js";
-import { type AgentIdentity } from "../identity.js";
+
 const identity: AgentIdentity = {
   tenantId: "tenant-corp",
   userId: "worker-1",

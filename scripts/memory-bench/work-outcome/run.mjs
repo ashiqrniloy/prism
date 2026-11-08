@@ -29,7 +29,7 @@ import { createScriptedHostUi } from "@arnilo/prism/testing";
 import { createStateMatchScorer, createUserSimulator, runScenario } from "@arnilo/prism-evals";
 import { createSqliteMemoryStores } from "@arnilo/prism-memory-core/sqlite";
 import fabric, { parseMemoryNoteMetadata } from "@arnilo/prism-memory-fabric";
-import { memoryWiki } from "@arnilo/prism-memory-wiki";
+import { wiki } from "@arnilo/prism-wiki";
 import { tokens } from "../injection-log.mjs";
 import { curatorStats, isCuratorRequest } from "../ontology-arm.mjs";
 import { createClaimPanel, judgeClaims, scriptedJudges, summarizeGroup } from "../ontology-audit.mjs";
@@ -478,7 +478,9 @@ export async function runPersonaArm({ persona, arm, providers, model, simulatorA
             scopes: { tenantId: persona.id, project: { id: projectId(session.project), root: join(base, session.project) } },
           }),
         );
-      if (config.wiki) packages.push(memoryWiki(structuredClone(config.wiki)));
+      // The wiki's own store: one root per project beside the memory root, never in the persona's workspace (plan 216
+      // Task 3). A root serves one project's memory; the wiki refuses a second one.
+      if (config.wiki) packages.push(wiki({ root: join(memoryRoot, "wiki", projectId(session.project)), ...structuredClone(config.wiki) }));
       const agent = await createAgent({
         model,
         packages,

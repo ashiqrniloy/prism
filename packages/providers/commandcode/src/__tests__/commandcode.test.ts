@@ -55,7 +55,7 @@ async function capture(req: ProviderRequest, config: Parameters<typeof createCom
   let body: JsonObject = {};
   const provider = createCommandCodeProvider({
     ...config,
-    apiKey: secret,
+    apiKey: async () => secret,
     fetch: (async (_url, init) => {
       headers = new Headers(init?.headers);
       body = JSON.parse(String(init?.body));
@@ -76,7 +76,7 @@ function errorEvent(events: readonly ProviderEvent[]) {
 
 async function classify(status: number, bodyText: string) {
   const provider = createCommandCodeProvider({
-    apiKey: secret,
+    apiKey: async () => secret,
     fetch: (async () => new Response(bodyText, { status, headers: { "content-type": "application/json" } })) as typeof fetch,
   });
   return errorEvent(await collectProviderEvents(provider, request()));
@@ -247,7 +247,7 @@ describe("Command Code routes", () => {
       "",
     ].join("\n\n");
     const provider = createCommandCodeProvider({
-      apiKey: secret,
+      apiKey: async () => secret,
       fetch: (async () => new Response(sse, { headers: { "content-type": "text/event-stream" } })) as typeof fetch,
     });
     const events = await collectProviderEvents(provider, request());
@@ -279,7 +279,7 @@ describe("Command Code routes", () => {
     ] as const) {
       const fixture = (await import(`./wire/${dir}/text.json`)) as { default: { path: string; responseBody: string } };
       const provider = createCommandCodeProvider({
-        apiKey: secret,
+        apiKey: async () => secret,
         fetch: replayFetch([{ ...fixture.default, status: 200, contentType: "text/event-stream" }]) as unknown as typeof fetch,
       });
       const events = await collectProviderEvents(provider, request(model));

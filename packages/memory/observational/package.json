@@ -23,6 +23,9 @@
   "peerDependencies": {
     "@arnilo/prism": ">=0.13.0 <1.0.0"
   },
+  "dependencies": {
+    "@arnilo/prism-memory-core": "0.13.0-experimental.0"
+  },
   "devDependencies": {
     "@types/node": "^22.20.0",
     "typescript": "^7.0.2"

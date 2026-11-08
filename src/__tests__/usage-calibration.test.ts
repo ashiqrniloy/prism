@@ -1,10 +1,10 @@
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { describe, it } from "bun:test";
-import { estimateMessageTokens, type Message, MODEL_FAMILY_TOKENS, type ModelFamily, resolveModelFamily } from "../index.js";
+import { estimateMessageTokens, type Message, type ModelFamily } from "../index.js";
 // The text projection is the seam the fixture records: no chat-template overhead.
 // Module-private by design (not re-exported from the root barrel).
-import { estimateTextTokensForFamily } from "../usage-estimation.js";
+import { estimateTextTokensForFamily, MODEL_FAMILY_TOKENS, resolveModelFamily } from "../usage-estimation.js";
 
 // Plan 103 Task 3. Frozen corpus + recorded reference counts for every calibrated
 // family, so a silent ratio or overhead edit fails here instead of drifting in

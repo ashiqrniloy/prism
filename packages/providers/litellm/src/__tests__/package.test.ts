@@ -72,7 +72,7 @@ describe("LiteLLM package", () => {
   });
 
   it("litellm_package_conformance_chat", async () => {
-    const result = await providerConformance((fetch) => createLiteLLMProvider({ apiKey: secret, fetch }), {
+    const result = await providerConformance((fetch) => createLiteLLMProvider({ apiKey: async () => secret, fetch }), {
       recordings: new URL("./wire/chat/", import.meta.url),
       models: conformanceModels,
       secrets: [secret],

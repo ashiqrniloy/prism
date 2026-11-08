@@ -435,7 +435,7 @@ export async function assertCacheStabilityPin(manifest, { root = "." } = {}) {
  * Plan 208 Task 3: what an ontology arm's product is. The fabric hash is the one plan 202's cache-stability record and
  * plan 207's prefix-probe record pin; the ontology product adds the wiki package.
  */
-export const ONTOLOGY_PRODUCT_PATHS = [...PREFIX_PRODUCT_PATHS, "packages/memory/wiki/src"];
+export const ONTOLOGY_PRODUCT_PATHS = [...PREFIX_PRODUCT_PATHS, "packages/knowledge/wiki/src"];
 /** Plan 207's prefix-probe record: the fabric's cached segments, byte-checked with the ontology tier in the tree. */
 export const ONTOLOGY_PREFIX_PROBE = "docs/_evidence/memory-bench/207/prefix-probe.json";
 
@@ -515,6 +515,136 @@ export async function writeCacheStabilityRecord({ root = ".", run = runPrefixSui
   };
   await writeFile(join(root, CACHE_STABILITY, "record.json"), `${JSON.stringify(record, null, 2)}\n`);
   return record;
+}
+
+/** Plan 210 Task 7: where the slimmed product's record and its equivalence attestation live. */
+export const SLIMMED = "docs/_evidence/memory-bench/210/slimmed";
+const DECISIONS_210 = "docs/_evidence/memory-bench/210/decisions.json";
+export const REMOVAL_GOLDEN = "packages/memory/fabric/src/__tests__/fixtures/removal-byte-identical.json";
+/**
+ * What each of the 14 removals did to the `conversational` and `coding` presets on the offline replay
+ * (`removal-byte-identical.test.ts`, 12 requests per preset). "byte-identical" means every provider request and tool
+ * schema was unchanged; a re-pin names the requests (1-based) whose hash moved. Context blocks never moved.
+ */
+export const SLIMMED_OUTCOMES = Object.freeze({
+  "retrieval.hybrid": { effect: "byte-identical" },
+  "workers.linker": { effect: "byte-identical" },
+  "workers.evolution": { effect: "byte-identical" },
+  "write.consolidate-model-decider": { effect: "byte-identical" },
+  "recall.state-wrapper": { effect: "byte-identical" },
+  "decisions.P1": { effect: "byte-identical" },
+  "decisions.P2": { effect: "byte-identical" },
+  "decisions.P6": { effect: "byte-identical" },
+  "scoped.policy": { effect: "byte-identical" },
+  "recall.supersession-hint": { effect: "byte-identical", note: "the default `all` marker is the behaviour that remains" },
+  "write.keyword-enrichment": {
+    effect: "re-pinned",
+    requests: [11, 12],
+    why: "memory.recall results for exchange notes no longer carry the enrichment keywords",
+  },
+  timeline: {
+    effect: "re-pinned",
+    requests: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    why: "the memory.recall tool schema lost from, to and order (every request carries the tool schema)",
+  },
+  "retrieval.similar-links": {
+    effect: "re-pinned",
+    requests: [10, 11, 12],
+    why: "a near-duplicate memory.insert result no longer carries the `similar` link",
+    approvedBy: "owner, 2026-11-08 (Task 7 question 1)",
+  },
+  "lifecycle.widen-narrow": {
+    effect: "re-pinned",
+    requests: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    why: "two model-visible strings changed: the `key` parameter description and the agent-scope write error",
+    approvedBy: "owner, 2026-11-08 (Task 7 question 2)",
+  },
+});
+
+/**
+ * Plan 210 Task 7: the slimmed product (the `P` baseline plans 216-223 compare against). The record carries the product
+ * hash, every removal with its evidence and its effect on the presets, the golden the byte-identical test pins, and the
+ * cache-stability pin for that hash. The pin is the 202 one: the prefix suite green, and an equivalence attestation (the
+ * pre-removal tree against this tree, answer path byte for byte) that names the product.
+ */
+export async function writeSlimmedRecord({ root = ".", run = runPrefixSuite } = {}) {
+  const decisions = JSON.parse(await readFile(join(root, DECISIONS_210), "utf8"));
+  const equivalenceText = await readFile(join(root, CACHE_STABILITY, "equivalence.json"), "utf8");
+  const equivalence = JSON.parse(equivalenceText);
+  const golden = await readFile(join(root, REMOVAL_GOLDEN), "utf8");
+  const suite = run(root);
+  const productHash = await sourceFingerprint(PREFIX_PRODUCT_PATHS, root);
+  const removals = decisions.removals.map((id) => {
+    const row = decisions.features.find((feature) => feature.feature === id);
+    const outcome = SLIMMED_OUTCOMES[id];
+    if (!row || !outcome) throw new Error(`SlimmedRecord: removal ${id} has no ledger row or recorded outcome`);
+    return {
+      feature: id,
+      section: row.section,
+      verdict: row.verdict,
+      reason: row.reason,
+      ...(row.conditional ? { conditional: true } : {}),
+      evidence:
+        row.section === "measured"
+          ? { kind: "wave-1 leave-one-out / add arm", arms: row.arms, cells: row.cells }
+          : { kind: "inert removal", approvedBy: row.approvedBy, condition: row.condition },
+      presets: outcome,
+    };
+  });
+  const record = {
+    kind: "210-slimmed-product-record",
+    version: 1,
+    plan: 210,
+    task: 7,
+    productHash,
+    harnessHash: await sourceFingerprint(HARNESS_PATHS, root),
+    productPaths: PREFIX_PRODUCT_PATHS,
+    removals,
+    experimental: decisions.experimental,
+    byteIdenticalTest: { file: REMOVAL_GOLDEN, sha256: createHash("sha256").update(golden).digest("hex") },
+    cacheStability: {
+      status: suite.fail === 0 && CACHE_STABILITY_TESTS.every((name) => suite.passed.includes(name)) ? "passed" : "failed",
+      suite: { files: CACHE_STABILITY_SUITE, ...suite },
+      equivalence: {
+        file: `${CACHE_STABILITY}/equivalence.json`,
+        sha256: createHash("sha256").update(equivalenceText).digest("hex"),
+        status: equivalence.status,
+        differingArms: equivalence.differingArms,
+        rerunArms: equivalence.rerunArms,
+        mergeWithPreChangeCells: equivalence.mergeWithPreChangeCells,
+        base: equivalence.base?.commit,
+        baseProductHash: equivalence.base?.productHash,
+      },
+    },
+    note: "Plans 216-223 compare against this product. A later change to packages/memory/fabric/src moves the hash; rerun `readiness.mjs --slimmed` for a new record, never edit this one.",
+  };
+  await writeFile(join(root, SLIMMED, "record.json"), `${JSON.stringify(record, null, 2)}\n`);
+  return record;
+}
+
+/** Pure verdict on a slimmed record: every removal listed once, the byte-identical golden and the cache pin intact. */
+export function slimmedRecordBlockers({ record, decisions, goldenSha256, equivalenceSha256 } = {}) {
+  const blockers = [];
+  if (!record) return ["slimmed-record-missing"];
+  const listed = (record.removals ?? []).map((row) => row.feature);
+  if (
+    JSON.stringify([...listed].sort()) !== JSON.stringify([...(decisions?.removals ?? [])].sort()) ||
+    new Set(listed).size !== listed.length
+  )
+    blockers.push("slimmed-removals-differ-from-the-decision-record");
+  if ((record.removals ?? []).some((row) => !row.evidence || !row.presets?.effect)) blockers.push("slimmed-removal-without-evidence");
+  if (record.byteIdenticalTest?.sha256 !== goldenSha256) blockers.push("slimmed-golden-changed");
+  const pin = record.cacheStability;
+  if (
+    pin?.status !== "passed" ||
+    pin.suite?.fail !== 0 ||
+    !CACHE_STABILITY_TESTS.every((name) => pin.suite?.passed?.includes(name)) ||
+    pin.equivalence?.sha256 !== equivalenceSha256 ||
+    !["identical", "different"].includes(pin.equivalence?.status) ||
+    pin.equivalence?.mergeWithPreChangeCells !== false
+  )
+    blockers.push("slimmed-cache-pin-failed");
+  return blockers;
 }
 
 /** JUnit is the only reporter that names passing tests when output is not a terminal. */
@@ -908,7 +1038,13 @@ export async function writeReadiness() {
 }
 
 if (import.meta.main) {
-  if (process.argv.includes("--cache-stability")) {
+  if (process.argv.includes("--slimmed")) {
+    const record = await writeSlimmedRecord();
+    console.log(
+      `slimmed ${record.cacheStability.status}: ${record.removals.length} removals; product ${record.productHash.slice(0, 12)}; equivalence ${record.cacheStability.equivalence.status}`,
+    );
+    process.exitCode = record.cacheStability.status === "passed" ? 0 : 1;
+  } else if (process.argv.includes("--cache-stability")) {
     const record = await writeCacheStabilityRecord();
     console.log(
       `cache-stability ${record.status}: ${record.suite.pass} pass / ${record.suite.fail} fail; equivalence ${record.equivalence.status}`,

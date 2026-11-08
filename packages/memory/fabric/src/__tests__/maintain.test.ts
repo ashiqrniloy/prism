@@ -64,8 +64,6 @@ describe("Maintenance capability gate (plan 188.4 Task 2)", () => {
       merged: 0,
       episodesMerged: 0,
       evicted: 0,
-      widened: 0,
-      superseded: 0,
       overBudget: [],
     });
   });

@@ -1,0 +1,2195 @@
+{
+  "kind": "210-decision-record",
+  "plan": 210,
+  "task": 6,
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "cleanupCriteriaHash": "ee1a7b5840477e69fff2b43dc4a908c96de4f8e0b3ca2c441eaadc304c934c80",
+  "reportManifestHash": "d5e1409401daf099ec97e7153cf718bfedfa9e5b90c3dd6f00dac72bb03f31f6",
+  "productHash": "b47f8b8ea26d2b5023e89ca82a72d835a4ffcf3c85fa74e316d54e82c0304fd0",
+  "partition": "dev",
+  "note": "Development evidence only. Every verdict is cleanupVerdict()'s; the owner supplies holds and written reasons, never a verdict.",
+  "owner": {
+    "decided": "2026-11-08",
+    "by": "owner (answers to the Task 6 review questions; the assistant wrote the reasons from the wave-1 report and the owner approved the recommended option)",
+    "inertApproval": "Approve all 11: the 9 inert features (retrieval.hybrid, workers.linker, workers.evolution, write.consolidate-model-decider, recall.state-wrapper, decisions.P1, decisions.P2, decisions.P6, scoped.policy) and the 2 conditional ones (retrieval.similar-links, lifecycle.widen-narrow), each as `remove` pending the byte-identical-preset test that Task 7 builds.",
+    "negativeOverrides": [
+      {
+        "feature": "retrieval.lexical",
+        "decided": "2026-11-08",
+        "by": "owner",
+        "reason": "The only evidence is the memory-off arm, which turns off all of memory and so does not isolate lexical retrieval. Its overall effect is +26 to +60 points on every suite and model. The negative rule fired on a single 12-question LoCoMo `adversarial` stratum (small model), where answering without memory is expected to win. Removing the core search is not a candidate.",
+        "scope": "waives only the per-ability CI trigger of the negative rule; a ledger `negative` status or a safety failure still removes the feature"
+      }
+    ],
+    "beamContradictionPrompt": {
+      "allowed": false,
+      "decision": "No. BEAM's published answer prompt stays in force for every headline number. Contradiction resolution is 0/4 under both recall and oracle, so no product change can move it. It is reported as a limit (0/4, no claim) and is not scored with a prompt that asks the model to surface contradictions."
+    },
+    "unmeasuredPolicy": "Every candidate that wave 1 did not measure is recorded `unmeasured`: not removed, and not moved to the experimental tier by this plan. Opt-in variants stay opt-in at their current defaults and default-on features stay on, as the plan's amendment of 2026-11-08 already says for the cancelled-wave rows. Plan 223 Task 3 lists them with no claim."
+  },
+  "totals": {
+    "ledgerRows": 108,
+    "measured": 9,
+    "inertRemoval": 11,
+    "transferred": 40,
+    "unmeasured": 31,
+    "accepted": 17
+  },
+  "removals": [
+    "retrieval.hybrid",
+    "retrieval.similar-links",
+    "workers.linker",
+    "workers.evolution",
+    "recall.supersession-hint",
+    "write.consolidate-model-decider",
+    "write.keyword-enrichment",
+    "timeline",
+    "recall.state-wrapper",
+    "lifecycle.widen-narrow",
+    "decisions.P1",
+    "decisions.P2",
+    "decisions.P6",
+    "scoped.policy"
+  ],
+  "experimental": [
+    "recall.multi-query",
+    "recall.unmatched-terms",
+    "recall.state-grouping",
+    "delivery.directory",
+    "navigation.agentic-lexical"
+  ],
+  "plan202Task5": [
+    {
+      "feature": "write.keyword-enrichment",
+      "cells": 10,
+      "pass": false,
+      "candidateGap": {
+        "pass": 0,
+        "miss": 8,
+        "inconclusive": 2
+      },
+      "unverified": 0,
+      "vetoed": 8
+    },
+    {
+      "feature": "navigation.agentic-lexical",
+      "cells": 10,
+      "pass": false,
+      "candidateGap": {
+        "pass": 0,
+        "miss": 8,
+        "inconclusive": 2
+      },
+      "unverified": 0,
+      "vetoed": 7
+    }
+  ],
+  "plan202Closure": [
+    {
+      "sourceTask": 4,
+      "title": "broad baseline / measurement",
+      "features": [
+        "preset.conversational",
+        "retrieval.lexical"
+      ],
+      "status": "partial",
+      "scored": [
+        "retrieval.lexical"
+      ]
+    },
+    {
+      "sourceTask": 5,
+      "title": "enrichment and navigation",
+      "features": [
+        "write.keyword-enrichment",
+        "navigation.agentic-lexical"
+      ],
+      "status": "scored",
+      "scored": [
+        "write.keyword-enrichment",
+        "navigation.agentic-lexical"
+      ]
+    },
+    {
+      "sourceTask": 6,
+      "title": "timeline",
+      "features": [
+        "timeline"
+      ],
+      "status": "scored",
+      "scored": [
+        "timeline"
+      ]
+    },
+    {
+      "sourceTask": 7,
+      "title": "state grouping / opt-in wrapper",
+      "features": [
+        "recall.state-grouping",
+        "recall.state-wrapper"
+      ],
+      "status": "partial",
+      "scored": [
+        "recall.state-grouping"
+      ]
+    },
+    {
+      "sourceTask": 8,
+      "title": "passive delivery",
+      "features": [
+        "delivery.precision-filter",
+        "delivery.passive-tail"
+      ],
+      "status": "unverified",
+      "scored": [],
+      "transferred": [
+        "delivery.passive-tail"
+      ]
+    },
+    {
+      "sourceTask": 9,
+      "title": "aggregation / abstention",
+      "features": [
+        "delivery.aggregation-abstention"
+      ],
+      "status": "unverified",
+      "scored": []
+    },
+    {
+      "sourceTask": 10,
+      "title": "weak-tool-caller adaptation",
+      "features": [
+        "delivery.weak-tool-caller"
+      ],
+      "status": "unverified",
+      "scored": []
+    },
+    {
+      "sourceTask": 11,
+      "title": "coding decisions",
+      "features": [
+        "kind.decision",
+        "delivery.path-cues",
+        "preset.coding"
+      ],
+      "status": "unverified",
+      "scored": []
+    },
+    {
+      "sourceTask": 12,
+      "title": "decision gates P1-P7",
+      "features": [
+        "decisions.binding",
+        "decisions.P1",
+        "decisions.P2",
+        "decisions.P3",
+        "decisions.P4",
+        "decisions.P5",
+        "decisions.P6",
+        "decisions.P7"
+      ],
+      "status": "unverified",
+      "scored": []
+    },
+    {
+      "sourceTask": 13,
+      "title": "typed-link association",
+      "features": [],
+      "status": "unverified",
+      "scored": []
+    },
+    {
+      "sourceTask": 14,
+      "title": "safety",
+      "features": [
+        "safety.trust-scan",
+        "safety.deletion-cascade",
+        "scope.isolation",
+        "safety.redaction"
+      ],
+      "status": "unverified",
+      "scored": []
+    },
+    {
+      "sourceTask": 15,
+      "title": "growth and scale",
+      "features": [
+        "lifecycle.archive-revival",
+        "lifecycle.capacity-eviction",
+        "lifecycle.exchange-capacity"
+      ],
+      "status": "unverified",
+      "scored": [],
+      "transferred": [
+        "lifecycle.archive-revival"
+      ]
+    },
+    {
+      "sourceTask": 16,
+      "title": "OM and promotion",
+      "features": [
+        "write.om-promotion",
+        "om.observer",
+        "om.reflector"
+      ],
+      "status": "transferred",
+      "scored": [],
+      "transferred": [
+        "write.om-promotion",
+        "om.observer",
+        "om.reflector"
+      ]
+    },
+    {
+      "sourceTask": 17,
+      "title": "facts / F4",
+      "features": [],
+      "status": "unverified",
+      "scored": []
+    }
+  ],
+  "f4": {
+    "disposition": "unmeasured",
+    "moved": "plan 219 Task 7 (amendment 7)"
+  },
+  "features": [
+    {
+      "feature": "retrieval.lexical",
+      "group": "retrieval",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "measured",
+      "computed": "keep",
+      "computedReason": "benefit",
+      "verdict": "keep",
+      "tier": "stable",
+      "reason": "benefit",
+      "arms": [
+        "memory-off"
+      ],
+      "cells": 4,
+      "effects": [
+        {
+          "arm": "memory-off",
+          "model": "large",
+          "suite": "locomo",
+          "n": 60,
+          "points": 38.3,
+          "ci95": [
+            20.5,
+            57.4
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "memory-off",
+          "model": "large",
+          "suite": "longmemeval-m",
+          "n": 50,
+          "points": 46,
+          "ci95": [
+            32,
+            60
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "memory-off",
+          "model": "small",
+          "suite": "locomo",
+          "n": 60,
+          "points": 28.3,
+          "ci95": [
+            12.5,
+            44.6
+          ],
+          "negativeStrata": [
+            {
+              "ability": "adversarial",
+              "n": 12,
+              "ci95": [
+                -61.1,
+                -11.1
+              ]
+            }
+          ]
+        },
+        {
+          "arm": "memory-off",
+          "model": "small",
+          "suite": "longmemeval-m",
+          "n": 50,
+          "points": 40,
+          "ci95": [
+            26,
+            54
+          ],
+          "negativeStrata": []
+        }
+      ],
+      "predictions": [
+        {
+          "arm": "memory-off",
+          "outcome": "hit"
+        }
+      ],
+      "plan202Task5": null
+    },
+    {
+      "feature": "retrieval.hybrid",
+      "group": "retrieval",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "inert-removal",
+      "verdict": "remove",
+      "tier": "removed",
+      "reason": "removal non-inferior",
+      "conditional": false,
+      "condition": "Task 7 byte-identical-preset test on the conversational and coding presets",
+      "approvedBy": "Approve all 11: the 9 inert features (retrieval.hybrid, workers.linker, workers.evolution, write.consolidate-model-decider, recall.state-wrapper, decisions.P1, decisions.P2, decisions.P6, scoped.policy) and the 2 conditional ones (retrieval.similar-links, lifecycle.widen-narrow), each as `remove` pending the byte-identical-preset test that Task 7 builds."
+    },
+    {
+      "feature": "retrieval.scope-priors",
+      "group": "retrieval",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: Task 3 assigned it to an instrument outside this campaign (gap-analysis.md)",
+      "unmeasuredKind": "measure-elsewhere",
+      "stays": "at its current default"
+    },
+    {
+      "feature": "retrieval.strength-priors",
+      "group": "retrieval",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: its arms were in a wave gate C-1 cancelled on 2026-11-08",
+      "unmeasuredKind": "wave-cancelled",
+      "cancelledArms": [
+        "strength-0.15"
+      ],
+      "stays": "at its current default"
+    },
+    {
+      "feature": "retrieval.decay-per-kind",
+      "group": "retrieval",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 220,
+      "reason": "non-declarative long-term memory and priming"
+    },
+    {
+      "feature": "retrieval.similar-links",
+      "group": "retrieval",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "inert-removal",
+      "verdict": "remove",
+      "tier": "removed",
+      "reason": "removal non-inferior",
+      "conditional": true,
+      "condition": "Task 7 byte-identical-preset test; a failure waits for a paid arm (none is open: gate C-1 is closed), so the owner decides then",
+      "approvedBy": "Approve all 11: the 9 inert features (retrieval.hybrid, workers.linker, workers.evolution, write.consolidate-model-decider, recall.state-wrapper, decisions.P1, decisions.P2, decisions.P6, scoped.policy) and the 2 conditional ones (retrieval.similar-links, lifecycle.widen-narrow), each as `remove` pending the byte-identical-preset test that Task 7 builds."
+    },
+    {
+      "feature": "workers.linker",
+      "group": "retrieval",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "inert-removal",
+      "verdict": "remove",
+      "tier": "removed",
+      "reason": "removal non-inferior",
+      "conditional": false,
+      "condition": "Task 7 byte-identical-preset test on the conversational and coding presets",
+      "approvedBy": "Approve all 11: the 9 inert features (retrieval.hybrid, workers.linker, workers.evolution, write.consolidate-model-decider, recall.state-wrapper, decisions.P1, decisions.P2, decisions.P6, scoped.policy) and the 2 conditional ones (retrieval.similar-links, lifecycle.widen-narrow), each as `remove` pending the byte-identical-preset test that Task 7 builds."
+    },
+    {
+      "feature": "workers.evolution",
+      "group": "retrieval",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "inert-removal",
+      "verdict": "remove",
+      "tier": "removed",
+      "reason": "removal non-inferior",
+      "conditional": false,
+      "condition": "Task 7 byte-identical-preset test on the conversational and coding presets",
+      "approvedBy": "Approve all 11: the 9 inert features (retrieval.hybrid, workers.linker, workers.evolution, write.consolidate-model-decider, recall.state-wrapper, decisions.P1, decisions.P2, decisions.P6, scoped.policy) and the 2 conditional ones (retrieval.similar-links, lifecycle.widen-narrow), each as `remove` pending the byte-identical-preset test that Task 7 builds."
+    },
+    {
+      "feature": "recall.kind-hints",
+      "group": "retrieval",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: Task 3 assigned it to an instrument outside this campaign (gap-analysis.md)",
+      "unmeasuredKind": "measure-elsewhere",
+      "stays": "at its current default"
+    },
+    {
+      "feature": "recall.multi-query",
+      "group": "retrieval",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "measured",
+      "computed": "inconclusive",
+      "computedReason": "removal not shown non-inferior",
+      "verdict": "owner-hold",
+      "tier": "experimental",
+      "reason": "Experimental tier. Removing the tool affordances (arm tool-affordances-loo) is not shown non-inferior: the CI lower bound is -7.3 to -17.9 points against the -2 margin, and the benefit CI lower bound is -4.4 (large) and -9.2 (small), so there is no keep reason either. Task 3's prediction missed. Kept in the experimental tier until a measured benefit or a non-inferior removal.",
+      "arms": [
+        "tool-affordances-loo"
+      ],
+      "cells": 4,
+      "effects": [
+        {
+          "arm": "tool-affordances-loo",
+          "model": "large",
+          "suite": "locomo",
+          "n": 60,
+          "points": 3.3,
+          "ci95": [
+            -4.4,
+            12
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "tool-affordances-loo",
+          "model": "large",
+          "suite": "beam-100k",
+          "n": 40,
+          "points": 0,
+          "ci95": [
+            -6.5,
+            7.3
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "tool-affordances-loo",
+          "model": "small",
+          "suite": "locomo",
+          "n": 60,
+          "points": 0,
+          "ci95": [
+            -9.2,
+            9.4
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "tool-affordances-loo",
+          "model": "small",
+          "suite": "beam-100k",
+          "n": 35,
+          "points": 2.9,
+          "ci95": [
+            -15.6,
+            17.9
+          ],
+          "negativeStrata": []
+        }
+      ],
+      "predictions": [
+        {
+          "arm": "tool-affordances-loo",
+          "outcome": "miss"
+        }
+      ],
+      "plan202Task5": null,
+      "ownerHold": "Experimental tier. Removing the tool affordances (arm tool-affordances-loo) is not shown non-inferior: the CI lower bound is -7.3 to -17.9 points against the -2 margin, and the benefit CI lower bound is -4.4 (large) and -9.2 (small), so there is no keep reason either. Task 3's prediction missed. Kept in the experimental tier until a measured benefit or a non-inferior removal."
+    },
+    {
+      "feature": "recall.unmatched-terms",
+      "group": "retrieval",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "measured",
+      "computed": "inconclusive",
+      "computedReason": "removal not shown non-inferior",
+      "verdict": "owner-hold",
+      "tier": "experimental",
+      "reason": "Experimental tier. It shares the tool-affordances-loo arm with recall.multi-query, so the evidence is the same: removal CI lower bound -7.3 to -17.9 points against the -2 margin, benefit CI lower bound below 0 on both answer models, prediction missed. Kept in the experimental tier until a measured benefit or a non-inferior removal.",
+      "arms": [
+        "tool-affordances-loo"
+      ],
+      "cells": 4,
+      "effects": [
+        {
+          "arm": "tool-affordances-loo",
+          "model": "large",
+          "suite": "locomo",
+          "n": 60,
+          "points": 3.3,
+          "ci95": [
+            -4.4,
+            12
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "tool-affordances-loo",
+          "model": "large",
+          "suite": "beam-100k",
+          "n": 40,
+          "points": 0,
+          "ci95": [
+            -6.5,
+            7.3
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "tool-affordances-loo",
+          "model": "small",
+          "suite": "locomo",
+          "n": 60,
+          "points": 0,
+          "ci95": [
+            -9.2,
+            9.4
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "tool-affordances-loo",
+          "model": "small",
+          "suite": "beam-100k",
+          "n": 35,
+          "points": 2.9,
+          "ci95": [
+            -15.6,
+            17.9
+          ],
+          "negativeStrata": []
+        }
+      ],
+      "predictions": [
+        {
+          "arm": "tool-affordances-loo",
+          "outcome": "miss"
+        }
+      ],
+      "plan202Task5": null,
+      "ownerHold": "Experimental tier. It shares the tool-affordances-loo arm with recall.multi-query, so the evidence is the same: removal CI lower bound -7.3 to -17.9 points against the -2 margin, benefit CI lower bound below 0 on both answer models, prediction missed. Kept in the experimental tier until a measured benefit or a non-inferior removal."
+    },
+    {
+      "feature": "recall.supersession-hint",
+      "group": "retrieval",
+      "ledgerStatus": "neutral",
+      "candidate": true,
+      "section": "measured",
+      "computed": "remove",
+      "computedReason": "negative",
+      "verdict": "remove",
+      "tier": "removed",
+      "reason": "negative",
+      "arms": [
+        "supersession-keyed-only"
+      ],
+      "cells": 6,
+      "effects": [
+        {
+          "arm": "supersession-keyed-only",
+          "model": "large",
+          "suite": "locomo",
+          "n": 60,
+          "points": -1.7,
+          "ci95": [
+            -10,
+            4.9
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "supersession-keyed-only",
+          "model": "large",
+          "suite": "beam-100k",
+          "n": 40,
+          "points": -2.5,
+          "ci95": [
+            -12.1,
+            4.9
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "supersession-keyed-only",
+          "model": "large",
+          "suite": "longmemeval-m",
+          "n": 50,
+          "points": 2,
+          "ci95": [
+            -6,
+            10
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "supersession-keyed-only",
+          "model": "small",
+          "suite": "locomo",
+          "n": 60,
+          "points": -3.3,
+          "ci95": [
+            -10.3,
+            3.1
+          ],
+          "negativeStrata": [
+            {
+              "ability": "temporal",
+              "n": 12,
+              "ci95": [
+                -50,
+                -6.7
+              ]
+            }
+          ]
+        },
+        {
+          "arm": "supersession-keyed-only",
+          "model": "small",
+          "suite": "beam-100k",
+          "n": 36,
+          "points": 0,
+          "ci95": [
+            -14,
+            17.1
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "supersession-keyed-only",
+          "model": "small",
+          "suite": "longmemeval-m",
+          "n": 48,
+          "points": 2.1,
+          "ci95": [
+            -6.2,
+            10.4
+          ],
+          "negativeStrata": []
+        }
+      ],
+      "predictions": [
+        {
+          "arm": "supersession-keyed-only",
+          "outcome": "miss"
+        }
+      ],
+      "plan202Task5": null
+    },
+    {
+      "feature": "recall.expansion",
+      "group": "retrieval",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: its arms were in a wave gate C-1 cancelled on 2026-11-08",
+      "unmeasuredKind": "wave-cancelled",
+      "cancelledArms": [
+        "expansion"
+      ],
+      "stays": "at its current default"
+    },
+    {
+      "feature": "recall.gather",
+      "group": "retrieval",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: its arms were in a wave gate C-1 cancelled on 2026-11-08",
+      "unmeasuredKind": "wave-cancelled",
+      "cancelledArms": [
+        "gather"
+      ],
+      "stays": "at its current default"
+    },
+    {
+      "feature": "write.consolidate-default",
+      "group": "write",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: Task 3 assigned it to an instrument outside this campaign (gap-analysis.md)",
+      "unmeasuredKind": "measure-elsewhere",
+      "stays": "at its current default"
+    },
+    {
+      "feature": "write.consolidate-model-decider",
+      "group": "write",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "inert-removal",
+      "verdict": "remove",
+      "tier": "removed",
+      "reason": "removal non-inferior",
+      "conditional": false,
+      "condition": "Task 7 byte-identical-preset test on the conversational and coding presets",
+      "approvedBy": "Approve all 11: the 9 inert features (retrieval.hybrid, workers.linker, workers.evolution, write.consolidate-model-decider, recall.state-wrapper, decisions.P1, decisions.P2, decisions.P6, scoped.policy) and the 2 conditional ones (retrieval.similar-links, lifecycle.widen-narrow), each as `remove` pending the byte-identical-preset test that Task 7 builds."
+    },
+    {
+      "feature": "write.session-consolidation",
+      "group": "write",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 219,
+      "reason": "Rehearsal and declarative long-term memory"
+    },
+    {
+      "feature": "write.om-promotion",
+      "group": "write",
+      "ledgerStatus": "neutral",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 219,
+      "reason": "Rehearsal and declarative long-term memory"
+    },
+    {
+      "feature": "write.exchange-archive",
+      "group": "write",
+      "ledgerStatus": "benefit",
+      "candidate": false,
+      "section": "accepted",
+      "verdict": "keep",
+      "reason": "ledger status benefit: accepted evidence, not re-decided"
+    },
+    {
+      "feature": "write.keyword-enrichment",
+      "group": "write",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "measured",
+      "computed": "remove",
+      "computedReason": "negative",
+      "verdict": "remove",
+      "tier": "removed",
+      "reason": "negative",
+      "arms": [
+        "enrichment-loo"
+      ],
+      "cells": 10,
+      "effects": [
+        {
+          "arm": "enrichment-loo",
+          "model": "large",
+          "suite": "memoryagentbench-cr",
+          "n": 20,
+          "points": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "enrichment-loo",
+          "model": "large",
+          "suite": "beam-100k",
+          "n": 40,
+          "points": 5,
+          "ci95": [
+            0,
+            12.9
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "enrichment-loo",
+          "model": "large",
+          "suite": "locomo",
+          "n": 60,
+          "points": -8.3,
+          "ci95": [
+            -13.6,
+            -3.3
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "enrichment-loo",
+          "model": "large",
+          "suite": "beam-1m",
+          "n": 40,
+          "points": -5,
+          "ci95": [
+            -14.3,
+            5.3
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "enrichment-loo",
+          "model": "large",
+          "suite": "longmemeval-m",
+          "n": 50,
+          "points": -4,
+          "ci95": [
+            -16,
+            6
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "enrichment-loo",
+          "model": "small",
+          "suite": "memoryagentbench-cr",
+          "n": 18,
+          "points": -5.6,
+          "ci95": [
+            -21.4,
+            0
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "enrichment-loo",
+          "model": "small",
+          "suite": "beam-100k",
+          "n": 36,
+          "points": 2.8,
+          "ci95": [
+            -10.3,
+            13.9
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "enrichment-loo",
+          "model": "small",
+          "suite": "locomo",
+          "n": 60,
+          "points": -1.7,
+          "ci95": [
+            -10.6,
+            6.9
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "enrichment-loo",
+          "model": "small",
+          "suite": "beam-1m",
+          "n": 35,
+          "points": -11.4,
+          "ci95": [
+            -25.8,
+            0
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "enrichment-loo",
+          "model": "small",
+          "suite": "longmemeval-m",
+          "n": 47,
+          "points": 0,
+          "ci95": [
+            -12.8,
+            12.8
+          ],
+          "negativeStrata": []
+        }
+      ],
+      "predictions": [
+        {
+          "arm": "enrichment-loo",
+          "outcome": "not-scored"
+        }
+      ],
+      "plan202Task5": {
+        "cells": 10,
+        "pass": false,
+        "candidateGap": {
+          "pass": 0,
+          "miss": 8,
+          "inconclusive": 2
+        },
+        "unverified": 0,
+        "vetoed": 8
+      }
+    },
+    {
+      "feature": "write.exchange-steps",
+      "group": "write",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 219,
+      "reason": "Rehearsal and declarative long-term memory"
+    },
+    {
+      "feature": "timeline",
+      "group": "write",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "measured",
+      "computed": "remove",
+      "computedReason": "negative",
+      "verdict": "remove",
+      "tier": "removed",
+      "reason": "negative",
+      "arms": [
+        "timeline-loo"
+      ],
+      "cells": 4,
+      "effects": [
+        {
+          "arm": "timeline-loo",
+          "model": "large",
+          "suite": "longmemeval-m",
+          "n": 50,
+          "points": 6,
+          "ci95": [
+            -6,
+            18
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "timeline-loo",
+          "model": "large",
+          "suite": "locomo",
+          "n": 60,
+          "points": -6.7,
+          "ci95": [
+            -15.5,
+            3.6
+          ],
+          "negativeStrata": [
+            {
+              "ability": "temporal",
+              "n": 12,
+              "ci95": [
+                -46.2,
+                -7.7
+              ]
+            }
+          ]
+        },
+        {
+          "arm": "timeline-loo",
+          "model": "small",
+          "suite": "longmemeval-m",
+          "n": 49,
+          "points": -2,
+          "ci95": [
+            -14.3,
+            10.2
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "timeline-loo",
+          "model": "small",
+          "suite": "locomo",
+          "n": 60,
+          "points": -1.7,
+          "ci95": [
+            -7.8,
+            5.9
+          ],
+          "negativeStrata": []
+        }
+      ],
+      "predictions": [
+        {
+          "arm": "timeline-loo",
+          "outcome": "miss"
+        }
+      ],
+      "plan202Task5": null
+    },
+    {
+      "feature": "recall.state-grouping",
+      "group": "write",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "measured",
+      "computed": "inconclusive",
+      "computedReason": "removal not shown non-inferior",
+      "verdict": "owner-hold",
+      "tier": "experimental",
+      "reason": "Experimental tier. Removal is not shown non-inferior (CI lower bound -4.5 to -21.3 points against the -2 margin) and the benefit CI lower bound is -15.4 (large) and -4.3 (small). Task 3's prediction missed. Kept in the experimental tier until a measured benefit or a non-inferior removal.",
+      "arms": [
+        "grouping-loo"
+      ],
+      "cells": 4,
+      "effects": [
+        {
+          "arm": "grouping-loo",
+          "model": "large",
+          "suite": "longmemeval-m",
+          "n": 50,
+          "points": -6,
+          "ci95": [
+            -18,
+            6
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "grouping-loo",
+          "model": "large",
+          "suite": "beam-100k",
+          "n": 40,
+          "points": -5,
+          "ci95": [
+            -15.4,
+            4.5
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "grouping-loo",
+          "model": "small",
+          "suite": "longmemeval-m",
+          "n": 47,
+          "points": 8.5,
+          "ci95": [
+            -4.3,
+            21.3
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "grouping-loo",
+          "model": "small",
+          "suite": "beam-100k",
+          "n": 36,
+          "points": 5.6,
+          "ci95": [
+            -5.7,
+            15.4
+          ],
+          "negativeStrata": []
+        }
+      ],
+      "predictions": [
+        {
+          "arm": "grouping-loo",
+          "outcome": "miss"
+        }
+      ],
+      "plan202Task5": null,
+      "ownerHold": "Experimental tier. Removal is not shown non-inferior (CI lower bound -4.5 to -21.3 points against the -2 margin) and the benefit CI lower bound is -15.4 (large) and -4.3 (small). Task 3's prediction missed. Kept in the experimental tier until a measured benefit or a non-inferior removal."
+    },
+    {
+      "feature": "recall.state-wrapper",
+      "group": "write",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "inert-removal",
+      "verdict": "remove",
+      "tier": "removed",
+      "reason": "removal non-inferior",
+      "conditional": false,
+      "condition": "Task 7 byte-identical-preset test on the conversational and coding presets",
+      "approvedBy": "Approve all 11: the 9 inert features (retrieval.hybrid, workers.linker, workers.evolution, write.consolidate-model-decider, recall.state-wrapper, decisions.P1, decisions.P2, decisions.P6, scoped.policy) and the 2 conditional ones (retrieval.similar-links, lifecycle.widen-narrow), each as `remove` pending the byte-identical-preset test that Task 7 builds."
+    },
+    {
+      "feature": "tools.explicit-writes",
+      "group": "write",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: Task 3 assigned it to an instrument outside this campaign (gap-analysis.md)",
+      "unmeasuredKind": "measure-elsewhere",
+      "stays": "at its current default"
+    },
+    {
+      "feature": "lifecycle.verification",
+      "group": "lifecycle",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 219,
+      "reason": "Rehearsal and declarative long-term memory"
+    },
+    {
+      "feature": "lifecycle.archive-revival",
+      "group": "lifecycle",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 221,
+      "reason": "Sleep"
+    },
+    {
+      "feature": "lifecycle.capacity-eviction",
+      "group": "lifecycle",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: Task 3 assigned it to an instrument outside this campaign (gap-analysis.md)",
+      "unmeasuredKind": "measure-elsewhere",
+      "stays": "at its current default"
+    },
+    {
+      "feature": "lifecycle.exchange-capacity",
+      "group": "lifecycle",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured by a model run: only the offline growth stream measured it (210/offline/growth-*); its p95 half is not measured",
+      "unmeasuredKind": "offline-only",
+      "stays": "at its current default"
+    },
+    {
+      "feature": "lifecycle.duplicate-merge",
+      "group": "lifecycle",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 221,
+      "reason": "Sleep"
+    },
+    {
+      "feature": "lifecycle.episode-merge",
+      "group": "lifecycle",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 216,
+      "reason": "retired by owner decision (memory model, 2026-11-08)"
+    },
+    {
+      "feature": "lifecycle.widen-narrow",
+      "group": "lifecycle",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "inert-removal",
+      "verdict": "remove",
+      "tier": "removed",
+      "reason": "removal non-inferior",
+      "conditional": true,
+      "condition": "Task 7 byte-identical-preset test; a failure waits for a paid arm (none is open: gate C-1 is closed), so the owner decides then",
+      "approvedBy": "Approve all 11: the 9 inert features (retrieval.hybrid, workers.linker, workers.evolution, write.consolidate-model-decider, recall.state-wrapper, decisions.P1, decisions.P2, decisions.P6, scoped.policy) and the 2 conditional ones (retrieval.similar-links, lifecycle.widen-narrow), each as `remove` pending the byte-identical-preset test that Task 7 builds."
+    },
+    {
+      "feature": "lifecycle.maintain",
+      "group": "lifecycle",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 221,
+      "reason": "Sleep"
+    },
+    {
+      "feature": "scope.user",
+      "group": "scopes",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: Task 3 assigned it to an instrument outside this campaign (gap-analysis.md)",
+      "unmeasuredKind": "measure-elsewhere",
+      "stays": "at its current default"
+    },
+    {
+      "feature": "scope.project",
+      "group": "scopes",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: Task 3 assigned it to an instrument outside this campaign (gap-analysis.md)",
+      "unmeasuredKind": "measure-elsewhere",
+      "stays": "at its current default"
+    },
+    {
+      "feature": "scope.path",
+      "group": "scopes",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: Task 3 assigned it to an instrument outside this campaign (gap-analysis.md)",
+      "unmeasuredKind": "measure-elsewhere",
+      "stays": "at its current default"
+    },
+    {
+      "feature": "scope.agent",
+      "group": "scopes",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: Task 3 assigned it to an instrument outside this campaign (gap-analysis.md)",
+      "unmeasuredKind": "measure-elsewhere",
+      "stays": "at its current default"
+    },
+    {
+      "feature": "scope.team-store",
+      "group": "scopes",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: Task 3 assigned it to an instrument outside this campaign (gap-analysis.md)",
+      "unmeasuredKind": "measure-elsewhere",
+      "stays": "at its current default"
+    },
+    {
+      "feature": "scope.shadowing",
+      "group": "scopes",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: Task 3 assigned it to an instrument outside this campaign (gap-analysis.md)",
+      "unmeasuredKind": "measure-elsewhere",
+      "stays": "at its current default"
+    },
+    {
+      "feature": "scope.isolation",
+      "group": "scopes",
+      "ledgerStatus": "safety-proven",
+      "candidate": false,
+      "section": "accepted",
+      "verdict": "keep",
+      "reason": "ledger status safety-proven: accepted evidence, not re-decided"
+    },
+    {
+      "feature": "delivery.passive-tail",
+      "group": "delivery",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 220,
+      "reason": "non-declarative long-term memory and priming"
+    },
+    {
+      "feature": "delivery.precision-filter",
+      "group": "delivery",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: its arms were in a wave gate C-1 cancelled on 2026-11-08",
+      "unmeasuredKind": "wave-cancelled",
+      "cancelledArms": [
+        "precision-filter"
+      ],
+      "stays": "at its current default"
+    },
+    {
+      "feature": "delivery.weak-tool-caller",
+      "group": "delivery",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: Task 3 assigned it to an instrument outside this campaign (gap-analysis.md)",
+      "unmeasuredKind": "measure-elsewhere",
+      "stays": "at its current default"
+    },
+    {
+      "feature": "delivery.aggregation-abstention",
+      "group": "delivery",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: its arms were in a wave gate C-1 cancelled on 2026-11-08",
+      "unmeasuredKind": "wave-cancelled",
+      "cancelledArms": [
+        "aggregation-loo"
+      ],
+      "stays": "at its current default"
+    },
+    {
+      "feature": "delivery.directory",
+      "group": "delivery",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "measured",
+      "computed": "inconclusive",
+      "computedReason": "removal not shown non-inferior",
+      "verdict": "owner-hold",
+      "tier": "experimental",
+      "reason": "Experimental tier. Removal is not shown non-inferior on LoCoMo (CI lower bound -14.9 large, -9.8 small) and the benefit CI lower bound is -4.4 (large) and -8.2 (small). Task 3's prediction missed. Kept in the experimental tier until a measured benefit or a non-inferior removal.",
+      "arms": [
+        "directory-loo"
+      ],
+      "cells": 4,
+      "effects": [
+        {
+          "arm": "directory-loo",
+          "model": "large",
+          "suite": "locomo",
+          "n": 60,
+          "points": 5,
+          "ci95": [
+            -4.4,
+            14.9
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "directory-loo",
+          "model": "large",
+          "suite": "longmemeval-m",
+          "n": 50,
+          "points": -4,
+          "ci95": [
+            -14,
+            6
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "directory-loo",
+          "model": "small",
+          "suite": "locomo",
+          "n": 60,
+          "points": 0,
+          "ci95": [
+            -8.2,
+            9.8
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "directory-loo",
+          "model": "small",
+          "suite": "longmemeval-m",
+          "n": 48,
+          "points": -4.2,
+          "ci95": [
+            -10.4,
+            0
+          ],
+          "negativeStrata": []
+        }
+      ],
+      "predictions": [
+        {
+          "arm": "directory-loo",
+          "outcome": "miss"
+        }
+      ],
+      "plan202Task5": null,
+      "ownerHold": "Experimental tier. Removal is not shown non-inferior on LoCoMo (CI lower bound -14.9 large, -9.8 small) and the benefit CI lower bound is -4.4 (large) and -8.2 (small). Task 3's prediction missed. Kept in the experimental tier until a measured benefit or a non-inferior removal."
+    },
+    {
+      "feature": "delivery.standing-rules",
+      "group": "delivery",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 220,
+      "reason": "non-declarative long-term memory and priming"
+    },
+    {
+      "feature": "delivery.rule-capture",
+      "group": "delivery",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 220,
+      "reason": "non-declarative long-term memory and priming"
+    },
+    {
+      "feature": "delivery.rules-md-reconcile",
+      "group": "delivery",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: Task 3 assigned it to an instrument outside this campaign (gap-analysis.md)",
+      "unmeasuredKind": "measure-elsewhere",
+      "stays": "at its current default"
+    },
+    {
+      "feature": "delivery.path-cues",
+      "group": "delivery",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: Task 3 assigned it to an instrument outside this campaign (gap-analysis.md)",
+      "unmeasuredKind": "measure-elsewhere",
+      "stays": "on (preset member)"
+    },
+    {
+      "feature": "delivery.working-memory",
+      "group": "delivery",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 216,
+      "reason": "retired by owner decision (memory model, 2026-11-08)"
+    },
+    {
+      "feature": "decisions.binding",
+      "group": "delivery",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: Task 3 assigned it to an instrument outside this campaign (gap-analysis.md)",
+      "unmeasuredKind": "measure-elsewhere",
+      "stays": "at its current default"
+    },
+    {
+      "feature": "decisions.P1",
+      "group": "delivery",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "inert-removal",
+      "verdict": "remove",
+      "tier": "removed",
+      "reason": "removal non-inferior",
+      "conditional": false,
+      "condition": "Task 7 byte-identical-preset test on the conversational and coding presets",
+      "approvedBy": "Approve all 11: the 9 inert features (retrieval.hybrid, workers.linker, workers.evolution, write.consolidate-model-decider, recall.state-wrapper, decisions.P1, decisions.P2, decisions.P6, scoped.policy) and the 2 conditional ones (retrieval.similar-links, lifecycle.widen-narrow), each as `remove` pending the byte-identical-preset test that Task 7 builds."
+    },
+    {
+      "feature": "decisions.P2",
+      "group": "delivery",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "inert-removal",
+      "verdict": "remove",
+      "tier": "removed",
+      "reason": "removal non-inferior",
+      "conditional": false,
+      "condition": "Task 7 byte-identical-preset test on the conversational and coding presets",
+      "approvedBy": "Approve all 11: the 9 inert features (retrieval.hybrid, workers.linker, workers.evolution, write.consolidate-model-decider, recall.state-wrapper, decisions.P1, decisions.P2, decisions.P6, scoped.policy) and the 2 conditional ones (retrieval.similar-links, lifecycle.widen-narrow), each as `remove` pending the byte-identical-preset test that Task 7 builds."
+    },
+    {
+      "feature": "decisions.P3",
+      "group": "delivery",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: its arms were in a wave gate C-1 cancelled on 2026-11-08",
+      "unmeasuredKind": "wave-cancelled",
+      "cancelledArms": [
+        "decisions-p3"
+      ],
+      "stays": "at its current default"
+    },
+    {
+      "feature": "decisions.P4",
+      "group": "delivery",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: its arms were in a wave gate C-1 cancelled on 2026-11-08",
+      "unmeasuredKind": "wave-cancelled",
+      "cancelledArms": [
+        "W.decisions-p4"
+      ],
+      "stays": "at its current default"
+    },
+    {
+      "feature": "decisions.P5",
+      "group": "delivery",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: its arms were in a wave gate C-1 cancelled on 2026-11-08",
+      "unmeasuredKind": "wave-cancelled",
+      "cancelledArms": [
+        "decisions-p5"
+      ],
+      "stays": "at its current default"
+    },
+    {
+      "feature": "decisions.P6",
+      "group": "delivery",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "inert-removal",
+      "verdict": "remove",
+      "tier": "removed",
+      "reason": "removal non-inferior",
+      "conditional": false,
+      "condition": "Task 7 byte-identical-preset test on the conversational and coding presets",
+      "approvedBy": "Approve all 11: the 9 inert features (retrieval.hybrid, workers.linker, workers.evolution, write.consolidate-model-decider, recall.state-wrapper, decisions.P1, decisions.P2, decisions.P6, scoped.policy) and the 2 conditional ones (retrieval.similar-links, lifecycle.widen-narrow), each as `remove` pending the byte-identical-preset test that Task 7 builds."
+    },
+    {
+      "feature": "decisions.P7",
+      "group": "delivery",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: Task 3 assigned it to an instrument outside this campaign (gap-analysis.md)",
+      "unmeasuredKind": "measure-elsewhere",
+      "stays": "at its current default"
+    },
+    {
+      "feature": "kind.episode",
+      "group": "kinds",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 216,
+      "reason": "retired by owner decision (memory model, 2026-11-08)"
+    },
+    {
+      "feature": "kind.fact",
+      "group": "kinds",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: Task 3 assigned it to an instrument outside this campaign (gap-analysis.md)",
+      "unmeasuredKind": "measure-elsewhere",
+      "stays": "at its current default"
+    },
+    {
+      "feature": "kind.preference",
+      "group": "kinds",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: Task 3 assigned it to an instrument outside this campaign (gap-analysis.md)",
+      "unmeasuredKind": "measure-elsewhere",
+      "stays": "at its current default"
+    },
+    {
+      "feature": "kind.procedure",
+      "group": "kinds",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 220,
+      "reason": "non-declarative long-term memory and priming"
+    },
+    {
+      "feature": "kind.decision",
+      "group": "kinds",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: Task 3 assigned it to an instrument outside this campaign (gap-analysis.md)",
+      "unmeasuredKind": "measure-elsewhere",
+      "stays": "at its current default"
+    },
+    {
+      "feature": "kind.file",
+      "group": "kinds",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: Task 3 assigned it to an instrument outside this campaign (gap-analysis.md)",
+      "unmeasuredKind": "measure-elsewhere",
+      "stays": "at its current default"
+    },
+    {
+      "feature": "kind.exchange",
+      "group": "kinds",
+      "ledgerStatus": "benefit",
+      "candidate": false,
+      "section": "accepted",
+      "verdict": "keep",
+      "reason": "ledger status benefit: accepted evidence, not re-decided"
+    },
+    {
+      "feature": "kind.concept",
+      "group": "kinds",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 216,
+      "reason": "extracted into the wiki; verdict in plan 222"
+    },
+    {
+      "feature": "lessons",
+      "group": "kinds",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 220,
+      "reason": "non-declarative long-term memory and priming"
+    },
+    {
+      "feature": "ontology.tier",
+      "group": "ontology",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 216,
+      "reason": "extracted into the wiki; verdict in plan 222"
+    },
+    {
+      "feature": "ontology.binding-deterministic",
+      "group": "ontology",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 216,
+      "reason": "extracted into the wiki; verdict in plan 222"
+    },
+    {
+      "feature": "ontology.binding-extractor",
+      "group": "ontology",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 216,
+      "reason": "extracted into the wiki; verdict in plan 222"
+    },
+    {
+      "feature": "ontology.curator-pass",
+      "group": "ontology",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 216,
+      "reason": "extracted into the wiki; verdict in plan 222"
+    },
+    {
+      "feature": "ontology.trigger.co-read",
+      "group": "ontology",
+      "ledgerStatus": "neutral",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 216,
+      "reason": "extracted into the wiki; verdict in plan 222"
+    },
+    {
+      "feature": "ontology.trigger.accumulation",
+      "group": "ontology",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 216,
+      "reason": "extracted into the wiki; verdict in plan 222"
+    },
+    {
+      "feature": "ontology.trigger.repair",
+      "group": "ontology",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 216,
+      "reason": "extracted into the wiki; verdict in plan 222"
+    },
+    {
+      "feature": "ontology.concept-prior",
+      "group": "ontology",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 216,
+      "reason": "extracted into the wiki; verdict in plan 222"
+    },
+    {
+      "feature": "ontology.passive-pointer",
+      "group": "ontology",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 216,
+      "reason": "extracted into the wiki; verdict in plan 222"
+    },
+    {
+      "feature": "ontology.concept-sharing",
+      "group": "ontology",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 216,
+      "reason": "extracted into the wiki; verdict in plan 222"
+    },
+    {
+      "feature": "ontology.claim-lint",
+      "group": "ontology",
+      "ledgerStatus": "safety-proven",
+      "candidate": false,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 216,
+      "reason": "moves with the wiki; stays safety-proven"
+    },
+    {
+      "feature": "ontology.source-ingest",
+      "group": "ontology",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 216,
+      "reason": "extracted into the wiki; verdict in plan 222"
+    },
+    {
+      "feature": "ontology.coding-o6",
+      "group": "ontology",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 216,
+      "reason": "extracted into the wiki; verdict in plan 222"
+    },
+    {
+      "feature": "om.observer",
+      "group": "om",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 217,
+      "reason": "short-term memory"
+    },
+    {
+      "feature": "om.reflector",
+      "group": "om",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 218,
+      "reason": "working memory"
+    },
+    {
+      "feature": "om.dropper-model",
+      "group": "om",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 219,
+      "reason": "Rehearsal and declarative long-term memory"
+    },
+    {
+      "feature": "om.dropper-lowest-relevance",
+      "group": "om",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 219,
+      "reason": "Rehearsal and declarative long-term memory"
+    },
+    {
+      "feature": "om.task-state",
+      "group": "om",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 217,
+      "reason": "short-term memory"
+    },
+    {
+      "feature": "om.compaction",
+      "group": "om",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 218,
+      "reason": "working memory"
+    },
+    {
+      "feature": "om.recall-tool",
+      "group": "om",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 219,
+      "reason": "Rehearsal and declarative long-term memory"
+    },
+    {
+      "feature": "om.pinned-context",
+      "group": "om",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 218,
+      "reason": "working memory"
+    },
+    {
+      "feature": "om.commands",
+      "group": "om",
+      "ledgerStatus": "safety-proven",
+      "candidate": false,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 216,
+      "reason": "carried into the new package; stays safety-proven"
+    },
+    {
+      "feature": "om.worker-limits",
+      "group": "om",
+      "ledgerStatus": "safety-proven",
+      "candidate": false,
+      "section": "transferred",
+      "verdict": "transferred",
+      "plan": 216,
+      "reason": "carried into the new package; stays safety-proven"
+    },
+    {
+      "feature": "preset.conversational",
+      "group": "presets",
+      "ledgerStatus": "benefit",
+      "candidate": false,
+      "section": "accepted",
+      "verdict": "keep",
+      "reason": "ledger status benefit: accepted evidence, not re-decided"
+    },
+    {
+      "feature": "preset.coding",
+      "group": "presets",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: Task 3 assigned it to an instrument outside this campaign (gap-analysis.md)",
+      "unmeasuredKind": "measure-elsewhere",
+      "stays": "at its current default"
+    },
+    {
+      "feature": "okf.markdown-files",
+      "group": "safety",
+      "ledgerStatus": "safety-proven",
+      "candidate": false,
+      "section": "accepted",
+      "verdict": "keep",
+      "reason": "ledger status safety-proven: accepted evidence, not re-decided"
+    },
+    {
+      "feature": "okf.export-import",
+      "group": "safety",
+      "ledgerStatus": "safety-proven",
+      "candidate": false,
+      "section": "accepted",
+      "verdict": "keep",
+      "reason": "ledger status safety-proven: accepted evidence, not re-decided"
+    },
+    {
+      "feature": "okf.forward-compat",
+      "group": "safety",
+      "ledgerStatus": "safety-proven",
+      "candidate": false,
+      "section": "accepted",
+      "verdict": "keep",
+      "reason": "ledger status safety-proven: accepted evidence, not re-decided"
+    },
+    {
+      "feature": "safety.trust-scan",
+      "group": "safety",
+      "ledgerStatus": "safety-proven",
+      "candidate": false,
+      "section": "accepted",
+      "verdict": "keep",
+      "reason": "ledger status safety-proven: accepted evidence, not re-decided"
+    },
+    {
+      "feature": "safety.redaction",
+      "group": "safety",
+      "ledgerStatus": "safety-proven",
+      "candidate": false,
+      "section": "accepted",
+      "verdict": "keep",
+      "reason": "ledger status safety-proven: accepted evidence, not re-decided"
+    },
+    {
+      "feature": "safety.deletion-cascade",
+      "group": "safety",
+      "ledgerStatus": "safety-proven",
+      "candidate": false,
+      "section": "accepted",
+      "verdict": "keep",
+      "reason": "ledger status safety-proven: accepted evidence, not re-decided"
+    },
+    {
+      "feature": "safety.provenance",
+      "group": "safety",
+      "ledgerStatus": "safety-proven",
+      "candidate": false,
+      "section": "accepted",
+      "verdict": "keep",
+      "reason": "ledger status safety-proven: accepted evidence, not re-decided"
+    },
+    {
+      "feature": "safety.legal-holds",
+      "group": "safety",
+      "ledgerStatus": "safety-proven",
+      "candidate": false,
+      "section": "accepted",
+      "verdict": "keep",
+      "reason": "ledger status safety-proven: accepted evidence, not re-decided"
+    },
+    {
+      "feature": "safety.consent",
+      "group": "safety",
+      "ledgerStatus": "safety-proven",
+      "candidate": false,
+      "section": "accepted",
+      "verdict": "keep",
+      "reason": "ledger status safety-proven: accepted evidence, not re-decided"
+    },
+    {
+      "feature": "safety.file-jail",
+      "group": "safety",
+      "ledgerStatus": "safety-proven",
+      "candidate": false,
+      "section": "accepted",
+      "verdict": "keep",
+      "reason": "ledger status safety-proven: accepted evidence, not re-decided"
+    },
+    {
+      "feature": "safety.resource-limits",
+      "group": "safety",
+      "ledgerStatus": "safety-proven",
+      "candidate": false,
+      "section": "accepted",
+      "verdict": "keep",
+      "reason": "ledger status safety-proven: accepted evidence, not re-decided"
+    },
+    {
+      "feature": "stores.durable",
+      "group": "safety",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "unmeasured",
+      "verdict": "unmeasured",
+      "reason": "unmeasured: Task 3 assigned it to an instrument outside this campaign (gap-analysis.md)",
+      "unmeasuredKind": "measure-elsewhere",
+      "stays": "at its current default"
+    },
+    {
+      "feature": "fabric.toggle-status",
+      "group": "safety",
+      "ledgerStatus": "safety-proven",
+      "candidate": false,
+      "section": "accepted",
+      "verdict": "keep",
+      "reason": "ledger status safety-proven: accepted evidence, not re-decided"
+    },
+    {
+      "feature": "scoped.policy",
+      "group": "safety",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "inert-removal",
+      "verdict": "remove",
+      "tier": "removed",
+      "reason": "removal non-inferior",
+      "conditional": false,
+      "condition": "Task 7 byte-identical-preset test on the conversational and coding presets",
+      "approvedBy": "Approve all 11: the 9 inert features (retrieval.hybrid, workers.linker, workers.evolution, write.consolidate-model-decider, recall.state-wrapper, decisions.P1, decisions.P2, decisions.P6, scoped.policy) and the 2 conditional ones (retrieval.similar-links, lifecycle.widen-narrow), each as `remove` pending the byte-identical-preset test that Task 7 builds."
+    },
+    {
+      "feature": "navigation.agentic-lexical",
+      "group": "retrieval",
+      "ledgerStatus": "unmeasured",
+      "candidate": true,
+      "section": "measured",
+      "computed": "inconclusive",
+      "computedReason": "removal not shown non-inferior",
+      "verdict": "owner-hold",
+      "tier": "experimental",
+      "reason": "Experimental tier. It missed the frozen plan 202 Task 5 rules (candidate-gap halving and the ability veto), which bars a keep on benefit, and removal is not shown non-inferior (CI lower bound as low as -20 points on MemoryAgentBench-CR and -17.1 on BEAM-1M against the -2 margin). The tool is how an agent pages through neighbours and sessions, and the wave-1 losses say removing it could harm. Kept in the experimental tier until a measured benefit or a non-inferior removal.",
+      "arms": [
+        "navigation-loo"
+      ],
+      "cells": 10,
+      "effects": [
+        {
+          "arm": "navigation-loo",
+          "model": "large",
+          "suite": "memoryagentbench-cr",
+          "n": 20,
+          "points": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "navigation-loo",
+          "model": "large",
+          "suite": "beam-100k",
+          "n": 40,
+          "points": 2.5,
+          "ci95": [
+            0,
+            9.1
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "navigation-loo",
+          "model": "large",
+          "suite": "locomo",
+          "n": 60,
+          "points": 0,
+          "ci95": [
+            -5.7,
+            7.7
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "navigation-loo",
+          "model": "large",
+          "suite": "beam-1m",
+          "n": 40,
+          "points": 0,
+          "ci95": [
+            -11.4,
+            9.3
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "navigation-loo",
+          "model": "large",
+          "suite": "longmemeval-m",
+          "n": 50,
+          "points": -6,
+          "ci95": [
+            -16,
+            4
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "navigation-loo",
+          "model": "small",
+          "suite": "memoryagentbench-cr",
+          "n": 18,
+          "points": 11.1,
+          "ci95": [
+            0,
+            20
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "navigation-loo",
+          "model": "small",
+          "suite": "beam-100k",
+          "n": 37,
+          "points": 2.7,
+          "ci95": [
+            -11.4,
+            15.9
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "navigation-loo",
+          "model": "small",
+          "suite": "locomo",
+          "n": 60,
+          "points": -3.3,
+          "ci95": [
+            -9.5,
+            3.3
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "navigation-loo",
+          "model": "small",
+          "suite": "beam-1m",
+          "n": 34,
+          "points": 2.9,
+          "ci95": [
+            -12,
+            17.1
+          ],
+          "negativeStrata": []
+        },
+        {
+          "arm": "navigation-loo",
+          "model": "small",
+          "suite": "longmemeval-m",
+          "n": 47,
+          "points": -2.1,
+          "ci95": [
+            -12.8,
+            8.5
+          ],
+          "negativeStrata": []
+        }
+      ],
+      "predictions": [
+        {
+          "arm": "navigation-loo",
+          "outcome": "not-scored"
+        }
+      ],
+      "plan202Task5": {
+        "cells": 10,
+        "pass": false,
+        "candidateGap": {
+          "pass": 0,
+          "miss": 8,
+          "inconclusive": 2
+        },
+        "unverified": 0,
+        "vetoed": 7
+      },
+      "ownerHold": "Experimental tier. It missed the frozen plan 202 Task 5 rules (candidate-gap halving and the ability veto), which bars a keep on benefit, and removal is not shown non-inferior (CI lower bound as low as -20 points on MemoryAgentBench-CR and -17.1 on BEAM-1M against the -2 margin). The tool is how an agent pages through neighbours and sessions, and the wave-1 losses say removing it could harm. Kept in the experimental tier until a measured benefit or a non-inferior removal."
+    },
+    {
+      "feature": "delivery.read-tools",
+      "group": "delivery",
+      "ledgerStatus": "benefit",
+      "candidate": false,
+      "section": "accepted",
+      "verdict": "keep",
+      "reason": "ledger status benefit: accepted evidence, not re-decided"
+    }
+  ]
+}

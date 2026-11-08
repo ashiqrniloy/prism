@@ -65,6 +65,8 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
 5. **210** (17f): the end-of-build feature audit and removals, then the one held-out acceptance on the final product (formerly this plan's Task 18) and the preset revision, defaults and published claims (formerly Task 19);
 6. plan 184, then plan 185.
 
+**Amended 2026-11-08 (owner, memory model).** Plan 210 Tasks 9–10 moved again, to plan 223 Tasks 2–4. The Task 17 / F4 disposition moved to plan 219 Task 7. `robustness-criteria.json` is unchanged.
+
 **Tasks 18 and 19 moved to plan 210 (Tasks 9 and 10) on 2026-10-31.** Elsewhere in this plan, "Task 18" means plan 210 Task 9, "Task 19" means plan 210 Task 10, and "gate 3" is the held-out gate plan 210 Task 9 runs. The frozen product read on held-out partitions therefore includes plans 207–209 and plan 210's removals. `robustness-criteria.json` is unchanged and still judges the robustness rows; the ontology arms are judged by plan 208's `three-tier-criteria.json` and the work-outcome arms by plan 209's `work-outcome-criteria.json`.
 
 **Plan end.** After the last task the lever rule leaves (Task 17, or the last executed task before it), the executor runs plan end (Compromises, Further Actions, backlog hand-off) and lists, for plan 210's ledger, every feature of this plan whose development evidence is neutral, negative or missing: for example a closed lever, a decision point that failed its bench, or a lifecycle mechanism with no task benefit.

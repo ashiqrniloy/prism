@@ -1,103 +1,158 @@
-ACTIVATED_TOOLS_KEY	export declare const ACTIVATED_TOOLS_KEY = "contextEngineering.activated"
-ATTENTION_BUDGET_ERROR_CODE	export declare const ATTENTION_BUDGET_ERROR_CODE: "attention_budget_exceeded"
-ATTENTION_STATE_KEY	export declare const ATTENTION_STATE_KEY = "contextEngineering.attention"
-AttentionBudgetError	export declare class AttentionBudgetError extends Error
-CONTEXT_BUDGET_ERROR_CODE	export declare const CONTEXT_BUDGET_ERROR_CODE: "context_budget_exceeded"
-CONTEXT_ENGINEERING_PRIORITY	export declare const CONTEXT_ENGINEERING_PRIORITY = -1000
-ContextBudgetError	export declare class ContextBudgetError extends Error
-ContextEngineeringConfigError	export declare class ContextEngineeringConfigError extends Error
-DEFAULT_ATTENTION_COMPACT_RATIO	export declare const DEFAULT_ATTENTION_COMPACT_RATIO = 0.9
-DEFAULT_ATTENTION_KEEP_LAST	export declare const DEFAULT_ATTENTION_KEEP_LAST = 3
-DEFAULT_ATTENTION_RESERVE_TOKENS	export declare const DEFAULT_ATTENTION_RESERVE_TOKENS = 1024
-DEFAULT_ATTENTION_THINKING_KEEP_TURNS	export declare const DEFAULT_ATTENTION_THINKING_KEEP_TURNS = 1
-DEFAULT_ATTENTION_TRIGGER_RATIO	export declare const DEFAULT_ATTENTION_TRIGGER_RATIO = 0.75
-DEFAULT_ATTENTION_TRUNCATION_THRESHOLD	export declare const DEFAULT_ATTENTION_TRUNCATION_THRESHOLD = 2
-DEFAULT_FOLD_CLEAR_AT_LEAST_TOKENS	export declare const DEFAULT_FOLD_CLEAR_AT_LEAST_TOKENS = 0
-DEFAULT_FOLD_KEEP_LAST	export declare const DEFAULT_FOLD_KEEP_LAST = 3
-DEFAULT_FOLD_MAX_SUMMARY_BYTES	export declare const DEFAULT_FOLD_MAX_SUMMARY_BYTES = 512
-DEFAULT_FOLD_MIN_AGE_TURNS	export declare const DEFAULT_FOLD_MIN_AGE_TURNS = 2
-DEFAULT_FOLD_MIN_BYTES	export declare const DEFAULT_FOLD_MIN_BYTES = 4096
-DEFAULT_FOLD_SUMMARY_INSTRUCTION	export declare const DEFAULT_FOLD_SUMMARY_INSTRUCTION = "Summarize this tool result for a later turn. Keep identifiers, file paths, and outcomes
-DEFAULT_MAX_CONTEXT_BUDGET_OMISSIONS	export declare const DEFAULT_MAX_CONTEXT_BUDGET_OMISSIONS = 256
-DEFAULT_MAX_TOOLS_SEARCH_QUERY_BYTES	export declare const DEFAULT_MAX_TOOLS_SEARCH_QUERY_BYTES = 4096
-DEFAULT_TOOLS_SEARCH_TOP_K	export declare const DEFAULT_TOOLS_SEARCH_TOP_K = 16
-DEFAULT_TOOL_RESULT_FOLD_CLEAR_AT_LEAST_TOKENS	export declare const DEFAULT_TOOL_RESULT_FOLD_CLEAR_AT_LEAST_TOKENS = 0
-DEFAULT_TOOL_RESULT_FOLD_KEEP_LAST	export declare const DEFAULT_TOOL_RESULT_FOLD_KEEP_LAST = 3
-DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES	export declare const DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES = 512
-DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS	export declare const DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS = 2
-DEFAULT_TOOL_RESULT_FOLD_MIN_BYTES	export declare const DEFAULT_TOOL_RESULT_FOLD_MIN_BYTES = 4096
-DEFAULT_TOOL_SEARCH_TOP_K	export declare const DEFAULT_TOOL_SEARCH_TOP_K = 16
-FOLD_FRONTIER_KEY	export declare const FOLD_FRONTIER_KEY = "contextEngineering.foldFrontier"
-FOLD_LOG_KEY	export declare const FOLD_LOG_KEY = "contextEngineering.folds"
-HARD_MAX_CONTEXT_BUDGET_BYTES	export declare const HARD_MAX_CONTEXT_BUDGET_BYTES: number
-HARD_MAX_CONTEXT_BUDGET_OMISSIONS	export declare const HARD_MAX_CONTEXT_BUDGET_OMISSIONS = 1024
-HARD_MAX_CONTEXT_BUDGET_TOKENS	export declare const HARD_MAX_CONTEXT_BUDGET_TOKENS = 2000000
-HARD_MAX_TOOLS_INDEX	export declare const HARD_MAX_TOOLS_INDEX = 1024
-HARD_MAX_TOOLS_SEARCH_QUERY_BYTES	export declare const HARD_MAX_TOOLS_SEARCH_QUERY_BYTES = 65536
-HARD_MAX_TOOLS_SEARCH_TOP_K	export declare const HARD_MAX_TOOLS_SEARCH_TOP_K = 64
-HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES	export declare const HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES = 4096
-MAX_FOLD_FRONTIER_IDS	export declare const MAX_FOLD_FRONTIER_IDS = 4096
-MAX_LEDGER_BODIES	export declare const MAX_LEDGER_BODIES = 64
-SEARCH_TOOLS_TOOL_NAME	export declare const SEARCH_TOOLS_TOOL_NAME = "search_tools"
-TOOL_DISCLOSURE_ERROR_CODE	export declare const TOOL_DISCLOSURE_ERROR_CODE: "tool_disclosure_exceeded"
-TOOL_RESULT_FOLD_TURN_METADATA_KEY	export declare const TOOL_RESULT_FOLD_TURN_METADATA_KEY: "prismToolResultTurn"
-ToolDisclosureError	export declare class ToolDisclosureError extends Error
-accountRequest	export declare function accountRequest(request: ProviderRequest, options: AccountRequestOptions): AccountedRequest
-applyDraftBudget	export declare function applyDraftBudget(options: ApplyDraftBudgetOptions): ApplyDraftBudgetResult
-assertToolDisclosureConforms	export declare function assertToolDisclosureConforms(options: ToolDisclosureConformanceOptions): void
-attentionTriggerState	export declare function attentionTriggerState(compiler: Pick<AttentionCompiler, "inputCap" | "runInputBudget">, turn:
-capToolResultSummary	export declare function capToolResultSummary(summary: string, maxBytes: number): string
-compileAttention	export declare function compileAttention(options: AttentionCompileOptions): Promise<AttentionCompilation>
-contextEngineering	export declare function contextEngineering(config?: ContextEngineeringConfig): PackageInstance
-contextEngineeringConfigSchema	export declare const contextEngineeringConfigSchema: JsonSchema
-createActiveToolSet	export declare function createActiveToolSet(): ActiveToolSet
-createAttentionCompiler	export declare function createAttentionCompiler(options?: AttentionCompilerOptions, context?: AttentionCompilerContext): AttentionCompiler
-createAttentionFoldLedger	export declare function createAttentionFoldLedger(): AttentionFoldLedger
-createAttentionStickyFrontier	export declare function createAttentionStickyFrontier(): AttentionStickyFrontier
-createAttentionTruncationTrigger	export declare function createAttentionTruncationTrigger(options?: AttentionTruncationTriggerOptions): AttentionTruncationTrigger
-createContextEngineeringHandler	export declare function createContextEngineeringHandler(deps: ContextEngineeringHandlerDeps): ContextEngineeringHandler
-createModelSummarize	export declare function createModelSummarize(options: ModelSummarizeOptions): (input: ToolResultFoldInput) => Promise<string>
-createSearchToolsTool	export declare function createSearchToolsTool(state: ToolSearchState, queryByteCap?: number): ToolDefinition
-createSearchToolsWiring	export declare function createSearchToolsWiring(options:
-createToolSearchIndex	export declare function createToolSearchIndex(tools: readonly ToolDefinition[], skip?: (tool: ToolDefinition) => boolean): ToolSearchIndex
-createToolSearchState	export declare function createToolSearchState(options:
-currentTurnOf	export declare function currentTurnOf(messages: readonly Message[]): number
-default	export default
-evaluateAttentionTrigger	export declare function evaluateAttentionTrigger(axes: readonly AttentionTrigger[], state: AttentionTriggerState): AttentionTriggerDecision
-foldToolResultHistory	export declare function foldToolResultHistory(history: readonly Message[], options: ResolvedToolResultFoldOptions, context: FoldToolResultsContext): Promise<readonly Message[]>
-foldedToolResultHeader	export declare function foldedToolResultHeader(toolName: string, toolCallId: string, summary: string): string
-foldedToolResultStub	export declare function foldedToolResultStub(toolName: string, toolCallId: string, summary: string, originalBytes: number): string
-formatFoldedToolResult	export declare function formatFoldedToolResult(summary: string): string
-inferToolResultTurns	export declare function inferToolResultTurns(history: readonly Message[]): readonly number[]
-initialAttentionState	export declare function initialAttentionState(): JsonObject
-isAttentionBudgetError	export declare function isAttentionBudgetError(error: unknown): error is AttentionBudgetError
-isContextBudgetError	export declare function isContextBudgetError(error: unknown): error is ContextBudgetError
-isEmptyContextEngineeringConfig	export declare function isEmptyContextEngineeringConfig(config: ResolvedContextEngineeringConfig): boolean
-isToolDisclosureError	export declare function isToolDisclosureError(error: unknown): error is ToolDisclosureError
-measureBudgetCost	export declare function measureBudgetCost(options:
-measureDraftCost	export declare function measureDraftCost(options:
-packageName	export declare const packageName = "@arnilo/prism-context-engineering"
-parseAttentionStickyFrontier	export declare function parseAttentionStickyFrontier(value: unknown): PersistedAttentionStickyFrontier | undefined
-planToolResultFoldBatch	export declare function planToolResultFoldBatch(history: readonly Message[], options: ResolvedToolResultFoldOptions, context:
-readActivatedNames	export declare function readActivatedNames(value: JsonValue): readonly string[]
-readAttentionState	export declare function readAttentionState(frontierValue: JsonValue, logEntries: readonly JsonValue[]): AttentionSessionState
-readFoldFrontier	export declare function readFoldFrontier(value: JsonValue | undefined): ReadonlySet<string>
-readFrontier	export declare function readFrontier(value: JsonValue): AttentionStickyFrontier
-readLedger	export declare function readLedger(entries: readonly JsonValue[]): AttentionFoldLedger
-resolveAttentionReserveTokens	export declare function resolveAttentionReserveTokens(value: unknown): number
-resolveContextBudget	export declare function resolveContextBudget(budget: ContextBudget): Required<Pick<ContextBudget, "reportOmissions">> & ContextBudget
-resolveContextEngineeringConfig	export declare function resolveContextEngineeringConfig(config?: ContextEngineeringConfig): ResolvedContextEngineeringConfig
-resolveInputCap	export declare function resolveInputCap(options?: AttentionInputCapOptions, model?: AttentionCompilerContext["model"]): number
-resolveToolResultFold	export declare function resolveToolResultFold(run?: ToolResultFoldOptions, agent?: ToolResultFoldOptions): ResolvedToolResultFoldOptions | undefined
-resolveToolsDisclosure	export declare function resolveToolsDisclosure(run?: ToolsDisclosure, agent?: ToolsDisclosure): ToolsDisclosure
-restoreAttentionFoldLedger	export declare function restoreAttentionFoldLedger(value: unknown): AttentionFoldLedger | undefined
-restoreAttentionStickyFrontier	export declare function restoreAttentionStickyFrontier(persisted: PersistedAttentionStickyFrontier): AttentionStickyFrontier
-scoreTools	export declare function scoreTools(index: ToolSearchIndex, query: string, k: number, queryByteCap?: number): readonly ToolSearchMatch[]
-selectDisclosedTools	export declare function selectDisclosedTools(options:
-serializeAttentionFoldLedger	export declare function serializeAttentionFoldLedger(ledger: AttentionFoldLedger): PersistedAttentionFoldLedger
-serializeAttentionStickyFrontier	export declare function serializeAttentionStickyFrontier(frontier: AttentionStickyFrontier): PersistedAttentionStickyFrontier
-toolResultFoldText	export declare function toolResultFoldText(result: unknown, error: unknown, extra?: readonly
-truncateSummarize	export declare function truncateSummarize(input: ToolResultFoldInput): string
-writeActivatedNames	export declare function writeActivatedNames(names: readonly string[]): JsonObject
-writeFoldFrontier	export declare function writeFoldFrontier(ids: Iterable<string>): JsonObject
-writeFrontier	export declare function writeFrontier(frontier: AttentionStickyFrontier): JsonObject
+. ACTIVATED_TOOLS_KEY	const ACTIVATED_TOOLS_KEY = "contextEngineering.activated"
+. ATTENTION_BUDGET_ERROR_CODE	const ATTENTION_BUDGET_ERROR_CODE: "attention_budget_exceeded"
+. ATTENTION_STATE_KEY	const ATTENTION_STATE_KEY = "contextEngineering.attention"
+. AccountRequestOptions	interface AccountRequestOptions { readonly inputCapTokens: number; readonly maxShare?: number; }
+. AccountedRequest	interface AccountedRequest { readonly event: ContextAccountEvent; readonly request: ProviderRequest; }
+. ActiveToolSet	interface ActiveToolSet { add(name: string): void; clear(): void; has(name: string): boolean; list(): readonly string[]; }
+. ApplyDraftBudgetOptions	interface ApplyDraftBudgetOptions { readonly budget: ContextBudget; readonly context?: readonly ContextBlock[]; readonly messages: readonly Message[]; readonly systemPrompt?: string; readonly tools?: readonly ToolDefinition[]; }
+. ApplyDraftBudgetResult	interface ApplyDraftBudgetResult { readonly context: readonly ContextBlock[]; readonly messages: readonly Message[]; readonly report: ContextBudgetReport; }
+. AttentionBudgetError	class AttentionBudgetError extends Error { constructor(message?: string); readonly code: "attention_budget_exceeded"; }
+. AttentionCompilation	interface AttentionCompilation { readonly messages: readonly Message[]; readonly mutated: boolean; readonly report: AttentionReport; }
+. AttentionCompileOptions	interface AttentionCompileOptions { readonly attentionFold?: AttentionFoldLedger; readonly compiler: AttentionCompiler; readonly context?: readonly ContextBlock[]; readonly fold?: ResolvedToolResultFoldOptions; readonly frontier?: AttentionStickyFrontier; readonly messages: readonly Message[]; readonly redactor?: SecretRedactor; readonly runId?: string; readonly runInputTokens?: number; readonly sessionId?: string; readonly signal?: AbortSignal; readonly tools?: readonly ToolDefinition[]; readonly turn?: number; }
+. AttentionCompiler	interface AttentionCompiler { readonly compactRatio: number; readonly excludeTools: readonly string[]; readonly inputCap: number; readonly keepLast: number; readonly reserveTokens: number; readonly runInputBudget?: number; readonly thinkingKeepTurns: number; readonly trigger: readonly AttentionTrigger[]; readonly triggerRatio: number; }
+. AttentionCompilerContext	interface AttentionCompilerContext { readonly model?: { readonly limits?: { readonly contextWindow?: number; readonly maxOutputTokens?: number; }; }; readonly runInputBudget?: number | null; }
+. AttentionCompilerOptions	interface AttentionCompilerOptions extends AttentionInputCapOptions { readonly compactRatio?: number; readonly excludeTools?: readonly string[]; readonly keepLast?: number; readonly thinkingKeepTurns?: number; readonly trigger?: AttentionTriggerInput; readonly triggerRatio?: number; }
+. AttentionCompilerSetting	type AttentionCompilerSetting = boolean | AttentionCompilerOptions
+. AttentionFoldLedger	interface AttentionFoldLedger { readonly bodies: Map<string, string>; }
+. AttentionInputCapOptions	interface AttentionInputCapOptions { readonly maxInputTokens?: number; readonly reserveTokens?: number; }
+. AttentionReport	interface AttentionReport { readonly droppedThinkingTurns: number; readonly firedAxis?: AttentionTriggerKind; readonly inputCap: number; readonly newFoldedBodies: number; readonly runId?: string; readonly sessionId?: string; readonly stubbedBytes: number; readonly stubbedToolResults: number; readonly triggerRatio: number; readonly truncated: boolean; readonly used: number; readonly usedAfter: number; }
+. AttentionSessionState	interface AttentionSessionState { readonly frontier: AttentionStickyFrontier; readonly ledger: AttentionFoldLedger; }
+. AttentionStickyFrontier	interface AttentionStickyFrontier { readonly thinking: Set<string>; readonly toolCallIds: Set<string>; }
+. AttentionTrigger	type AttentionTrigger = { readonly kind: "input_ratio"; readonly ratio: number; } | { readonly kind: "run_input_ratio"; readonly ratio: number; } | { readonly kind: "token_floor"; readonly tokens: number; } | { readonly kind: "predicate"; readonly shouldFold: AttentionTriggerFunction; }
+. AttentionTriggerDecision	interface AttentionTriggerDecision { readonly failsClosed: boolean; readonly firedAxis?: AttentionTriggerKind; readonly shouldFold: boolean; readonly targetTokens?: number; }
+. AttentionTriggerFunction	type AttentionTriggerFunction = (state: AttentionTriggerState) => boolean
+. AttentionTriggerInput	type AttentionTriggerInput = AttentionTrigger | AttentionTriggerFunction | readonly (AttentionTrigger | AttentionTriggerFunction)[]
+. AttentionTriggerKind	type AttentionTriggerKind = "input_ratio" | "run_input_ratio" | "token_floor" | "predicate"
+. AttentionTriggerState	interface AttentionTriggerState { readonly estimatedInputTokens: number; readonly inputCapTokens: number; readonly runInputBudgetTokens?: number; readonly runInputTokens: number; readonly turn: number; }
+. AttentionTruncationTrigger	interface AttentionTruncationTrigger { observe(report: { readonly truncated?: unknown; }): number; readonly shouldCompact: () => boolean; readonly streak: () => number; reset(): void; }
+. AttentionTruncationTriggerOptions	interface AttentionTruncationTriggerOptions { readonly threshold?: number; }
+. CONTEXT_BUDGET_ERROR_CODE	const CONTEXT_BUDGET_ERROR_CODE: "context_budget_exceeded"
+. CONTEXT_ENGINEERING_PRIORITY	const CONTEXT_ENGINEERING_PRIORITY = -1000
+. ContextAccountEvent	interface ContextAccountEvent { readonly bySource: { readonly system: number; readonly instructions: number; readonly skills: number; readonly history: number; readonly toolResults: number; readonly folded: number; readonly input: number; readonly blocks: Readonly<Record<string, number>>; readonly tail: Readonly<Record<string, number>>; }; readonly dropped: readonly { readonly source: string; readonly tokens: number; }[]; readonly inputCapTokens: number; readonly totalTokens: number; readonly turn: number; }
+. ContextBudget	interface ContextBudget { readonly maxInputBytes?: number; readonly maxInputTokens?: number; readonly reportOmissions?: boolean; }
+. ContextBudgetError	class ContextBudgetError extends Error { constructor(message?: string); readonly code: "context_budget_exceeded"; }
+. ContextBudgetOmission	interface ContextBudgetOmission { readonly byteLength: number; readonly id?: string; readonly kind: ContextBudgetOmissionKind; readonly tokenEstimate: number; }
+. ContextBudgetOmissionKind	type ContextBudgetOmissionKind = "tool_results" | "history" | "context"
+. ContextBudgetReport	interface ContextBudgetReport { readonly keptBytes: number; readonly keptTokens: number; readonly maxInputBytes?: number; readonly maxInputTokens?: number; readonly omitted: readonly ContextBudgetOmission[]; readonly truncated: boolean; }
+. ContextEngineeringAttentionConfig	interface ContextEngineeringAttentionConfig { readonly compactRatio?: number; readonly excludeTools?: readonly string[]; readonly keepLast?: number; readonly maxInputTokens?: number; readonly reserveTokens?: number; readonly thinkingKeepTurns?: number; readonly trigger?: readonly AttentionTrigger[] | AttentionTrigger; readonly triggerRatio?: number; }
+. ContextEngineeringBlocksConfig	interface ContextEngineeringBlocksConfig { readonly maxShare: number; }
+. ContextEngineeringBudgetConfig	interface ContextEngineeringBudgetConfig { readonly maxInputBytes?: number; readonly maxInputTokens?: number; readonly reportOmissions?: boolean; }
+. ContextEngineeringConfig	interface ContextEngineeringConfig { readonly accounting?: boolean; readonly attention?: ContextEngineeringAttentionConfig; readonly blocks?: ContextEngineeringBlocksConfig; readonly budget?: ContextEngineeringBudgetConfig; readonly fold?: ContextEngineeringFoldConfig; readonly toolSearch?: ContextEngineeringToolSearchConfig; }
+. ContextEngineeringConfigError	class ContextEngineeringConfigError extends Error { constructor(message: string); }
+. ContextEngineeringFoldConfig	interface ContextEngineeringFoldConfig { readonly clearAtLeastTokens?: number; readonly excludeTools?: readonly string[]; readonly keepLast?: number; readonly maxSummaryBytes?: number; readonly minAgeTurns?: number; readonly minBytes?: number; readonly summarize?: "truncate" | { readonly model?: ModelRef; }; }
+. ContextEngineeringHandler	type ContextEngineeringHandler = (draft: ContextDraft, context: HookContext) => Promise<ContextDraft | undefined | HookRejection>
+. ContextEngineeringHandlerDeps	interface ContextEngineeringHandlerDeps { readonly activatedState: SessionState<JsonObject>; readonly attentionCompilerFor: (session: SessionContext) => AttentionCompiler; readonly config: ResolvedContextEngineeringConfig; readonly foldFrontierState: SessionState<JsonObject>; readonly foldLog: SessionLog<JsonValue>; readonly frontierState: SessionState<JsonObject>; readonly prism: PackageAPI<ContextEngineeringConfig>; readonly searchTools?: SearchToolsWiring; readonly summarizeFor: (session: SessionContext) => (input: ToolResultFoldInput) => Promise<string> | string; }
+. ContextEngineeringToolSearchConfig	interface ContextEngineeringToolSearchConfig { readonly disclosure?: "all" | "search"; readonly topK?: number; }
+. DEFAULT_ATTENTION_COMPACT_RATIO	const DEFAULT_ATTENTION_COMPACT_RATIO = 0.9
+. DEFAULT_ATTENTION_KEEP_LAST	const DEFAULT_ATTENTION_KEEP_LAST = 3
+. DEFAULT_ATTENTION_RESERVE_TOKENS	const DEFAULT_ATTENTION_RESERVE_TOKENS = 1024
+. DEFAULT_ATTENTION_THINKING_KEEP_TURNS	const DEFAULT_ATTENTION_THINKING_KEEP_TURNS = 1
+. DEFAULT_ATTENTION_TRIGGER_RATIO	const DEFAULT_ATTENTION_TRIGGER_RATIO = 0.75
+. DEFAULT_ATTENTION_TRUNCATION_THRESHOLD	const DEFAULT_ATTENTION_TRUNCATION_THRESHOLD = 2
+. DEFAULT_FOLD_CLEAR_AT_LEAST_TOKENS	const DEFAULT_FOLD_CLEAR_AT_LEAST_TOKENS = 0
+. DEFAULT_FOLD_KEEP_LAST	const DEFAULT_FOLD_KEEP_LAST = 3
+. DEFAULT_FOLD_MAX_SUMMARY_BYTES	const DEFAULT_FOLD_MAX_SUMMARY_BYTES = 512
+. DEFAULT_FOLD_MIN_AGE_TURNS	const DEFAULT_FOLD_MIN_AGE_TURNS = 2
+. DEFAULT_FOLD_MIN_BYTES	const DEFAULT_FOLD_MIN_BYTES = 4096
+. DEFAULT_FOLD_SUMMARY_INSTRUCTION	const DEFAULT_FOLD_SUMMARY_INSTRUCTION = "Summarize this tool result for a later turn. Keep identifiers, file paths, and outcomes; drop formatting noise. Answer with the summary only."
+. DEFAULT_MAX_CONTEXT_BUDGET_OMISSIONS	const DEFAULT_MAX_CONTEXT_BUDGET_OMISSIONS = 256
+. DEFAULT_MAX_TOOLS_SEARCH_QUERY_BYTES	const DEFAULT_MAX_TOOLS_SEARCH_QUERY_BYTES = 4096
+. DEFAULT_TOOLS_SEARCH_TOP_K	const DEFAULT_TOOLS_SEARCH_TOP_K = 16
+. DEFAULT_TOOL_RESULT_FOLD_CLEAR_AT_LEAST_TOKENS	const DEFAULT_TOOL_RESULT_FOLD_CLEAR_AT_LEAST_TOKENS = 0
+. DEFAULT_TOOL_RESULT_FOLD_KEEP_LAST	const DEFAULT_TOOL_RESULT_FOLD_KEEP_LAST = 3
+. DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES	const DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES = 512
+. DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS	const DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS = 2
+. DEFAULT_TOOL_RESULT_FOLD_MIN_BYTES	const DEFAULT_TOOL_RESULT_FOLD_MIN_BYTES = 4096
+. DEFAULT_TOOL_SEARCH_TOP_K	const DEFAULT_TOOL_SEARCH_TOP_K = 16
+. FOLD_FRONTIER_KEY	const FOLD_FRONTIER_KEY = "contextEngineering.foldFrontier"
+. FOLD_LOG_KEY	const FOLD_LOG_KEY = "contextEngineering.folds"
+. FoldToolResultsContext	interface FoldToolResultsContext { readonly restrictToToolCallIds?: ReadonlySet<string>; readonly runId: string; readonly sessionId: string; readonly signal?: AbortSignal; readonly turn: number; }
+. HARD_MAX_CONTEXT_BUDGET_BYTES	const HARD_MAX_CONTEXT_BUDGET_BYTES: number
+. HARD_MAX_CONTEXT_BUDGET_OMISSIONS	const HARD_MAX_CONTEXT_BUDGET_OMISSIONS = 1024
+. HARD_MAX_CONTEXT_BUDGET_TOKENS	const HARD_MAX_CONTEXT_BUDGET_TOKENS = 2000000
+. HARD_MAX_TOOLS_INDEX	const HARD_MAX_TOOLS_INDEX = 1024
+. HARD_MAX_TOOLS_SEARCH_QUERY_BYTES	const HARD_MAX_TOOLS_SEARCH_QUERY_BYTES = 65536
+. HARD_MAX_TOOLS_SEARCH_TOP_K	const HARD_MAX_TOOLS_SEARCH_TOP_K = 64
+. HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES	const HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES = 4096
+. MAX_FOLD_FRONTIER_IDS	const MAX_FOLD_FRONTIER_IDS = 4096
+. MAX_LEDGER_BODIES	const MAX_LEDGER_BODIES = 64
+. ModelSummarizeOptions	interface ModelSummarizeOptions { readonly client: { generate(request: { readonly messages: readonly Message[]; readonly signal?: AbortSignal; }): AsyncIterable<{ readonly type: string; readonly content?: { readonly type: string; readonly text?: string; }; readonly error?: unknown; }>; }; readonly instruction?: string; readonly maxSummaryBytes: number; }
+. MutableToolSearchState	type MutableToolSearchState = { -readonly [K in keyof ToolSearchState]: ToolSearchState[K]; }
+. PersistedAttentionFoldLedger	interface PersistedAttentionFoldLedger { readonly bodies: readonly { readonly id: string; readonly body: string; }[]; readonly v: 1; }
+. PersistedAttentionStickyFrontier	interface PersistedAttentionStickyFrontier { readonly thinking: readonly string[]; readonly toolCallIds: readonly string[]; readonly v: 1; }
+. ResolvedContextEngineeringConfig	interface ResolvedContextEngineeringConfig { readonly accounting: boolean; readonly attention?: ContextEngineeringAttentionConfig; readonly blocks?: ContextEngineeringBlocksConfig; readonly budget?: ContextBudget; readonly fold?: { readonly minAgeTurns: number; readonly minBytes: number; readonly maxSummaryBytes: number; readonly summarize: "truncate" | { readonly model?: ModelRef; }; readonly keepLast: number; readonly excludeTools: readonly string[]; readonly clearAtLeastTokens: number; }; readonly toolSearch?: { readonly disclosure: "all" | "search"; readonly topK: number; }; }
+. ResolvedToolResultFoldOptions	interface ResolvedToolResultFoldOptions { readonly clearAtLeastTokens: number; readonly excludeTools: readonly string[]; readonly keepLast: number; readonly maxSummaryBytes: number; readonly minAgeTurns: number; readonly minBytes: number; readonly summarize: (input: ToolResultFoldInput) => Promise<string> | string; }
+. SEARCH_TOOLS_TOOL_NAME	const SEARCH_TOOLS_TOOL_NAME = "search_tools"
+. SearchToolsWiring	interface SearchToolsWiring { publish(session: SessionContext, tools: readonly ToolDefinition[], topK: number): void; tool: ToolDefinition; }
+. TOOL_DISCLOSURE_ERROR_CODE	const TOOL_DISCLOSURE_ERROR_CODE: "tool_disclosure_exceeded"
+. TOOL_RESULT_FOLD_TURN_METADATA_KEY	const TOOL_RESULT_FOLD_TURN_METADATA_KEY: "prismToolResultTurn"
+. TokenEstimator	type TokenEstimator = (text: string) => number
+. ToolDisclosureConformanceOptions	interface ToolDisclosureConformanceOptions { readonly filter?: ToolFilterInput; readonly input?: string; readonly search?: { readonly topK?: number; }; readonly secrets?: readonly (string | undefined)[]; readonly tools: readonly ToolDefinition[]; }
+. ToolDisclosureError	class ToolDisclosureError extends Error { constructor(message: string); readonly code: "tool_disclosure_exceeded"; }
+. ToolResultFoldInput	interface ToolResultFoldInput { readonly runId: string; readonly sessionId: string; readonly text: string; readonly toolCallId: string; readonly toolName: string; readonly turn: number; }
+. ToolResultFoldOptions	interface ToolResultFoldOptions { readonly clearAtLeastTokens?: number; readonly excludeTools?: readonly string[]; readonly keepLast?: number; readonly maxSummaryBytes?: number; readonly minAgeTurns?: number; readonly minBytes?: number; readonly summarize: (input: ToolResultFoldInput) => Promise<string> | string; }
+. ToolResultFoldSelection	interface ToolResultFoldSelection { readonly advance: readonly string[]; readonly foldToolCallIds: ReadonlySet<string>; }
+. ToolSearchIndex	interface ToolSearchIndex { readonly postings: ReadonlyMap<string, PostingEntry[]>; readonly tools: readonly ToolDefinition[]; }
+. ToolSearchMatch	interface ToolSearchMatch { readonly description?: string; readonly matched: readonly string[]; readonly name: string; }
+. ToolSearchState	interface ToolSearchState { readonly activated: ActiveToolSet; readonly index: ToolSearchIndex; readonly topK: number; }
+. ToolsDisclosure	type ToolsDisclosure = "all" | "search"
+. ToolsSearchOptions	interface ToolsSearchOptions { readonly topK?: number; }
+. accountRequest	function accountRequest(request: ProviderRequest, options: AccountRequestOptions): AccountedRequest
+. applyDraftBudget	function applyDraftBudget(options: ApplyDraftBudgetOptions): ApplyDraftBudgetResult
+. assertToolDisclosureConforms	function assertToolDisclosureConforms(options: ToolDisclosureConformanceOptions): void
+. attentionTriggerState	function attentionTriggerState(compiler: Pick<AttentionCompiler, "inputCap" | "runInputBudget">, turn: { readonly estimatedInputTokens: number; readonly runInputTokens?: number; readonly turn?: number; }): AttentionTriggerState
+. capToolResultSummary	function capToolResultSummary(summary: string, maxBytes: number): string
+. compileAttention	function compileAttention(options: AttentionCompileOptions): Promise<AttentionCompilation>
+. contextEngineering	function contextEngineering(config?: ContextEngineeringConfig): PackageInstance
+. contextEngineeringConfigSchema	const contextEngineeringConfigSchema: JsonSchema
+. createActiveToolSet	function createActiveToolSet(): ActiveToolSet
+. createAttentionCompiler	function createAttentionCompiler(options?: AttentionCompilerOptions, context?: AttentionCompilerContext): AttentionCompiler
+. createAttentionFoldLedger	function createAttentionFoldLedger(): AttentionFoldLedger
+. createAttentionStickyFrontier	function createAttentionStickyFrontier(): AttentionStickyFrontier
+. createAttentionTruncationTrigger	function createAttentionTruncationTrigger(options?: AttentionTruncationTriggerOptions): AttentionTruncationTrigger
+. createContextEngineeringHandler	function createContextEngineeringHandler(deps: ContextEngineeringHandlerDeps): ContextEngineeringHandler
+. createModelSummarize	function createModelSummarize(options: ModelSummarizeOptions): (input: ToolResultFoldInput) => Promise<string>
+. createSearchToolsTool	function createSearchToolsTool(state: ToolSearchState, queryByteCap?: number): ToolDefinition
+. createSearchToolsWiring	function createSearchToolsWiring(options: { readonly activatedState: SessionState<JsonObject>; readonly states: Map<string, MutableToolSearchState>; }): SearchToolsWiring
+. createToolSearchIndex	function createToolSearchIndex(tools: readonly ToolDefinition[], skip?: (tool: ToolDefinition) => boolean): ToolSearchIndex
+. createToolSearchState	function createToolSearchState(options: { readonly tools: readonly ToolDefinition[]; readonly activated: ActiveToolSet; readonly search?: ToolsSearchOptions; }): ToolSearchState
+. currentTurnOf	function currentTurnOf(messages: readonly Message[]): number
+. default	const definition: import("@arnilo/prism").PackageDefinition<ContextEngineeringConfig>
+. evaluateAttentionTrigger	function evaluateAttentionTrigger(axes: readonly AttentionTrigger[], state: AttentionTriggerState): AttentionTriggerDecision
+. foldToolResultHistory	function foldToolResultHistory(history: readonly Message[], options: ResolvedToolResultFoldOptions, context: FoldToolResultsContext): Promise<readonly Message[]>
+. foldedToolResultHeader	function foldedToolResultHeader(toolName: string, toolCallId: string, summary: string): string
+. foldedToolResultStub	function foldedToolResultStub(toolName: string, toolCallId: string, summary: string, originalBytes: number): string
+. formatFoldedToolResult	function formatFoldedToolResult(summary: string): string
+. inferToolResultTurns	function inferToolResultTurns(history: readonly Message[]): readonly number[]
+. initialAttentionState	function initialAttentionState(): JsonObject
+. isAttentionBudgetError	function isAttentionBudgetError(error: unknown): error is AttentionBudgetError
+. isContextBudgetError	function isContextBudgetError(error: unknown): error is ContextBudgetError
+. isEmptyContextEngineeringConfig	function isEmptyContextEngineeringConfig(config: ResolvedContextEngineeringConfig): boolean
+. isToolDisclosureError	function isToolDisclosureError(error: unknown): error is ToolDisclosureError
+. measureBudgetCost	function measureBudgetCost(options: { readonly messages: readonly Message[]; readonly context?: readonly ContextBlock[]; readonly tools?: readonly ToolDefinition[]; readonly systemPrompt?: string; }): { tokens: number; bytes: number; }
+. measureDraftCost	function measureDraftCost(options: { readonly messages: readonly Message[]; readonly context?: readonly ContextBlock[]; readonly tools?: readonly ToolDefinition[]; }): { tokens: number; bytes: number; }
+. packageName	const packageName = "@arnilo/prism-context-engineering"
+. parseAttentionStickyFrontier	function parseAttentionStickyFrontier(value: unknown): PersistedAttentionStickyFrontier | undefined
+. planToolResultFoldBatch	function planToolResultFoldBatch(history: readonly Message[], options: ResolvedToolResultFoldOptions, context: { readonly turn: number; readonly clearedToolCallIds: ReadonlySet<string>; }): ToolResultFoldSelection
+. readActivatedNames	function readActivatedNames(value: JsonValue): readonly string[]
+. readAttentionState	function readAttentionState(frontierValue: JsonValue, logEntries: readonly JsonValue[]): AttentionSessionState
+. readFoldFrontier	function readFoldFrontier(value: JsonValue | undefined): ReadonlySet<string>
+. readFrontier	function readFrontier(value: JsonValue): AttentionStickyFrontier
+. readLedger	function readLedger(entries: readonly JsonValue[]): AttentionFoldLedger
+. resolveAttentionReserveTokens	function resolveAttentionReserveTokens(value: unknown): number
+. resolveContextBudget	function resolveContextBudget(budget: ContextBudget): Required<Pick<ContextBudget, "reportOmissions">> & ContextBudget
+. resolveContextEngineeringConfig	function resolveContextEngineeringConfig(config?: ContextEngineeringConfig): ResolvedContextEngineeringConfig
+. resolveInputCap	function resolveInputCap(options?: AttentionInputCapOptions, model?: AttentionCompilerContext["model"]): number
+. resolveToolResultFold	function resolveToolResultFold(run?: ToolResultFoldOptions, agent?: ToolResultFoldOptions): ResolvedToolResultFoldOptions | undefined
+. resolveToolsDisclosure	function resolveToolsDisclosure(run?: ToolsDisclosure, agent?: ToolsDisclosure): ToolsDisclosure
+. restoreAttentionFoldLedger	function restoreAttentionFoldLedger(value: unknown): AttentionFoldLedger | undefined
+. restoreAttentionStickyFrontier	function restoreAttentionStickyFrontier(persisted: PersistedAttentionStickyFrontier): AttentionStickyFrontier
+. scoreTools	function scoreTools(index: ToolSearchIndex, query: string, k: number, queryByteCap?: number): readonly ToolSearchMatch[]
+. selectDisclosedTools	function selectDisclosedTools(options: { readonly tools: readonly ToolDefinition[]; readonly input: ToolSearchInput; readonly queryByteCap?: number; readonly search?: ToolsSearchOptions; readonly activated?: { has(name: string): boolean; }; }): readonly ToolDefinition[]
+. serializeAttentionFoldLedger	function serializeAttentionFoldLedger(ledger: AttentionFoldLedger): PersistedAttentionFoldLedger
+. serializeAttentionStickyFrontier	function serializeAttentionStickyFrontier(frontier: AttentionStickyFrontier): PersistedAttentionStickyFrontier
+. toolResultFoldText	function toolResultFoldText(result: unknown, error: unknown, extra?: readonly { readonly type: string; }[]): string
+. truncateSummarize	function truncateSummarize(input: ToolResultFoldInput): string
+. writeActivatedNames	function writeActivatedNames(names: readonly string[]): JsonObject
+. writeFoldFrontier	function writeFoldFrontier(ids: Iterable<string>): JsonObject
+. writeFrontier	function writeFrontier(frontier: AttentionStickyFrontier): JsonObject

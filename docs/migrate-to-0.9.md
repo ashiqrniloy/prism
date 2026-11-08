@@ -178,7 +178,7 @@ const access = createAccessRecheck({ store, onDenied: audit.warn });
 const propagator = createDeletionPropagator({ store, handlers: [createRagDeletionHandler(vectors), createWikiDeletionHandler(wiki)] });
 ```
 
-Sizing: the local reranker declares no inference dependency — the built-in loader resolves `@huggingface/transformers` at first use (pass `runtime` to inject your own, or `allowRemoteModels: false` for a no-network posture after the model is cached); propagation and repoint walks are bounded by `HARD_PROPAGATION_EDGES` / `HARD_REPOINT_RECORDS` and fail closed past them. See [RAG](../packages/memory/rag/README.md), [Embeddings](../packages/memory/rag/README.md), and [Knowledge sync](../packages/memory/wiki/README.md).
+Sizing: the local reranker declares no inference dependency — the built-in loader resolves `@huggingface/transformers` at first use (pass `runtime` to inject your own, or `allowRemoteModels: false` for a no-network posture after the model is cached); propagation and repoint walks are bounded by `HARD_PROPAGATION_EDGES` / `HARD_REPOINT_RECORDS` and fail closed past them. See [RAG](../packages/knowledge/rag/README.md), [Embeddings](../packages/knowledge/rag/README.md), and [Knowledge sync](../packages/knowledge/wiki/README.md).
 
 ---
 

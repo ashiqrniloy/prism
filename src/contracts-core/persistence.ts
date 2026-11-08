@@ -399,6 +399,9 @@ export interface MigrationQuery extends PersistenceQuery {
  * required by the contract. Resumable consumers (workflows, channels) reach the
  * checkpoints and leases capabilities through the service contracts their own
  * packages publish (plan 168 Task 4-5).
+ *
+ * Implemented by `@arnilo/prism-store-sqlite` and `@arnilo/prism-store-postgres` (their `persistence`
+ * modules); `@arnilo/prism/testing` ships the query and state-concurrency conformance suites they run.
  */
 export interface ProductionPersistenceStore {
   readonly name?: string;

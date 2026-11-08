@@ -11,7 +11,6 @@ import {
   normalizeHostname,
   type SsrfPolicy,
 } from "./media-types.js";
-import { pinnedFetch } from "./pinned-fetch.js";
 import { assertPermission } from "./security.js";
 
 export type { MediaHostAddress, MediaHostnameResolver, SsrfPolicy } from "./media-types.js";
@@ -169,10 +168,7 @@ export function assertModelSupportsContentBlocks(model: ModelConfig, blocks: rea
 export function assertMessagesSupportModelCapabilities(model: ModelConfig, messages: readonly Message[]): void {
   // Tool-message media never reaches the wire as host media: each codec renders it as a text note
   // when the model declares no support (plan 189 Task 2), so it must not fail the request gate.
-  assertModelSupportsContentBlocks(
-    model,
-    collectMessageContentBlocks(messages.filter((message) => message.role !== "tool")),
-  );
+  assertModelSupportsContentBlocks(model, collectMessageContentBlocks(messages.filter((message) => message.role !== "tool")));
 }
 
 export function assertMediaBlocksWithinBounds(blocks: readonly MediaContentBlock[], bounds: MediaContentBounds = {}): void {
@@ -430,7 +426,9 @@ async function fetchBoundedMediaUrl(url: string, options: FetchBoundedMediaOptio
       return bytes;
     }
 
-    // Default: one DNS-pinned, redirect-free, byte-bounded fetch (task 4).
+    // Default: one DNS-pinned, redirect-free, byte-bounded fetch (task 4). Loaded lazily so the
+    // root entry graph never pulls `node:http`/`node:https` (plan 215 Task 26).
+    const { pinnedFetch } = await import("./pinned-fetch.js");
     const response = await pinnedFetch(
       new URL(url),
       { signal, redirect: "manual" },

@@ -98,7 +98,7 @@ test("preset_makes_no_embedding_or_write_path_model_call", async () => {
     expect(report.archived).toBe(1);
     const result = await h.read({ session: "new-session" });
     expect(result.notes).toHaveLength(1);
-    const recalled = await h.fabric.recall("travel", { kinds: ["exchange"], minSimilarity: 0 });
+    const recalled = await h.fabric.recall("flight", { kinds: ["exchange"], minSimilarity: 0 });
     expect(recalled.hits.some((hit) => hit.id === result.notes[0].id)).toBe(true);
   } finally {
     h.stores.close();

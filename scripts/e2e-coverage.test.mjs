@@ -154,8 +154,9 @@ test("real repo: manifest covers every exports surface in baseline mode", () => 
   // total is 80. Plan 205 Task 2 adds `@arnilo/prism-provider-commandcode`, so 81. Plan 213 Task 2 adds
   // `@arnilo/prism-provider-kilo` and plan 214 Task 2 adds `@arnilo/prism-provider-litellm`, so 83.
   // Plan 206 Task 2 adds `@arnilo/prism-provider-ollama-cloud`, so 84. Plan 215 Task 14 adds
-  // `@arnilo/prism-host-builder`, so 85.
-  assert.equal(summary.total, 85);
+  // `@arnilo/prism-host-builder`, so 85. Plan 215 Task 26 added the kernel's `./net` and `./artifacts` subpaths; plan 216
+  // Task 3 regenerated the manifest (the knowledge renames keep the count), so 87.
+  assert.equal(summary.total, 87);
   assert.equal(summary.pending, 4, "four surfaces are unannotated after the 0.13 regeneration");
 });
 

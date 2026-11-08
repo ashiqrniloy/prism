@@ -66,13 +66,14 @@ to this template word for word, ignoring line breaks, and fails when a package j
 stable README carries it.
 
 ```markdown
-> **Experimental in 0.13.0.** Install with `bun add <name>@experimental`. Outside the stability promise of the stable
-> packages: its API, config, preset contents and defaults may change or be removed in any release until it graduates.
+> **Experimental in 0.13.0.** Install with `bun add <name>@experimental`. Outside the
+> [stability promise](https://github.com/ashiqrniloy/prism/blob/main/docs/compatibility.md) of the stable packages: its API,
+> config, preset contents and defaults may change or be removed in any release until it graduates.
 > Graduation is the memory track's final step, which sets the first stable version.
 ```
 
-The `docs/index.md` entry of each experimental package says "(experimental)". Once `docs/compatibility.md`
-exists, the notice links it from "the stability promise of the stable packages".
+The `docs/index.md` entry of each experimental package says "(experimental)". The link is absolute because the
+notice ships inside each package's README on npm, where a relative path to `docs/` does not resolve.
 
 ## What a tarball contains
 
@@ -114,6 +115,49 @@ bun run release:gate
 Without `PRISM_TEST_POSTGRES_URL` the durable surface records `blocked` and `release:gate` stops at
 `checkReleaseEvidence` rather than passing quietly. The DSN is read from the environment only — it is
 never written to `scripts/release-evidence.json`, `scripts/postgres-evidence.json`, or a log.
+
+## Live acceptance
+
+`release:gate` is hermetic. Before the tag, the release commit also passes live acceptance: T1 wire
+scenarios for every gating provider, the SDK journey on Hyper and OpenCode Go, and cache parity, all in
+strict mode, with a signed evidence file. After publish, the packed smoke (`bun scripts/post-publish-smoke.mjs`)
+runs against the registry. Tiers, entry criteria, credentials, the procedure, triage and evidence are in
+[Release acceptance on live providers](live-testing.md#release-acceptance-on-live-providers).
+
+## The compat gate
+
+The compat leg freezes the shape of each package's public surface, not only its names.
+`scripts/compat-shape.mjs` reads the emitted `.d.ts` tree from every code target in the manifest's
+`exports` (`.`, `./net`, `./artifacts`, `./provider-kit`, `./driver-kit`, `./manifest`, `./testing`, …)
+and records one line per name, keyed `<entry> <name>`:
+
+```text
+. AgentConfig	interface AgentConfig { readonly compaction?: false | CompactionOptions; readonly disable?: AgentDisable; … }
+./net pinnedFetch	function pinnedFetch(…): Promise<Response>
+```
+
+- **What a line holds.** The full normalized declaration: interface, class and enum bodies with members
+  sorted, type alias right-hand sides, every function overload, and const types. Comments are stripped
+  and whitespace is collapsed, so a comment edit or a member reorder changes nothing. A re-exported name
+  resolves to its declaration inside the package. A name re-exported from another package records
+  `reexport <name> from "<package>"`, so the owning package's baseline freezes its shape. A value that is
+  exported only as a type carries `[type-only export]`.
+- **Entry points.** Only names reachable from an `exports` target are frozen. Moving a name between the
+  root and a subpath is a removal under one entry and an addition under the other.
+- **Classification.** The gate reports each name as `removed`, `changed` (with a line diff of the
+  normalized text), `compatible`, or `added`. Three kinds of change are `compatible` and pass: a new optional
+  interface or class member, a new function overload, and a new member of a union the kernel only
+  produces. Those unions are listed in `PRODUCER_ONLY_TYPES` in `scripts/compat-shape.mjs`
+  (`AgentEventPayload`, `AgentEvent`, `AgentEventType`, `AgentFinishReason`, `HostUiRequest`,
+  `SessionEntryKind`); [compatibility.md](compatibility.md) gives the host, package and store rules that make
+  their growth safe. Any other
+  change fails, unless you pass `--allow-break` and `docs/migration.md` names the version. That includes
+  widening a union a host constructs, a required member, a narrowed type, or a value that becomes
+  type-only.
+- **Updating.** `bun scripts/release.mjs gate --update-baseline` rewrites every live package's baseline.
+  Review the diff of `scripts/compat-baseline/` like an API change. Baselines of the retired 0.3-era
+  packages are left alone: they are frozen literals for the legacy registry
+  (`scripts/phase54-package-map.mjs`).
 
 ## The kernel size budget
 
@@ -171,10 +215,9 @@ The inventory and the provider adapters below are generated from the workspace m
 | `@arnilo/prism-memory-core` | 0.13.0-experimental.0 | library — shared memory contracts, vector stores, lineage, propagation, and scoring; no slot and no capability |
 | `@arnilo/prism-memory-fabric` | 0.13.0-experimental.0 | capability — T1 of the three-tier memory, the store of record: working, semantic, and scoped notes with the memory.* tools, a context block, and per-session state |
 | `@arnilo/prism-memory-observational` | 0.13.0-experimental.0 | capability — T0 of the three-tier memory: observes the session, keeps a source-backed ledger, and compacts from it |
-| `@arnilo/prism-memory-rag` | 0.13.0-experimental.0 | capability — indexed retrieval with a rag_search tool, an opt-in context block, and the embeddings service |
-| `@arnilo/prism-memory-wiki` | 0.13.0-experimental.0 | capability — T2 of the three-tier memory, opt-in and unmeasured: concept notes over the fabric, consolidated from cited evidence |
 | `@arnilo/prism-model-router` | 0.13.0 | capability — policy around hook routing turns across candidates with budget, circuit, and rate-limit controls |
 | `@arnilo/prism-observability` | 0.13.0 | capability — OpenTelemetry spans and metrics over the agent event catalog as observe handlers; exports nothing itself |
+| `@arnilo/prism-rag` | 0.13.0-experimental.0 | capability — indexed retrieval with a rag_search tool, an opt-in context block, and the embeddings service |
 | `@arnilo/prism-remote` | 0.13.0 | library — host library serving a Prism agent to remote clients and connecting to remote agents over prism.remote/1 |
 | `@arnilo/prism-store-codecs` | 0.13.0 | capability |
 | `@arnilo/prism-store-jsonl` | 0.13.0 | capability |
@@ -187,6 +230,7 @@ The inventory and the provider adapters below are generated from the workspace m
 | `@arnilo/prism-tools-research` | 0.13.0 | capability — research skills, a per-session source ledger, cite, and a bounded run.end citation check |
 | `@arnilo/prism-tools-web` | 0.13.0 | capability — keyless native fetch plus Brave/Exa/SearXNG/Tavily/Kagi search, Firecrawl fetch/extract, and host-installed Obscura, with a host domain policy, an optional per-session cache, and a web.fetch service |
 | `@arnilo/prism-tools-work` | 0.13.0 | capability — /connectors, /documents, /sheets, /diagrams, /document-extraction, /document-reader, /sandbox, /skills, /tools subpaths |
+| `@arnilo/prism-wiki` | 0.13.0-experimental.0 | capability — knowledge outside memory, opt-in and unmeasured: concepts and sources in its own store, consolidated from cited evidence; reads memory read-only |
 | `@arnilo/prism-workflows` | 0.13.0 | library — typed graph workflows (DAG and cyclic) that orchestrate any set of agents from outside their sessions: checkpoints, suspend/resume, replay, graph export, and the `checkpoints`/`leases` service contracts |
 <!-- generated:package-truth:inventory end -->
 

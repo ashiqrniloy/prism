@@ -1,11 +1,12 @@
-import { type ArtifactBodyStore, type JsonObject } from "@arnilo/prism";
+import { type JsonObject } from "@arnilo/prism";
+import { type ArtifactBodyStore } from "@arnilo/prism/artifacts";
 import type { CheckpointStore } from "@arnilo/prism-workflows";
 import { assertSafeArgv, createCliRunner, parseCliJson, parseCliNdjson } from "./cli.js";
 import { createCheckpointWorkDraftStore, createMemoryWorkDraftStore } from "./drafts.js";
 import { WorkToolError } from "./errors.js";
+import { type AgentIdentity, assertIdentityActive } from "./identity.js";
 import { resolveWorkLimits } from "./limits.js";
 import type { GoogleWorkspaceAdapter, GoogleWorkspaceOp, WorkCliRunner, WorkDraftStore, WorkLimits, WorkTokenProvider } from "./types.js";
-import { type AgentIdentity, assertIdentityActive } from "./identity.js";
 /** Default ops enabled without Docs/Sheets/Slides capability gates. */
 export const DEFAULT_GWS_OPS: readonly GoogleWorkspaceOp[] = [
   "version",

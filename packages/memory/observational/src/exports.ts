@@ -7,10 +7,7 @@ export {
 } from "./ids.js";
 export {
   HARD_MAX_RECALL_PAGE_LIMIT,
-  measureWorkerJson,
-  resolveMemoryWorkerLimits,
   resolveRecallPageLimit,
-  truncateWorkerText,
 } from "./limits.js";
 export {
   serializeSessionEntry,
@@ -47,18 +44,11 @@ export {
   isEligibleObservationSourceEntry,
 } from "./coverage-helpers.js";
 export {
-  runMemoryWorkerLoop,
-} from "./worker-loop.js";
-export {
   memoryObservationalConfigSchema,
   resolveMemoryObservationalConfig,
   type MemoryObservationalCompactAt,
   type ResolvedCompactAt,
 } from "./config.js";
-export type {
-  MemoryWorkerLimitOptions,
-  ResolvedMemoryWorkerLimits,
-} from "./limits.js";
 export type {
   ObservationalMemoryContextOptions,
   RecentMessageWindowOptions,
@@ -83,9 +73,6 @@ export type {
   ObservationsRecordedData,
   ReflectionsRecordedData,
 } from "./types.js";
-export type {
-  MemoryWorkerLoopOptions,
-} from "./worker-loop.js";
 export type {
   MemoryObservationalConfig,
   MemoryObservationalDropperPolicy,

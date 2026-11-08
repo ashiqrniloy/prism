@@ -1,46 +1,29 @@
-ADVICE_JSON_INSTRUCTION	export declare const ADVICE_JSON_INSTRUCTION = "Reply with JSON only, no prose and no code fences:
-ADVISE_DESCRIPTION	export declare const ADVISE_DESCRIPTION = "Ask a second model for advice on your current approach. It sees the recent conversation
-ADVISE_TOOL	export declare const ADVISE_TOOL = "advise"
-AdvisorConfigError	export declare class AdvisorConfigError extends Error
-COMPLETE_JSON_INSTRUCTION	export declare const COMPLETE_JSON_INSTRUCTION = "Reply with JSON only, no prose and no code fences:
-DEFAULT_ADVICE_MAX_CHARS	export declare const DEFAULT_ADVICE_MAX_CHARS = 4000
-DEFAULT_ADVISOR_INSTRUCTIONS	export declare const DEFAULT_ADVISOR_INSTRUCTIONS = "You are a second opinion for another AI agent that is working on a task. Read the conversation and answer its question directly. Point out a wrong approach, a missed requirement, or a risk it has not noticed, and say what to do instead. Be brief: at most a few short paragraphs. You have no tools and cannot act
-DEFAULT_CONTEXT_LAST_TURNS	export declare const DEFAULT_CONTEXT_LAST_TURNS = 6
-DEFAULT_CONTEXT_MAX_CHARS	export declare const DEFAULT_CONTEXT_MAX_CHARS = 24000
-DEFAULT_MAX_CONSULTS_PER_RUN	export declare const DEFAULT_MAX_CONSULTS_PER_RUN = 3
-DEFAULT_MAX_ROUNDS	export declare const DEFAULT_MAX_ROUNDS = 2
-HARD_ADVICE_MAX_CHARS	export declare const HARD_ADVICE_MAX_CHARS = 16000
-HARD_CONTEXT_LAST_TURNS	export declare const HARD_CONTEXT_LAST_TURNS = 50
-HARD_CONTEXT_MAX_CHARS	export declare const HARD_CONTEXT_MAX_CHARS = 120000
-HARD_MAX_CONSULTS_PER_RUN	export declare const HARD_MAX_CONSULTS_PER_RUN = 20
-HARD_MAX_ROUNDS	export declare const HARD_MAX_ROUNDS = 10
-MAX_MISSING_CHARS	export declare const MAX_MISSING_CHARS = 200
-MAX_MISSING_ITEMS	export declare const MAX_MISSING_ITEMS = 5
-advisorConfigSchema	export declare const advisorConfigSchema:
-callKey	export declare function callKey(name: string, args: Readonly<Record<string, JsonValue>>): string
-consultPrompt	export declare function consultPrompt(instructions: string, transcript: string, question: string): string
-createAdviseTool	export declare function createAdviseTool(prism: PackageAPI<AdvisorConfig>, runtime: AdvisorRuntime): ToolDefinition
-createConsultLedger	export declare const createConsultLedger: (prism: PackageAPI<AdvisorConfig>, maxConsultsPerRun: number) => ConsultLedger
-createTaskStore	export declare function createTaskStore(prism: PackageAPI<AdvisorConfig>): TaskStore
-default	export default
-eventData	export declare const eventData: (data: Readonly<Record<string, JsonValue | undefined>>) => JsonValue
-generateText	export declare function generateText(client: ModelClient, prompt: string, options:
-messageText	export declare function messageText(message: Message): string
-parseAdviceVerdict	export declare function parseAdviceVerdict(text: string, maxChars: number): AdviceVerdict | undefined
-parseCompletionVerdict	export declare function parseCompletionVerdict(text: string): CompletionVerdict | undefined
-parseJsonObject	export declare function parseJsonObject(text: string): Record<string, unknown> | undefined
-registerBeforeFinish	export declare function registerBeforeFinish(prism: PackageAPI<AdvisorConfig>, runtime: AdvisorRuntime): void
-registerBeforeTools	export declare function registerBeforeTools(prism: PackageAPI<AdvisorConfig>, runtime: AdvisorRuntime, names: readonly string[]): void
-registerTaskCapture	export declare function registerTaskCapture(prism: PackageAPI<AdvisorConfig>, store: TaskStore): void
-registerValidation	export declare function registerValidation(prism: PackageAPI<AdvisorConfig>, runtime: AdvisorRuntime, config: AdvisorValidateConfig, maxRounds: number, tasks: TaskStore): void
-renderSlice	export declare function renderSlice(slice: TranscriptSlice): string
-resolveContext	export declare function resolveContext(config: AdvisorContextConfig | undefined): ResolvedContext
-resolveLimits	export declare function resolveLimits(config: AdvisorConfig):
-sliceOf	export declare function sliceOf(entries: readonly SessionEntry[] | readonly Message[], context: ResolvedContext, pinned?: readonly Message[]): TranscriptSlice
-type AdviceVerdict	export { type AdviceVerdict, type CompletionVerdict, MAX_MISSING_CHARS, MAX_MISSING_ITEMS, parseAdviceVerdict, parseCompletionVerdict } from "./verdict.js"
-type AdvisorConfig	export { type AdvisorConfig, type AdvisorContextConfig, type AdvisorValidateConfig, advisorConfigSchema, DEFAULT_ADVISOR_INSTRUCTIONS, DEFAULT_ADVICE_MAX_CHARS, DEFAULT_CONTEXT_LAST_TURNS, DEFAULT_CONTEXT_MAX_CHARS, DEFAULT_MAX_CONSULTS_PER_RUN, DEFAULT_MAX_ROUNDS, HARD_ADVICE_MAX_CHARS, HARD_CONTEXT_LAST_TURNS, HARD_CONTEXT_MAX_CHARS, HARD_MAX_CONSULTS_PER_RUN, HARD_MAX_ROUNDS, resolveContext, resolveLimits } from "./config.js"
-type AdvisorContextConfig	export { type AdvisorConfig, type AdvisorContextConfig, type AdvisorValidateConfig, advisorConfigSchema, DEFAULT_ADVISOR_INSTRUCTIONS, DEFAULT_ADVICE_MAX_CHARS, DEFAULT_CONTEXT_LAST_TURNS, DEFAULT_CONTEXT_MAX_CHARS, DEFAULT_MAX_CONSULTS_PER_RUN, DEFAULT_MAX_ROUNDS, HARD_ADVICE_MAX_CHARS, HARD_CONTEXT_LAST_TURNS, HARD_CONTEXT_MAX_CHARS, HARD_MAX_CONSULTS_PER_RUN, HARD_MAX_ROUNDS, resolveContext, resolveLimits } from "./config.js"
-type AdvisorValidateConfig	export { type AdvisorConfig, type AdvisorContextConfig, type AdvisorValidateConfig, advisorConfigSchema, DEFAULT_ADVISOR_INSTRUCTIONS, DEFAULT_ADVICE_MAX_CHARS, DEFAULT_CONTEXT_LAST_TURNS, DEFAULT_CONTEXT_MAX_CHARS, DEFAULT_MAX_CONSULTS_PER_RUN, DEFAULT_MAX_ROUNDS, HARD_ADVICE_MAX_CHARS, HARD_CONTEXT_LAST_TURNS, HARD_CONTEXT_MAX_CHARS, HARD_MAX_CONSULTS_PER_RUN, HARD_MAX_ROUNDS, resolveContext, resolveLimits } from "./config.js"
-type CompletionVerdict	export { type AdviceVerdict, type CompletionVerdict, MAX_MISSING_CHARS, MAX_MISSING_ITEMS, parseAdviceVerdict, parseCompletionVerdict } from "./verdict.js"
-type ValidatorDelegateService	export { type ValidatorDelegateService, type ValidatorVerdict } from "./validate.js"
-type ValidatorVerdict	export { type ValidatorDelegateService, type ValidatorVerdict } from "./validate.js"
+. ADVISE_DESCRIPTION	const ADVISE_DESCRIPTION = "Ask a second model for advice on your current approach. It sees the recent conversation; state the specific question."
+. ADVISE_TOOL	const ADVISE_TOOL = "advise"
+. AdviceVerdict	type AdviceVerdict = { readonly verdict: "proceed"; } | { readonly verdict: "revise"; readonly advice: string; }
+. AdvisorConfig	interface AdvisorConfig { readonly adviceMaxChars?: number; readonly context?: AdvisorContextConfig; readonly instructions?: string; readonly maxConsultsPerRun?: number; readonly model: ModelRef; readonly tool?: boolean; readonly triggers?: { readonly beforeTools?: readonly string[]; readonly beforeFinish?: boolean; }; readonly validate?: AdvisorValidateConfig; }
+. AdvisorConfigError	class AdvisorConfigError extends Error { constructor(message: string); }
+. AdvisorContextConfig	interface AdvisorContextConfig { readonly lastTurns?: number; readonly maxChars?: number; }
+. AdvisorValidateConfig	interface AdvisorValidateConfig { readonly context?: AdvisorContextConfig; readonly criteria?: string; readonly engine?: "model" | { readonly child: string; }; readonly maxRounds?: number; readonly onError?: "continue" | "end"; }
+. CompletionVerdict	type CompletionVerdict = { readonly verdict: "complete"; } | { readonly verdict: "incomplete"; readonly missing: readonly string[]; }
+. DEFAULT_ADVICE_MAX_CHARS	const DEFAULT_ADVICE_MAX_CHARS = 4000
+. DEFAULT_ADVISOR_INSTRUCTIONS	const DEFAULT_ADVISOR_INSTRUCTIONS = "You are a second opinion for another AI agent that is working on a task. Read the conversation and answer its question directly. Point out a wrong approach, a missed requirement, or a risk it has not noticed, and say what to do instead. Be brief: at most a few short paragraphs. You have no tools and cannot act; the agent acts."
+. DEFAULT_CONTEXT_LAST_TURNS	const DEFAULT_CONTEXT_LAST_TURNS = 6
+. DEFAULT_CONTEXT_MAX_CHARS	const DEFAULT_CONTEXT_MAX_CHARS = 24000
+. DEFAULT_MAX_CONSULTS_PER_RUN	const DEFAULT_MAX_CONSULTS_PER_RUN = 3
+. DEFAULT_MAX_ROUNDS	const DEFAULT_MAX_ROUNDS = 2
+. HARD_ADVICE_MAX_CHARS	const HARD_ADVICE_MAX_CHARS = 16000
+. HARD_CONTEXT_LAST_TURNS	const HARD_CONTEXT_LAST_TURNS = 50
+. HARD_CONTEXT_MAX_CHARS	const HARD_CONTEXT_MAX_CHARS = 120000
+. HARD_MAX_CONSULTS_PER_RUN	const HARD_MAX_CONSULTS_PER_RUN = 20
+. HARD_MAX_ROUNDS	const HARD_MAX_ROUNDS = 10
+. MAX_MISSING_CHARS	const MAX_MISSING_CHARS = 200
+. MAX_MISSING_ITEMS	const MAX_MISSING_ITEMS = 5
+. ValidatorDelegateService	interface ValidatorDelegateService { start(input: { readonly child: string; readonly input: string; readonly mode: "sync"; readonly session: SessionContext; readonly signal?: AbortSignal; }): Promise<{ readonly status: string; readonly text?: string; readonly error?: string; }>; }
+. ValidatorVerdict	type ValidatorVerdict = "verified" | "incomplete" | "unverified" | "error"
+. advisorConfigSchema	const advisorConfigSchema: { readonly type: "object"; readonly properties: { readonly model: { readonly anyOf: readonly [{ readonly type: "string"; }, { readonly type: "object"; readonly properties: { readonly provider: { readonly type: "string"; }; readonly model: { readonly type: "string"; }; }; readonly required: readonly ["provider", "model"]; }]; }; readonly instructions: { readonly type: "string"; readonly minLength: 1; }; readonly context: { readonly type: "object"; readonly properties: { readonly lastTurns: { readonly type: "integer"; readonly minimum: 1; }; readonly maxChars: { readonly type: "integer"; readonly minimum: 1; }; }; readonly additionalProperties: false; }; readonly adviceMaxChars: { readonly type: "integer"; readonly minimum: 1; }; readonly tool: { readonly type: "boolean"; }; readonly triggers: { readonly type: "object"; readonly properties: { readonly beforeTools: { readonly type: "array"; readonly items: { readonly type: "string"; readonly minLength: 1; }; }; readonly beforeFinish: { readonly type: "boolean"; }; }; readonly additionalProperties: false; }; readonly maxConsultsPerRun: { readonly type: "integer"; readonly minimum: 1; }; readonly validate: { readonly type: "object"; readonly properties: { readonly criteria: { readonly type: "string"; }; readonly engine: { readonly anyOf: readonly [{ readonly type: "string"; readonly enum: readonly ["model"]; }, { readonly type: "object"; readonly properties: { readonly child: { readonly type: "string"; readonly minLength: 1; }; }; readonly required: readonly ["child"]; readonly additionalProperties: false; }]; }; readonly onError: { readonly type: "string"; readonly enum: readonly ["continue", "end"]; }; readonly maxRounds: { readonly type: "integer"; readonly minimum: 1; }; readonly context: { readonly type: "object"; readonly properties: { readonly lastTurns: { readonly type: "integer"; readonly minimum: 1; }; readonly maxChars: { readonly type: "integer"; readonly minimum: 1; }; }; readonly additionalProperties: false; }; }; readonly additionalProperties: false; }; }; readonly additionalProperties: false; }
+. default	const definition: import("@arnilo/prism").PackageDefinition<AdvisorConfig>
+. parseAdviceVerdict	function parseAdviceVerdict(text: string, maxChars: number): AdviceVerdict | undefined
+. parseCompletionVerdict	function parseCompletionVerdict(text: string): CompletionVerdict | undefined
+. resolveContext	function resolveContext(config: AdvisorContextConfig | undefined): ResolvedContext
+. resolveLimits	function resolveLimits(config: AdvisorConfig): { readonly adviceMaxChars: number; readonly maxConsultsPerRun: number; readonly maxRounds: number; readonly clamped: readonly string[]; }

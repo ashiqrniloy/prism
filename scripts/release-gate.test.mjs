@@ -6,6 +6,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, 
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { parseBunLock } from "./bun-lock.mjs";
+import { classifyChange, extractPackageSurface, normalizeDeclaration } from "./compat-shape.mjs";
 import { publishableWorkspaceDirs } from "./package-truth.mjs";
 import { CONSOLIDATION_SPEC } from "./phase54-package-map.mjs";
 import { loadRelease, publishArgs, satisfiesInternalRange, tarballName, validateRelease } from "./release.mjs";
@@ -111,6 +112,191 @@ export * as ns from "./mod.js";
     assert.equal(serializeSurface(parseSurface(serializeSurface(surface))), serializeSurface(surface));
   });
 
+  // Plan 215 Task 28: the shape freeze. Fixtures are hand-written `.d.ts` trees (what tsc emits), so
+  // these run without a declaration emit; `compat_detects_member_change` goes through the real gate.
+  function declTree(files) {
+    const dir = mkdtempSync(join(tmpdir(), "prism-shape-"));
+    for (const [path, text] of Object.entries(files)) {
+      mkdirSync(join(dir, path, ".."), { recursive: true });
+      writeFileSync(join(dir, path), text);
+    }
+    return dir;
+  }
+  const surfaceOf = (files, exports = { ".": "./src/index.ts" }) => {
+    const dir = declTree(files);
+    try {
+      return extractPackageSurface(dir, { name: "@arnilo/prism-fixture", exports });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+
+  it("normalizer_is_stable", () => {
+    const a = normalizeDeclaration(`export interface AgentConfig {
+    /** The id. */
+    readonly id?: string;
+    // a comment with ; and { inside
+    readonly disable?: AgentDisable;
+    readonly hooks?: (hooks: HookRegistrar) => void;
+}`);
+    const b = normalizeDeclaration(
+      "export interface AgentConfig { readonly hooks?: (hooks: HookRegistrar) => void; /* x; */ readonly disable?: AgentDisable;\n readonly id?: string }",
+    );
+    assert.equal(a, b);
+    assert.equal(
+      a,
+      "interface AgentConfig { readonly disable?: AgentDisable; readonly hooks?: (hooks: HookRegistrar) => void; readonly id?: string; }",
+    );
+    // Strings keep their content: a `;`, `//` or `{` inside a literal is not structure.
+    // A template literal type is built by concatenation so the fixture carries a literal `${`.
+    const template = "`p-$" + "{string}`";
+    assert.equal(
+      normalizeDeclaration(`export type Url = "https://x.test/a;b" | ${template};`),
+      `type Url = "https://x.test/a;b" | ${template}`,
+    );
+    assert.equal(normalizeDeclaration("export declare enum Kind {\n  B = 1,\n  A = 0\n}"), "enum Kind { A = 0, B = 1 }");
+  });
+
+  it("compat_resolves_reexports", () => {
+    const { surface, missing } = surfaceOf(
+      {
+        "src/index.d.ts":
+          'export { type AgentConfig } from "./agent.js";\nexport * from "./net/index.js";\nimport { helper } from "./util.js";\nexport { helper as renamed };\nexport type { Runner } from "./util.js";\nexport { ModelProvider } from "@arnilo/prism";\n',
+        "src/agent.d.ts": "export interface AgentConfig {\n    readonly name?: string;\n}\n",
+        "src/util.d.ts":
+          "export declare function helper(a: string): void;\nexport declare function helper(a: number): void;\nexport declare class Runner {\n    run(): void;\n}\n",
+        "src/net/index.d.ts": "export declare const pinned: () => void;\n",
+      },
+      { ".": "./src/index.ts", "./net": "./src/net/index.ts", "./schema.json": "./schema.json" },
+    );
+    assert.deepEqual(missing, []);
+    assert.equal(surface.get(". AgentConfig"), "interface AgentConfig { readonly name?: string; }");
+    assert.equal(surface.get(". renamed"), "function helper(a: number): void; function helper(a: string): void");
+    assert.equal(surface.get(". Runner"), "class Runner { run(): void; }; [type-only export]");
+    assert.equal(surface.get(". ModelProvider"), 'reexport ModelProvider from "@arnilo/prism"');
+    // Keyed by entry: the same declaration under two entries is two names, so a move is a removal plus an addition.
+    assert.equal(surface.get(". pinned"), "const pinned: () => void");
+    assert.equal(surface.get("./net pinned"), "const pinned: () => void");
+  });
+
+  it("compat_detects_type_alias_change", () => {
+    const before = surfaceOf({ "src/index.d.ts": 'export type ToolCapabilityKind = "read" | "write" | "execute";\n' }).surface;
+    const after = surfaceOf({ "src/index.d.ts": 'export type ToolCapabilityKind = "read" | "write";\n' }).surface;
+    const diff = diffSurface(after, before);
+    assert.deepEqual(diff.changed, [". ToolCapabilityKind"]);
+    assert.match(diff.diffs.get(". ToolCapabilityKind"), /^- type ToolCapabilityKind = "read" \| "write" \| "execute"$/m);
+    // Widening a host-constructed union breaks too: only producer-only types may grow.
+    const widened = surfaceOf({ "src/index.d.ts": 'export type ToolCapabilityKind = "read" | "write" | "execute" | "admin";\n' }).surface;
+    assert.deepEqual(diffSurface(widened, before).changed, [". ToolCapabilityKind"]);
+  });
+
+  it("compat_allows_optional_member_add", () => {
+    const before = "interface AgentConfig { readonly name?: string; }";
+    assert.equal(
+      classifyChange(". AgentConfig", before, "interface AgentConfig { readonly id?: string; readonly name?: string; }"),
+      "compatible",
+    );
+    assert.equal(
+      classifyChange(". AgentConfig", before, "interface AgentConfig { readonly id: string; readonly name?: string; }"),
+      "breaking",
+    );
+    assert.equal(classifyChange(". AgentConfig", before, "interface AgentConfig { readonly name: string; }"), "breaking");
+    // A new overload is additive; a removed one is not.
+    const one = "function f(a: string): void";
+    const two = "function f(a: number): void; function f(a: string): void";
+    assert.equal(classifyChange(". f", one, two), "compatible");
+    assert.equal(classifyChange(". f", two, one), "breaking");
+    // A value export that becomes type-only is a break.
+    assert.equal(classifyChange(". C", "class C {}", "class C {}; [type-only export]"), "breaking");
+    const diff = diffSurface(
+      new Map([[". AgentConfig", "interface AgentConfig { readonly id?: string; readonly name?: string; }"]]),
+      new Map([[". AgentConfig", before]]),
+    );
+    assert.deepEqual(diff.changed, []);
+    assert.deepEqual(diff.compatible, [". AgentConfig"]);
+  });
+
+  it("compat_allows_producer_union_growth", () => {
+    const before = 'type AgentEventPayload = { type: "a"; } | { type: "b"; }';
+    const after = 'type AgentEventPayload = { type: "a"; } | { type: "b"; } | { type: "c"; }';
+    assert.equal(classifyChange(". AgentEventPayload", before, after), "compatible");
+    assert.equal(classifyChange(". AgentEventPayload", after, before), "breaking", "a removed event member breaks");
+    assert.equal(
+      classifyChange(". OtherUnion", before.replace("AgentEventPayload", "OtherUnion"), after.replace("AgentEventPayload", "OtherUnion")),
+      "breaking",
+    );
+  });
+
+  it("compat_detects_member_change", () => {
+    const root = mkdtempSync(join(import.meta.dirname, "..", ".gate-fixture-"));
+    try {
+      writeFileSync(
+        join(root, "tsconfig.packages.json"),
+        `${JSON.stringify({ compilerOptions: { target: "ES2022", module: "NodeNext", moduleResolution: "NodeNext", strict: true } })}\n`,
+      );
+      const path = "packages/alpha";
+      mkdirSync(join(root, path, "src"), { recursive: true });
+      const manifest = { name: "@arnilo/prism-alpha", version: "1.0.0", exports: { ".": "./src/index.ts" } };
+      writeFileSync(join(root, path, "package.json"), `${JSON.stringify(manifest)}\n`);
+      const source = (members) =>
+        `export interface AgentDisable { readonly tools?: boolean }\nexport interface AgentConfig {\n${members}\n}\n`;
+      writeFileSync(join(root, path, "src", "index.ts"), source("  readonly disable?: AgentDisable;\n  readonly name?: string;"));
+      const release = { root, packages: [{ path, manifest }], validate: () => {}, validateIndependent: () => {} };
+      runGates({ release, version: "1.0.0", skipTarball: true, updateBaseline: true });
+      // Adding an optional member passes as compatible.
+      writeFileSync(
+        join(root, path, "src", "index.ts"),
+        source("  readonly disable?: AgentDisable;\n  readonly id?: string;\n  readonly name?: string;"),
+      );
+      runGates({ release, version: "1.0.0", skipTarball: true });
+      // Removing `disable` fails and names the member.
+      writeFileSync(join(root, path, "src", "index.ts"), source("  readonly name?: string;"));
+      assert.throws(
+        () => runGates({ release, version: "1.0.0", skipTarball: true }),
+        /compat: @arnilo\/prism-alpha changed: AgentConfig .*fix or pass --allow-break/,
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("compat_coding_surface_has_no_plan189_removals", () => {
+    const read = (name) => readFileSync(join(import.meta.dirname, "..", BASELINE_DIR, baselineName(name)), "utf8");
+    const names = (text) =>
+      new Set(
+        text
+          .split("\n")
+          .filter(Boolean)
+          .map((line) => line.slice(0, line.indexOf("\t")).split(" ").pop()),
+      );
+    const coding = names(read("@arnilo/prism-tools-coding"));
+    for (const removed of [
+      "repo_list",
+      "repo_search",
+      "git_branch",
+      "git_apply",
+      "git_worktree",
+      "fuzzyFindText",
+      "normalizeForFuzzyMatch",
+      "serializeToolResultJson",
+    ]) {
+      assert.ok(!coding.has(removed), `plan 189 removed ${removed}`);
+    }
+    for (const kept of ["compileGlob", "createBackgroundProcesses"]) assert.ok(coding.has(kept), `missing ${kept}`);
+    // Internal to `agent/edit.ts` and not reachable from the package's only entry: the old union extractor froze it by accident.
+    assert.ok(!coding.has("generateChangedLinePreview"));
+    // `shell_output` and `diagnostics` are tool names registered inside `createCodingTools`, not exports: the
+    // tool-registration tests own them, the shape baseline does not.
+    const kernel = names(read("@arnilo/prism"));
+    assert.ok(kernel.has("serializeToolResultText") && kernel.has("OMITTED_TOOL_RESULT_IMAGE_NOTE"));
+    assert.ok(!kernel.has("serializeToolResultJson"));
+    // Every live package's baseline is in the per-entry shape format (legacy-registry baselines stay frozen literals).
+    for (const pkg of loadRelease(join(import.meta.dirname, "..")).packages) {
+      const first = read(pkg.manifest.name).split("\n")[0];
+      assert.match(first, /^\.\S* \S+\t/, `${pkg.manifest.name} baseline is not keyed by entry`);
+    }
+  });
+
   it("tarball deny list blocks review/plan/map content and allows clean packs", () => {
     assert.throws(() => assertTarballAllowDeny("pkg", ["dist/index.js", "docs/review-coverage-2026.md"]), /denied paths/);
     assert.throws(() => assertTarballAllowDeny("pkg", ["docs/_evidence/release-0.2.7-evidence.md"]), /denied paths/);
@@ -209,7 +395,10 @@ export * as ns from "./mod.js";
       const distDir = join(release.root, pkg.path, "dist");
       if (!existsSync(distDir)) continue; // manifest-only profiles ship no code
       const baselinePath = join(release.root, BASELINE_DIR, baselineName(pkg.manifest.name));
-      const diff = diffSurface(extractDeclaredSurface(distDir), parseSurface(readFileSync(baselinePath, "utf8")));
+      const diff = diffSurface(
+        extractPackageSurface(join(release.root, pkg.path), pkg.manifest).surface,
+        parseSurface(readFileSync(baselinePath, "utf8")),
+      );
       if (!diff.removed.length && !diff.changed.length) continue;
       if (pkg.experimental) continue; // plan 215 Task 2: the gate reports an experimental drift and never fails on it
       stale.push(
@@ -304,8 +493,8 @@ export * as ns from "./mod.js";
     runGates({ release, version: "1.0.0", skipTarball: true, updateBaseline: true });
     for (const pkg of packages) {
       const file = join(root, BASELINE_DIR, baselineName(pkg.manifest.name));
-      const text = readFileSync(file, "utf8").replace(/^moved\t.*$/m, "moved\texport declare const moved: string");
-      writeFileSync(file, `${text}gone\texport declare const gone: number\n`);
+      const text = readFileSync(file, "utf8").replace(/^\. moved\t.*$/m, ". moved\tconst moved: string");
+      writeFileSync(file, `${text}. gone\tconst gone: number\n`);
     }
     return { root, release, packages };
   }
@@ -341,7 +530,7 @@ export * as ns from "./mod.js";
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
-  });
+  }, 30_000);
 
   it("gate_cleans_types_dir", () => {
     const { root, release } = emitFixture();

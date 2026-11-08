@@ -18,7 +18,7 @@ export async function kiloOverflowSession(recording: RecordedExchange): Promise<
   let calls = 0;
   const replay = replayFetch([recording, ok]);
   const provider = createKiloProvider({
-    apiKey: "test-key",
+    apiKey: async () => "test-key",
     fetch: (async (url, init) => {
       calls++;
       return replay(url, init);

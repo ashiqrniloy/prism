@@ -122,12 +122,9 @@ test("memory_bench_ablate_flag_toggles_feature", async () => {
   assert.throws(() => memoryConfigs({ config: "fabric", ablate: ["fabric.inject.budgetTokens=-1"] }));
   assert.throws(() => memoryConfigs({ config: "fabric", ablate: ["fabric.tools.root=/tmp"] }));
   assert.throws(() => memoryConfigs({ config: "fabric", ablate: ["fabric.inject=off", "fabric.inject.query=user"] }));
-  assert.equal(memoryConfigs({ config: "fabric", ablate: ["fabric.consolidate.decider=off"] }).fabric.consolidate.decider, undefined);
-  assert.equal(
-    memoryConfigs({ config: "fabric", ablate: ["fabric.consolidate.decider=off"] }, { lifecycle: true, policy: { consolidate: false } })
-      .fabric.consolidate,
-    false,
-  );
+  // Plan 210 Task 7 removed `consolidate.decider`: it is no longer an ablation path.
+  assert.throws(() => memoryConfigs({ config: "fabric", ablate: ["fabric.consolidate.decider=off"] }), /unsupported or conflicting setting/);
+  assert.throws(() => memoryConfigs({ config: "fabric-hybrid" }), /fabric-hybrid was removed/);
   assert.throws(() => memoryConfigs({ config: "fabric-agentic", ablate: ["fabric.inject=on"] }));
   assert.throws(() => memoryConfigs({ config: "om", ablate: ["om.dropper.targetTokens=5000"] }));
   const om = memoryConfigs({ config: "om", ablate: ["om.reflector.observationTokens=5000", "om.dropper.targetTokens=5000"] });

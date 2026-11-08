@@ -55,7 +55,8 @@ status note instead of failing the load. `requires` is:
 | `services` | Service names some loaded package must `provide` during its `setup`. |
 
 A package admits any kernel that supports its API level, so `requires.api: 1` loads on kernel 0.14 as
-well as 0.13. The stability promise and the additive-vs-breaking rule live in `docs/compatibility.md`.
+well as 0.13. The stability promise, the additive-vs-breaking rule, and the rules a package follows to stay
+compatible with later minors live in [compatibility.md](compatibility.md).
 
 Ranges support `^`, `~`, exact, `>=`, `>`, `<=`, `<`, space-joined comparators (AND), `||`, and
 `*`, with the node-semver prerelease rule (a `-0` prerelease bound admits prereleases of the same

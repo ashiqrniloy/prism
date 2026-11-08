@@ -20,8 +20,6 @@ import type {
   MemoryReflection,
   MemoryRelevance,
   MemoryTaskState,
-  MemoryWorkerLimitOptions,
-  MemoryWorkerLoopOptions,
   ObservationalMemoryContextOptions,
   ObservationalMemoryLedger,
   ObservationsRecordedData,
@@ -33,7 +31,6 @@ import type {
   ReflectionsRecordedData,
   ResolvedCompactAt,
   ResolvedMemoryObservationalConfig,
-  ResolvedMemoryWorkerLimits,
   TaskStateRecordedData,
 } from "../index.js";
 
@@ -48,8 +45,6 @@ type _StableTypes = [
   MemoryReflection,
   MemoryRelevance,
   MemoryTaskState,
-  MemoryWorkerLimitOptions,
-  MemoryWorkerLoopOptions,
   ObservationalMemoryContextOptions,
   ObservationalMemoryLedger,
   ObservationsRecordedData,
@@ -61,7 +56,6 @@ type _StableTypes = [
   ReflectionsRecordedData,
   ResolvedCompactAt,
   ResolvedMemoryObservationalConfig,
-  ResolvedMemoryWorkerLimits,
   TaskStateRecordedData,
 ];
 export type StableTypeCount = _StableTypes["length"];
@@ -93,14 +87,10 @@ const SHARED = [
   "isObservationsRecordedData",
   "isReflectionsRecordedData",
   "isTaskStateRecordedData",
-  "measureWorkerJson",
   "recallObservationalMemoryBranchPage",
   "recordData",
-  "resolveMemoryWorkerLimits",
   "resolveRecallPageLimit",
-  "runMemoryWorkerLoop",
   "serializeSessionEntry",
-  "truncateWorkerText",
 ] as const;
 
 const INTERNAL_NAMES = [
@@ -113,6 +103,10 @@ const INTERNAL_NAMES = [
   "OBSERVATIONS_POOL_TARGET_TOKENS",
   "ObservationalMemoryError",
   "ObservationalMemoryLimitError",
+  "measureWorkerJson",
+  "resolveMemoryWorkerLimits",
+  "runMemoryWorkerLoop",
+  "truncateWorkerText",
   "assertNoRemovedFlatKeys",
   "createObservationalCompactor",
   "createObservationalFlush",

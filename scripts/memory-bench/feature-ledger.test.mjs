@@ -158,7 +158,7 @@ describe("plan 210 Task 1 feature ledger", () => {
     for (const f of ledger.findings1887) expect(f.features.length).toBeGreaterThan(0);
     for (const l of ledger.limitations18811) expect(l.features.length).toBeGreaterThan(0);
     for (const h of ledger.planHandoffs) for (const id of h.features) expect(byId.has(id)).toBe(true);
-    expect(ledger.scope.excluded.map((x) => x.package)).toEqual(["@arnilo/prism-memory-rag", "@arnilo/prism-memory-compaction"]);
+    expect(ledger.scope.excluded.map((x) => x.package)).toEqual(["@arnilo/prism-rag", "@arnilo/prism-memory-compaction"]);
   });
 
   test("ledger_is_text_free_and_committed_copy_is_current", () => {

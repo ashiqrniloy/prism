@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { CredentialRequest } from "@arnilo/prism";
 import {
   askSystemOneDecisions,
   DEFAULT_MAX_SYSTEMONE_STATE_BYTES,
@@ -62,7 +61,7 @@ function options(fetchImpl: typeof fetch, overrides: Partial<SystemOneDecisionOp
   return {
     provider: "TypeSafe Jev",
     baseUrl: "https://api.typesafe.ai/",
-    apiKey: "sk-secret",
+    apiKey: async () => "sk-secret",
     fetch: fetchImpl,
     jitter: 0,
     baseDelayMs: 0,
@@ -168,13 +167,11 @@ describe("@arnilo/prism/provider-kit (systemone-decisions)", () => {
     assert.equal(DEFAULT_MAX_SYSTEMONE_STATE_BYTES, 262_144);
   });
 
-  it("decisions_resolves_the_credential_once_under_the_provider_and_redacts_it", async () => {
-    const requests: CredentialRequest[] = [];
-    const apiKey = {
-      resolve: (request: CredentialRequest) => {
-        requests.push(request);
-        return { type: "api_key" as const, value: "sk-secret" };
-      },
+  it("decisions_resolves_the_credential_once_and_redacts_it", async () => {
+    let resolutions = 0;
+    const apiKey = async () => {
+      resolutions += 1;
+      return "sk-secret";
     };
     const { impl, calls } = fakeFetch(() => jsonResponse({ error: { message: "upstream echoed sk-secret" } }, 529));
     await assert.rejects(askSystemOneDecisions(BODY, options(impl, { apiKey, maxRetries: 0 })), (error: unknown) => {
@@ -184,9 +181,7 @@ describe("@arnilo/prism/provider-kit (systemone-decisions)", () => {
       return true;
     });
     assert.equal(calls.length, 1);
-    assert.equal(requests.length, 1, "the credential source is resolved exactly once");
-    assert.equal(requests[0].provider, "TypeSafe Jev", "resolution uses the configured provider label");
-    assert.equal(requests[0].name, "apiKey");
+    assert.equal(resolutions, 1, "the credential source is resolved exactly once");
   });
 
   it("decisions_abort_between_retries_stops_retrying", async () => {

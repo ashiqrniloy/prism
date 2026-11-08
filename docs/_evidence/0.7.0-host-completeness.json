@@ -113,14 +113,14 @@
       "status": "environment-blocked",
       "tier": "live",
       "tests": [
-        "packages/memory/rag/src/__tests__/rag.test.ts"
+        "packages/knowledge/rag/src/__tests__/rag.test.ts"
       ],
       "live": [
         "memory/drive-sync-live",
         "memory/postgres"
       ],
       "docs": [
-        "packages/memory/rag/README.md"
+        "packages/knowledge/rag/README.md"
       ]
     },
     {

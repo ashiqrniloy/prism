@@ -3,7 +3,6 @@ import { assertMessagesSupportModelCapabilities } from "./content.js";
 import type {
   ContentBlock,
   ContextBlock,
-  InputAssemblyLayout,
   InputBuildContext,
   JsonObject,
   JsonValue,
@@ -166,27 +165,15 @@ interface DefaultInputMessageGroups {
   readonly toolResults: readonly Message[];
 }
 
-function flattenInputGroups(groups: DefaultInputMessageGroups, layout: InputAssemblyLayout): Message[] {
-  switch (layout) {
-    case "cache_aware":
-      return [
-        ...groups.instructions,
-        ...groups.attachments,
-        ...groups.summaries,
-        ...groups.history,
-        ...groups.toolResults,
-        ...groups.input,
-      ];
-    case "legacy":
-      return [
-        ...groups.instructions,
-        ...groups.summaries,
-        ...groups.history,
-        ...groups.input,
-        ...groups.attachments,
-        ...groups.toolResults,
-      ];
-  }
+function flattenInputGroups(groups: DefaultInputMessageGroups): Message[] {
+  return [
+    ...groups.instructions,
+    ...groups.attachments,
+    ...groups.summaries,
+    ...groups.history,
+    ...groups.toolResults,
+    ...groups.input,
+  ];
 }
 
 export function createDefaultInputBuilder(): DefaultInputBuilder {
@@ -196,7 +183,7 @@ export function createDefaultInputBuilder(): DefaultInputBuilder {
       const groups = await buildDefaultInputMessageGroups(input, context);
       // The default builder is not a security seam: `assembleProviderInput` owns what
       // happens after it returns, so a host cannot slip unassembled messages past it.
-      return flattenInputGroups(groups, context.inputLayout ?? "cache_aware");
+      return flattenInputGroups(groups);
     },
   };
 }
@@ -222,12 +209,8 @@ function buildProviderMessages(request: PromptComposition): readonly Message[] {
           : { disclosure: request.skillsDisclosure, loaded: request.loadedSkills, tools: toolNameSet(request.tools) },
       );
   const declarations = toolMessages(tools);
-  if ((request.inputLayout ?? "cache_aware") === "legacy") {
-    return [...context, ...skills, ...declarations, ...request.messages];
-  }
-
   // Default input assembly keeps stable instruction messages at the front. Keep that
-  // boundary ahead of dynamic context/skills; legacy retains the old whole-prompt order.
+  // boundary ahead of dynamic context/skills.
   const firstNonSystem = request.messages.findIndex((message) => message.role !== "system");
   const stable = firstNonSystem < 0 ? request.messages : request.messages.slice(0, firstNonSystem);
   const dynamic = firstNonSystem < 0 ? [] : request.messages.slice(firstNonSystem);
@@ -237,7 +220,6 @@ function buildProviderMessages(request: PromptComposition): readonly Message[] {
 interface PromptComposition {
   readonly deferSkillsCatalog?: boolean;
   readonly messages: readonly Message[];
-  readonly inputLayout?: InputAssemblyLayout;
   readonly context?: readonly ContextBlock[];
   readonly skills?: readonly Skill[];
   readonly skillsDisclosure?: SkillsDisclosure;
@@ -265,7 +247,6 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
     signal: options.signal,
   };
   const buildContext: DefaultInputBuildContext = { ...options, ...baseContext };
-  const layout = buildContext.inputLayout ?? "cache_aware";
   const skills = options.skills;
   const tools = options.tools;
   let messages: readonly Message[] = await createDefaultInputBuilder().build(options.input, buildContext);
@@ -290,7 +271,6 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
 
   const providerMessages = buildProviderMessages({
     messages,
-    inputLayout: layout,
     deferSkillsCatalog: options.deferSkillsCatalog,
     skills,
     skillsDisclosure: options.skillsDisclosure,

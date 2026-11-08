@@ -45,7 +45,7 @@ it("cache_levers_match_pi_openai_chatgpt", async () => {
   const bodies: JsonObject[] = [];
   const headers: Headers[] = [];
   const provider = createOpenAICodexProvider({
-    apiKey: "offline-fixture",
+    apiKey: async () => "offline-fixture",
     fetch: (async (_url, init) => {
       headers.push(new Headers(init?.headers));
       bodies.push(JSON.parse(String(init?.body)));
@@ -136,7 +136,7 @@ it("cache_levers_match_pi_openai_chatgpt", async () => {
 it("cache_key_clamp_matches_pi", async () => {
   const keys: Array<string | undefined> = [];
   const provider = createOpenAICodexProvider({
-    apiKey: "offline-fixture",
+    apiKey: async () => "offline-fixture",
     fetch: (async (_url, init) => {
       const body = JSON.parse(String(init?.body));
       keys.push(body.prompt_cache_key);

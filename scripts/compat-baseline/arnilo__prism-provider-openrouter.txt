@@ -1,15 +1,17 @@
-OPENROUTER_DEFAULT_API_KEY_REF	export declare const OPENROUTER_DEFAULT_API_KEY_REF = "env:OPENROUTER_API_KEY"
-OPENROUTER_DEFAULT_BASE_URL	export declare const OPENROUTER_DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
-createOpenRouterProvider	export declare function createOpenRouterProvider(options?: OpenRouterProviderOptions): ModelProvider
-default	export default
-listOpenRouterModels	export declare function listOpenRouterModels(options?: ListOpenRouterModelsOptions): Promise<ModelConfig[]>
-mapOpenRouterHttpError	export declare function mapOpenRouterHttpError(response: Response, bodyText: string, secrets: readonly (string | undefined)[]): Error
-mapOpenRouterModel	export declare function mapOpenRouterModel(entry: OpenRouterModelEntry, options?:
-mapOpenRouterUsage	export declare function mapOpenRouterUsage(raw: unknown, chunk?: JsonObject): Usage | undefined
-openRouterModels	export declare const openRouterModels: readonly ModelConfig[]
-openrouter	export declare function openrouter(options?: OpenRouterProviderPackageOptions & OpenRouterProviderConfig): PackageInstance
-openrouterSession	export declare function openrouterSession(request: ProviderRequest): Record<string, string>
-type ListOpenRouterModelsOptions	export { listOpenRouterModels, mapOpenRouterModel, openRouterModels, OPENROUTER_DEFAULT_BASE_URL, type ListOpenRouterModelsOptions, type OpenRouterModelEntry, } from "./models.js"
-type OpenRouterModelEntry	export { listOpenRouterModels, mapOpenRouterModel, openRouterModels, OPENROUTER_DEFAULT_BASE_URL, type ListOpenRouterModelsOptions, type OpenRouterModelEntry, } from "./models.js"
-type OpenRouterProviderOptions	export { createOpenRouterProvider, mapOpenRouterHttpError, mapOpenRouterUsage, openrouterSession, type OpenRouterProviderOptions, type OpenRouterRouting, } from "./provider.js"
-type OpenRouterRouting	export { createOpenRouterProvider, mapOpenRouterHttpError, mapOpenRouterUsage, openrouterSession, type OpenRouterProviderOptions, type OpenRouterRouting, } from "./provider.js"
+. ListOpenRouterModelsOptions	interface ListOpenRouterModelsOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly provider?: string; readonly signal?: AbortSignal; }
+. OPENROUTER_DEFAULT_API_KEY_REF	const OPENROUTER_DEFAULT_API_KEY_REF = "env:OPENROUTER_API_KEY"
+. OPENROUTER_DEFAULT_BASE_URL	const OPENROUTER_DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
+. OpenRouterModelEntry	interface OpenRouterModelEntry { readonly architecture?: { readonly input_modalities?: readonly string[]; readonly output_modalities?: readonly string[]; }; readonly context_length?: number; readonly id: string; readonly name?: string; readonly pricing?: Readonly<Record<string, string | number>>; readonly supported_parameters?: readonly string[]; readonly top_provider?: { readonly max_completion_tokens?: number | null; }; }
+. OpenRouterProviderConfig	interface OpenRouterProviderConfig { readonly apiKey?: string; readonly appTitle?: string; readonly appUrl?: string; readonly baseUrl?: string; readonly models?: readonly ModelConfig[]; readonly routing?: OpenRouterRouting; }
+. OpenRouterProviderOptions	interface OpenRouterProviderOptions { readonly apiKey?: SecretSource; readonly appTitle?: string; readonly appUrl?: string; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly id?: string; readonly routing?: OpenRouterRouting; }
+. OpenRouterProviderPackageOptions	interface OpenRouterProviderPackageOptions { readonly fetch?: typeof fetch; readonly id?: string; }
+. OpenRouterRouting	interface OpenRouterRouting { readonly allow_fallbacks?: boolean; readonly data_collection?: "allow" | "deny"; readonly ignore?: readonly string[]; readonly max_price?: { readonly prompt?: number; readonly completion?: number; readonly request?: number; readonly image?: number; }; readonly only?: readonly string[]; readonly order?: readonly string[]; readonly quantizations?: readonly string[]; readonly require_parameters?: boolean; readonly sort?: "price" | "throughput" | "latency"; readonly zdr?: boolean; }
+. createOpenRouterProvider	function createOpenRouterProvider(options?: OpenRouterProviderOptions): ModelProvider
+. default	const definition: import("@arnilo/prism").PackageDefinition<OpenRouterProviderConfig>
+. listOpenRouterModels	function listOpenRouterModels(options?: ListOpenRouterModelsOptions): Promise<ModelConfig[]>
+. mapOpenRouterHttpError	function mapOpenRouterHttpError(response: Response, bodyText: string, secrets: readonly (string | undefined)[]): Error
+. mapOpenRouterModel	function mapOpenRouterModel(entry: OpenRouterModelEntry, options?: { readonly provider?: string; }): ModelConfig
+. mapOpenRouterUsage	function mapOpenRouterUsage(raw: unknown, chunk?: JsonObject): Usage | undefined
+. openRouterModels	const openRouterModels: readonly ModelConfig[]
+. openrouter	function openrouter(options?: OpenRouterProviderPackageOptions & OpenRouterProviderConfig): PackageInstance
+. openrouterSession	function openrouterSession(request: ProviderRequest): Record<string, string>

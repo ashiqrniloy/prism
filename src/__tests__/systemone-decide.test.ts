@@ -58,7 +58,7 @@ function provider(fetchImpl: typeof fetch, overrides: { path?: string; models?: 
     id: "typesafe",
     label: "TypeSafe Jev",
     baseUrl: "https://api.typesafe.ai",
-    apiKey: "sk-secret",
+    apiKey: async () => "sk-secret",
     fetch: fetchImpl,
     maxRetries: 0,
     models: overrides.models ?? [TEXT_MODEL, IMAGE_MODEL],

@@ -1,7 +1,7 @@
 import { afterEach, describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { createAgent, definePackage, type JsonObject, type PackageInstance, type ProviderEvent, type ProviderRequest } from "@arnilo/prism";
@@ -36,7 +36,7 @@ async function tempRoot(): Promise<string> {
   return dir;
 }
 
-/** Another package's `Embedder`, the way `@arnilo/prism-memory-rag` provides it. */
+/** Another package's `Embedder`, the way `@arnilo/prism-rag` provides it. */
 function embeddingsPackage(): PackageInstance {
   const embedder: Embedder = createHashEmbedder({ dimensions: 8, id: "fake-embeddings" });
   return definePackage({
@@ -125,26 +125,9 @@ describe("@arnilo/prism-memory-fabric package (plan 158 Task 4)", () => {
   });
 
   it("passive recall runs once per user turn and preserves tail bytes through tool rounds", async () => {
-    let embeddings = 0;
-    const base = createHashEmbedder({ dimensions: 8, id: "uncalibrated-fixture" });
-    const service = definePackage({
-      name: "fixture-embeddings",
-      version: "0.0.0",
-      requires: { api: 1 },
-      setup(prism) {
-        prism.services.provide("embeddings", {
-          ...base,
-          async embed(texts: readonly string[], options: Parameters<Embedder["embed"]>[1]) {
-            embeddings++;
-            return base.embed(texts, options);
-          },
-        });
-      },
-    })();
     const { agent, requests } = await harness({
-      config: { retrieval: "hybrid", inject: { minSimilarity: 0.35 }, consolidate: false },
+      config: { inject: { minSimilarity: 0.35 }, consolidate: false },
       extraPackages: [
-        service,
         contextEngineering({ fold: { minAgeTurns: 1, minBytes: 1, maxSummaryBytes: 32 }, budget: { maxInputTokens: 20_000 } }),
       ],
       script: [
@@ -157,10 +140,7 @@ describe("@arnilo/prism-memory-fabric package (plan 158 Task 4)", () => {
     try {
       const session = await agent.session({ create: true });
       await session.run("needle");
-      // One write embedding plus one query embedding per active scope (project, agent, user).
-      assert.equal(embeddings, 4);
       await session.run("needle");
-      assert.equal(embeddings, 7);
       const tails = requests.slice(2).map((request) => request.messages.find((message) => message.metadata?.contextBlocks));
       assert.ok(tails[0]);
       const semantic = (tail: (typeof tails)[number]) => tail?.content.at(-1);
@@ -168,7 +148,6 @@ describe("@arnilo/prism-memory-fabric package (plan 158 Task 4)", () => {
       assert.match(JSON.stringify(tails[1]), /fabric-working/);
       assert.doesNotMatch(JSON.stringify(requests[3]?.context ?? []), /fabric-working/);
       assert.match(JSON.stringify(tails[0]), /fabric-semantic/);
-      assert.equal(agent.inspect().statusNotes.filter((note) => /provisional cosine floor/.test(note.message)).length, 1);
       await session.close();
     } finally {
       await agent.dispose();
@@ -287,28 +266,6 @@ describe("@arnilo/prism-memory-fabric package (plan 158 Task 4)", () => {
     }
   });
 
-  it("model_decider_is_lazy_and_runs_once_for_a_similar_write", async () => {
-    const { agent, requests } = await harness({
-      config: { consolidate: { threshold: 0, decider: "model" } },
-      extraPackages: [embeddingsPackage()],
-      script: [
-        [providerToolCall(toolCallContent("i1", "memory.insert", { kind: "fact", text: "Alice flight leaves at noon" })), providerDone()],
-        [providerToolCall(toolCallContent("i2", "memory.insert", { kind: "fact", text: "Bob flight leaves at noon" })), providerDone()],
-        [providerToolCall(toolCallContent("d1", "decide_memory", { action: "ADD" })), providerDone()],
-        [providerTextDelta("stored"), providerDone()],
-      ],
-    });
-    try {
-      assert.equal(requests.length, 0);
-      const session = await agent.session({ create: true });
-      await session.run("remember flights");
-      assert.equal(requests.filter((request) => request.tools?.some((tool) => tool.name === "decide_memory")).length, 1);
-      assert.match(lastToolResult(requests), /similar/);
-      await session.close();
-    } finally {
-      await agent.dispose();
-    }
-  });
 
   it("invalid_project_scope_warns_once_and_keeps_user_and_agent", async () => {
     const { agent } = await harness({ config: { semantic: false, scopes: { project: { id: "bad id" } } } });
@@ -361,35 +318,6 @@ describe("@arnilo/prism-memory-fabric package (plan 158 Task 4)", () => {
     await next.agent.dispose();
   });
 
-  it("fabric_startup_reconcile_uses_late_embeddings_and_skips_database_files", async () => {
-    const root = await tempRoot();
-    await writeFile(join(root, "note.md"), "canary rollout protects deploys");
-    let calls = 0;
-    const hash = createHashEmbedder({ dimensions: 8, id: "fake-embeddings" });
-    const embeddings = definePackage({
-      name: "@acme/startup-embeddings",
-      version: "0.0.0",
-      requires: { api: 1 },
-      setup(prism) {
-        prism.services.provide("embeddings", {
-          ...hash,
-          embed: (...args: Parameters<typeof hash.embed>) => {
-            if (args[0].some((text) => text.includes("canary rollout"))) calls++;
-            return hash.embed(...args);
-          },
-        });
-      },
-    })();
-    for (let restart = 0; restart < 3; restart++) {
-      if (restart === 2) await writeFile(join(root, "note.md"), "updated canary rollout protects deploys");
-      const { agent } = await harness({ config: { retrieval: "hybrid", tools: { root } }, extraPackages: [embeddings] });
-      const session = await agent.session({ id: "reconcile-startup", create: true });
-      await session.run("hello");
-      assert.equal(calls, restart === 2 ? 2 : 1);
-      await session.close();
-      await agent.dispose();
-    }
-  });
 
   it("fabric_sqlite_path_outside_root_fails_config", async () => {
     const root = await tempRoot();
@@ -500,30 +428,6 @@ describe("@arnilo/prism-memory-fabric package (plan 158 Task 4)", () => {
     await agent.dispose();
   });
 
-  it("hybrid_without_service_notes_and_falls_back", async () => {
-    const { agent, requests } = await harness({
-      config: { retrieval: "hybrid" },
-      script: [
-        [
-          providerToolCall(toolCallContent("i", "memory.insert", { kind: "fact", text: "canary rollout protects deploys" })),
-          providerDone(),
-        ],
-        [providerTextDelta("stored"), providerDone()],
-        [providerToolCall(toolCallContent("r", "memory.recall", { query: "canary rollout" })), providerDone()],
-        [providerTextDelta("done"), providerDone()],
-      ],
-    });
-    assert.ok(
-      agent.inspect().statusNotes.some((note) => /hybrid needs an embeddings service/.test(note.message)),
-      "hybrid without a service notes the fallback",
-    );
-    const session = await agent.session({ create: true });
-    await session.run("remember");
-    await session.run("recall");
-    assert.match(JSON.stringify(requests.at(-1)?.messages ?? []), /canary rollout protects deploys/, "lexical recall still works");
-    await session.close();
-    await agent.dispose();
-  });
 
   it("memory_fabric_tools_gated_per_session", async () => {
     const { agent, requests } = await harness({ config: { semantic: false }, script: INSERT_THEN_ANSWER });
@@ -541,31 +445,6 @@ describe("@arnilo/prism-memory-fabric package (plan 158 Task 4)", () => {
     await agent.dispose();
   });
 
-  it("memory_fabric_scoped_recall_records_no_use_on_retrieval", async () => {
-    const scopeRoot = await tempRoot();
-    const toolsRoot = await tempRoot();
-    const script = [
-      [
-        providerToolCall(toolCallContent("c1", "memory.insert", { path: "canary.md", text: "canary rollout protects deploys" })),
-        providerDone(),
-      ],
-      [providerToolCall(toolCallContent("c2", "memory.recall", { query: "canary rollout protects deploys" })), providerDone()],
-      [providerTextDelta("recalled"), providerDone()],
-    ] as const;
-    const { agent, requests } = await harness({
-      config: { scoped: { scopeRoot }, tools: { root: toolsRoot } },
-      extraPackages: [embeddingsPackage()],
-      script,
-    });
-    const session = await agent.session({ id: "fabric-scoped", create: true });
-    await session.run("remember and recall");
-    const recalled = JSON.parse(lastToolResult(requests)) as Array<{ content?: Array<{ type: string; text?: string }> }>;
-    assert.match(JSON.stringify(recalled), /"hits":\[\{/, "the scoped recall returned the indexed note");
-    // A retrieval is not a use (D5): the scoped policy no longer writes a use row anywhere.
-    await assert.rejects(readFile(join(scopeRoot, ".memory", "state.json"), "utf8"), /ENOENT/);
-    await session.close();
-    await agent.dispose();
-  });
 
   // Plan 210 Task 2: capture reads the archived user turn; without the archive it cannot fire, so setup says so.
   it("rules_capture_without_the_exchange_archive_warns_at_setup", async () => {
@@ -682,7 +561,7 @@ describe("retired memory family workspace", () => {
       "packages/memory/fabric/src/__tests__/package.test.ts", // this scan's own allow-list
       "packages/memory/fabric/src/__tests__/notes.test.ts", // asserts the family manifest is deleted
       "packages/memory/fabric/README.md", // "moved out of the `@arnilo/prism-memory/{fabric,scoped}` subpaths"
-      "packages/memory/wiki/README.md", // "moved out of the `@arnilo/prism-memory/wiki` subpath"
+      "packages/knowledge/wiki/README.md", // "moved out of the `@arnilo/prism-memory/wiki` subpath"
       "scripts/deprecations-0.13.json", // the deliberate 0.13 registry deprecation ledger names every retired line
       "scripts/budgets.json", // frozen 0.12 family export budget and historical rationale
       "scripts/phase12-freeze-manifest.json", // frozen 0.12 record: "pgvector (required by … path only)"

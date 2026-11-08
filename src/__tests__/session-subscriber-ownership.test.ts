@@ -137,7 +137,7 @@ describe("session subscriber ownership (plan 104 Task 5)", () => {
     const outcome = await Promise.race([
       (async () => {
         try {
-          for await (const event of session.stream("Hi", { maxToolRounds: 3 } as never)) void event;
+          for await (const event of session.stream("Hi", { promptVersion: 3 } as never)) void event;
           return "resolved";
         } catch (error) {
           return `rejected: ${(error as Error).message}`;
@@ -146,7 +146,7 @@ describe("session subscriber ownership (plan 104 Task 5)", () => {
       new Promise<string>((resolve) => setTimeout(() => resolve("hung"), 1_000)),
     ]);
 
-    assert.match(outcome, /^rejected: RunOptions\.maxToolRounds was removed/, "the failure surfaces, it does not park the consumer");
+    assert.match(outcome, /^rejected: RunOptions\.promptVersion must be/, "the failure surfaces, it does not park the consumer");
     const result = await session.run("again");
     assert.equal(result.status, "completed", "the failed stream released the session");
   });

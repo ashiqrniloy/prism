@@ -81,12 +81,9 @@ export function priorFor(metadata: MemoryNoteMetadata, priors: ScopePriors, touc
   return globs.some((glob) => touchedPaths.some((path) => globMatches(glob, path))) ? priors.path : priors.project;
 }
 
-/**
- * What shadows what: a note's `key`, or for a concept its subject (plan 207 Task 4), so a private concept hides a
- * team concept about the same subject. `:` is outside the key alphabet, so the two namespaces cannot collide.
- */
+/** What shadows what: a note's `key`. */
 function shadowKey(metadata: MemoryNoteMetadata): string | undefined {
-  return metadata.kind === "concept" && metadata.subject !== undefined ? `concept:${metadata.subject}` : metadata.key;
+  return metadata.key;
 }
 
 /** One hit dropped because a narrower scope holds the same `key`. */
@@ -136,15 +133,8 @@ export function createScopeRecall(deps: {
   readonly priors: ScopePriors;
   /** `w_R·σ(R) + w_S·σ(S)` for one note; absent keeps the pre-188.4 ranking. */
   readonly strengthPrior?: (metadata: MemoryNoteMetadata) => number;
-  /**
-   * The ontology tier's kind prior (plan 207 Task 4): added to a `concept` hit after fusion and the scope prior, so a
-   * matching concept outranks its own evidence but not a better-matching note. Absent or 0 leaves the ranking alone.
-   */
-  readonly conceptPrior?: number;
 }): ScopeCandidateLoader {
   const { scopes, recallCandidates, priors, strengthPrior } = deps;
-  const conceptPrior = deps.conceptPrior ?? 0;
-  const kindPrior = (metadata: MemoryNoteMetadata): number => (metadata.kind === "concept" ? conceptPrior : 0);
 
   return async function load(
     query,
@@ -173,15 +163,7 @@ export function createScopeRecall(deps: {
       })),
     );
     // One active scope is the pre-188.2 path: no fusion and no prior, so scores stay the mode's own.
-    if (perScope.length === 1) {
-      const only = perScope[0]!.candidates;
-      if (conceptPrior === 0 || !only.some((candidate) => candidate.metadata.kind === "concept")) return { candidates: only, shadowed: [] };
-      // Stable sort: equal scores keep the mode's own order, and a recall without a concept never reaches here.
-      const lifted = only
-        .map((candidate) => ({ ...candidate, hit: { ...candidate.hit, score: candidate.hit.score + kindPrior(candidate.metadata) } }))
-        .sort((a, b) => b.hit.score - a.hit.score);
-      return { candidates: lifted, shadowed: [] };
-    }
+    if (perScope.length === 1) return { candidates: perScope[0]!.candidates, shadowed: [] };
 
     const all = perScope.flatMap((scope) => scope.candidates);
     // Key shadowing: the narrowest scope wins, regardless of rank. A note without a key never shadows.
@@ -223,8 +205,7 @@ export function createScopeRecall(deps: {
           score:
             entry.score +
             priorFor(candidate.metadata, priors, touchedPaths) +
-            (strengthPrior?.(candidate.metadata) ?? 0) +
-            kindPrior(candidate.metadata),
+            (strengthPrior?.(candidate.metadata) ?? 0),
           retrieval: entry.retrieval,
         },
       });

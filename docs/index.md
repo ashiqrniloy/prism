@@ -10,6 +10,7 @@ The kernel pages and package READMEs below describe the 0.13.0 contract. The cur
 
 - [Agent](agent.md): `createAgent`, sessions, runs, `RunResult`, the principal contract, and the frozen agent surface.
 - [Agent adapters](agent-adapters.md): Mapping a vendor coding agent onto the driver contract, with worked adapters and the terms-of-use caveats.
+- [Compatibility](compatibility.md): What stays stable across releases and how hosts, packages, and stores stay compatible with later minors.
 - [Decisions](decisions.md): Typed decision calls: `models.decisions()`, question and answer shapes, bounds, and provider adapters.
 - [Driver kit](drivers.md): The driver kit: how an external-agent package fills the loop slot, gates vendor calls through `run.ask`, and bridges tools.
 - [Events](events.md): The dotted `AgentEvent` catalog: every event name, its payload, and when it fires.
@@ -59,8 +60,8 @@ Each native package documents itself in its README; the kernel pages above cover
 - [`@arnilo/prism-memory-core`](../packages/memory/core/README.md) (experimental): Shared memory contracts, stores, lineage, propagation, and scoring used by the Prism memory packages.
 - [`@arnilo/prism-memory-fabric`](../packages/memory/fabric/README.md) (experimental): Tier 1 of the three-tier memory, the store of record: working, semantic, and scoped memory for Prism agents.
 - [`@arnilo/prism-memory-observational`](../packages/memory/observational/README.md) (experimental): Tier 0 of the three-tier memory: observational memory for Prism.
-- [`@arnilo/prism-memory-rag`](../packages/memory/rag/README.md) (experimental): Retrieval-augmented generation for Prism agents.
-- [`@arnilo/prism-memory-wiki`](../packages/memory/wiki/README.md) (experimental): Tier 2 of the three-tier memory, opt-in and unmeasured: concept notes over the fabric, consolidated from cited evidence.
+- [`@arnilo/prism-rag`](../packages/knowledge/rag/README.md) (experimental): Retrieval-augmented generation for Prism agents.
+- [`@arnilo/prism-wiki`](../packages/knowledge/wiki/README.md) (experimental): The wiki, knowledge outside memory, opt-in and unmeasured: concepts and sources in its own store, consolidated from cited evidence, reading memory read-only.
 - [`@arnilo/prism-context-engineering`](../packages/context/engineering/README.md): Context engineering for Prism agents.
 - [`@arnilo/prism-context-files`](../packages/context/files/README.md): AGENTS.md and SYSTEM.md context layers for Prism agents, trust-gated and cached per session.
 
@@ -181,10 +182,9 @@ The generated inventory below derives from [`scripts/package-truth.json`](../scr
 | `@arnilo/prism-memory-core` | 0.13.0-experimental.0 | library — shared memory contracts, vector stores, lineage, propagation, and scoring; no slot and no capability |
 | `@arnilo/prism-memory-fabric` | 0.13.0-experimental.0 | capability — T1 of the three-tier memory, the store of record: working, semantic, and scoped notes with the memory.* tools, a context block, and per-session state |
 | `@arnilo/prism-memory-observational` | 0.13.0-experimental.0 | capability — T0 of the three-tier memory: observes the session, keeps a source-backed ledger, and compacts from it |
-| `@arnilo/prism-memory-rag` | 0.13.0-experimental.0 | capability — indexed retrieval with a rag_search tool, an opt-in context block, and the embeddings service |
-| `@arnilo/prism-memory-wiki` | 0.13.0-experimental.0 | capability — T2 of the three-tier memory, opt-in and unmeasured: concept notes over the fabric, consolidated from cited evidence |
 | `@arnilo/prism-model-router` | 0.13.0 | capability — policy around hook routing turns across candidates with budget, circuit, and rate-limit controls |
 | `@arnilo/prism-observability` | 0.13.0 | capability — OpenTelemetry spans and metrics over the agent event catalog as observe handlers; exports nothing itself |
+| `@arnilo/prism-rag` | 0.13.0-experimental.0 | capability — indexed retrieval with a rag_search tool, an opt-in context block, and the embeddings service |
 | `@arnilo/prism-remote` | 0.13.0 | library — host library serving a Prism agent to remote clients and connecting to remote agents over prism.remote/1 |
 | `@arnilo/prism-store-codecs` | 0.13.0 | capability |
 | `@arnilo/prism-store-jsonl` | 0.13.0 | capability |
@@ -197,5 +197,6 @@ The generated inventory below derives from [`scripts/package-truth.json`](../scr
 | `@arnilo/prism-tools-research` | 0.13.0 | capability — research skills, a per-session source ledger, cite, and a bounded run.end citation check |
 | `@arnilo/prism-tools-web` | 0.13.0 | capability — keyless native fetch plus Brave/Exa/SearXNG/Tavily/Kagi search, Firecrawl fetch/extract, and host-installed Obscura, with a host domain policy, an optional per-session cache, and a web.fetch service |
 | `@arnilo/prism-tools-work` | 0.13.0 | capability — /connectors, /documents, /sheets, /diagrams, /document-extraction, /document-reader, /sandbox, /skills, /tools subpaths |
+| `@arnilo/prism-wiki` | 0.13.0-experimental.0 | capability — knowledge outside memory, opt-in and unmeasured: concepts and sources in its own store, consolidated from cited evidence; reads memory read-only |
 | `@arnilo/prism-workflows` | 0.13.0 | library — typed graph workflows (DAG and cyclic) that orchestrate any set of agents from outside their sessions: checkpoints, suspend/resume, replay, graph export, and the `checkpoints`/`leases` service contracts |
 <!-- generated:package-truth:inventory end -->

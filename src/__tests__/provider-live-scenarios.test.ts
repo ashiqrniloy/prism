@@ -41,7 +41,7 @@ describe("provider live scenarios", () => {
     const model = hyperModels.find((m: ModelConfig) => m.model === "deepseek-v4-pro")!;
 
     // Scenario 1: text stream
-    const textProvider = createHyperProvider({ apiKey: "fake-key", fetch: replayFetch(textFixture) });
+    const textProvider = createHyperProvider({ apiKey: async () => "fake-key", fetch: replayFetch(textFixture) });
     const textRes = await liveScenarioTextStream({
       provider: textProvider,
       model,
@@ -51,7 +51,7 @@ describe("provider live scenarios", () => {
     assert.ok(textRes.text.length > 0);
 
     // Scenario 2: tool loop with thinking replay
-    const toolLoopProvider = createHyperProvider({ apiKey: "fake-key", fetch: replayFetch(toolLoopFixture) });
+    const toolLoopProvider = createHyperProvider({ apiKey: async () => "fake-key", fetch: replayFetch(toolLoopFixture) });
     const toolRes = await liveScenarioToolLoop({
       provider: toolLoopProvider,
       model,
@@ -62,7 +62,7 @@ describe("provider live scenarios", () => {
     assert.equal(toolRes.toolCalls[0]!.name, "get_weather");
 
     // Scenario 3: structured output
-    const structProvider = createHyperProvider({ apiKey: "fake-key", fetch: replayFetch(structuredFixture) });
+    const structProvider = createHyperProvider({ apiKey: async () => "fake-key", fetch: replayFetch(structuredFixture) });
     const structRes = await liveScenarioStructuredOutput({
       provider: structProvider,
       model,
@@ -75,7 +75,7 @@ describe("provider live scenarios", () => {
 
     // Scenario 4: abort before first request
     const abortProvider = createHyperProvider({
-      apiKey: "fake-key",
+      apiKey: async () => "fake-key",
       fetch: () => {
         throw new Error("should not fetch");
       },
@@ -83,7 +83,7 @@ describe("provider live scenarios", () => {
     await liveScenarioAbort({ provider: abortProvider, model, route: "openai" });
 
     // Scenario 5: error leaking no secret
-    const errProvider = createHyperProvider({ apiKey: "fake-key", fetch: replayFetch(errorFixture) });
+    const errProvider = createHyperProvider({ apiKey: async () => "fake-key", fetch: replayFetch(errorFixture) });
     await liveScenarioErrorResponse({
       provider: errProvider,
       model,
@@ -92,7 +92,7 @@ describe("provider live scenarios", () => {
     });
 
     // Scenario 6: warm-prefix cache probe
-    const cacheProvider = createHyperProvider({ apiKey: "fake-key", fetch: replayFetch(cacheFixture) });
+    const cacheProvider = createHyperProvider({ apiKey: async () => "fake-key", fetch: replayFetch(cacheFixture) });
     const cacheRes = await liveScenarioCacheProbe({
       provider: cacheProvider,
       model,
@@ -112,7 +112,7 @@ describe("provider live scenarios", () => {
     const sysOneErrorFixture = readJson("packages/providers/typesafe/src/__tests__/wire/systemone/error.json");
 
     // System One: decision
-    const decisionProvider = createTypeSafeProvider({ apiKey: "fake-key", fetch: replayFetch(decisionFixture) });
+    const decisionProvider = createTypeSafeProvider({ apiKey: async () => "fake-key", fetch: replayFetch(decisionFixture) });
     const decRes = await systemOneScenarioDecision({
       provider: decisionProvider,
       model: jModel,
@@ -123,7 +123,7 @@ describe("provider live scenarios", () => {
 
     // System One: tools rejected before fetch
     const toolRejProvider = createTypeSafeProvider({
-      apiKey: "fake-key",
+      apiKey: async () => "fake-key",
       fetch: () => {
         throw new Error("should not fetch");
       },
@@ -134,12 +134,12 @@ describe("provider live scenarios", () => {
     await systemOneScenarioAbort({ provider: toolRejProvider, model: jModel });
 
     // System One: error leaking no secret
-    const sysErrProvider = createTypeSafeProvider({ apiKey: "fake-key", fetch: replayFetch(sysOneErrorFixture) });
+    const sysErrProvider = createTypeSafeProvider({ apiKey: async () => "fake-key", fetch: replayFetch(sysOneErrorFixture) });
     await systemOneScenarioErrorResponse({ provider: sysErrProvider, model: jModel, secrets: ["fake-key"] });
 
     // 3. Multi-scenario programmatic runner
     const multiExchanges = [textFixture, toolLoopFixture[0], toolLoopFixture[1], structuredFixture, errorFixture, cacheFixture];
-    const multiProvider = createHyperProvider({ apiKey: "fake-key", fetch: replayFetch(multiExchanges) });
+    const multiProvider = createHyperProvider({ apiKey: async () => "fake-key", fetch: replayFetch(multiExchanges) });
     const multiExecResult = await executeProviderLiveScenarios({
       provider: multiProvider,
       routes: {

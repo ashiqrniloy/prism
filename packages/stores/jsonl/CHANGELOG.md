@@ -4,6 +4,10 @@
 
 ### Added
 
+- Forward compatibility (plan 215 Task 29): a line of an unknown `kind` with a valid envelope, or with a
+  `schemaVersion` newer than the kernel's, is returned unchanged as an opaque entry instead of being reported in
+  `errors`. The store warns once through the new `logger` option (`createJsonlSessionStore({ dir, logger })`;
+  the package passes `prism.log`). A structurally invalid line is still an error. See `docs/compatibility.md`.
 - `@arnilo/prism-store-jsonl` (plan 153 Task 3): the JSONL session store moved out of the kernel's
   `./node/session-store-jsonl` subpath. The package default-exports a `definePackage` definition with
   `capabilities: ["slot:store"]` and config `{ dir }`, and claims the slot with

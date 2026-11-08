@@ -1,4 +1,4 @@
-import type { CredentialValueSource, JsonObject, ModelProvider, ProviderRequest } from "@arnilo/prism";
+import type { JsonObject, ModelProvider, ProviderRequest } from "@arnilo/prism";
 import {
   anthropicAdaptiveThinking,
   createRoutedProvider,
@@ -7,6 +7,7 @@ import {
   readRetryAfterMs,
   resolveThinkingObject,
   sanitizeCacheKey,
+  type SecretSource,
 } from "@arnilo/prism/provider-kit";
 import { COMMAND_CODE_DEFAULT_BASE_URL, type CommandCodeRoute, routeForCommandCodeModel } from "./models.js";
 
@@ -67,7 +68,7 @@ export interface CommandCodeProviderOptions {
   readonly id?: string;
   /** Defaults to official `https://api.commandcode.ai/provider/v1`. */
   readonly baseUrl?: string;
-  readonly apiKey?: CredentialValueSource;
+  readonly apiKey?: SecretSource;
   /** Adds the provider-owned `x-cmd-zdr: 1` header on every route. */
   readonly zdr?: boolean;
   readonly fetch?: typeof fetch;

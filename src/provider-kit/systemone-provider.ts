@@ -20,7 +20,7 @@ import { assertDecisionRequest, assertDecisionsSupported, DecisionsError } from 
 import { redactSecrets } from "../redaction.js";
 import type { PackageDefinition, PackageInstance } from "../packages/api.js";
 import type { JsonSchema } from "../packages/schema.js";
-import type { CredentialValueSource } from "../credentials/index.js";
+import type { SecretSource } from "./provider-package.js";
 import {
   providerDone,
   providerError,
@@ -44,6 +44,11 @@ import {
   secretRefProperty,
 } from "./provider-package.js";
 
+/** A `SecretSource` over a key this provider already resolved (once per call, for error redaction). */
+function resolvedSecret(value: string | undefined): SecretSource | undefined {
+  return value === undefined ? undefined : async () => value;
+}
+
 export interface SystemOneDecisionProviderOptions {
   readonly id: string;
   /** Prefix on gate and HTTP errors, e.g. "TypeSafe Jev" or "Laya". */
@@ -53,7 +58,7 @@ export interface SystemOneDecisionProviderOptions {
   readonly path?: string;
   /** Curated catalog used to gate `decisions()` calls per model; unknown ids are trusted to the caller. */
   readonly models?: readonly ModelConfig[];
-  readonly apiKey?: CredentialValueSource;
+  readonly apiKey?: SecretSource;
   readonly fetch?: typeof fetch;
   /** Retries after the first attempt; forwarded to the shared client (default 2). */
   readonly maxRetries?: number;
@@ -73,7 +78,7 @@ export function createSystemOneDecisionProvider(options: SystemOneDecisionProvid
       let apiKey: string | undefined;
       try {
         const structuredOutput = requireStructuredOutput(options.label, request);
-        apiKey = await resolveProviderApiKey(options.apiKey, options.id);
+        apiKey = await resolveProviderApiKey(options.apiKey);
         const booleanThreshold = readBooleanThreshold(options.label, request.options?.compat);
         const media = await resolveProviderMediaMessages(request.messages, request.model, { signal: request.signal });
         const compiled = compileSystemOneState(request.messages, media);
@@ -88,7 +93,7 @@ export function createSystemOneDecisionProvider(options: SystemOneDecisionProvid
             provider: options.label,
             baseUrl,
             path,
-            apiKey,
+            apiKey: resolvedSecret(apiKey),
             fetch: options.fetch,
             maxRetries: options.maxRetries,
           },
@@ -115,7 +120,7 @@ export function createSystemOneDecisionProvider(options: SystemOneDecisionProvid
           assertDecisionRequest(request, known ?? { provider: options.id, model: request.model });
           let apiKey: string | undefined;
           try {
-            apiKey = await resolveProviderApiKey(options.apiKey, options.id);
+            apiKey = await resolveProviderApiKey(options.apiKey);
             const result = await askSystemOneDecisions(
               {
                 model: request.model,
@@ -127,7 +132,7 @@ export function createSystemOneDecisionProvider(options: SystemOneDecisionProvid
                 provider: options.label,
                 baseUrl,
                 path,
-                apiKey,
+                apiKey: resolvedSecret(apiKey),
                 fetch: options.fetch,
                 maxRetries: options.maxRetries,
               },
@@ -212,7 +217,7 @@ export interface SystemOneProviderPackageSpec {
     readonly id?: string;
     readonly baseUrl?: string;
     readonly path?: string;
-    readonly apiKey?: CredentialValueSource;
+    readonly apiKey?: SecretSource;
     readonly fetch?: typeof fetch;
     readonly maxRetries?: number;
     readonly warn?: (message: string) => void;
@@ -313,5 +318,4 @@ export function systemOneProviderPackage(spec: SystemOneProviderPackageSpec): Sy
     package: instanceFactory,
   };
 }
-
 

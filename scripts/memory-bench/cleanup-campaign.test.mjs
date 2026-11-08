@@ -18,6 +18,7 @@ import {
   c1FeatureEvidence,
   c1Jobs,
   c1PairEffect,
+  c1Scheduled,
   f4Disposition,
   f4LegRow,
   orientEffect,
@@ -25,7 +26,7 @@ import {
   parseC1Waves,
   scorePrediction,
 } from "./cleanup-campaign.mjs";
-import { cleanupVerdict } from "./robustness.mjs";
+import { CLEANUP_CRITERIA, cleanupVerdict } from "./robustness.mjs";
 import { questionFailureDisposition } from "./run.mjs";
 import { transformVariantSource, VARIANT_PATHS } from "./variants.mjs";
 
@@ -225,9 +226,7 @@ describe("plan 210 Task 5 (gate C-1)", () => {
   test("leave_one_out_switches_apply_to_current_sources_and_change_them", async () => {
     const specs = [
       "fabric.unmatchedTerms=off",
-      "fabric.enrichment=off",
       "fabric.navigation=off",
-      "fabric.timeline=off",
       "fabric.grouping=off",
       "fabric.aggregation=off",
       "ontology.pointer=off",
@@ -313,11 +312,56 @@ describe("plan 210 Task 5 (gate C-1)", () => {
     expect(() => assertC1Jobs(early)).toThrow(/C1Waves/);
     // Only the named waves start; the rest are deferred, and the env value is validated.
     expect(parseC1Waves(undefined)).toBeNull();
-    expect(parseC1Waves("2,1")).toEqual([1, 2]);
+    expect(parseC1Waves("1")).toEqual([1]);
     expect(() => parseC1Waves("4")).toThrow(/C1Waves/);
+    // Amendment 7: the campaign closed after wave 1, so waves 2 and 3 are refused, not just deferred.
+    expect(() => parseC1Waves("2,1")).toThrow(/C1Closed/);
     const manifest = { activeWaves: [1] };
     expect(c1Deferred(manifest, { wave: 1 })).toBe(false);
     expect(c1Deferred(manifest, { wave: 2 })).toBe(true);
-    expect(c1Deferred({}, { wave: 3 })).toBe(false);
+    expect(c1Deferred({}, { wave: 1 })).toBe(false);
+    expect(c1Deferred({}, { wave: 3 })).toBe(true);
+  });
+
+  test("plan_210_c1_closed_after_wave_1_and_report_reads_wave_1_only", async () => {
+    const jobs = c1Jobs(hashes);
+    const manifest = { jobs, activeWaves: [1, 2, 3] };
+    // No wave 2-3 job is scheduled, whatever the manifest's active waves say.
+    const scheduled = c1Scheduled(manifest);
+    expect(scheduled.length).toBeGreaterThan(0);
+    expect(scheduled.every((job) => job.wave === 1)).toBe(true);
+    expect(scheduled.length).toBeLessThan(jobs.length);
+    expect(jobs.filter((job) => job.wave > 1).every((job) => c1Deferred(manifest, job))).toBe(true);
+
+    // Every arm of a cancelled wave is listed with a disposition, and no wave-1 arm is.
+    const cancelled = CLEANUP_CRITERIA.closure.cancelledArms;
+    const armWave = new Map(jobs.filter((job) => job.kind !== "write-side").map((job) => [job.c1Arm ?? job.arm, job.wave]));
+    for (const [arm, wave] of armWave) expect([arm, Boolean(cancelled[arm])]).toEqual([arm, wave > 1]);
+    for (const arm of Object.keys(cancelled)) expect(armWave.has(arm)).toBe(true);
+
+    // The report skips a wave 2-3 report that exists on disk, and calls every cancelled arm `cancelled`, never a miss.
+    const ledger = JSON.parse(
+      await readFile(new URL("../../docs/_evidence/memory-bench/210/feature-ledger.json", import.meta.url), "utf8"),
+    );
+    const predictions = JSON.parse(
+      await readFile(new URL("../../docs/_evidence/memory-bench/210/gap-predictions.json", import.meta.url), "utf8"),
+    );
+    const strayId = "210-c1.large.gather.locomo";
+    const stray = report([row("q1", true), row("q2", false)]);
+    const built = buildC1Report({ reports: new Map([[strayId, stray]]), manifest: { jobs }, ledger, predictions: predictions.predictions });
+    expect(built.jobs.read).toEqual([]);
+    expect(built.closure.afterWave).toBe(1);
+    const gather = built.predictions.find((item) => item.arm === "gather");
+    expect(gather.outcome).toBe("cancelled");
+    expect(gather.outcome).not.toBe("miss");
+    expect(built.predictions.filter((item) => item.outcome === "miss")).toEqual([]);
+    expect(built.cancelled.every((item) => item.outcome === "cancelled")).toBe(true);
+    // Rows only waves 2-3 would have measured are unmeasured (not removed); transferred rows are not scored.
+    const verdictOf = (id) => built.verdicts.find((item) => item.feature === id);
+    expect(verdictOf("recall.gather")).toMatchObject({ measured: false, verdict: null, status: "unmeasured" });
+    expect(verdictOf("kind.concept")).toMatchObject({ measured: false, verdict: "transferred", plan: 216 });
+    expect(built.transferred).toHaveLength(CLEANUP_CRITERIA.transferred.features.length);
+    expect(built.plan202Closure.filter((item) => item.status === "scored").length).toBe(0);
+    expect(built.plan202Closure.some((item) => item.status === "unverified")).toBe(true);
   });
 });

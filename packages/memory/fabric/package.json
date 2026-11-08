@@ -33,7 +33,7 @@
     "@arnilo/prism-memory-observational": "0.13.0-experimental.0"
   },
   "devDependencies": {
-    "@arnilo/prism-memory-rag": "file:../rag",
+    "@arnilo/prism-rag": "file:../../knowledge/rag",
     "@types/node": "^22.20.0",
     "@types/pg": "^8.23.1",
     "pg": "^8.23.0",

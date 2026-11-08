@@ -5,7 +5,7 @@ import contextEngineering from "@arnilo/prism-context-engineering";
 import compaction from "@arnilo/prism-memory-compaction";
 import memoryFabric from "@arnilo/prism-memory-fabric";
 import observational from "@arnilo/prism-memory-observational";
-import { memoryRag } from "@arnilo/prism-memory-rag";
+import { memoryRag } from "@arnilo/prism-rag";
 import { toolsBrowser } from "@arnilo/prism-tools-browser";
 import { toolsResearch } from "@arnilo/prism-tools-research";
 import { toolsWeb } from "@arnilo/prism-tools-web";

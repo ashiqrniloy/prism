@@ -810,6 +810,7 @@ This plan is a pre-publish part of roadmap **Phase 11**, made necessary by the o
 
 ## Compromises Made
 
+- **Reopened 2026-11-08 by plan 215 Task 24 (one line):** `mapOpenAIChatUsage` and `mapOpenAIResponsesUsage` now read the vendor cache-write counts (Command Code: top-level `cache_creation_input_tokens` on Chat, `input_tokens_details.cache_write_tokens` on Responses). The usage contract (inclusive `inputTokens`, cache counts as subsets) is unchanged; tests `chat_usage_reads_a_top_level_cache_creation_count` and `responses_usage_reads_cache_write_tokens_as_a_subset_of_input` in `src/__tests__/provider-usage.test.ts`.
 - To be filled after tasks are completed and tests pass.
 
 ## Further Actions

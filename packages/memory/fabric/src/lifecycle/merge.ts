@@ -6,10 +6,10 @@
 
 import type { JsonObject, ModelClient, SecretRedactor, ToolDefinition } from "@arnilo/prism";
 import { lexicalDice, lexicalTerms } from "@arnilo/prism-memory-core";
-import { measureWorkerJson, type ResolvedMemoryWorkerLimits, runMemoryWorkerLoop } from "@arnilo/prism-memory-observational";
+import { measureWorkerJson, type ResolvedMemoryWorkerLimits, runMemoryWorkerLoop } from "@arnilo/prism-memory-core";
 import { unionStrings } from "../consolidate.js";
 import { mergeNoteLinks } from "../links.js";
-import { scanScopedMemoryContent } from "../scoped/trust.js";
+import { scanScopedMemoryContent } from "@arnilo/prism-memory-core";
 import type { MemoryNoteLink, MemoryNoteMetadata, MemoryNotePromotionStamp } from "../types.js";
 import { type CapacityNote, compareNotes } from "./capacity.js";
 import { MAX_USE_EVENTS, type MemoryNoteUseEvent, readUseEvents } from "./events.js";
@@ -40,7 +40,7 @@ function scopeIdentity(note: CapacityNote): string {
  * duplicate: episodes of one subject are summarised by the episode pass, not folded as if repeated.
  */
 function mergeable(note: CapacityNote): boolean {
-  return note.text !== undefined && note.metadata.pinned !== true && note.metadata.kind !== "episode" && note.metadata.kind !== "concept";
+  return note.text !== undefined && note.metadata.pinned !== true && note.metadata.kind !== "episode";
 }
 
 function byStrength(notes: readonly CapacityNote[], weights?: StorageWeights) {

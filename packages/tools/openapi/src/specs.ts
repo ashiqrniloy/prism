@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { type JsonObject, pinnedFetch } from "@arnilo/prism";
+import { type JsonObject } from "@arnilo/prism";
+import { pinnedFetch } from "@arnilo/prism/net";
 
 import type { ToolsOpenapiSpecConfig } from "./config.js";
 import { OpenApiToolError } from "./errors.js";

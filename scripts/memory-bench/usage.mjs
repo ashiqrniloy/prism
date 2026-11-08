@@ -81,7 +81,7 @@ const round = (value) => Math.round(value * 1e6) / 1e6;
 /** The fact extractor's stable cache key base (`consolidation/extract.ts`); the wire proxy logs it per exchange. */
 export const EXTRACT_CACHE_KEY = "prism-fabric-extract";
 
-/** The ontology curator's stable cache key (`packages/memory/wiki/src/consolidate/prompt.ts`); the wire proxy logs it per exchange. */
+/** The ontology curator's stable cache key (`packages/knowledge/wiki/src/consolidate/prompt.ts`); the wire proxy logs it per exchange. */
 export const ONTOLOGY_CACHE_KEY = "prism-wiki-consolidate";
 
 /**

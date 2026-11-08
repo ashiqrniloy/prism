@@ -1,8 +1,8 @@
 /**
  * Liquid providers: the hosted d1 decision models and a local d1-3B, behind the standard ModelProvider seam.
  */
-import type { CredentialValueSource, ModelProvider } from "@arnilo/prism";
-import { createSystemOneDecisionProvider } from "@arnilo/prism/provider-kit";
+import type { ModelProvider } from "@arnilo/prism";
+import { createSystemOneDecisionProvider, type SecretSource } from "@arnilo/prism/provider-kit";
 import { LIQUID_DEFAULT_BASE_URL, LIQUID_DEFAULT_PATH, LIQUID_LOCAL_BASE_URL, liquidLocalModels, liquidModels } from "./models.js";
 
 export interface LiquidProviderOptions {
@@ -10,7 +10,7 @@ export interface LiquidProviderOptions {
   readonly baseUrl?: string;
   /** Endpoint path; defaults to `/decisions/v1/systemone` (hosted) or `/v1/systemone` (local). Must start with `/`. */
   readonly path?: string;
-  readonly apiKey?: CredentialValueSource;
+  readonly apiKey?: SecretSource;
   readonly fetch?: typeof fetch;
   /** Retries after the first attempt; forwarded to the shared System One client (default 2). */
   readonly maxRetries?: number;

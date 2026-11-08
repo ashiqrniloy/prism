@@ -14,6 +14,7 @@ import type {
   DispatchToolCallOptions,
   InputAssemblyLayout,
   ModelCacheCapabilities,
+  ModelCapabilities,
   ModelProvider,
   PackageCommand,
   PromptCacheHints,
@@ -140,7 +141,7 @@ describe("public contracts", () => {
   it("host can type layered system prompt contracts", () => {
     const mode: SystemPromptMode = "append";
     const config: SystemPromptConfig = [{ id: "app", source: "app", mode, text: "App rules." }];
-    const runOptions: RunOptions = { inputLayout: "legacy" };
+    const runOptions: RunOptions = { inputLayout: "cache_aware" };
     const agentConfig: AgentConfig = {
       model: { provider: "mock", model: "demo" },
       packages: [providerPackage("test-provider", [provider])],
@@ -236,27 +237,7 @@ describe("public contracts", () => {
         return { name: "say", value: "ok" };
       },
     };
-    const agentDefinition: AgentDefinition = {
-      name: "agent",
-      create() {
-        return {
-          id: "agent",
-          config: { model: { provider: "mock", model: "demo" }, provider },
-          tools: [],
-          skills: [],
-          sessions: {} as never,
-          models: {} as never,
-          session() {
-            throw new Error("not implemented in public contract test");
-          },
-          subscribe: () => ({}) as never,
-          commands: { list: () => [], run: async () => undefined },
-          reload: async () => {},
-          dispose: async () => {},
-          inspect: () => ({}) as never,
-        };
-      },
-    };
+    const agentDefinition: AgentDefinition = { name: "agent", tools: ["echo"] };
     const compactor: Compactor = { name: "compact", compact: () => ({ summary: "ok" }) };
     const storeFactory: StoreFactory = { name: "memory", create: () => ({ append: async () => undefined, list: async () => [] }) };
 
@@ -281,6 +262,15 @@ describe("public contracts", () => {
     assert.equal(registry.resolve("echo"), tool);
     assert.deepEqual(filterTools(registry.list(), filter), [tool]);
     assert.equal((await dispatchToolCall(options)).name, "echo");
+  });
+
+  it("input_layout_has_no_legacy", () => {
+    const layout: InputAssemblyLayout = "cache_aware";
+    // @ts-expect-error -- the legacy input order is retired; cache_aware is the only layout.
+    const legacy: InputAssemblyLayout = "legacy";
+    // @ts-expect-error -- `toolCallStrictness: "legacy"` is retired.
+    const strictness: NonNullable<ModelCapabilities["toolCallStrictness"]> = "legacy";
+    assert.deepEqual([layout, legacy, strictness], ["cache_aware", "legacy", "legacy"]);
   });
 
   it("host can type phase 5 default input assembly", async () => {
@@ -332,12 +322,7 @@ describe("public contracts", () => {
   });
 
   it("host can create minimal phase 6 agent sessions", async () => {
-    const definition: AgentDefinition = {
-      name: "runtime-agent",
-      create: async () =>
-        await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] }),
-    };
-    const agent = await definition.create!();
+    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] });
     const session = await agent.session({ id: "s1", leafId: undefined, create: true });
     const forkOptions: SessionForkOptions = { at: undefined };
 
@@ -345,8 +330,7 @@ describe("public contracts", () => {
     assert.notEqual((await session.fork(forkOptions)).id, "s1");
   });
 
-  it("AgentDefinition supports declarative requirements and create is optional", () => {
-    // Declarative-only definition: no create() escape hatch.
+  it("AgentDefinition is declarative only", () => {
     const declarative: AgentDefinition = {
       name: "declarative-agent",
       description: "agent by declaration",
@@ -356,7 +340,12 @@ describe("public contracts", () => {
       instructions: "Be helpful.",
     };
     assert.equal(declarative.name, "declarative-agent");
-    assert.equal(declarative.create, undefined);
+    // @ts-expect-error -- the 0.12 `create()` escape hatch is retired.
+    const withCreate: AgentDefinition = { name: "x", create: () => undefined };
+    assert.equal(withCreate.name, "x");
+    // @ts-expect-error -- the migration-only `activateAllCapabilities` flag is retired.
+    const activateAll: AgentDefinitionResolutionContext = { activateAllCapabilities: true };
+    assert.ok(activateAll);
 
     // Resolution context type is exported.
     const ctx: AgentDefinitionResolutionContext = {

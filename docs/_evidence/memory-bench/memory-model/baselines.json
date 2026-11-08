@@ -1,0 +1,18 @@
+{
+  "kind": "memory-model-baselines",
+  "plan": 216,
+  "task": 2,
+  "memoryModelCriteriaHash": "2b50880bdc7ebee4f4a2a6c7dd574b6e2acdbb0bfbd58901d37e66f9d02ef9d5",
+  "P": {
+    "record": "docs/_evidence/memory-bench/210/slimmed/record.json",
+    "productHash": "867f82771643fe716c4d214c0ff26250cd842d1da6ee44dac5aabfdefed8759c"
+  },
+  "omBefore": {
+    "arm": "OM-before",
+    "config": "om",
+    "revision": null,
+    "productHash": null,
+    "productPaths": ["packages/memory/observational/src"],
+    "pinWhen": "the first step of plan 216 Task 4, before any file moves: commit the tree, record `git rev-parse HEAD` as revision and sourceFingerprint(productPaths) as productHash; plan 217 Task 6 runs the arm with PRISM_MEMORY_BENCH_SOURCE=<revision>"
+  }
+}

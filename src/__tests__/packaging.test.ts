@@ -6,9 +6,9 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseRange, parseVersion, satisfies } from "../packages/semver.js";
 // @ts-expect-error stdlib-only release gate scripts intentionally ship as runnable JavaScript.
 import { assertTarballAllowDeny } from "../../scripts/release-gates.mjs";
+import { parseRange, parseVersion, satisfies } from "../packages/semver.js";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -64,9 +64,9 @@ const packages: Array<{
   { dir: "packages/hosts/headless", name: "@arnilo/prism-headless", sourceExport: true },
   { dir: "packages/hosts/remote", name: "@arnilo/prism-remote", sourceExport: true },
   { dir: "packages/memory/core", name: "@arnilo/prism-memory-core", sourceExport: true },
-  { dir: "packages/memory/rag", name: "@arnilo/prism-memory-rag", sourceExport: true },
+  { dir: "packages/knowledge/rag", name: "@arnilo/prism-rag", sourceExport: true },
   { dir: "packages/memory/fabric", name: "@arnilo/prism-memory-fabric", sourceExport: true },
-  { dir: "packages/memory/wiki", name: "@arnilo/prism-memory-wiki", sourceExport: true },
+  { dir: "packages/knowledge/wiki", name: "@arnilo/prism-wiki", sourceExport: true },
   { dir: "packages/memory/compaction", name: "@arnilo/prism-memory-compaction", sourceExport: true },
   { dir: "packages/memory/observational", name: "@arnilo/prism-memory-observational", sourceExport: true },
   { dir: "packages/tools/browser", name: "@arnilo/prism-tools-browser", sourceExport: true },
@@ -315,7 +315,7 @@ describe("packaging guard", () => {
   it("packed_tarball_includes_skills: web, browser and delegate ship their bundled skill", () => {
     const shipped = [
       ["@arnilo/prism-tools-web", "web-research"],
-            ["@arnilo/prism-tools-browser", "browser-automation"],
+      ["@arnilo/prism-tools-browser", "browser-automation"],
       ["@arnilo/prism-delegate", "delegating-work"],
     ] as const;
     for (const [name, skill] of shipped) {
@@ -392,15 +392,17 @@ describe("packaging guard", () => {
         "@arnilo/prism-memory-core",
         "@arnilo/prism-memory-fabric",
         "@arnilo/prism-memory-observational",
-        "@arnilo/prism-memory-rag",
-        "@arnilo/prism-memory-wiki",
       ],
-      "the six memory packages are present and the family root is absent",
+      "the four memory packages are present and the family root is absent",
     );
+    // Plan 216 Task 3: retrieval and the wiki are knowledge packages outside memory, under packages/knowledge.
+    for (const name of ["@arnilo/prism-rag", "@arnilo/prism-wiki"]) {
+      assert.ok(packages.some((pkg) => pkg.name === name), `${name} is a workspace`);
+    }
 
-    const wiki = readPkg("packages/memory/wiki");
+    const wiki = readPkg("packages/knowledge/wiki");
     assert.equal(wiki.bin, undefined, "the prism-wiki bin is retired with the 0.12 compiler (plan 207 Task 5)");
-    const wikiFiles = getPackList("packages/memory/wiki", "@arnilo/prism-memory-wiki");
+    const wikiFiles = getPackList("packages/knowledge/wiki", "@arnilo/prism-wiki");
     assert.ok(wikiFiles.includes("src/index.ts"), "wiki pack missing src/index.ts");
     assert.equal(
       wikiFiles.some((file) => file.startsWith("skills/") || file.startsWith("src/cli")),
@@ -409,7 +411,7 @@ describe("packaging guard", () => {
     );
 
     // No memory tarball may ship the retired family's build output or its canary fixture.
-    for (const dir of ["packages/memory/core", "packages/memory/rag", "packages/memory/fabric", "packages/memory/wiki"]) {
+    for (const dir of ["packages/memory/core", "packages/knowledge/rag", "packages/memory/fabric", "packages/knowledge/wiki"]) {
       const files = getPackList(dir, readPkg(dir).name as string);
       assert.equal(
         files.some((file) => file.startsWith("dist/") || file.startsWith(".wiki/")),
@@ -435,6 +437,10 @@ describe("packaging guard", () => {
     );
     assert.ok(files.includes("src/index.ts"), "kernel tarball missing src/index.ts");
     assert.ok(files.includes("manifest/schema.json"), "kernel tarball missing manifest/schema.json");
+    // Plan 215 Task 26: the network plumbing and artifact records ship as their own subpaths.
+    for (const entry of ["src/net/index.ts", "src/artifacts/index.ts", "src/artifacts/artifacts.ts", "src/pinned-fetch.ts"]) {
+      assert.ok(files.includes(entry), `kernel tarball missing ${entry}`);
+    }
     assertTarballAllowDeny("@arnilo/prism", files);
   });
 

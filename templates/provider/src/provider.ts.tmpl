@@ -1,5 +1,5 @@
-import type { CredentialValueSource, ModelProvider } from "@arnilo/prism";
-import { createRoutedProvider } from "@arnilo/prism/provider-kit";
+import type { ModelProvider } from "@arnilo/prism";
+import { createRoutedProvider, type SecretSource } from "@arnilo/prism/provider-kit";
 import { {{providerId}}Models } from "./models.js";
 
 export const {{providerUpper}}_DEFAULT_BASE_URL = "https://api.{{providerId}}.example/v1";
@@ -7,7 +7,7 @@ export const {{providerUpper}}_DEFAULT_BASE_URL = "https://api.{{providerId}}.ex
 export interface {{providerPascal}}ProviderOptions {
   readonly id?: string;
   readonly baseUrl?: string;
-  readonly apiKey?: CredentialValueSource;
+  readonly apiKey?: SecretSource;
   readonly fetch?: typeof fetch;
 }
 

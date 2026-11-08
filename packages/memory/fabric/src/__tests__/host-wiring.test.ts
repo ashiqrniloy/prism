@@ -1,7 +1,7 @@
 /**
  * Plan 102 Task 8: the cross-layer host entry point.
  *
- * One propagation pass wires the RAG and fabric-note legs in one place (the ontology tier's concept cascade is `memory.fabric.concept-deletion`, pinned in `ontology.test.ts`), and the
+ * One propagation pass wires the RAG and fabric-note legs in one place (the wiki's concept cascade reads memory's deletion feed since plan 216 Task 3), and the
  * same tombstone set is what a projection reads when it builds instead of writing a drop entry. These
  * tests are the executable recipe: no in-tree runtime is invented, no facade is added, and every import
  * is a published entry point (`@arnilo/prism-memory-core`, `-rag`, `-fabric`).
@@ -19,7 +19,7 @@ import {
   type MemoryVectorRecord,
 } from "@arnilo/prism-memory-core";
 import { createMemory, createMemoryFabric, createMemoryWorkingStore } from "@arnilo/prism-memory-fabric";
-import { chunkText, createRagDeletionHandler, indexChunks, type RagScope } from "@arnilo/prism-memory-rag";
+import { chunkText, createRagDeletionHandler, indexChunks, type RagScope } from "@arnilo/prism-rag";
 import { createFabricRepointHandler } from "../repoint.js";
 
 const scope: Required<MemoryScope> = { tenantId: "t1", resourceId: "handbook", threadId: "s1" };

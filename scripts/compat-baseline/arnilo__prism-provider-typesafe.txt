@@ -1,10 +1,12 @@
-TYPESAFE_API_KEY_ENV	export declare const TYPESAFE_API_KEY_ENV = "TYPESAFE_API_KEY"
-TYPESAFE_DEFAULT_API_KEY_REF	export declare const TYPESAFE_DEFAULT_API_KEY_REF = "env:TYPESAFE_API_KEY"
-TYPESAFE_DEFAULT_BASE_URL	export declare const TYPESAFE_DEFAULT_BASE_URL = "https://api.typesafe.ai"
-createTypeSafeProvider	export declare function createTypeSafeProvider(options?: TypeSafeProviderOptions): ModelProvider
-default	export default
-defineTypeSafeModel	export declare function defineTypeSafeModel(config: TypeSafeModelConfig): ModelConfig
-type TypeSafeModelConfig	export { defineTypeSafeModel, type TypeSafeModelConfig, typeSafeModels, TYPESAFE_API_KEY_ENV, TYPESAFE_DEFAULT_API_KEY_REF, TYPESAFE_DEFAULT_BASE_URL, } from "./models.js"
-type TypeSafeProviderOptions	export { createTypeSafeProvider, type TypeSafeProviderOptions } from "./provider.js"
-typeSafeModels	export declare const typeSafeModels: readonly ModelConfig[]
-typesafe	export declare function typesafe(options?: TypeSafeProviderPackageOptions & TypeSafeProviderConfig): PackageInstance
+. TYPESAFE_API_KEY_ENV	const TYPESAFE_API_KEY_ENV = "TYPESAFE_API_KEY"
+. TYPESAFE_DEFAULT_API_KEY_REF	const TYPESAFE_DEFAULT_API_KEY_REF = "env:TYPESAFE_API_KEY"
+. TYPESAFE_DEFAULT_BASE_URL	const TYPESAFE_DEFAULT_BASE_URL = "https://api.typesafe.ai"
+. TypeSafeModelConfig	interface TypeSafeModelConfig extends Omit<ModelConfig, "provider"> { readonly compat?: JsonObject; readonly provider?: "typesafe"; }
+. TypeSafeProviderConfig	type TypeSafeProviderConfig = SystemOneProviderConfig
+. TypeSafeProviderOptions	interface TypeSafeProviderOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly id?: string; readonly maxRetries?: number; readonly path?: string; readonly warn?: (message: string) => void; }
+. TypeSafeProviderPackageOptions	type TypeSafeProviderPackageOptions = SystemOneProviderPackageOptions
+. createTypeSafeProvider	function createTypeSafeProvider(options?: TypeSafeProviderOptions): ModelProvider
+. default	const _default: import("@arnilo/prism").PackageDefinition<SystemOneProviderConfig>
+. defineTypeSafeModel	function defineTypeSafeModel(config: TypeSafeModelConfig): ModelConfig
+. typeSafeModels	const typeSafeModels: readonly ModelConfig[]
+. typesafe	function typesafe(options?: TypeSafeProviderPackageOptions & TypeSafeProviderConfig): PackageInstance

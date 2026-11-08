@@ -140,7 +140,7 @@ export async function* ollamaCloudNativeEvents(
   const secrets: (string | undefined)[] = [];
   let apiKey: string | undefined;
   try {
-    apiKey = await resolveProviderApiKey(options.apiKey, options.id, undefined, request);
+    apiKey = await resolveProviderApiKey(options.apiKey, undefined, request);
     secrets.push(apiKey);
     const prepared = await ollamaCloudNativeBody(request);
     const headers = nativeHeaders(request, apiKey);

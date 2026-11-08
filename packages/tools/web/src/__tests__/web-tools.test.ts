@@ -51,7 +51,7 @@ describe("web search adapters", () => {
     assert.equal(first.untrusted, true);
     assert.equal(JSON.stringify(first).includes("brave-canary"), false);
     const exa = createExaSearch({
-      credentials: "exa-canary",
+      credentials: async () => "exa-canary",
       fetch: async (_input, init) => {
         exaHeader = new Headers(init?.headers).get("authorization") ?? "";
         return json({
@@ -69,12 +69,12 @@ describe("web search adapters", () => {
   });
 
   it("enforces origin, query, response, retry, abort, and concurrency bounds", async () => {
-    assert.throws(() => createBraveSearch({ credentials: "x", allowedOrigins: ["https://wrong.example"] }), /origin/i);
+    assert.throws(() => createBraveSearch({ credentials: async () => "x", allowedOrigins: ["https://wrong.example"] }), /origin/i);
     let calls = 0,
       active = 0,
       peak = 0;
     const search = createBraveSearch({
-      credentials: "secret",
+      credentials: async () => "secret",
       limits: { maxConcurrency: 1, maxResponseBytes: 512, maxRetries: 1 },
       sleep: async () => {},
       fetch: async () => {
@@ -92,7 +92,7 @@ describe("web search adapters", () => {
     assert.equal(calls, 3);
     await assert.rejects(() => search.search("x".repeat(401)), /query/i);
     const overflow = createExaSearch({
-      credentials: "secret",
+      credentials: async () => "secret",
       limits: { maxResponseBytes: 100 },
       fetch: async () => json({ results: [{ url: `https://example.com/${"x".repeat(200)}` }] }),
     });
@@ -118,7 +118,7 @@ describe("web search adapters", () => {
       release = resolve;
     });
     const queued = createBraveSearch({
-      credentials: "x",
+      credentials: async () => "x",
       // One slot and a one-deep queue: the third call is refused instead of waiting forever.
       limits: { maxConcurrency: 1, maxQueued: 1 },
       fetch: async () => {
@@ -140,7 +140,7 @@ describe("web_fetch slices", () => {
   function countingFetch(markdown: string) {
     const calls: string[] = [];
     const fetch = createFirecrawlFetch({
-      credentials: "key",
+      credentials: async () => "key",
       fetch: async (_input, init) => {
         calls.push(String(JSON.parse(String(init?.body)).url));
         return json({ success: true, data: { markdown, metadata: { sourceURL: "https://example.com/doc", title: "Doc" } } });
@@ -220,7 +220,7 @@ describe("Firecrawl adapters and tools", () => {
   it("returns bounded untrusted Markdown and rejects private/rebound targets", async () => {
     let validated = 0;
     const fetcher = createFirecrawlFetch({
-      credentials: "firecrawl-canary",
+      credentials: async () => "firecrawl-canary",
       validateUrl: async (url) => {
         validated++;
         if (url.hostname === "rebound.example") throw new Error("blocked");
@@ -244,7 +244,7 @@ describe("Firecrawl adapters and tools", () => {
     await assert.rejects(() => fetcher.fetch("http://127.0.0.1/admin"), /not allowed/i);
     await assert.rejects(() => fetcher.fetch("https://rebound.example"), /blocked/);
     const privateAllowed = createFirecrawlFetch({
-      credentials: "key",
+      credentials: async () => "key",
       ssrf: { denyPrivateHosts: false },
       fetch: async () => json({ success: true, data: { markdown: "host-approved", metadata: {} } }),
     });
@@ -260,7 +260,7 @@ describe("Firecrawl adapters and tools", () => {
       additionalProperties: false,
     };
     const extract = createFirecrawlExtractor({
-      credentials: "key",
+      credentials: async () => "key",
       schema,
       validator,
       limits: { pollingDelayMs: 0, maxPollingAttempts: 2 },
@@ -276,7 +276,7 @@ describe("Firecrawl adapters and tools", () => {
     assert.deepEqual(result.data, { title: "Prism" });
     assert.equal(result.metadata?.cost, 3);
     const invalid = createFirecrawlExtractor({
-      credentials: "key",
+      credentials: async () => "key",
       schema,
       validator,
       fetch: async () => json({ success: true, data: { title: "Wrong" } }),
@@ -285,9 +285,9 @@ describe("Firecrawl adapters and tools", () => {
       () => invalid.extract(["https://example.com"]),
       (error: unknown) => error instanceof WebToolError && error.code === "ERR_PRISM_WEB_SCHEMA",
     );
-    const search = createBraveSearch({ credentials: "key", fetch: async () => json({ web: { results: [] } }) });
+    const search = createBraveSearch({ credentials: async () => "key", fetch: async () => json({ web: { results: [] } }) });
     const fetcher = createFirecrawlFetch({
-      credentials: "key",
+      credentials: async () => "key",
       fetch: async () => json({ success: true, data: { markdown: "ok", metadata: {} } }),
     });
     const tools = createWebTools({ search, fetch: fetcher, extract });
@@ -306,13 +306,13 @@ describe("Firecrawl adapters and tools", () => {
     const tool = async (name: string, args: JsonObject) =>
       (
         createWebTools({
-          search: createBraveSearch({ credentials: "key", fetch: async () => json({ web: { results: [] } }) }),
+          search: createBraveSearch({ credentials: async () => "key", fetch: async () => json({ web: { results: [] } }) }),
           fetch: createFirecrawlFetch({
-            credentials: "key",
+            credentials: async () => "key",
             fetch: async () => json({ success: true, data: { markdown: "ok", metadata: { sourceURL: "https://example.com/doc" } } }),
           }),
           extract: createFirecrawlExtractor({
-            credentials: "key",
+            credentials: async () => "key",
             schema: { type: "object", properties: { title: { type: "string" } } } as JsonObject,
             validator,
             fetch: async () => json({ success: true, data: { title: "Prism" } }),
@@ -338,7 +338,7 @@ describe("Firecrawl adapters and tools", () => {
 
   it("web_search_metadata_is_top_level_only", async () => {
     const search = createBraveSearch({
-      credentials: "key",
+      credentials: async () => "key",
       fetch: async () =>
         json(
           { web: { results: [{ title: "A", url: "https://example.com/a", description: "snippet" }] } },
@@ -357,7 +357,7 @@ describe("Firecrawl adapters and tools", () => {
 
   it("web_search_schema_states_count_maximum", async () => {
     const search = createBraveSearch({
-      credentials: "key",
+      credentials: async () => "key",
       limits: { maxResults: 7 },
       fetch: async () => json({ web: { results: [] } }),
     });
@@ -367,7 +367,7 @@ describe("Firecrawl adapters and tools", () => {
     assert.match(tool.description ?? "", /default 7, maximum 7/u);
     assert.match(tool.description ?? "", /web_fetch/u, "says when to reach for each tool");
     assert.equal(/firecrawl|brave|exa|obscura/iu.test(tool.description ?? ""), false, "no backend vendor names");
-    const fetchTool = createWebTools({ fetch: createFirecrawlFetch({ credentials: "key", fetch: async () => json({}) }) }).find(
+    const fetchTool = createWebTools({ fetch: createFirecrawlFetch({ credentials: async () => "key", fetch: async () => json({}) }) }).find(
       (candidate) => candidate.name === "web_fetch",
     )!;
     assert.match(fetchTool.description ?? "", /default 32000, maximum 100000/u, "states the slice defaults");
@@ -376,11 +376,11 @@ describe("Firecrawl adapters and tools", () => {
 
   it("rejects remote schema refs and keeps an oversized Markdown head", async () => {
     assert.throws(
-      () => createFirecrawlExtractor({ credentials: "x", schema: { $ref: "https://evil/schema" }, validator }),
+      () => createFirecrawlExtractor({ credentials: async () => "x", schema: { $ref: "https://evil/schema" }, validator }),
       /Remote JSON Schema/,
     );
     const fetcher = createFirecrawlFetch({
-      credentials: "x",
+      credentials: async () => "x",
       limits: { maxMarkdownBytes: 8 },
       fetch: async () => json({ success: true, data: { markdown: "123456789", metadata: {} } }),
     });

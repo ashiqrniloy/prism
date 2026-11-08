@@ -102,7 +102,7 @@ describe("routed-provider", () => {
     const provider = createRoutedProvider({
       id: "headers-test",
       baseUrl: "https://api.test.example/v1",
-      apiKey: "secret-key-12345",
+      apiKey: async () => "secret-key-12345",
       fetch: (async (_url, init) => {
         capturedHeaders = new Headers(init?.headers);
         return new Response(sse([STOP, "[DONE]"]), { status: 200 });
@@ -176,7 +176,7 @@ describe("routed-provider", () => {
     const provider = createRoutedProvider({
       id: "redact-test",
       baseUrl: "https://api.test.example/v1",
-      apiKey: SECRET,
+      apiKey: async () => SECRET,
       fetch: (async () => {
         return new Response(`Error: Invalid key ${SECRET} supplied in authorization header`, { status: 401 });
       }) as typeof fetch,
@@ -242,7 +242,7 @@ describe("routed-provider", () => {
     const provider = createRoutedProvider({
       id: "affinity-test",
       baseUrl: "https://api.test.example/v1",
-      apiKey: "test-key-xyz",
+      apiKey: async () => "test-key-xyz",
       fetch: (async (_url, init) => {
         capturedHeaders = new Headers(init?.headers);
         return new Response(sse([STOP, "[DONE]"]), { status: 200 });

@@ -13,7 +13,7 @@ const input = (name: string) => (error: unknown) =>
 
 function brave(searchQuery: (url: URL) => void = () => {}) {
   return createBraveSearch({
-    credentials: "key",
+    credentials: async () => "key",
     fetch: async (request) => {
       searchQuery(new URL(String(request)));
       return json({ web: { results: [] } });
@@ -57,7 +57,7 @@ describe("search controls", () => {
   it("exa_maps_domains_and_freshness", async () => {
     let body: Record<string, unknown> | undefined;
     const search = createExaSearch({
-      credentials: "key",
+      credentials: async () => "key",
       fetch: async (_request, init) => {
         body = JSON.parse(String(init?.body)) as Record<string, unknown>;
         return json({ results: [] });
@@ -108,7 +108,7 @@ describe("search controls", () => {
     const properties = (search: Parameters<typeof createWebTools>[0]["search"]) =>
       Object.keys((createWebTools({ search }).find((tool) => tool.name === "web_search")!.parameters as JsonObject).properties as object).sort();
     assert.deepEqual(properties(brave()), ["count", "country", "exclude_domains", "freshness", "include_domains", "language", "offset", "query"]);
-    const exa = createExaSearch({ credentials: "key", fetch: async () => json({ results: [] }) });
+    const exa = createExaSearch({ credentials: async () => "key", fetch: async () => json({ results: [] }) });
     assert.deepEqual(properties(exa), ["count", "country", "exclude_domains", "freshness", "include_domains", "query"]);
     const obscura = createObscuraWebTools({ command: process.execPath, argsBefore: [fakeObscuraCliPath()] });
     const search = obscura.tools.find((tool) => tool.name === "web_search")!;
@@ -127,7 +127,7 @@ describe("search controls", () => {
   });
 
   it("unsupported_control_fails_naming_argument", async () => {
-    const exa = createExaSearch({ credentials: "key", fetch: async () => json({ results: [] }) });
+    const exa = createExaSearch({ credentials: async () => "key", fetch: async () => json({ results: [] }) });
     await assert.rejects(() => exa.search("q", { offset: 2 }), input("offset"));
     await assert.rejects(() => exa.search("q", { language: "en" }), input("language"));
     const tool = createWebTools({ search: exa }).find((candidate) => candidate.name === "web_search")!;

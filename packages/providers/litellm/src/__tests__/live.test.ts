@@ -22,7 +22,7 @@ runProviderLiveScenarios({
   provider: (options) =>
     createLiteLLMProvider({
       baseUrl,
-      apiKey: () => process.env.LITELLM_API_KEY,
+      apiKey: async () => process.env.LITELLM_API_KEY,
       ...(options?.fetch ? { fetch: options.fetch } : {}),
     }),
   routes: { openai: { model: modelId } },

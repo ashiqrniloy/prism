@@ -68,7 +68,6 @@ import {
 import { createFabricContext } from "./context.js";
 import { createMemoryFabric } from "./create.js";
 import { noteMemoryRetraction, noteMemoryWrite } from "./directory.js";
-import { emitMemoryRetract, type MemoryRetractReason } from "./ontology/retract.js";
 import { registerMemoryFabricContext } from "./provider.js";
 import { parseMemoryNoteMetadata } from "./types.js";
 import { createMemoryWorkingStore, validateWorkingValue } from "./working-memory.js";
@@ -120,7 +119,6 @@ export function createMemory(options: CreateMemoryOptions): Memory {
     markOptions: { hold?: boolean; supersedesId?: string; signal?: AbortSignal } = {},
   ): Promise<readonly string[]> {
     if (vectorStore.lineage !== "invalidation" || !vectorStore.invalidate) {
-      await emitMemoryRetract(memory, { ids: roots, reason: retractReasonOf(reason) });
       return roots;
     }
     const records = vectorStore.getByThread ? await vectorStore.getByThread(threadScope) : [];
@@ -143,7 +141,6 @@ export function createMemory(options: CreateMemoryOptions): Memory {
       noteMemoryRetraction(memory);
     }
     await options.onInvalidate?.(toInvalidationEvent(markedReason, ids, hold));
-    await emitMemoryRetract(memory, { ids, reason: retractReasonOf(markedReason) });
     return ids;
   }
 
@@ -459,7 +456,6 @@ export function createMemory(options: CreateMemoryOptions): Memory {
       if (retracts) noteMemoryRetraction(memory);
     }
     noteMemoryWrite(memory);
-    if (retracts) await emitMemoryRetract(memory, { ids: [id], reason: patchRetractReason(metadata, note, previous) });
     return true;
   }
 
@@ -703,10 +699,7 @@ export function createMemory(options: CreateMemoryOptions): Memory {
         noteMemoryRetraction(memory);
       }
     }
-    if (deleted > 0) {
-      noteMemoryWrite(memory);
-      await emitMemoryRetract(memory, { ids, reason: "deleted" });
-    }
+    if (deleted > 0) noteMemoryWrite(memory);
     return { deleted, scanned };
   }
 
@@ -925,24 +918,4 @@ async function withinDeadline<T>(
     if (timeout) clearTimeout(timeout);
     signal?.removeEventListener("abort", abort);
   }
-}
-
-/** The invalidation reasons the store records, mapped onto the retraction events the ontology cascade understands. */
-function retractReasonOf(reason: MemoryInvalidationReason): MemoryRetractReason {
-  return reason === "revoked" || reason === "legal_hold" || reason === "corrected" ? reason : "forgotten";
-}
-
-/** Why a metadata patch retracted a note, in the order the lifecycle applies them. */
-function patchRetractReason(
-  metadata: JsonObject,
-  note: ReturnType<typeof parseMemoryNoteMetadata>,
-  previous: ReturnType<typeof parseMemoryNoteMetadata>,
-): MemoryRetractReason {
-  const status = metadata.status ?? "verified";
-  if (status === "archived") return "archived";
-  if (status === "retired") return "superseded";
-  if (status === "candidate") return (note?.flags?.length ?? 0) > 0 ? "flagged" : "downgraded";
-  if (note === undefined || (note.flags?.length ?? 0) > 0) return "flagged";
-  if (note.validTo !== previous?.validTo) return "superseded";
-  return "downgraded";
 }

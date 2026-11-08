@@ -1,15 +1,7 @@
 import { Buffer } from "node:buffer";
 import { isAbsolute } from "node:path";
-import {
-  UNTRUSTED_EXTERNAL_TRUST,
-  type ArtifactBodyRef,
-  ArtifactBodyStore,
-  JsonObject,
-  SecretRedactor,
-  ToolDefinition,
-  ToolExecutionContext,
-  ToolResult,
-} from "@arnilo/prism";
+import { JsonObject, SecretRedactor, ToolDefinition, ToolExecutionContext, ToolResult, UNTRUSTED_EXTERNAL_TRUST } from "@arnilo/prism";
+import { type ArtifactBodyRef, ArtifactBodyStore } from "@arnilo/prism/artifacts";
 import {
   type DocumentCaps,
   type DocumentFormat,

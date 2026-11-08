@@ -3,12 +3,14 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createAgent } from "../agent-session/create-agent.js";
 import { withContextBlocks } from "../context-build.js";
-import type { Message, ProviderRequest, Session, Skill } from "../contracts.js";
+import type { JsonObject, Message, ModelConfig, ProviderRequest, Session, Skill } from "../contracts.js";
 import type { HookRegistrar } from "../hooks/index.js";
 import { providerDone, toolCallContent } from "../models/events.js";
-import { providerPackage } from "../provider-kit/index.js";
+import { createOpenAICompatibleProvider, providerPackage } from "../provider-kit/index.js";
 import { createSkillRegistry } from "../skills.js";
 import {
+  anthropicSegments,
+  assertWireSegmentsStable,
   type PrefixStabilityConformanceOptions,
   runPrefixStabilityConformance,
   scorePrefixStability,
@@ -406,5 +408,82 @@ describe("bulk tool-result fixture (plan 110 Task 4)", () => {
         }),
       /foldableToolResultBytes must be a positive safe integer/,
     );
+  });
+});
+
+describe("prefix stability conformance: wire mode", () => {
+  const realModel: ModelConfig = { provider: "wire-demo", model: "demo", capabilities: { tools: true, reasoning: true } };
+  const provider = createOpenAICompatibleProvider({ id: "wire-demo", baseUrl: "https://example.invalid/v1" });
+  const encodeReal = (request: ProviderRequest): Promise<JsonObject> => provider.encode({ ...request, model: realModel });
+  const wire = (encode: (request: ProviderRequest) => Promise<JsonObject>, turns = 5) =>
+    runPrefixStabilityConformance({ host: host(), skills: [firstSkill, secondSkill], reasoningFixture: true, turns, encode });
+
+  it("builtin_wire_prefix_stable", async () => {
+    const started = performance.now();
+    const result = await wire(encodeReal);
+    assert.equal(result.requests, 10);
+    assert.equal(result.wirePairs, 9);
+    assert.ok(performance.now() - started < 500, "wire run must stay under 500 ms offline");
+  });
+
+  it("leaves wirePairs at 0 when no encoder is given", async () => {
+    const result = await runPrefixStabilityConformance({ host: host(), skills: [firstSkill, secondSkill] });
+    assert.equal(result.wirePairs, 0);
+  });
+
+  /** Seed one defect on the later of two requests only. */
+  const defect = (mutate: (body: JsonObject, call: number) => void) => {
+    let call = 0;
+    return async (request: ProviderRequest): Promise<JsonObject> => {
+      const body = structuredClone(await encodeReal(request)) as JsonObject;
+      call += 1;
+      mutate(body, call);
+      return body;
+    };
+  };
+
+  it("wire_prefix_detects_reordered_tools", async () => {
+    await assert.rejects(
+      wire(defect((body, call) => { if (call % 2 === 0 && Array.isArray(body.tools)) body.tools.reverse(); })),
+      /segment 'tools' changed.*first differing byte \d+/,
+    );
+  });
+
+  it("wire_prefix_detects_mutated_earlier_message", async () => {
+    await assert.rejects(
+      wire(
+        defect((body, call) => {
+          const messages = body.messages as JsonObject[];
+          const at = messages.findIndex((message) => message.role === "user");
+          if (call === 3) messages[at] = { ...messages[at], content: "mutated" };
+        }),
+      ),
+      /segment 'messages' index 0 changed.*first differing byte \d+/,
+    );
+  });
+
+  it("wire_prefix_detects_system_timestamp", async () => {
+    await assert.rejects(
+      wire(
+        defect((body, call) => {
+          const messages = body.messages as JsonObject[];
+          messages[0] = { ...messages[0], content: `${String(messages[0]?.content)} now=${call}` };
+        }),
+      ),
+      /segment 'system' changed/,
+    );
+  });
+
+  it("wire_prefix_allows_moved_cache_marker", () => {
+    const user = (text: string, marker: boolean) => ({
+      role: "user",
+      content: [{ type: "text", text, ...(marker ? { cache_control: { type: "ephemeral" } } : {}) }],
+    });
+    const earlier = anthropicSegments({ system: "s", messages: [user("a", false), user("b", true)] });
+    const later = anthropicSegments({ system: "s", messages: [user("a", true), user("b", false), user("c", true)] });
+    assertWireSegmentsStable(earlier, later);
+    // Only markers may move: changed text under a marker still fails.
+    const mutated = anthropicSegments({ system: "s", messages: [user("changed", true), user("b", false), user("c", true)] });
+    assert.throws(() => assertWireSegmentsStable(earlier, mutated), /segment 'messages' index 0 changed/);
   });
 });

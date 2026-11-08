@@ -1,133 +1,151 @@
-DEFAULT_CACHE_MAX_BYTES	export declare const DEFAULT_CACHE_MAX_BYTES: number
-DEFAULT_CACHE_MAX_ENTRIES	export declare const DEFAULT_CACHE_MAX_ENTRIES = 64
-DEFAULT_FETCH_CHARS	export declare const DEFAULT_FETCH_CHARS = 32000
-DEFAULT_MAX_REDIRECTS	export declare const DEFAULT_MAX_REDIRECTS = 5
-DEFAULT_OBSCURA_NAME_PREFIX	export declare const DEFAULT_OBSCURA_NAME_PREFIX = "obscura_"
-DEFAULT_OBSCURA_PROCESS_LIMITS	export declare const DEFAULT_OBSCURA_PROCESS_LIMITS: ObscuraProcessLimits
-DEFAULT_OBSCURA_SEARCH_PROFILE	export declare const DEFAULT_OBSCURA_SEARCH_PROFILE: ObscuraSearchProfile
-DEFAULT_OBSCURA_SERVER_ID	export declare const DEFAULT_OBSCURA_SERVER_ID = "obscura"
-DEFAULT_OBSCURA_WEB_LIMITS	export declare const DEFAULT_OBSCURA_WEB_LIMITS: ObscuraWebLimits
-DEFAULT_PROMPT_INPUT_CHARS	export declare const DEFAULT_PROMPT_INPUT_CHARS = 100000
-DEFAULT_PROMPT_OUTPUT_TOKENS	export declare const DEFAULT_PROMPT_OUTPUT_TOKENS = 1024
-DEFAULT_WEB_LIMITS	export declare const DEFAULT_WEB_LIMITS: ResolvedWebLimits
-HARD_CACHE_MAX_BYTES	export declare const HARD_CACHE_MAX_BYTES: number
-HARD_CACHE_MAX_ENTRIES	export declare const HARD_CACHE_MAX_ENTRIES = 4096
-HARD_CACHE_TTL_SECONDS	export declare const HARD_CACHE_TTL_SECONDS = 86400
-HARD_FETCH_CHARS	export declare const HARD_FETCH_CHARS = 100000
-HARD_MAX_REDIRECTS	export declare const HARD_MAX_REDIRECTS = 10
-HARD_OBSCURA_PROCESS_LIMITS	export declare const HARD_OBSCURA_PROCESS_LIMITS: ObscuraProcessLimits
-HARD_OBSCURA_WEB_LIMITS	export declare const HARD_OBSCURA_WEB_LIMITS: ObscuraWebLimits
-HARD_PROMPT_INPUT_CHARS	export declare const HARD_PROMPT_INPUT_CHARS = 1000000
-HARD_PROMPT_OUTPUT_TOKENS	export declare const HARD_PROMPT_OUTPUT_TOKENS = 32768
-HARD_WEB_LIMITS	export declare const HARD_WEB_LIMITS: ResolvedWebLimits
-MAX_DOMAIN_CONTROLS	export declare const MAX_DOMAIN_CONTROLS = 10
-MEMO_MAX_ENTRIES	export declare const MEMO_MAX_ENTRIES = 8
-MEMO_TTL_SECONDS	export declare const MEMO_TTL_SECONDS = 600
-OBSCURA_GUARDED_VERSION	export declare const OBSCURA_GUARDED_VERSION = "0.1.8"
-ObscuraCdpSession	export type { ObscuraCdpSession, ObscuraChromium, ObscuraPlaywright } from "./cdp.js"
-ObscuraChromium	export type { ObscuraCdpSession, ObscuraChromium, ObscuraPlaywright } from "./cdp.js"
-ObscuraCliRunOptions	export type { ObscuraCliRunOptions, ObscuraCliRunResult, ObscuraVersionProbe, ObscuraVersionProbeOptions, ValidateObscuraUrlOptions, } from "./cli.js"
-ObscuraCliRunResult	export type { ObscuraCliRunOptions, ObscuraCliRunResult, ObscuraVersionProbe, ObscuraVersionProbeOptions, ValidateObscuraUrlOptions, } from "./cli.js"
-ObscuraCloseOptions	export type { ObscuraCloseOptions, ObscuraExit, ObscuraProcessOptions, OwnedObscuraProcess, } from "./types.js"
-ObscuraError	export declare class ObscuraError extends Error
-ObscuraExit	export type { ObscuraCloseOptions, ObscuraExit, ObscuraProcessOptions, OwnedObscuraProcess, } from "./types.js"
-ObscuraMcpError	export declare class ObscuraMcpError extends Error
-ObscuraPlaywright	export type { ObscuraCdpSession, ObscuraChromium, ObscuraPlaywright } from "./cdp.js"
-ObscuraProcessOptions	export type { ObscuraCloseOptions, ObscuraExit, ObscuraProcessOptions, OwnedObscuraProcess, } from "./types.js"
-ObscuraVersionProbe	export type { ObscuraCliRunOptions, ObscuraCliRunResult, ObscuraVersionProbe, ObscuraVersionProbeOptions, ValidateObscuraUrlOptions, } from "./cli.js"
-ObscuraVersionProbeOptions	export type { ObscuraCliRunOptions, ObscuraCliRunResult, ObscuraVersionProbe, ObscuraVersionProbeOptions, ValidateObscuraUrlOptions, } from "./cli.js"
-OwnedObscuraProcess	export type { ObscuraCloseOptions, ObscuraExit, ObscuraProcessOptions, OwnedObscuraProcess, } from "./types.js"
-PROMPT_SYSTEM_PROMPT	export declare const PROMPT_SYSTEM_PROMPT: string
-PlaywrightBrowser	export type { PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightCdpSession, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, } from "./playwright.js"
-PlaywrightBrowserContext	export type { PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightCdpSession, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, } from "./playwright.js"
-PlaywrightCdpSession	export type { PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightCdpSession, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, } from "./playwright.js"
-PlaywrightDialog	export type { PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightCdpSession, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, } from "./playwright.js"
-PlaywrightDownload	export type { PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightCdpSession, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, } from "./playwright.js"
-PlaywrightLocator	export type { PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightCdpSession, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, } from "./playwright.js"
-PlaywrightPage	export type { PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightCdpSession, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, } from "./playwright.js"
-PlaywrightRequest	export type { PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightCdpSession, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, } from "./playwright.js"
-PlaywrightRoute	export type { PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightCdpSession, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, } from "./playwright.js"
-SEARCH_FRESHNESS	export declare const SEARCH_FRESHNESS: readonly SearchFreshness[]
-SEARCH_HIGHLIGHTS_PER_RESULT	export declare const SEARCH_HIGHLIGHTS_PER_RESULT = 2
-SEARCH_HIGHLIGHT_CHARS	export declare const SEARCH_HIGHLIGHT_CHARS = 200
-SEARCH_SNIPPET_CHARS	export declare const SEARCH_SNIPPET_CHARS = 300
-ToolsWebBackend	export type { ToolsWebBackend, ToolsWebCacheConfig, ToolsWebConfig, ToolsWebDomainsConfig, ToolsWebFetchConfig, ToolsWebObscuraConfig, ToolsWebPromptConfig, ToolsWebSearxngConfig, } from "./config.js"
-ToolsWebCacheConfig	export type { ToolsWebBackend, ToolsWebCacheConfig, ToolsWebConfig, ToolsWebDomainsConfig, ToolsWebFetchConfig, ToolsWebObscuraConfig, ToolsWebPromptConfig, ToolsWebSearxngConfig, } from "./config.js"
-ToolsWebConfig	export type { ToolsWebBackend, ToolsWebCacheConfig, ToolsWebConfig, ToolsWebDomainsConfig, ToolsWebFetchConfig, ToolsWebObscuraConfig, ToolsWebPromptConfig, ToolsWebSearxngConfig, } from "./config.js"
-ToolsWebDomainsConfig	export type { ToolsWebDomainsConfig } from "./domains.js"
-ToolsWebFetchConfig	export type { ToolsWebBackend, ToolsWebCacheConfig, ToolsWebConfig, ToolsWebDomainsConfig, ToolsWebFetchConfig, ToolsWebObscuraConfig, ToolsWebPromptConfig, ToolsWebSearxngConfig, } from "./config.js"
-ToolsWebObscuraConfig	export type { ToolsWebBackend, ToolsWebCacheConfig, ToolsWebConfig, ToolsWebDomainsConfig, ToolsWebFetchConfig, ToolsWebObscuraConfig, ToolsWebPromptConfig, ToolsWebSearxngConfig, } from "./config.js"
-ToolsWebPromptConfig	export type { ToolsWebBackend, ToolsWebCacheConfig, ToolsWebConfig, ToolsWebDomainsConfig, ToolsWebFetchConfig, ToolsWebObscuraConfig, ToolsWebPromptConfig, ToolsWebSearxngConfig, } from "./config.js"
-ToolsWebSearxngConfig	export type { ToolsWebBackend, ToolsWebCacheConfig, ToolsWebConfig, ToolsWebDomainsConfig, ToolsWebFetchConfig, ToolsWebObscuraConfig, ToolsWebPromptConfig, ToolsWebSearxngConfig, } from "./config.js"
-ValidateObscuraUrlOptions	export type { ObscuraCliRunOptions, ObscuraCliRunResult, ObscuraVersionProbe, ObscuraVersionProbeOptions, ValidateObscuraUrlOptions, } from "./cli.js"
-WebToolError	export declare class WebToolError extends Error
-assertBoundedJson	export declare function assertBoundedJson(value: unknown, maxDepth: number, maxProperties: number, maxBytes: number): asserts value is JsonValue
-boundedJson	export declare function boundedJson<T>(value: T, maxDepth: number, maxProperties: number, maxBytes: number): T
-canonicalUrl	export declare function canonicalUrl(input: string): string
-citation	export declare function citation(provider: WebProvider, inputUrl: string, sourceId?: string): WebCitation
-connectObscuraCdp	export declare function connectObscuraCdp(options: ConnectObscuraCdpOptions): Promise<ObscuraCdpSession>
-controlsFromArgs	export declare function controlsFromArgs(args: JsonObject): Record<string, unknown>
-convertHtml	export declare function convertHtml(html: string, sourceUrl: string): Promise<HtmlConversion>
-createBraveSearch	export declare function createBraveSearch(options: WebAdapterOptions): WebSearchAdapter
-createDomainPolicy	export declare function createDomainPolicy(config: ToolsWebDomainsConfig): DomainPolicy
-createExaSearch	export declare function createExaSearch(options: WebAdapterOptions): WebSearchAdapter
-createFetchCache	export declare function createFetchCache(config: ResolvedFetchCache, now?: () => number): FetchCache
-createFirecrawlExtractor	export declare function createFirecrawlExtractor(options: FirecrawlExtractOptions): WebExtractAdapter
-createFirecrawlFetch	export declare function createFirecrawlFetch(options: FirecrawlFetchOptions): WebFetchAdapter
-createKagiSearch	export declare function createKagiSearch(options: WebAdapterOptions): WebSearchAdapter
-createNativeFetch	export declare function createNativeFetch(options: NativeFetchOptions): WebFetchAdapter
-createObscuraMcpTools	export declare function createObscuraMcpTools(options: ObscuraMcpToolsOptions): Promise<ObscuraMcpTools>
-createObscuraPageFetcher	export declare function createObscuraPageFetcher(options: ObscuraWebToolsOptions): WebFetchService
-createObscuraWebTools	export declare function createObscuraWebTools(options: ObscuraWebToolsOptions): ObscuraWebTools
-createPromptFetch	export declare function createPromptFetch(client: ModelClient, options:
-createSearxngSearch	export declare function createSearxngSearch(options: SearxngSearchOptions): WebSearchAdapter
-createTavilySearch	export declare function createTavilySearch(options: WebAdapterOptions): WebSearchAdapter
-createWebTools	export declare function createWebTools(options: WebToolsOptions): readonly ToolDefinition[]
-createWebTransport	export declare function createWebTransport(provider: WebProvider, apiOrigin: string, options: WebAdapterOptions, transport?: WebTransportOptions): WebTransport
-decodeBody	export declare function decodeBody(bytes: Uint8Array, contentType: string | null): string
-default	export default
-domainOperatorsQuery	export declare function domainOperatorsQuery(query: string, controls: SearchControls): string
-endpointFromServeArgs	export declare function endpointFromServeArgs(args: readonly string[]): string
-fetchParameters	export declare function fetchParameters(cached?: boolean, prompt?: boolean): JsonObject
-fetchSliceArgs	export declare function fetchSliceArgs(args: JsonObject): FetchSliceArgs
-fetchSliceText	export declare function fetchSliceText(slice: FetchSlice, sourceTruncated?: boolean, cachedAgeMs?: number): string
-fetchSliceValue	export declare function fetchSliceValue<T extends
-isObscuraReadTool	export declare function isObscuraReadTool(name: string): boolean
-normalizeSearchResults	export declare function normalizeSearchResults(provider: WebSearchProvider, _query: string, raw: unknown, maxResults: number): readonly WebSearchResult[]
-object	export declare function object(value: unknown): Record<string, unknown>
-obscuraVersionIsGuarded	export declare function obscuraVersionIsGuarded(version: string | undefined): boolean
-packageName	export declare const packageName = "@arnilo/prism-tools-web"
-parseObscuraVersion	export declare function parseObscuraVersion(output: string): string | undefined
-probeObscuraVersion	export declare function probeObscuraVersion(options: ObscuraVersionProbeOptions): Promise<ObscuraVersionProbe>
-providerFacts	export declare function providerFacts(raw: unknown, base?: WebProviderMetadata): WebProviderMetadata | undefined
-renderScrapeResults	export declare function renderScrapeResults(value: unknown): string
-renderSearchResults	export declare function renderSearchResults(value: unknown): string
-resolveFetchCache	export declare function resolveFetchCache(config: ToolsWebCacheConfig | undefined): ResolvedFetchCache
-resolveObscuraCommand	export declare function resolveObscuraCommand(name: string): string | undefined
-resolveObscuraProcessLimits	export declare function resolveObscuraProcessLimits(input?: Partial<ObscuraProcessLimits>): ObscuraProcessLimits
-resolveObscuraSearchProfile	export declare function resolveObscuraSearchProfile(profile: ObscuraSearchProfile | undefined, maxEvalBytes: number): ObscuraSearchProfile
-resolveObscuraWebLimits	export declare function resolveObscuraWebLimits(input?: Partial<ObscuraWebLimits>): ObscuraWebLimits
-resolveWebLimits	export declare function resolveWebLimits(input?: WebLimits): ResolvedWebLimits
-runObscuraCli	export declare function runObscuraCli(options: ObscuraCliRunOptions): Promise<ObscuraCliRunResult>
-searchControlProperties	export declare function searchControlProperties(supports: ReadonlySet<SearchControl>, values?: WebSearchControlValues): JsonObject
-searchControls	export declare function searchControls(supports: ReadonlySet<SearchControl>, input: object, values?: WebSearchControlValues): SearchControls
-sliceMarkdown	export declare function sliceMarkdown(markdown: string, args: FetchSliceArgs): FetchSlice
-snapshotWebEvidence	export declare function snapshotWebEvidence(input:
-spawnObscuraProcess	export declare function spawnObscuraProcess(options: ObscuraProcessOptions): OwnedObscuraProcess
-text	export declare function text(value: unknown): string | undefined
-toolsWeb	export declare function toolsWeb(config: ToolsWebConfig): PackageInstance
-toolsWebConfigSchema	export declare const toolsWebConfigSchema: JsonSchema
-truncateUtf8Bytes	export declare function truncateUtf8Bytes(text: string, maxBytes: number): string
-tryCanonicalUrl	export declare function tryCanonicalUrl(url: string): string | undefined
-type ObscuraMcpTools	export { createObscuraMcpTools, DEFAULT_OBSCURA_NAME_PREFIX, DEFAULT_OBSCURA_SERVER_ID, ObscuraMcpError, type ObscuraMcpTools, type ObscuraMcpToolsOptions, } from "./mcp.js"
-type ObscuraMcpToolsOptions	export { createObscuraMcpTools, DEFAULT_OBSCURA_NAME_PREFIX, DEFAULT_OBSCURA_SERVER_ID, ObscuraMcpError, type ObscuraMcpTools, type ObscuraMcpToolsOptions, } from "./mcp.js"
-type ObscuraProcessLimits	export { DEFAULT_OBSCURA_PROCESS_LIMITS, DEFAULT_OBSCURA_WEB_LIMITS, HARD_OBSCURA_PROCESS_LIMITS, HARD_OBSCURA_WEB_LIMITS, type ObscuraProcessLimits, type ObscuraWebLimits, resolveObscuraProcessLimits, resolveObscuraWebLimits, } from "./limits.js"
-type ObscuraSearchProfile	export { DEFAULT_OBSCURA_SEARCH_PROFILE, type ObscuraSearchProfile, resolveObscuraSearchProfile } from "./search-profile.js"
-type ObscuraWebLimits	export { DEFAULT_OBSCURA_PROCESS_LIMITS, DEFAULT_OBSCURA_WEB_LIMITS, HARD_OBSCURA_PROCESS_LIMITS, HARD_OBSCURA_WEB_LIMITS, type ObscuraProcessLimits, type ObscuraWebLimits, resolveObscuraProcessLimits, resolveObscuraWebLimits, } from "./limits.js"
-type ObscuraWebTools	export { createObscuraWebTools, type ObscuraWebTools, type ObscuraWebToolsOptions } from "./web.js"
-type ObscuraWebToolsOptions	export { createObscuraWebTools, type ObscuraWebTools, type ObscuraWebToolsOptions } from "./web.js"
-validateObscuraCommand	export declare function validateObscuraCommand(options: ObscuraProcessOptions, limits: ObscuraProcessLimits): void
-validateObscuraEndpoint	export declare function validateObscuraEndpoint(raw: string, allowRemote: boolean): URL
-validateObscuraWebUrl	export declare function validateObscuraWebUrl(input: string, options?: readonly string[] | ValidateObscuraUrlOptions): Promise<string>
-withFetchCache	export declare function withFetchCache<T extends
-withOutputBudget	export declare function withOutputBudget(model: ModelConfig, maxTokens: number): ModelConfig
+. CachedPage	interface CachedPage { readonly ageMs: number; readonly document: WebDocument; }
+. DEFAULT_CACHE_MAX_BYTES	const DEFAULT_CACHE_MAX_BYTES: number
+. DEFAULT_CACHE_MAX_ENTRIES	const DEFAULT_CACHE_MAX_ENTRIES = 64
+. DEFAULT_MAX_REDIRECTS	const DEFAULT_MAX_REDIRECTS = 5
+. DEFAULT_OBSCURA_NAME_PREFIX	const DEFAULT_OBSCURA_NAME_PREFIX = "obscura_"
+. DEFAULT_OBSCURA_PROCESS_LIMITS	const DEFAULT_OBSCURA_PROCESS_LIMITS: ObscuraProcessLimits
+. DEFAULT_OBSCURA_SEARCH_PROFILE	const DEFAULT_OBSCURA_SEARCH_PROFILE: ObscuraSearchProfile
+. DEFAULT_OBSCURA_SERVER_ID	const DEFAULT_OBSCURA_SERVER_ID = "obscura"
+. DEFAULT_OBSCURA_WEB_LIMITS	const DEFAULT_OBSCURA_WEB_LIMITS: ObscuraWebLimits
+. DEFAULT_PROMPT_INPUT_CHARS	const DEFAULT_PROMPT_INPUT_CHARS = 100000
+. DEFAULT_PROMPT_OUTPUT_TOKENS	const DEFAULT_PROMPT_OUTPUT_TOKENS = 1024
+. DEFAULT_WEB_LIMITS	const DEFAULT_WEB_LIMITS: ResolvedWebLimits
+. DomainPolicy	interface DomainPolicy { readonly allows: (url: string) => boolean; readonly assert: (url: string) => void; readonly filter: <T extends { readonly url: string; }>(rows: readonly T[]) => { readonly results: readonly T[]; readonly filtered: number; }; readonly restricted: boolean; }
+. FetchCache	interface FetchCache { dropSession(sessionId: string): void; read(sessionId: string | undefined, url: string, now?: number): CachedPage | undefined; readonly annotated: boolean; write(sessionId: string | undefined, url: string, document: WebDocument): void; }
+. FirecrawlExtractOptions	interface FirecrawlExtractOptions extends WebAdapterOptions, FirecrawlTargetPolicy { readonly schema: JsonObject; readonly validator: ToolArgumentValidator; }
+. FirecrawlFetchOptions	interface FirecrawlFetchOptions extends WebAdapterOptions, FirecrawlTargetPolicy {}
+. FirecrawlTargetPolicy	interface FirecrawlTargetPolicy { readonly ssrf?: SsrfPolicy; readonly validateUrl?: (url: URL, signal?: AbortSignal) => void | Promise<void>; }
+. HARD_CACHE_MAX_BYTES	const HARD_CACHE_MAX_BYTES: number
+. HARD_CACHE_MAX_ENTRIES	const HARD_CACHE_MAX_ENTRIES = 4096
+. HARD_CACHE_TTL_SECONDS	const HARD_CACHE_TTL_SECONDS = 86400
+. HARD_MAX_REDIRECTS	const HARD_MAX_REDIRECTS = 10
+. HARD_OBSCURA_PROCESS_LIMITS	const HARD_OBSCURA_PROCESS_LIMITS: ObscuraProcessLimits
+. HARD_OBSCURA_WEB_LIMITS	const HARD_OBSCURA_WEB_LIMITS: ObscuraWebLimits
+. HARD_PROMPT_INPUT_CHARS	const HARD_PROMPT_INPUT_CHARS = 1000000
+. HARD_PROMPT_OUTPUT_TOKENS	const HARD_PROMPT_OUTPUT_TOKENS = 32768
+. HARD_WEB_LIMITS	const HARD_WEB_LIMITS: ResolvedWebLimits
+. MEMO_MAX_ENTRIES	const MEMO_MAX_ENTRIES = 8
+. MEMO_TTL_SECONDS	const MEMO_TTL_SECONDS = 600
+. NativeFetchOptions	interface NativeFetchOptions { readonly domains?: DomainPolicy; readonly limits?: WebLimits; readonly maxRedirects?: number; readonly request?: NativeFetchRequest; readonly resolver?: MediaHostnameResolver; readonly ssrf?: SsrfPolicy; readonly userAgent: string; }
+. NativeFetchRequest	type NativeFetchRequest = (url: URL, init: RequestInit) => Promise<Response>
+. OBSCURA_GUARDED_VERSION	const OBSCURA_GUARDED_VERSION = "0.1.8"
+. ObscuraCdpSession	interface ObscuraCdpSession { close(): Promise<void>; readonly browser: PlaywrightBrowser; readonly endpoint: string; readonly process: OwnedObscuraProcess | undefined; }
+. ObscuraChromium	interface ObscuraChromium { connectOverCDP(endpoint: string, options?: { timeout?: number; }): Promise<PlaywrightBrowser>; }
+. ObscuraCliRunOptions	interface ObscuraCliRunOptions { readonly args?: readonly string[]; readonly argsBefore?: readonly string[]; readonly command: string; readonly cwd?: string; readonly env?: Readonly<Record<string, string>>; readonly limits?: Partial<ObscuraProcessLimits>; readonly maxOutputBytes?: number; readonly signal?: AbortSignal; readonly timeoutMs?: number; }
+. ObscuraCliRunResult	interface ObscuraCliRunResult { readonly exitCode: number | null; readonly stderr: string; readonly stdout: string; readonly truncated: boolean; }
+. ObscuraCloseOptions	interface ObscuraCloseOptions { readonly shutdownTimeoutMs?: number; readonly signal?: AbortSignal; }
+. ObscuraError	class ObscuraError extends Error { constructor(code: string, message: string, options?: ErrorOptions); readonly code: string; }
+. ObscuraExit	interface ObscuraExit { readonly code: number | null; readonly signal: NodeJS.Signals | null; }
+. ObscuraMcpError	class ObscuraMcpError extends Error { constructor(message: string); }
+. ObscuraMcpTools	interface ObscuraMcpTools { close(): Promise<void>; readonly tools: readonly ToolDefinition[]; refresh(): Promise<void>; }
+. ObscuraMcpToolsOptions	interface ObscuraMcpToolsOptions { readonly allowRemoteHttp?: boolean; readonly connect?: (options: ConnectMcpToolsOptions) => Promise<McpToolBridge>; readonly namePrefix?: string; readonly serverId?: string; readonly signal?: AbortSignal; readonly transport: McpTransportConfig; }
+. ObscuraPlaywright	interface ObscuraPlaywright { readonly chromium: ObscuraChromium; }
+. ObscuraProcessLimits	interface ObscuraProcessLimits { readonly maxArgvBytes: number; readonly maxArgvEntries: number; readonly maxEnvEntries: number; readonly maxEnvValueBytes: number; readonly maxStderrBytes: number; readonly shutdownTimeoutMs: number; readonly startupTimeoutMs: number; }
+. ObscuraProcessOptions	interface ObscuraProcessOptions { readonly allowInsecureFlags?: boolean; readonly args?: readonly string[]; readonly command: string; readonly cwd?: string; readonly env?: Readonly<Record<string, string>>; readonly limits?: Partial<ObscuraProcessLimits>; readonly stderr?: "pipe" | "ignore"; }
+. ObscuraSearchProfile	interface ObscuraSearchProfile { readonly extractionJs: string; readonly id: string; readonly searchUrl: (query: string, controls?: SearchProfileControls) => string; }
+. ObscuraVersionProbe	interface ObscuraVersionProbe { readonly guarded: boolean; readonly version?: string; }
+. ObscuraVersionProbeOptions	interface ObscuraVersionProbeOptions { readonly argsBefore?: readonly string[]; readonly command: string; readonly cwd?: string; readonly env?: Readonly<Record<string, string>>; readonly signal?: AbortSignal; readonly timeoutMs?: number; }
+. ObscuraWebLimits	interface ObscuraWebLimits { readonly maxConcurrency: number; readonly maxEvalBytes: number; readonly maxOutputBytes: number; readonly maxQueryBytes: number; readonly maxResults: number; readonly maxStderrBytes: number; readonly maxUrls: number; readonly timeoutMs: number; }
+. ObscuraWebTools	interface ObscuraWebTools { readonly searchProfileId: string; readonly tools: readonly ToolDefinition[]; }
+. ObscuraWebToolsOptions	interface ObscuraWebToolsOptions { readonly allowEval?: boolean; readonly argsBefore?: readonly string[]; readonly cache?: FetchCache; readonly command: string; readonly cwd?: string; readonly domains?: DomainPolicy; readonly env?: Readonly<Record<string, string>>; readonly fetchTools?: boolean; readonly limits?: Partial<ObscuraWebLimits>; readonly nativeTools?: boolean; readonly prompt?: PromptFetch; readonly resolver?: MediaHostnameResolver; readonly searchProfile?: ObscuraSearchProfile; }
+. OwnedObscuraProcess	interface OwnedObscuraProcess { close(options?: ObscuraCloseOptions): Promise<void>; readonly exited: Promise<ObscuraExit>; readonly pid: number | undefined; stderrText(): string; waitReady(probe: () => boolean | Promise<boolean>, options?: { signal?: AbortSignal; }): Promise<void>; }
+. PROMPT_SYSTEM_PROMPT	const PROMPT_SYSTEM_PROMPT: string
+. PlaywrightBrowser	interface PlaywrightBrowser { close?(): Promise<void>; isConnected?(): boolean; newBrowserCDPSession?(): Promise<PlaywrightCdpSession>; newContext(options?: { serviceWorkers?: "allow" | "block"; acceptDownloads?: boolean; javaScriptEnabled?: boolean; userAgent?: string; viewport?: { width: number; height: number; } | null; storageState?: string | { cookies?: unknown[]; origins?: unknown[]; }; proxy?: { server: string; bypass?: string; username?: string; password?: string; }; }): Promise<PlaywrightBrowserContext>; version?(): string; }
+. PlaywrightBrowserContext	interface PlaywrightBrowserContext { close(): Promise<void>; newCDPSession?(page: PlaywrightPage): Promise<PlaywrightCdpSession>; newPage(): Promise<PlaywrightPage>; off?(event: string, handler: (...args: never[]) => void): void; on(event: "page" | "download", handler: (pageOrDownload: PlaywrightPage | PlaywrightDownload) => void): void; pages(): PlaywrightPage[]; route?(url: string | RegExp, handler: (route: PlaywrightRoute) => unknown): Promise<void>; setDefaultNavigationTimeout?(timeout: number): void; setDefaultTimeout?(timeout: number): void; unroute?(url: string | RegExp, handler?: (route: PlaywrightRoute) => unknown): Promise<void>; }
+. PlaywrightCdpSession	interface PlaywrightCdpSession { detach?(): Promise<void>; off?(event: string, handler: (params: Record<string, unknown>) => void): void; on(event: string, handler: (params: Record<string, unknown>) => void): void; send<T = unknown>(method: string, params?: Record<string, unknown>): Promise<T>; }
+. PlaywrightDialog	interface PlaywrightDialog { accept(promptText?: string): Promise<void>; dismiss(): Promise<void>; message(): string; type(): string; }
+. PlaywrightDownload	interface PlaywrightDownload { cancel?(): Promise<void>; createReadStream?(): Promise<NodeJS.ReadableStream | null>; failure?(): Promise<string | null>; saveAs?(path: string): Promise<void>; suggestedFilename(): string; url(): string; }
+. PlaywrightLocator	interface PlaywrightLocator { check(options?: { timeout?: number; }): Promise<void>; click(options?: { timeout?: number; }): Promise<void>; count(): Promise<number>; fill(value: string, options?: { timeout?: number; }): Promise<void>; first(): PlaywrightLocator; nth(index: number): PlaywrightLocator; pressSequentially?(text: string, options?: { timeout?: number; delay?: number; }): Promise<void>; scrollIntoViewIfNeeded?(options?: { timeout?: number; }): Promise<void>; selectOption(values: string | readonly string[] | { label?: string; value?: string; } | ReadonlyArray<{ label?: string; value?: string; }>, options?: { timeout?: number; }): Promise<string[]>; setInputFiles?(files: string | readonly string[] | { name: string; mimeType: string; buffer: Buffer; }, options?: { timeout?: number; }): Promise<void>; type?(text: string, options?: { timeout?: number; delay?: number; }): Promise<void>; uncheck(options?: { timeout?: number; }): Promise<void>; }
+. PlaywrightPage	interface PlaywrightPage { ariaSnapshot(options?: { mode?: "ai" | "default"; depth?: number; boxes?: boolean; timeout?: number; }): Promise<string>; close(): Promise<void>; evaluate?<T = unknown>(pageFunction: string | ((arg: unknown) => T | Promise<T>), arg?: unknown): Promise<T>; getByLabel(text: string | RegExp, options?: { exact?: boolean; }): PlaywrightLocator; getByRole(role: string, options?: { name?: string | RegExp; exact?: boolean; }): PlaywrightLocator; getByTestId(testId: string | RegExp): PlaywrightLocator; getByText(text: string | RegExp, options?: { exact?: boolean; }): PlaywrightLocator; goto(url: string, options?: { timeout?: number; waitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit"; }): Promise<unknown>; isClosed(): boolean; locator(selector: string): PlaywrightLocator; mouse?: { wheel(deltaX: number, deltaY: number): Promise<void>; }; off?(event: string, handler: (...args: never[]) => void): void; on(event: "dialog", handler: (dialog: PlaywrightDialog) => void): void; on(event: "popup" | "close" | "crash" | "download", handler: (page?: PlaywrightPage | PlaywrightDownload) => void): void; once?(event: string, handler: (...args: never[]) => void): void; readonly url: () => string; screenshot?(options?: { type?: "png" | "jpeg"; fullPage?: boolean; clip?: { x: number; y: number; width: number; height: number; }; timeout?: number; }): Promise<Buffer>; title(): Promise<string>; waitForSelector?(selector: string, options?: { timeout?: number; }): Promise<unknown>; waitForTimeout?(timeout: number): Promise<void>; waitForURL?(url: string | RegExp, options?: { timeout?: number; }): Promise<void>; }
+. PlaywrightRequest	interface PlaywrightRequest { method?(): string; redirectedFrom?(): PlaywrightRequest | null; resourceType?(): string; url(): string; }
+. PlaywrightRoute	interface PlaywrightRoute { abort(errorCode?: string): Promise<void>; continue(options?: { url?: string; headers?: Record<string, string>; }): Promise<void>; fulfill?(options?: { status?: number; body?: string | Buffer; contentType?: string; }): Promise<void>; request(): PlaywrightRequest; }
+. PromptAnswer	interface PromptAnswer { readonly answer: string; readonly inputChars: number; readonly sourceTruncated: boolean; readonly usage?: Usage; }
+. PromptFetch	interface PromptFetch { answer(page: WebDocument, question: string, options?: { readonly signal?: AbortSignal; }): Promise<PromptAnswer>; }
+. ResolvedFetchCache	interface ResolvedFetchCache { readonly annotated: boolean; readonly maxBytes: number; readonly maxEntries: number; readonly ttlMs: number; }
+. ResolvedWebLimits	type ResolvedWebLimits = Required<WebLimits>
+. SearchControl	type SearchControl = keyof SearchControls
+. SearchControls	interface SearchControls { readonly country?: string; readonly excludeDomains?: readonly string[]; readonly freshness?: SearchFreshness; readonly includeDomains?: readonly string[]; readonly language?: string; readonly offset?: number; }
+. SearchFreshness	type SearchFreshness = "day" | "week" | "month" | "year"
+. SearxngSearchOptions	interface SearxngSearchOptions extends Omit<WebAdapterOptions, "credentials"> { readonly allowLoopback?: boolean; readonly credentials?: WebCredentialSource; readonly origin: string; }
+. ToolsWebBackend	type ToolsWebBackend = "brave" | "exa" | "firecrawl" | "native" | "obscura" | "searxng" | "tavily" | "kagi"
+. ToolsWebCacheConfig	interface ToolsWebCacheConfig { readonly maxBytes?: number; readonly maxEntries?: number; readonly ttlSeconds: number; }
+. ToolsWebConfig	interface ToolsWebConfig { readonly apiKey?: string; readonly backend: ToolsWebBackend; readonly cache?: ToolsWebCacheConfig; readonly domains?: ToolsWebDomainsConfig; readonly extract?: ToolsWebExtractConfig; readonly fetch?: ToolsWebFetchConfig; readonly limits?: WebLimits; readonly obscura?: ToolsWebObscuraConfig; readonly searxng?: ToolsWebSearxngConfig; }
+. ToolsWebDomainsConfig	interface ToolsWebDomainsConfig { readonly allow?: readonly string[]; readonly block?: readonly string[]; }
+. ToolsWebFetchConfig	interface ToolsWebFetchConfig { readonly apiKey?: string; readonly backend?: "native" | "firecrawl" | "off"; readonly prompt?: ToolsWebPromptConfig; readonly userAgent?: string; }
+. ToolsWebObscuraConfig	interface ToolsWebObscuraConfig { readonly binary?: string; readonly limits?: Partial<ObscuraWebLimits>; readonly nativeTools?: boolean; }
+. ToolsWebPromptConfig	interface ToolsWebPromptConfig { readonly maxInputChars?: number; readonly maxOutputTokens?: number; readonly model: ModelRef; }
+. ToolsWebSearxngConfig	interface ToolsWebSearxngConfig { readonly allowLoopback?: boolean; readonly origin: string; }
+. ValidateObscuraUrlOptions	interface ValidateObscuraUrlOptions { readonly allowedHostnames?: readonly string[]; readonly resolver?: MediaHostnameResolver; readonly signal?: AbortSignal; }
+. WebAdapterOptions	interface WebAdapterOptions { readonly allowedOrigins?: readonly string[]; readonly credentials: WebCredentialSource; readonly fetch?: typeof globalThis.fetch; readonly limits?: WebLimits; readonly sleep?: (ms: number, signal: AbortSignal) => Promise<void>; }
+. WebCitation	interface WebCitation { readonly citationId: string; readonly provider: WebProvider; readonly sourceId?: string; readonly url: string; }
+. WebCredentialSource	type WebCredentialSource = () => Promise<string | undefined>
+. WebDocument	interface WebDocument extends WebCitation { readonly cached?: true; readonly cachedAgeMs?: number; readonly markdown: string; readonly metadata?: WebProviderMetadata; readonly redirects?: readonly string[]; readonly retrievedAt: string; readonly sourceTruncated?: boolean; readonly title?: string; readonly untrusted: true; }
+. WebExtractAdapter	interface WebExtractAdapter { extract(urls: readonly string[], options?: { readonly signal?: AbortSignal; }): Promise<WebExtraction>; readonly provider: "firecrawl"; }
+. WebExtraction	interface WebExtraction { readonly data: JsonValue; readonly metadata?: WebProviderMetadata; readonly provider: "firecrawl"; readonly retrievedAt: string; readonly untrusted: true; readonly urls: readonly string[]; }
+. WebFetchAdapter	interface WebFetchAdapter { fetch(url: string, options?: WebFetchOptions): Promise<WebDocument>; readonly provider: "firecrawl" | "native"; }
+. WebFetchOptions	interface WebFetchOptions { readonly maxBytes?: number; readonly refresh?: boolean; readonly sessionId?: string; readonly signal?: AbortSignal; }
+. WebFetchService	interface WebFetchService { fetch(url: string, options?: WebFetchOptions): Promise<WebDocument>; }
+. WebLimits	interface WebLimits { readonly maxAggregateBytes?: number; readonly maxConcurrency?: number; readonly maxExtractBytes?: number; readonly maxJsonDepth?: number; readonly maxJsonProperties?: number; readonly maxMarkdownBytes?: number; readonly maxPollingAttempts?: number; readonly maxQueryBytes?: number; readonly maxQueued?: number; readonly maxRateLimitDelayMs?: number; readonly maxRequestBytes?: number; readonly maxResponseBytes?: number; readonly maxResults?: number; readonly maxRetries?: number; readonly maxSchemaBytes?: number; readonly maxUrls?: number; readonly pollingDelayMs?: number; readonly timeoutMs?: number; }
+. WebProvider	type WebProvider = "brave" | "exa" | "firecrawl" | "native" | "obscura" | "searxng" | "tavily" | "kagi"
+. WebProviderMetadata	interface WebProviderMetadata { readonly cost?: JsonValue; readonly rate?: WebRateMetadata; readonly requestId?: string; }
+. WebRateMetadata	interface WebRateMetadata { readonly limit?: number; readonly remaining?: number; readonly reset?: string; readonly retryAfterMs?: number; }
+. WebRetryMode	type WebRetryMode = "idempotent" | "safe-post" | "never"
+. WebSearchAdapter	interface WebSearchAdapter { readonly controlValues?: WebSearchControlValues; readonly limits?: WebLimits; readonly provider: WebSearchProvider; readonly supports: ReadonlySet<SearchControl>; search(query: string, options?: WebSearchCall): Promise<WebSearchResponse>; }
+. WebSearchCall	interface WebSearchCall extends SearchControls { readonly count?: number; readonly signal?: AbortSignal; }
+. WebSearchControlValues	interface WebSearchControlValues { readonly freshness?: readonly SearchFreshness[]; }
+. WebSearchProvider	type WebSearchProvider = "brave" | "exa" | "searxng" | "tavily" | "kagi"
+. WebSearchResponse	interface WebSearchResponse { readonly filtered?: number; readonly metadata?: WebProviderMetadata; readonly provider: WebSearchProvider; readonly query: string; readonly results: readonly WebSearchResult[]; readonly untrusted: true; }
+. WebSearchResult	interface WebSearchResult extends WebCitation { readonly highlights?: readonly string[]; readonly publishedAt?: string; readonly retrievedAt: string; readonly snippet?: string; readonly title?: string; }
+. WebToolError	class WebToolError extends Error { constructor(code: string, message: string); readonly code: string; }
+. WebToolSet	type WebToolSet = readonly ToolDefinition[]
+. WebToolsOptions	interface WebToolsOptions { readonly cache?: FetchCache; readonly domains?: DomainPolicy; readonly extract?: WebExtractAdapter; readonly fetch?: WebFetchAdapter; readonly prompt?: PromptFetch; readonly search?: WebSearchAdapter; }
+. WebTransport	interface WebTransport { json(provider: WebProvider, credentialName: string, url: URL, init: RequestInit, signal: AbortSignal, options?: { readonly retry?: WebRetryMode; }): Promise<{ value: unknown; metadata?: WebProviderMetadata; }>; readonly limits: ResolvedWebLimits; run<T>(signal: AbortSignal | undefined, operation: (signal: AbortSignal) => Promise<T>): Promise<T>; }
+. WebTransportOptions	interface WebTransportOptions { readonly allowLoopback?: boolean; readonly auth?: "bearer" | "bot" | "none"; }
+. assertBoundedJson	function assertBoundedJson(value: unknown, maxDepth: number, maxProperties: number, maxBytes: number): asserts value is JsonValue
+. boundedJson	function boundedJson<T>(value: T, maxDepth: number, maxProperties: number, maxBytes: number): T
+. canonicalUrl	function canonicalUrl(input: string): string
+. citation	function citation(provider: WebProvider, inputUrl: string, sourceId?: string): WebCitation
+. connectObscuraCdp	function connectObscuraCdp(options: ConnectObscuraCdpOptions): Promise<ObscuraCdpSession>
+. createBraveSearch	function createBraveSearch(options: WebAdapterOptions): WebSearchAdapter
+. createDomainPolicy	function createDomainPolicy(config: ToolsWebDomainsConfig): DomainPolicy
+. createExaSearch	function createExaSearch(options: WebAdapterOptions): WebSearchAdapter
+. createFetchCache	function createFetchCache(config: ResolvedFetchCache, now?: () => number): FetchCache
+. createFirecrawlExtractor	function createFirecrawlExtractor(options: FirecrawlExtractOptions): WebExtractAdapter
+. createFirecrawlFetch	function createFirecrawlFetch(options: FirecrawlFetchOptions): WebFetchAdapter
+. createKagiSearch	function createKagiSearch(options: WebAdapterOptions): WebSearchAdapter
+. createNativeFetch	function createNativeFetch(options: NativeFetchOptions): WebFetchAdapter
+. createObscuraMcpTools	function createObscuraMcpTools(options: ObscuraMcpToolsOptions): Promise<ObscuraMcpTools>
+. createObscuraWebTools	function createObscuraWebTools(options: ObscuraWebToolsOptions): ObscuraWebTools
+. createPromptFetch	function createPromptFetch(client: ModelClient, options: { readonly maxInputChars: number; }): PromptFetch
+. createSearxngSearch	function createSearxngSearch(options: SearxngSearchOptions): WebSearchAdapter
+. createTavilySearch	function createTavilySearch(options: WebAdapterOptions): WebSearchAdapter
+. createWebTools	function createWebTools(options: WebToolsOptions): readonly ToolDefinition[]
+. createWebTransport	function createWebTransport(provider: WebProvider, apiOrigin: string, options: WebAdapterOptions, transport?: WebTransportOptions): WebTransport
+. default	const definition: import("@arnilo/prism").PackageDefinition<ToolsWebConfig>
+. endpointFromServeArgs	function endpointFromServeArgs(args: readonly string[]): string
+. isObscuraReadTool	function isObscuraReadTool(name: string): boolean
+. normalizeSearchResults	function normalizeSearchResults(provider: WebSearchProvider, _query: string, raw: unknown, maxResults: number): readonly WebSearchResult[]
+. object	function object(value: unknown): Record<string, unknown>
+. obscuraVersionIsGuarded	function obscuraVersionIsGuarded(version: string | undefined): boolean
+. packageName	const packageName = "@arnilo/prism-tools-web"
+. parseObscuraVersion	function parseObscuraVersion(output: string): string | undefined
+. probeObscuraVersion	function probeObscuraVersion(options: ObscuraVersionProbeOptions): Promise<ObscuraVersionProbe>
+. providerFacts	function providerFacts(raw: unknown, base?: WebProviderMetadata): WebProviderMetadata | undefined
+. resolveFetchCache	function resolveFetchCache(config: ToolsWebCacheConfig | undefined): ResolvedFetchCache
+. resolveObscuraCommand	function resolveObscuraCommand(name: string): string | undefined
+. resolveObscuraProcessLimits	function resolveObscuraProcessLimits(input?: Partial<ObscuraProcessLimits>): ObscuraProcessLimits
+. resolveObscuraSearchProfile	function resolveObscuraSearchProfile(profile: ObscuraSearchProfile | undefined, maxEvalBytes: number): ObscuraSearchProfile
+. resolveObscuraWebLimits	function resolveObscuraWebLimits(input?: Partial<ObscuraWebLimits>): ObscuraWebLimits
+. resolveWebLimits	function resolveWebLimits(input?: WebLimits): ResolvedWebLimits
+. runObscuraCli	function runObscuraCli(options: ObscuraCliRunOptions): Promise<ObscuraCliRunResult>
+. snapshotWebEvidence	function snapshotWebEvidence(input: { readonly url: string; readonly body: string | Uint8Array; readonly provider: WebProvider; readonly retrievedAt?: string; readonly title?: string; readonly sourceId?: string; readonly tenantId?: string; readonly excerpt?: string; readonly span?: { readonly start: number; readonly end: number; }; readonly revision?: string; }): ArtifactCitation
+. spawnObscuraProcess	function spawnObscuraProcess(options: ObscuraProcessOptions): OwnedObscuraProcess
+. text	function text(value: unknown): string | undefined
+. toolsWeb	function toolsWeb(config: ToolsWebConfig): PackageInstance
+. toolsWebConfigSchema	const toolsWebConfigSchema: JsonSchema
+. tryCanonicalUrl	function tryCanonicalUrl(url: string): string | undefined
+. validateObscuraCommand	function validateObscuraCommand(options: ObscuraProcessOptions, limits: ObscuraProcessLimits): void
+. validateObscuraEndpoint	function validateObscuraEndpoint(raw: string, allowRemote: boolean): URL
+. validateObscuraWebUrl	function validateObscuraWebUrl(input: string, options?: readonly string[] | ValidateObscuraUrlOptions): Promise<string>
+. withFetchCache	function withFetchCache<T extends { fetch(url: string, options?: WebFetchOptions): Promise<WebDocument>; }>(target: T, cache: FetchCache): T
+. withOutputBudget	function withOutputBudget(model: ModelConfig, maxTokens: number): ModelConfig

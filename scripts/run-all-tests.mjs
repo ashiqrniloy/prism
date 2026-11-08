@@ -71,6 +71,8 @@ export const GATE_FILES = [
   "scripts/packaging-current.test.mjs",
   "scripts/import-hygiene.test.mjs",
   "scripts/live-matrix.test.mjs",
+  "scripts/cache-parity/run.test.mjs",
+  "scripts/cache-parity/live.test.mjs",
   "scripts/memory-bench/run.test.mjs",
   "scripts/litellm/free-models.test.mjs",
   "scripts/litellm/reconcile.test.mjs",

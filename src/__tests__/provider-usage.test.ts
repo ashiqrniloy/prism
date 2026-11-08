@@ -4,6 +4,7 @@ import {
   anthropicMessagesEvents,
   cacheHitRate,
   mapOpenAIChatUsage,
+  mapOpenAIResponsesUsage,
   mapSystemOneUsage,
   normalizeUsage,
 } from "../provider-kit/index.js";
@@ -112,6 +113,44 @@ describe("provider usage contract (plan 182 Task 4)", () => {
       totalTokens: 1040,
       cacheReadTokens: 900,
     });
+  });
+
+  it("chat_usage_reads_a_top_level_cache_creation_count", () => {
+    // Command Code (measured 2026-11-08): `cache_creation_input_tokens` sits beside `prompt_tokens`, not in the details.
+    const usage = mapOpenAIChatUsage({
+      prompt_tokens: 3277,
+      completion_tokens: 91,
+      total_tokens: 3368,
+      prompt_tokens_details: { cached_tokens: 0 },
+      cache_creation_input_tokens: 3274,
+    });
+
+    assert.deepEqual(usage, {
+      inputTokens: 3277,
+      outputTokens: 91,
+      totalTokens: 3368,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 3274,
+    });
+  });
+
+  it("responses_usage_reads_cache_write_tokens_as_a_subset_of_input", () => {
+    // Command Code Responses (measured 2026-11-08): input_tokens 3045 is inclusive of cached 3042 on a warm request.
+    const cold = mapOpenAIResponsesUsage({
+      input_tokens: 3045,
+      output_tokens: 5,
+      total_tokens: 3050,
+      input_tokens_details: { cached_tokens: 0, cache_write_tokens: 3042 },
+    });
+    const warm = mapOpenAIResponsesUsage({
+      input_tokens: 3045,
+      output_tokens: 5,
+      total_tokens: 3050,
+      input_tokens_details: { cached_tokens: 3042, cache_write_tokens: 0 },
+    });
+
+    assert.deepEqual(cold, { inputTokens: 3045, outputTokens: 5, totalTokens: 3050, cacheReadTokens: 0, cacheWriteTokens: 3042 });
+    assert.deepEqual(warm, { inputTokens: 3045, outputTokens: 5, totalTokens: 3050, cacheReadTokens: 3042, cacheWriteTokens: 0 });
   });
 
   it("cache_hit_rate_is_at_most_one", () => {

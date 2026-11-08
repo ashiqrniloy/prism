@@ -19,7 +19,7 @@ import { createHashEmbedder, lexicalTerms } from "@arnilo/prism-memory-core";
 import { createMarkdownMemoryStores } from "@arnilo/prism-memory-core/fabric";
 import fabric, { createMemory, createMemoryFabric, parseMemoryNoteMetadata, resolveMemoryFabricConfig } from "@arnilo/prism-memory-fabric";
 import observational from "@arnilo/prism-memory-observational";
-import { createProviderEmbedder, probeEmbedderDimensions } from "@arnilo/prism-memory-rag";
+import { createProviderEmbedder, probeEmbedderDimensions } from "@arnilo/prism-rag";
 import { parseNoteFile } from "../../packages/memory/core/src/fabric/okf.ts";
 import {
   messageText as entryMessageText,
@@ -27,7 +27,7 @@ import {
   exchangePairs,
   splitExchange,
 } from "../../packages/memory/fabric/src/exchanges.ts";
-import { scanScopedMemoryContent } from "../../packages/memory/fabric/src/scoped/trust.ts";
+import { scanScopedMemoryContent } from "../../packages/memory/core/src/trust.ts";
 import { isToolsConfig, memoryConfigs } from "./ablations.mjs";
 import { BENCH_SCOPE } from "./bench-scope.mjs";
 import { injectionLogger, textOf, tokens } from "./injection-log.mjs";
@@ -1109,7 +1109,7 @@ let ontologySourceHash;
 async function ontologySources() {
   if (ontologySourceHash) return ontologySourceHash;
   const digest = createHash("sha256");
-  for (const base of ["packages/memory/core/src", "packages/memory/fabric/src", "packages/memory/wiki/src"]) {
+  for (const base of ["packages/memory/core/src", "packages/memory/fabric/src", "packages/knowledge/wiki/src"]) {
     const files = (await readdir(base, { recursive: true })).filter((file) => file.endsWith(".ts") && !file.includes("__tests__")).sort();
     for (const file of files) digest.update(`${base}/${file}\0`).update(await readFile(join(base, file)));
   }
@@ -1316,6 +1316,8 @@ export async function replay(question, options, providers, state) {
   try {
     if (usesFabric) {
       tempRoot = await mkdtemp(join(tmpdir(), "prism-bench-fabric-"));
+      // The wiki's store sits beside the notes, so a cached history restores both (plan 216 Task 3).
+      ontologyArm?.useRoot(join(tempRoot, "wiki"));
       const notesDir = join(tempRoot, "notes");
       await mkdir(notesDir, { recursive: true });
       if (ontologyCache) {

@@ -68,14 +68,14 @@ const e = (path, effect, extra = {}) => ({ path, effect, ...extra });
 const t = (file, name) => ({ file, name });
 
 const FT = "packages/memory/fabric/src/__tests__";
-const WT = "packages/memory/wiki/src/__tests__";
+const WT = "packages/knowledge/wiki/src/__tests__";
 const OT = "packages/memory/observational/src/__tests__";
 const CT = "packages/memory/core/src/__tests__";
 const ST = "scripts/memory-bench/safety/safety.test.mjs";
 
 const FABRIC = "@arnilo/prism-memory-fabric";
 const OM = "@arnilo/prism-memory-observational";
-const WIKI = "@arnilo/prism-memory-wiki";
+const WIKI = "@arnilo/prism-wiki";
 
 const free = { modelCalls: "0", writes: "0", tokens: "0" };
 
@@ -1038,9 +1038,8 @@ export const FEATURES = [
   {
     id: "kind.concept",
     group: "kinds",
-    name: "`concept` notes (ontology tier)",
-    owner: FABRIC,
-    kinds: ["concept"],
+    name: "Concepts (the wiki's own store since plan 216 Task 3; no longer a memory kind)",
+    owner: WIKI,
     cost: { modelCalls: "the curator's", writes: "concept edits", tokens: "0 at read" },
     roles: ["accuracy", "inspectability"],
     evidence: [e(EV.dev208, "O1/O2/O5/O7 pending, O3 not-run")],
@@ -1065,9 +1064,9 @@ export const FEATURES = [
   {
     id: "ontology.tier",
     group: "ontology",
-    name: "The ontology tier as a whole (memory-wiki over the fabric)",
+    name: "The ontology as a whole (the wiki over its own store, reading memory read-only since plan 216 Task 3)",
     owner: WIKI,
-    config: ["fabric:ontology"],
+    config: ["wiki:root", "wiki:store", "wiki:pointer"],
     defaultText: "not installed",
     cost: {
       modelCalls: "the curator's (15 curator calls on Muse in the 209 screen)",
@@ -1095,10 +1094,9 @@ export const FEATURES = [
   {
     id: "ontology.binding-deterministic",
     group: "ontology",
-    name: "Subject binding: deterministic (bindThreshold)",
-    owner: FABRIC,
-    config: ["fabric:ontology.bindThreshold"],
-    defaultRef: "fabric.ontology.bindThreshold",
+    name: "Subject binding: deterministic (bindThreshold), at the wiki's ingest and pass since plan 216 Task 3",
+    owner: WIKI,
+    config: ["wiki:bindThreshold"],
     cost: free,
     roles: ["accuracy"],
     evidence: [e(EV.dev208, "concept stages counted; no ablation")],
@@ -1188,10 +1186,9 @@ export const FEATURES = [
   {
     id: "ontology.concept-prior",
     group: "ontology",
-    name: "Concept prior and concept rendering in recall",
-    owner: FABRIC,
-    config: ["fabric:ontology.conceptPrior", "fabric:ontology.maxClaimsRendered"],
-    defaultRef: "fabric.ontology",
+    name: "Concept rendering in search (the recall concept prior was removed by plan 216 Task 3)",
+    owner: WIKI,
+    config: ["wiki:search", "wiki:search.maxClaimsRendered"],
     cost: free,
     roles: ["accuracy"],
     evidence: [e(EV.dev208, "no ablation arm in the development screen")],
@@ -1546,7 +1543,7 @@ export const FEATURES = [
     tests: [
       t(ST, "poisoning_is_refused_with_and_without_legitimate_memories"),
       t(ST, "adversarial_fixture_detects_every_class_including_curl_flags"),
-      t(`${FT}/source-index.test.ts`, "index_source_refuses_text_the_trust_scan_flags_and_writes_nothing"),
+      t("packages/knowledge/wiki/src/__tests__/source-ingest.test.ts", "a_source_the_trust_scan_refuses_is_staged_but_not_indexed"),
     ],
     status: "safety-proven",
     statusBasis: "Offline safety gate plus named tests; real-model MINJA confirmation is Task 5/9's.",
@@ -1913,7 +1910,7 @@ export const MANDATORY_CANDIDATE_TASKS = [6, 7, 8, 9, 10, 11, 12];
 
 /** Out of scope for this plan, listed so their absence is explicit. */
 export const EXCLUDED = [
-  { package: "@arnilo/prism-memory-rag", reason: "document retrieval, a separate capability the owner keeps outside memory" },
+  { package: "@arnilo/prism-rag", reason: "document retrieval, a separate capability the owner keeps outside memory" },
   { package: "@arnilo/prism-memory-compaction", reason: "measured by plan 194's rot curve" },
 ];
 

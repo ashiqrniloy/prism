@@ -101,7 +101,7 @@ describe("experimental boundary", () => {
   });
 
   describe("fixtures", () => {
-    const experimental = new Set(["@arnilo/prism-memory-core", "@arnilo/prism-memory-rag"]);
+    const experimental = new Set(["@arnilo/prism-memory-core", "@arnilo/prism-rag"]);
     const make = (files: Record<string, string>, manifest: Record<string, unknown> = {}) => {
       const root = mkdtempSync(join(tmpdir(), "prism-boundary-"));
       mkdirSync(join(root, "packages", "stable", "src", "__tests__"), { recursive: true });
@@ -123,10 +123,10 @@ describe("experimental boundary", () => {
 
     it("fails on type-only, re-export, bare and literal dynamic imports in stable src", () => {
       const { root, pkg } = make({
-        "src/type.ts": 'import type { A } from "@arnilo/prism-memory-rag";\n',
+        "src/type.ts": 'import type { A } from "@arnilo/prism-rag";\n',
         "src/reexport.ts": 'export type {\n  B,\n} from "@arnilo/prism-memory-core/sub";\n',
         "src/bare.ts": 'import "@arnilo/prism-memory-core";\n',
-        "src/dynamic.ts": 'export const load = () => import("@arnilo/prism-memory-rag");\n',
+        "src/dynamic.ts": 'export const load = () => import("@arnilo/prism-rag");\n',
       });
       try {
         const found = experimentalBoundaryViolations(root, [pkg], experimental).map((line) => line.split(" imports ")[0]);
@@ -145,7 +145,7 @@ describe("experimental boundary", () => {
       const { root, pkg } = make(
         {
           "src/__tests__/a.test.ts": 'import { x } from "@arnilo/prism-memory-core";\n',
-          "src/comment.ts": '// import("@arnilo/prism-memory-rag")\n/**\n * import x from "@arnilo/prism-memory-core";\n */\nexport {};\n',
+          "src/comment.ts": '// import("@arnilo/prism-rag")\n/**\n * import x from "@arnilo/prism-memory-core";\n */\nexport {};\n',
         },
         { devDependencies: { "@arnilo/prism-memory-core": "file:../core" } },
       );
@@ -155,7 +155,7 @@ describe("experimental boundary", () => {
         assert.deepEqual(experimentalBoundaryViolations(root, [privatePkg], experimental), []);
         const self = {
           ...pkg,
-          manifest: { ...pkg.manifest, name: "@arnilo/prism-memory-rag", dependencies: { "@arnilo/prism-memory-core": "1" } },
+          manifest: { ...pkg.manifest, name: "@arnilo/prism-rag", dependencies: { "@arnilo/prism-memory-core": "1" } },
         };
         assert.deepEqual(experimentalBoundaryViolations(root, [self], experimental), []);
       } finally {

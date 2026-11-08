@@ -83,7 +83,11 @@ export function mapOpenAIChatUsage(usage: unknown): Usage | undefined {
     cacheReadTokens: wire.prompt_tokens_details?.cached_tokens ?? wire.prompt_cache_hit_tokens,
     // Some OpenAI-compatible vendors report cache writes as `cache_write_tokens`,
     // others as the `cache_creation_input_tokens` variant; accept both.
-    cacheWriteTokens: wire.prompt_tokens_details?.cache_write_tokens ?? wire.prompt_tokens_details?.cache_creation_input_tokens,
+    // Command Code reports the write count at the top level of `usage`, beside `prompt_tokens`.
+    cacheWriteTokens:
+      wire.prompt_tokens_details?.cache_write_tokens ??
+      wire.prompt_tokens_details?.cache_creation_input_tokens ??
+      wire.cache_creation_input_tokens,
   });
 }
 
@@ -92,6 +96,7 @@ interface OpenAIWireUsage {
   readonly completion_tokens?: number;
   readonly total_tokens?: number;
   readonly prompt_cache_hit_tokens?: number;
+  readonly cache_creation_input_tokens?: number;
   readonly prompt_tokens_details?: {
     readonly cached_tokens?: number;
     readonly cache_write_tokens?: number;

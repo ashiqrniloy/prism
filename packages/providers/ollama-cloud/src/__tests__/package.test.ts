@@ -49,7 +49,7 @@ describe("@arnilo/prism-provider-ollama-cloud package", () => {
       captured = new Headers(init.headers);
       return completion();
     }) as typeof fetch;
-    const result = await providerConformance(() => createOllamaCloudProvider({ apiKey: key, fetch: fetchImpl }), {
+    const result = await providerConformance(() => createOllamaCloudProvider({ apiKey: async () => key, fetch: fetchImpl }), {
       request,
       secrets: [key],
       headers: {
@@ -64,7 +64,7 @@ describe("@arnilo/prism-provider-ollama-cloud package", () => {
 
   it("ollama_cloud_passes_recorded_conformance", async () => {
     const key = "sk-ollama-cloud-recorded-canary";
-    const result = await providerConformance((fetchImpl) => createOllamaCloudProvider({ apiKey: key, fetch: fetchImpl }), {
+    const result = await providerConformance((fetchImpl) => createOllamaCloudProvider({ apiKey: async () => key, fetch: fetchImpl }), {
       recordings: new URL("./wire/", import.meta.url),
       models: ollamaCloudModels,
       secrets: [key],

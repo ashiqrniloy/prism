@@ -1,29 +1,28 @@
-/** Plan 210 Task 2: ontology-tier probes (memory-wiki over the fabric). */
+/**
+ * Plan 210 Task 2: ontology probes. Since plan 216 Task 3 the ontology is the wiki's: concepts live in its own store and
+ * read the fabric (LTM) only through the read-only `memory.ltm` port. The probes drive that path; the three mechanisms
+ * plan 216 removed (extractor binding, the recall concept prior, concept sharing to the team store) report so.
+ */
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { mockCuratorEdits } from "../replay.mjs";
-import { digest, events, fabricAgent, lastValue, packages, resultText, scripted, tailText } from "./harness.mjs";
+import { digest, events, fabricAgent, lastValue, packages, resultText, scripted } from "./harness.mjs";
 
-const WIKI = "../../../packages/memory/wiki/src";
+const WIKI = "../../../packages/knowledge/wiki/src";
 
-/** The real fabric ontology over an in-memory store, wired the way the package wires it (wiki tests' setup). */
+/** The wiki's ontology over the real fabric (LTM, read only) and an in-memory wiki store (the wiki tests' setup). */
 async function env(levels = ["project"], ontologyOptions = {}) {
   const { fabric } = await packages();
   const core = await import("@arnilo/prism-memory-core");
+  const { createWikiOntology } = await import(`${WIKI}/ontology/port.ts`);
   const vectorStore = core.createMemoryVectorStore();
   const memories = new Map(
     levels.map((level) => [level, fabric.createMemory({ tenantId: "t", threadId: "th", resourceId: `r-${level}`, vectorStore })]),
   );
-  const ontology = fabric.createFabricOntology({
-    scopes: [...memories].map(([level, memory]) => ({ level, memory })),
-    store: vectorStore,
-    ...ontologyOptions,
-  });
+  const ltm = fabric.createMemoryLtmPort({ scopes: () => [...memories].map(([level, memory]) => ({ level, memory, store: vectorStore })) });
+  const ontology = createWikiOntology({ ltm: () => ltm, ...ontologyOptions });
   const fabrics = new Map(
-    [...memories].map(([level, memory]) => [
-      level,
-      fabric.createMemoryFabric({ memory, vectorStore, consolidate: false, subjects: ontology.subjects, ...ontologyOptions.fabric }),
-    ]),
+    [...memories].map(([level, memory]) => [level, fabric.createMemoryFabric({ memory, vectorStore, consolidate: false })]),
   );
   const note = (text, options = {}) =>
     fabrics.get(options.level ?? "project").remember({
@@ -41,21 +40,24 @@ async function env(levels = ["project"], ontologyOptions = {}) {
         return { ...metadata, fabric: fabric.encodeMemoryNoteMetadata({ ...parsed, coRead: events }) };
       });
   };
-  return { vectorStore, memories, ontology, port: ontology.port, fabrics, note, coRead };
+  return { vectorStore, memories, ontology, port: ontology, fabrics, note, coRead };
 }
 
-/** Capture the fabric's ontology port, as the wiki consumes it. */
-async function grabPort(holder) {
-  const { prism, fabric } = await packages();
-  return prism.definePackage({
-    name: "@probe/grab-port",
-    version: "0.0.0",
-    requires: { api: 1 },
-    setup(api) {
-      holder.value = api.services.consume(fabric.MEMORY_FABRIC_SERVICE);
-    },
-  })();
+/** The concepts the agent's wiki wrote, read from its store on disk. */
+async function wikiConcepts(root) {
+  const { createMarkdownWikiStore } = await import(`${WIKI}/store.ts`);
+  return (await createMarkdownWikiStore({ root }).concepts("project")).filter((record) => record.status !== "archived");
 }
+
+/** The wiki's passive block in a request (its `context.build` block, id `wiki:pointer`). */
+const wikiPointerText = (request) =>
+  (request.context ?? [])
+    .filter((block) => block.id === "wiki:pointer")
+    .map((block) => (typeof block.content === "string" ? block.content : ""))
+    .join("\n");
+
+/** A mechanism plan 216 Task 3 removed: reported, not probed. */
+const removed = (property, finding) => ({ surface: "unspecified", property, fires: 0, reaches: false, correct: true, finding });
 
 /** A concept on `payments` with two cited claims. */
 async function seeded(e) {
@@ -92,14 +94,18 @@ async function curator(calls) {
   };
 }
 
-/** Package arm: fabric + wiki, three keyword-clustered notes, one `wiki:consolidate`, then a concept recall. */
+/** Package arm: fabric + wiki, three keyword-clustered notes, one `wiki:consolidate`, then a `wiki.search` (off: a recall). */
 export async function tierArm(dir, { wiki = true, fabricConfig = {}, after, edits = mockCuratorEdits, agentOptions = {} } = {}) {
   const ev = await events();
   let curatorCalls = 0;
-  const { memoryWiki } = await import(`${WIKI}/index.ts`);
+  const { wiki: wikiPackage } = await import(`${WIKI}/index.ts`);
+  // Outside the fabric's tools.root: the fabric mirrors files under its root as notes, the wiki's included.
+  const knowledgeRoot = `${dir}-wiki`;
   const s = scripted().queue({
     calls: [
-      { name: "memory.recall", args: { query: "deploy pipeline approval", ...(wiki ? { kinds: ["concept"] } : { kinds: ["concept"] }) } },
+      wiki
+        ? { name: "wiki.search", args: { query: "deploy pipeline approval" } }
+        : { name: "memory.recall", args: { query: "deploy pipeline approval" } },
     ],
   });
   const h = await fabricAgent(dir, {
@@ -114,7 +120,7 @@ export async function tierArm(dir, { wiki = true, fabricConfig = {}, after, edit
       for (const text of ["deploys go through the pipeline", "the pipeline deploys on tag", "pipeline deploy needs approval"])
         await writer.remember({ kind: "fact", content: text, keywords: ["deploy"], scope: "project" });
     },
-    afterPackages: wiki ? [memoryWiki({ consolidate: { model: "worker/main", minNotes: 3 } })] : [],
+    afterPackages: wiki ? [wikiPackage({ root: knowledgeRoot, consolidate: { model: "worker/main", minNotes: 3 } })] : [],
     agentOptions,
   });
   try {
@@ -122,14 +128,14 @@ export async function tierArm(dir, { wiki = true, fabricConfig = {}, after, edit
       ? await h.command("wiki:consolidate", {}, "probe").catch((error) => ({ error: String(error?.message ?? error) }))
       : undefined;
     await h.run("probe", "how do deploys work");
-    const value = lastValue(h);
+    const value = lastValue(h, wiki ? "wiki.search" : "memory.recall");
     const extra = after ? await after(h) : undefined;
     return {
       pass,
       curatorCalls,
       value,
       text: resultText(h.toolResults.at(-1)?.result),
-      concepts: (await h.notes()).filter((note) => note.metadata?.kind === "concept").length,
+      concepts: wiki ? (await wikiConcepts(knowledgeRoot)).length : 0,
       extra,
       h,
     };
@@ -147,13 +153,10 @@ export const probes = [
       return {
         surface: "tool-result",
         property:
-          "with memory-wiki over the fabric, a curator pass turns a note cluster into a concept that recall renders with cited claims; without the wiki no concept is ever written",
+          "with the wiki beside the fabric, a curator pass turns a memory note cluster into a concept in the wiki's store that wiki.search renders with cited claims; without the wiki no concept is ever written",
         fires: on.concepts,
         reaches: digest(on.text) !== digest(off.text),
-        correct:
-          on.concepts >= 1 &&
-          on.value?.hits?.some((hit) => hit.kind === "concept") &&
-          !(off.value?.hits ?? []).some((hit) => hit.kind === "concept"),
+        correct: on.concepts >= 1 && (on.value?.concepts?.length ?? 0) >= 1 && off.concepts === 0,
         on: digest(on.text),
         off: digest(off.text),
         counts: { concepts: on.concepts, curatorCalls: on.curatorCalls },
@@ -164,10 +167,11 @@ export const probes = [
     id: "kind.concept",
     async run(root) {
       const on = await tierArm(join(root, "on"));
-      const hit = on.value?.hits?.find((item) => item.kind === "concept");
+      const hit = on.value?.concepts?.[0];
       return {
         surface: "tool-result",
-        property: "a concept note renders as [id] level concept subject with its current claims and the ids they cite",
+        property:
+          "a concept (the wiki's, not a memory kind) renders in wiki.search as [id] level concept subject with its current claims and the ids they cite",
         fires: hit ? 1 : 0,
         reaches: /concept/.test(on.text),
         correct: hit !== undefined && new RegExp(`\\[${hit.id}\\] project concept`).test(on.text),
@@ -180,8 +184,8 @@ export const probes = [
     id: "ontology.curator-pass",
     async run() {
       const { runWikiPass, createWikiLease } = await import(`${WIKI}/consolidate/pass.ts`);
-      const { resolveMemoryWorkerLimits } = await import("@arnilo/prism-memory-observational");
-      const { fabric } = await packages();
+      const { resolveMemoryWorkerLimits } = await import("@arnilo/prism-memory-core");
+      const { parseConceptBody } = await import(`${WIKI}/ontology/codec.ts`);
       const arm = async (withEvidence) => {
         const e = await env();
         await seeded(e);
@@ -199,7 +203,7 @@ export const probes = [
         });
         const row = (await e.port.subjects("project")).find((entry) => entry.subject === "payments");
         const [view] = row ? await e.port.read("project", [row.conceptId]) : [];
-        const doc = view ? fabric.parseConceptBody(view.text, { allowUncited: true }) : undefined;
+        const doc = view ? parseConceptBody(view.text, { allowUncited: true }) : undefined;
         return { report, calls: calls.length, claims: doc?.claims.length ?? 0, d: digest(doc?.claims.map((claim) => claim.text)) };
       };
       const on = await arm(true);
@@ -262,8 +266,11 @@ export const probes = [
     async run() {
       const e = await env();
       const { a } = await seeded(e);
+      await e.port.refresh();
       const before = await plan(e, []);
-      await e.ontology.retract({ ids: [a.id], reason: "forgotten" });
+      // The wiki reads memory's deletion feed: forgetting a cited note cascades on the next refresh.
+      await e.memories.get("project").forget({ ids: [a.id] });
+      await e.port.refresh();
       const after = await plan(e, []);
       return {
         surface: "curator-plan",
@@ -282,16 +289,17 @@ export const probes = [
       const arm = async (bindThreshold) => {
         const e = await env(["project"], { bindThreshold });
         await seeded(e);
-        // One token of the subject's name (payments), none of its title's second token or alias.
+        // One token of the subject's name (payments), none of its title's second token or alias. The wiki binds on its pass.
         const note = await e.note("the payments retries back off slowly");
-        const { fabric } = await packages();
-        return fabric.parseMemoryNoteMetadata((await e.memories.get("project").getEntry(note.id))?.metadata)?.subject;
+        await e.port.bindPending("project");
+        return (await e.port.store.bindings("project")).get(note.id);
       };
       const on = await arm(1);
       const off = await arm(2);
       return {
         surface: "stored-note",
-        property: "a new note containing bindThreshold tokens of a subject's name binds to that subject",
+        property:
+          "a new memory note containing bindThreshold tokens of a subject's name is bound to that subject by the wiki's pass (memory is never written)",
         fires: on === "payments" ? 1 : 0,
         reaches: on !== off,
         correct: on === "payments" && off === undefined,
@@ -303,97 +311,20 @@ export const probes = [
   },
   {
     id: "ontology.binding-extractor",
-    async run(root) {
-      // The extractor may name a shown subject on a note it records; the write binds it.
-      const ev = await events();
-      const { memoryWiki } = await import(`${WIKI}/index.ts`);
-      const arm = async (name, subject) => {
-        let sawSubjects = false;
-        const port = {};
-        const h = await fabricAgent(join(root, name), {
-          config: { rules: false, promote: { model: "worker/main", minTurnsBetween: 1, derivableFrom: [], minScore: 0 } },
-          respond: scripted().respond,
-          worker: (request, ctx) => {
-            if (ctx.toolTurn) return ev.say("");
-            const schema = JSON.stringify(request.tools ?? []);
-            if (/subject/.test(schema)) sawSubjects = true;
-            return ev.call("record_notes", {
-              notes: [
-                {
-                  // No token of the subject's name, so only the extractor's subject can bind it (not bindThreshold).
-                  text: "the weekly cadence moves to thursdays",
-                  kind: "fact",
-                  scope: "project",
-                  keywords: [],
-                  aliases: [],
-                  evidence: ["c1"],
-                  explicit: true,
-                  correction: false,
-                  generality: 1,
-                  ephemerality: 0,
-                  derivable: false,
-                  ...(subject ? { subject } : {}),
-                },
-              ],
-            });
-          },
-          afterPackages: [memoryWiki({ consolidate: { triggers: [] } }), await grabPort(port)],
-        });
-        try {
-          // The extractor may only name a subject it was shown; create it first through the port the wiki uses.
-          const evidence = await h.writer.remember({ kind: "fact", content: "the release train schedule is weekly", scope: "project" });
-          await port.value.applyConceptEdits(
-            "project",
-            [
-              { op: "create_subject", subject: "release-train", title: "Release train", conceptType: "topic", aliases: [] },
-              { op: "add_claim", subject: "release-train", text: "The release train runs weekly.", cites: [evidence.id] },
-            ],
-            { generatedBy: "consolidation" },
-          );
-          await h.run("probe", "Remember that the weekly cadence moves to thursdays.");
-          await h.command("memory:consolidate", {}, "probe");
-          await h.settle();
-          const note = (await h.notes()).find((row) => /moves to thursdays/.test(row.text ?? "") && row.metadata?.kind === "fact");
-          return { subject: note?.metadata?.subject, sawSubjects, written: note !== undefined };
-        } finally {
-          await h.close();
-        }
-      };
-      const on = await arm("on", "release-train");
-      const off = await arm("off", undefined);
-      return {
-        surface: "stored-note",
-        property: "a subject the extractor names on a recorded note binds that note (the tier then curates it)",
-        fires: on.subject ? 1 : 0,
-        reaches: on.subject !== off.subject,
-        correct: on.written && on.subject === "release-train" && off.subject === undefined,
-        on: digest(on.subject ?? null),
-        off: digest(off.subject ?? null),
-        counts: { extractorSchemaNamesSubject: on.sawSubjects ? 1 : 0 },
-      };
+    async run() {
+      return removed(
+        "removed by plan 216 Task 3: LTM never binds a note to a subject, so the extractor is shown no subject list and its subject is ignored",
+        "The extractor schema keeps an ignored free `subject` string for byte-stable tool bytes; binding is the wiki's (ingest and pass).",
+      );
     },
   },
   {
     id: "ontology.concept-prior",
     async run() {
-      const arm = async (conceptPrior) => {
-        const e = await env(["project", "agent"], { fabric: { ontology: { conceptPrior } } });
-        const { b } = await seeded(e);
-        const f = e.fabrics.get("project");
-        const hits = (await f.recall("payments inputs validated zod", { minSimilarity: 0, kinds: ["fact", "concept"] })).hits;
-        return { first: hits[0]?.kind, order: hits.map((hit) => hit.kind), evidence: b.id };
-      };
-      const on = await arm(0.5);
-      const off = await arm(0);
-      return {
-        surface: "recall-result",
-        property: "the concept prior lifts a matching concept above its own evidence notes",
-        fires: on.first === "concept" ? 1 : 0,
-        reaches: digest(on.order) !== digest(off.order),
-        correct: on.first === "concept" && off.first !== "concept",
-        on: digest(on.order),
-        off: digest(off.order),
-      };
+      return removed(
+        "removed by plan 216 Task 3: memory.recall holds no concepts, so there is no concept prior; wiki.search ranks concepts on their own",
+        "The concept-first stage left memory recall with the ontology.",
+      );
     },
   },
   {
@@ -414,7 +345,7 @@ export const probes = [
         fabricConfig: { inject: { query: "user", minSimilarity: 0 } },
         after: async (h) => {
           await h.run("probe2", "how does the deploy pipeline approval work");
-          return tailText(h.requests.at(-1)?.request ?? {});
+          return wikiPointerText(h.requests.at(-1)?.request ?? {});
         },
       });
       const off = await tierArm(join(root, "off"), {
@@ -423,12 +354,12 @@ export const probes = [
         fabricConfig: { inject: { query: "user", minSimilarity: 0 } },
         after: async (h) => {
           await h.run("probe2", "how does the deploy pipeline approval work");
-          return tailText(h.requests.at(-1)?.request ?? {});
+          return wikiPointerText(h.requests.at(-1)?.request ?? {});
         },
       });
       return {
         surface: "request",
-        property: "when a concept is in play for the turn, the passive tail adds one pointer line naming it instead of its text",
+        property: "when a concept is in play for the turn, the wiki's passive block adds one pointer line naming it instead of its text",
         fires: /concept/i.test(on.extra ?? "") ? 1 : 0,
         reaches: digest(on.extra) !== digest(off.extra),
         correct: /concept/i.test(on.extra ?? "") && !/concept/i.test(off.extra ?? ""),
@@ -439,71 +370,37 @@ export const probes = [
   },
   {
     id: "ontology.concept-sharing",
-    async run(root) {
-      const { testing } = await packages();
-      const arm = async (name, share) => {
-        await mkdir(join(root, name, ".prism/memory"), { recursive: true });
-        const ui = testing.createScriptedHostUi({ confirm: true });
-        let status;
-        const result = await tierArm(join(root, name), {
-          fabricConfig: { team: { dir: ".prism/memory", write: "ask" } },
-          agentOptions: { host: { ui: ui.ui } },
-          after: async (h) => {
-            const id = h.toolResults
-              .findLast((row) => row.name === "memory.recall")
-              ?.result?.value?.hits?.find((hit) => hit.kind === "concept")?.id;
-            const shared =
-              share && id
-                ? await h.command("memory:share", { id }, "probe").catch((error) => ({ error: String(error?.message ?? error) }))
-                : undefined;
-            status = await h.command("memory:status", {}, "probe");
-            return { id, shared };
-          },
-        });
-        return { team: status?.team, extra: result.extra };
-      };
-      const on = await arm("on", true);
-      const off = await arm("off", false);
-      const count = (arm) => (arm.team?.verified ?? 0) + (arm.team?.candidate ?? 0);
-      return {
-        surface: "stored-note",
-        property: "memory:share copies a concept into the team store, where its claims stand on the share",
-        fires: count(on),
-        reaches: count(on) !== count(off),
-        correct: count(on) >= 1 && count(off) === 0,
-        on: digest(count(on)),
-        off: digest(count(off)),
-        counts: { shareError: on.extra?.shared?.error ? 1 : 0 },
-      };
+    async run() {
+      return removed(
+        "removed by plan 216 Task 3: memory:share shares facts, preferences and procedures; a team concept is a file a person checks into the wiki's team scope",
+        "The wiki reads its team scope read only and reviews every load; there is no share command for a concept yet.",
+      );
     },
   },
   {
     id: "ontology.source-ingest",
     async run(root) {
-      const { memoryWiki } = await import(`${WIKI}/index.ts`);
+      const { wiki: wikiPackage } = await import(`${WIKI}/index.ts`);
       const arm = async (name, wiki) => {
         const dir = join(root, name);
         await mkdir(join(dir, "docs"), { recursive: true });
         await writeFile(join(dir, "docs", "adr-7.md"), "ADR 7: billing events are idempotent by event id.\n");
-        const s = scripted().queue({
-          calls: [
-            ...(wiki ? [{ name: "wiki_ingest", args: { path: "docs/adr-7.md" } }] : []),
-            { name: "memory.recall", args: { query: "billing events idempotent" } },
-          ],
-        });
+        const s = scripted().queue({ calls: [...(wiki ? [{ name: "wiki_ingest", args: { path: "docs/adr-7.md" } }] : [])] });
         const h = await fabricAgent(dir, {
           config: { rules: false },
           respond: s.respond,
-          afterPackages: wiki ? [memoryWiki({ workspaceRoot: dir, consolidate: { triggers: [] } })] : [],
+          // Outside the fabric's tools.root: the fabric mirrors files under its root as notes, the wiki's included.
+          afterPackages: wiki ? [wikiPackage({ workspaceRoot: dir, root: `${dir}-wiki`, consolidate: { triggers: [] } })] : [],
         });
         try {
           await h.run("probe", "ingest the adr");
           const ingest = h.toolResults.find((row) => row.name === "wiki_ingest");
-          const hits = lastValue(h)?.hits ?? [];
+          const value = ingest?.result?.value;
+          const memoryFiles = (await h.notes()).filter((note) => note.metadata?.kind === "file").length;
           return {
-            ingested: ingest?.result?.value?.id !== undefined || /indexed|staged|id/i.test(resultText(ingest?.result)),
-            hits: hits.length,
-            d: digest(resultText(h.toolResults.at(-1)?.result)),
+            ingested: value?.indexed === true && typeof value?.noteId === "string",
+            memoryFiles,
+            d: digest([value?.indexed ?? null, value?.scope ?? null, memoryFiles]),
           };
         } finally {
           await h.close();
@@ -513,13 +410,14 @@ export const probes = [
       const off = await arm("off", false);
       return {
         surface: "tool-result",
-        property: "wiki_ingest stages a workspace file under the memory root and indexes its extract as a file note recall returns",
+        property:
+          "wiki_ingest stages a workspace file under the wiki root and records it as a wiki source the concept pass can cite; memory gains no note",
         fires: on.ingested ? 1 : 0,
         reaches: on.d !== off.d,
-        correct: on.ingested && on.hits >= 1,
+        correct: on.ingested && on.memoryFiles === off.memoryFiles,
         on: on.d,
         off: off.d,
-        counts: { hitsOn: on.hits, hitsOff: off.hits },
+        counts: { memoryFilesOn: on.memoryFiles, memoryFilesOff: off.memoryFiles },
       };
     },
   },
@@ -530,10 +428,10 @@ export const probes = [
       const off = await tierArm(join(root, "off"), { wiki: false, fabricConfig: { preset: "coding" } });
       return {
         surface: "tool-result",
-        property: "the tier composes with the coding preset: a pass under preset coding still yields a recallable concept",
+        property: "the wiki composes with the coding preset: a pass under preset coding still yields a concept wiki.search returns",
         fires: on.concepts,
         reaches: digest(on.text) !== digest(off.text),
-        correct: on.concepts >= 1 && on.value?.hits?.some((hit) => hit.kind === "concept"),
+        correct: on.concepts >= 1 && (on.value?.concepts?.length ?? 0) >= 1,
         on: digest(on.text),
         off: digest(off.text),
       };

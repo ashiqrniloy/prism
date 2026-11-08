@@ -1,4 +1,5 @@
-import { ArtifactBodyRef, ArtifactBodyStore, JsonObject, OwnershipScope, ToolDefinition, ToolExecutionContext } from "@arnilo/prism";
+import { JsonObject, OwnershipScope, ToolDefinition, ToolExecutionContext } from "@arnilo/prism";
+import { ArtifactBodyRef, ArtifactBodyStore } from "@arnilo/prism/artifacts";
 import type { WorkSandboxFilesystem } from "../tools/filesystem.js";
 import { AgentIdentity } from "./identity.js";
 export type WorkProvider = "microsoft365" | "google-workspace";

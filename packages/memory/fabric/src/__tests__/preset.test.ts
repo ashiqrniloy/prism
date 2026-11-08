@@ -104,7 +104,6 @@ describe("the conversational preset (plan 188.11 Task 3)", () => {
 
   it("preset_contract_needs_no_embeddings_service", () => {
     const config = resolveMemoryFabricConfig({ preset: "conversational" });
-    assert.equal(config.retrieval, "lexical");
     assert.equal(config.promote.enabled, false);
     assert.equal(config.consolidate, undefined);
   });

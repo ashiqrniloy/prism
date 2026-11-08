@@ -84,7 +84,7 @@ describe("@arnilo/prism-provider-hyper", () => {
   it("hyper_defaults_to_official_hyper_base_url", async () => {
     let url = "";
     const provider = createHyperProvider({
-      apiKey: "fake-hyper-key",
+      apiKey: async () => "fake-hyper-key",
       fetch: (async (input) => {
         url = String(input);
         return ok(sse([{ choices: [{ delta: { content: "hi" }, finish_reason: "stop" }] }]));
@@ -106,7 +106,7 @@ describe("@arnilo/prism-provider-hyper", () => {
 
     const urls: string[] = [];
     const provider = createHyperProvider({
-      apiKey: "fake-hyper-key",
+      apiKey: async () => "fake-hyper-key",
       fetch: (async (input) => {
         urls.push(String(input));
         return ok(sse([{ choices: [{ delta: { content: "hi" }, finish_reason: "stop" }] }]));
@@ -152,7 +152,7 @@ describe("@arnilo/prism-provider-hyper", () => {
 
     // Verify stream emits usage with hyper metadata
     const provider = createHyperProvider({
-      apiKey: "fake-hyper-key",
+      apiKey: async () => "fake-hyper-key",
       fetch: (async () =>
         ok(
           sse([
@@ -180,7 +180,7 @@ describe("@arnilo/prism-provider-hyper", () => {
 
   it("hyper_402_is_not_retryable", async () => {
     const provider = createHyperProvider({
-      apiKey: "sk-hyper-secret-key",
+      apiKey: async () => "sk-hyper-secret-key",
       fetch: (async () =>
         new Response(JSON.stringify({ error: { message: "not enough Hypercredits sk-hyper-secret-key", code: "billing_error" } }), {
           status: 402,
@@ -201,7 +201,7 @@ describe("@arnilo/prism-provider-hyper", () => {
   it("hyper_unknown_route_fails_closed", async () => {
     let fetches = 0;
     const provider = createHyperProvider({
-      apiKey: "fake-hyper-key",
+      apiKey: async () => "fake-hyper-key",
       fetch: (async () => {
         fetches += 1;
         return new Response("ok");
@@ -331,7 +331,7 @@ describe("@arnilo/prism-provider-hyper", () => {
       assert.equal(headers.get("authorization"), "Bearer fake-hyper-key");
       return new Response(JSON.stringify({ balance: 42 }), { status: 200, headers: { "content-type": "application/json" } });
     }) as typeof fetch;
-    const credits = await getHyperCredits({ apiKey: "fake-hyper-key", fetch: fetchImpl });
+    const credits = await getHyperCredits({ apiKey: async () => "fake-hyper-key", fetch: fetchImpl });
     assert.equal(credits.balance, 42);
   });
 

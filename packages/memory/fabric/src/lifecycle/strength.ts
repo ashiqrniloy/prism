@@ -10,10 +10,7 @@
 import type { MemoryNoteKind, MemoryNoteMetadata, MemoryNoteUseEvent } from "../types.js";
 
 /** How much each kind of note is expected to be needed again; a lower `d` forgets slower. */
-export type MemoryNoteDecay = Readonly<Record<Exclude<MemoryNoteKind, "concept">, number>> & {
-  /** Unused: the lifecycle never decays, archives or evicts a concept (plan 207); a value would only rank it. */
-  readonly concept?: number;
-};
+export type MemoryNoteDecay = Readonly<Record<MemoryNoteKind, number>>;
 
 /** Coefficients of `S = explicit + sessions·log(1+useSessions) + helpful − harmful + outcome`. */
 export interface StorageWeights {

@@ -1,38 +1,30 @@
-ACP_LIMITS	export declare const ACP_LIMITS:
-AcpError	export declare class AcpError extends Error
-PERMISSION_OPTIONS	export declare const PERMISSION_OPTIONS: readonly [
-acpHost	export declare function acpHost(): HostPort
-bindAcpSession	export declare function bindAcpSession(port: HostPort | undefined, sessionId: string, bound: BoundAcpSession): void
-boundAcpSession	export declare function boundAcpSession(port: HostPort, sessionId: string | undefined): BoundAcpSession | undefined
-brandAcpHost	export declare function brandAcpHost(port: HostPort): void
-createAcpEventMapper	export declare function createAcpEventMapper(options?: AcpEventMapperOptions): AcpEventMapper
-createAcpLifecycleMapper	export declare function createAcpLifecycleMapper(options?: AcpEventMapperOptions): AcpLifecycleMapper
-decisionForPermission	export declare function decisionForPermission(pending: PendingDecision, response: RequestPermissionResponse | undefined): Decision
-elicitationRequest	export declare function elicitationRequest(sessionId: string, title: string, detail: string | undefined, schema: ElicitationSchema): CreateElicitationRequest
-isAcpHost	export declare function isAcpHost(port: HostPort | undefined): port is HostPort
-projectAcpPrompt	export declare function projectAcpPrompt(prompt: readonly
-resolveAcpAgentCapabilities	export declare function resolveAcpAgentCapabilities(options: AcpCapabilitiesSource): AgentCapabilities
-resolveAcpClientCapabilities	export declare function resolveAcpClientCapabilities(client?: ClientCapabilities): ResolvedAcpClientCapabilities
-resolveAcpLimits	export declare function resolveAcpLimits(options?: AcpLimitOptions): ResolvedAcpLimits
-serveAcp	export declare function serveAcp(prism: Agent, options: ServeAcpOptions): ServeAcpHandle
-type AcpCapabilitiesOptions	export { type AcpCapabilitiesOptions, type AcpCapabilitiesSource, type AcpCommand, type AcpCommandsSeam, type AcpMcpSeams, type AcpSessionStoreSeams, type AcpSessionSummary, type AcpUsageSeam, type ResolvedAcpClientCapabilities, resolveAcpAgentCapabilities, resolveAcpClientCapabilities, } from "./capabilities.js"
-type AcpCapabilitiesSource	export { type AcpCapabilitiesOptions, type AcpCapabilitiesSource, type AcpCommand, type AcpCommandsSeam, type AcpMcpSeams, type AcpSessionStoreSeams, type AcpSessionSummary, type AcpUsageSeam, type ResolvedAcpClientCapabilities, resolveAcpAgentCapabilities, resolveAcpClientCapabilities, } from "./capabilities.js"
-type AcpCommand	export { type AcpCapabilitiesOptions, type AcpCapabilitiesSource, type AcpCommand, type AcpCommandsSeam, type AcpMcpSeams, type AcpSessionStoreSeams, type AcpSessionSummary, type AcpUsageSeam, type ResolvedAcpClientCapabilities, resolveAcpAgentCapabilities, resolveAcpClientCapabilities, } from "./capabilities.js"
-type AcpCommandsSeam	export { type AcpCapabilitiesOptions, type AcpCapabilitiesSource, type AcpCommand, type AcpCommandsSeam, type AcpMcpSeams, type AcpSessionStoreSeams, type AcpSessionSummary, type AcpUsageSeam, type ResolvedAcpClientCapabilities, resolveAcpAgentCapabilities, resolveAcpClientCapabilities, } from "./capabilities.js"
-type AcpErrorCode	export { AcpError, type AcpErrorCode } from "./errors.js"
-type AcpEventMapper	export { type AcpEventMapper, type AcpEventMapperOptions, type AcpLifecycleMapper, createAcpEventMapper, createAcpLifecycleMapper, } from "./mapper.js"
-type AcpEventMapperOptions	export { type AcpEventMapper, type AcpEventMapperOptions, type AcpLifecycleMapper, createAcpEventMapper, createAcpLifecycleMapper, } from "./mapper.js"
-type AcpLifecycleMapper	export { type AcpEventMapper, type AcpEventMapperOptions, type AcpLifecycleMapper, createAcpEventMapper, createAcpLifecycleMapper, } from "./mapper.js"
-type AcpLimitOptions	export { ACP_LIMITS, type AcpLimitOptions, type ResolvedAcpLimits, resolveAcpLimits } from "./limits.js"
-type AcpMcpSeams	export { type AcpCapabilitiesOptions, type AcpCapabilitiesSource, type AcpCommand, type AcpCommandsSeam, type AcpMcpSeams, type AcpSessionStoreSeams, type AcpSessionSummary, type AcpUsageSeam, type ResolvedAcpClientCapabilities, resolveAcpAgentCapabilities, resolveAcpClientCapabilities, } from "./capabilities.js"
-type AcpPromptMedia	export { type AcpPromptMedia, type AcpPromptOptions, type AcpPromptResult, projectAcpPrompt } from "./prompt.js"
-type AcpPromptOptions	export { type AcpPromptMedia, type AcpPromptOptions, type AcpPromptResult, projectAcpPrompt } from "./prompt.js"
-type AcpPromptResult	export { type AcpPromptMedia, type AcpPromptOptions, type AcpPromptResult, projectAcpPrompt } from "./prompt.js"
-type AcpSessionStoreSeams	export { type AcpCapabilitiesOptions, type AcpCapabilitiesSource, type AcpCommand, type AcpCommandsSeam, type AcpMcpSeams, type AcpSessionStoreSeams, type AcpSessionSummary, type AcpUsageSeam, type ResolvedAcpClientCapabilities, resolveAcpAgentCapabilities, resolveAcpClientCapabilities, } from "./capabilities.js"
-type AcpSessionSummary	export { type AcpCapabilitiesOptions, type AcpCapabilitiesSource, type AcpCommand, type AcpCommandsSeam, type AcpMcpSeams, type AcpSessionStoreSeams, type AcpSessionSummary, type AcpUsageSeam, type ResolvedAcpClientCapabilities, resolveAcpAgentCapabilities, resolveAcpClientCapabilities, } from "./capabilities.js"
-type AcpUsageSeam	export { type AcpCapabilitiesOptions, type AcpCapabilitiesSource, type AcpCommand, type AcpCommandsSeam, type AcpMcpSeams, type AcpSessionStoreSeams, type AcpSessionSummary, type AcpUsageSeam, type ResolvedAcpClientCapabilities, resolveAcpAgentCapabilities, resolveAcpClientCapabilities, } from "./capabilities.js"
-type ResolvedAcpClientCapabilities	export { type AcpCapabilitiesOptions, type AcpCapabilitiesSource, type AcpCommand, type AcpCommandsSeam, type AcpMcpSeams, type AcpSessionStoreSeams, type AcpSessionSummary, type AcpUsageSeam, type ResolvedAcpClientCapabilities, resolveAcpAgentCapabilities, resolveAcpClientCapabilities, } from "./capabilities.js"
-type ResolvedAcpLimits	export { ACP_LIMITS, type AcpLimitOptions, type ResolvedAcpLimits, resolveAcpLimits } from "./limits.js"
-type ServeAcpHandle	export { type ServeAcpHandle, type ServeAcpOptions, serveAcp } from "./serve.js"
-type ServeAcpOptions	export { type ServeAcpHandle, type ServeAcpOptions, serveAcp } from "./serve.js"
-unbindAcpSession	export declare function unbindAcpSession(port: HostPort | undefined, sessionId: string): void
+. ACP_LIMITS	const ACP_LIMITS: { readonly maxEventBytes: number; readonly maxTextBytes: number; readonly maxReplayEvents: 100; readonly maxStreamEvents: 10000; readonly maxStreamBytes: number; readonly acpDiffBytes: number; readonly acpLocationsPerUpdate: 32; readonly acpImageBytes: number; readonly acpCommandsPerUpdate: 32; }
+. AcpCapabilitiesOptions	interface AcpCapabilitiesOptions { readonly prompt?: { readonly media?: (input: { readonly signal: AbortSignal; }) => boolean | Promise<boolean>; readonly embedded?: (input: { readonly signal: AbortSignal; }) => boolean | Promise<boolean>; }; readonly usage?: AcpUsageSeam; }
+. AcpCapabilitiesSource	interface AcpCapabilitiesSource { readonly capabilities?: AcpCapabilitiesOptions; readonly mcp?: AcpMcpSeams; readonly sessions?: AcpSessionStoreSeams; }
+. AcpCommand	interface AcpCommand { readonly description: string; readonly input?: { readonly hint: string; }; readonly name: string; }
+. AcpCommandsSeam	interface AcpCommandsSeam { readonly list: (input: { readonly sessionId: string; readonly signal: AbortSignal; }) => readonly AcpCommand[] | Promise<readonly AcpCommand[]>; }
+. AcpError	class AcpError extends Error { constructor(code: AcpErrorCode, message: string); readonly code: AcpErrorCode; }
+. AcpErrorCode	type AcpErrorCode = "ERR_PRISM_ACP_INPUT" | "ERR_PRISM_ACP_LIMIT" | "ERR_PRISM_ACP_POLICY" | "ERR_PRISM_ACP_CAPABILITY" | "ERR_PRISM_ACP_MCP" | "ERR_PRISM_ACP_RUN"
+. AcpEventMapper	interface AcpEventMapper { map(event: AgentEvent): Promise<readonly SessionUpdate[]>; mapCoWork(event: AcpCoWorkEvent): Promise<readonly SessionUpdate[]>; }
+. AcpEventMapperOptions	interface AcpEventMapperOptions { readonly limits?: AcpLimitOptions; readonly projection?: AcpProjection; readonly redactor?: SecretRedactor; readonly signal?: AbortSignal; readonly toolKinds?: ReadonlyMap<string, ToolKind>; readonly usage?: AcpUsageSeam; }
+. AcpLifecycleMapper	interface AcpLifecycleMapper { map(event: AcpLifecycleEvent): Promise<readonly SessionUpdate[]>; }
+. AcpLimitOptions	type AcpLimitOptions = { readonly [K in AcpLimitName]?: number; }
+. AcpMcpSeams	interface AcpMcpSeams { readonly select?: (input: { readonly servers: readonly McpServer[]; readonly signal: AbortSignal; }) => boolean | Promise<boolean>; readonly transports?: readonly ("http" | "sse")[]; }
+. AcpPromptMedia	interface AcpPromptMedia { readonly data: string; readonly mediaType: string; readonly name?: string; readonly type: "image" | "audio" | "file"; }
+. AcpPromptOptions	interface AcpPromptOptions { readonly capabilities: { readonly image: boolean; readonly audio: boolean; readonly embeddedContext: boolean; }; readonly maxBlocks: number; readonly maxMediaBytes: number; readonly maxMediaParts: number; readonly maxTextBytes: number; readonly policy?: { readonly media?: () => boolean | Promise<boolean>; readonly embedded?: () => boolean | Promise<boolean>; }; }
+. AcpPromptResult	interface AcpPromptResult { readonly media?: readonly AcpPromptMedia[]; readonly text: string; }
+. AcpSessionStoreSeams	interface AcpSessionStoreSeams { readonly additionalDirectories?: (input: { readonly directories: readonly string[]; readonly signal: AbortSignal; }) => readonly string[] | Promise<readonly string[]>; readonly delete?: (input: { readonly sessionId: string; readonly signal: AbortSignal; }) => void | Promise<void>; readonly list?: (input: { readonly cwd?: string; readonly signal: AbortSignal; }) => readonly AcpSessionSummary[] | Promise<readonly AcpSessionSummary[]>; readonly load?: (input: { readonly sessionId?: string; readonly cwd: string; readonly signal: AbortSignal; }) => AcpSessionBinding | Promise<AcpSessionBinding>; readonly resume?: (input: { readonly sessionId: string; readonly cwd: string; readonly signal: AbortSignal; }) => AcpSessionBinding | Promise<AcpSessionBinding>; readonly title?: (input: { readonly sessionId: string; readonly prompt?: readonly ContentBlock[]; readonly signal: AbortSignal; }) => string | undefined | Promise<string | undefined>; readonly transcript?: (input: { readonly sessionId: string; readonly signal: AbortSignal; }) => readonly SessionEntry[] | Promise<readonly SessionEntry[]>; }
+. AcpSessionSummary	interface AcpSessionSummary { readonly additionalDirectories?: readonly string[]; readonly cwd: string; readonly sessionId: string; readonly title?: string; readonly updatedAt?: string; }
+. AcpUsageSeam	interface AcpUsageSeam { readonly contextWindow?: (input: { readonly model?: string; readonly signal: AbortSignal; }) => number | undefined | Promise<number | undefined>; }
+. ResolvedAcpClientCapabilities	interface ResolvedAcpClientCapabilities { readonly configOptionBoolean: boolean; readonly elicitation: boolean; readonly fsReadTextFile: boolean; readonly fsWriteTextFile: boolean; readonly plan: boolean; readonly terminal: boolean; }
+. ResolvedAcpLimits	type ResolvedAcpLimits = { readonly [K in AcpLimitName]: number; }
+. ServeAcpHandle	interface ServeAcpHandle { close(): Promise<void>; readonly closed: Promise<void>; }
+. ServeAcpOptions	interface ServeAcpOptions { readonly authorize?: (input: { readonly peer: "stdio" | "stream"; }) => boolean | Promise<boolean>; readonly stdio?: true; readonly stream?: Stream; }
+. acpHost	function acpHost(): HostPort
+. createAcpEventMapper	function createAcpEventMapper(options?: AcpEventMapperOptions): AcpEventMapper
+. createAcpLifecycleMapper	function createAcpLifecycleMapper(options?: AcpEventMapperOptions): AcpLifecycleMapper
+. projectAcpPrompt	function projectAcpPrompt(prompt: readonly { readonly type: string; }[], options: AcpPromptOptions): Promise<AcpPromptResult>
+. resolveAcpAgentCapabilities	function resolveAcpAgentCapabilities(options: AcpCapabilitiesSource): AgentCapabilities
+. resolveAcpClientCapabilities	function resolveAcpClientCapabilities(client?: ClientCapabilities): ResolvedAcpClientCapabilities
+. resolveAcpLimits	function resolveAcpLimits(options?: AcpLimitOptions): ResolvedAcpLimits
+. serveAcp	function serveAcp(prism: Agent, options: ServeAcpOptions): ServeAcpHandle

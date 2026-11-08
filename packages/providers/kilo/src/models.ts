@@ -1,13 +1,11 @@
 import {
-  type CredentialValueSource,
   type JsonObject,
   type ModelConfig,
   type ModelCost,
   redactSecrets,
-  resolveCredentialValue,
   trimTrailingSlashes,
 } from "@arnilo/prism";
-import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/provider-kit";
+import { readBoundedResponseJson, readBoundedResponseText, type SecretSource } from "@arnilo/prism/provider-kit";
 
 /** Kilo AI Gateway base: `/chat/completions`, `/responses`, `/messages`, `/models`. */
 export const KILO_DEFAULT_BASE_URL = "https://ai-gateway.kilo.ai/api/v1";
@@ -67,7 +65,7 @@ export interface KiloModelEntry {
 export interface ListKiloModelsOptions {
   readonly provider?: string;
   readonly baseUrl?: string;
-  readonly apiKey?: CredentialValueSource;
+  readonly apiKey?: SecretSource;
   readonly organizationId?: string;
   readonly fetch?: typeof fetch;
   readonly signal?: AbortSignal;
@@ -222,7 +220,7 @@ export const kiloModels = FEATURED.map((entry) =>
 export async function listKiloModels(options: ListKiloModelsOptions = {}): Promise<ModelConfig[]> {
   const provider = options.provider ?? "kilo";
   const baseUrl = trimTrailingSlashes(options.baseUrl ?? KILO_DEFAULT_BASE_URL);
-  const token = await resolveCredentialValue(options.apiKey, { provider, name: "apiKey" });
+  const token = await options.apiKey?.();
   const path = options.organizationId
     ? `${baseUrl}/organizations/${encodeURIComponent(options.organizationId)}/models`
     : `${baseUrl}/models`;

@@ -9,8 +9,8 @@
   "approvedBy": "owner",
   "text": "Budget/models: \"Try Crouton alpha free on both Command Code and Opencode go. also glyph cluster free on command code. iceman contributor free on opencode go\". Roles: \"Crouton+Iceman answer, Glyph+Kilo judge (Recommended)\". LongMemEval-M: \"Full cohort, shared ingest (Recommended)\". Labels: \"Assistant labels (Recommended)\". Interruptions: \"since these are all free models. interruptions are expected. Make sure those are handled, retried and have no other impact other than wall time\" (owner answers to the gate C-1 questions, 2026-11-07).",
   "manifest": "docs/_evidence/memory-bench/210/ablations/c1-manifest.json",
-  "manifestHash": "13930dd8f67a7df4b35cd40a9fb17b1913b72343cccb92e8a04ed20053088bdd",
-  "cleanupCriteriaHash": "eea138eb71d58408d09c331e55da419ad8caf8bdcc0a1e44536dda0cc55a7a51",
+  "manifestHash": "d5e1409401daf099ec97e7153cf718bfedfa9e5b90c3dd6f00dac72bb03f31f6",
+  "cleanupCriteriaHash": "ee1a7b5840477e69fff2b43dc4a908c96de4f8e0b3ca2c441eaadc304c934c80",
   "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
   "plan202Task5": {
     "criteriaVersion": "202-task5-candidate-gap-v2",
@@ -149,6 +149,20 @@
       "text": "\"I would like to go with option 3. do the planning and ready the run. But do not start the run till I explicitly instruct you\" (owner, 2026-11-08, choosing the wave plan over Ollama Max or a scope cut, after \"I do not want to do a test that would take 2 days of wall time\").",
       "effect": "The campaign runs in three waves of about a working day each on the Pro plan (about 5-6 scored questions a minute at 3 concurrent requests): wave 1 = write sides, the plan 202 Task 5 rows (P, enrichment-loo, navigation-loo on all five suites, both models) and memory-off, tool-affordances-loo, supersession-keyed-only, grouping-loo, directory-loo, timeline-loo; wave 2 = the other recall and delivery arms, decisions P3/P5 and the work-outcome leg; wave 3 = the ontology arms with the panel calibration, the F4 diagnostic leg and OM. No arm, suite, question, model or criterion is dropped; every arm's base is in its own or an earlier wave (checked by assertC1Jobs). Each wave starts only on the owner's explicit instruction: `c1-supervise.sh <waves>` requires the wave list, and a job outside it is reported `deferred` and left in the journal. The journal fingerprint does not include the wave, so the progress made before the stop (3 completed jobs, answer and judge checkpoints) carries into wave 1. Default parallel arms 6. Manifest hash re-bound.",
       "previousManifestHash": "20837b3403ba51ac200e8ca596e014147d40318413a1b4c44d5de4fb3c1c0dcb"
+    },
+    {
+      "date": "2026-11-08",
+      "by": "owner (memory model decision, recorded in plan 210 Task 5; applied by the assistant)",
+      "text": "The campaign closes after wave 1. Wave 1 has finished: all 61 wave-1 jobs completed (journal campaign-96c896b2afef, status finished, run ended 14:38). Waves 2 (54 jobs) and 3 (48 jobs) are cancelled; no job of theirs runs.",
+      "effect": "Cancelled arms go to plan 222 Task 3 (P+O, the trigger, prior and pointer legs), plan 219 Task 7 (f4-readtime, the F4 diagnosis and conditional Task 17 arm), plan 217 Task 6 (OM as the 'before' baseline), plans 219-220 (tools-only, rules-add and the W.* work legs), plan 221 (maintain, archive-exchange-exempt). om-reflector-loo, om-dropper-deterministic and oracle are not run. gather, expansion, card-excerpt, precision-filter, strength-0.15, aggregation-loo, decisions-p3, decisions-p5 and W.decisions-p4 are not run and are recorded unmeasured. The criteria file gains `transferred` and `closure` (cleanupCriteriaHash re-pinned from eea138eb to the value below) and, at the Task 6 review, `ownerNegativeOverrides`. No rule, threshold or verdict precedence changed for any remaining feature (test cleanup_criteria_transfer_changes_no_rule_for_remaining_features). The runner refuses waves above the closure (C1Closed), and the report reads wave 1 only. Results already recorded for wave 1 stay valid under the new hash. Manifest hash re-bound; the job list, arms, models, routes and caps are unchanged.",
+      "spend": {
+        "journalConfirmedInputTokens": 93727027,
+        "completedJobs": 61,
+        "abandonedAttempts": 24,
+        "setupFailureAttempts": 6,
+        "note": "The dollar spend is not measured in this record: the session that closed the campaign had no OLLAMA_API_KEY, so /api/balance was not read. The last balance read (paid-panel.json, 2026-11-08T06:03Z, shortly after wave 1 started) was $49.73 of the $60 included allowance for the period ending 2026-12-07; the allowance left unused is the owner's to read from the dashboard. About $58 was left when wave 1 started (Task 5 notes). No call was made to close the campaign."
+      },
+      "previousManifestHash": "13930dd8f67a7df4b35cd40a9fb17b1913b72343cccb92e8a04ed20053088bdd"
     }
   ]
 }

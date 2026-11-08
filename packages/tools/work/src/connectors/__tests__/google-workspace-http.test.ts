@@ -4,8 +4,10 @@ import { createHash } from "node:crypto";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ArtifactBodyStore, ToolExecutionContext } from "@arnilo/prism";
+import { ToolExecutionContext } from "@arnilo/prism";
+import { ArtifactBodyStore } from "@arnilo/prism/artifacts";
 import { createWorkHttpClient } from "../http.js";
+import { AgentIdentity } from "../identity.js";
 import {
   createGoogleWorkspaceHttpAdapter,
   createMemoryIdempotencyStore,
@@ -13,7 +15,7 @@ import {
   resolveWorkLimits,
   WorkToolError,
 } from "../index.js";
-import { AgentIdentity } from "../identity.js";
+
 const identity: AgentIdentity = {
   tenantId: "tenant-1",
   userId: "user-1",

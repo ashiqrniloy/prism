@@ -1,8 +1,10 @@
-import type { CredentialValueSource, ModelProvider, ProviderRequest } from "@arnilo/prism";
+import type { ProviderRequest } from "@arnilo/prism";
 import {
   createRoutedProvider,
   sanitizeCacheKey,
+  type RoutedProvider,
   type RoutedProviderRoute,
+  type SecretSource,
 } from "@arnilo/prism/provider-kit";
 import { OPENCODE_GO_DEFAULT_BASE_URL, type OpenCodeGoRoute, routeForOpenCodeGoModel } from "./models.js";
 
@@ -42,11 +44,11 @@ export interface OpenCodeGoProviderOptions {
   readonly id?: string;
   /** Defaults to official `https://opencode.ai/zen/go/v1`. */
   readonly baseUrl?: string;
-  readonly apiKey?: CredentialValueSource;
+  readonly apiKey?: SecretSource;
   readonly fetch?: typeof fetch;
 }
 
-export function createOpenCodeGoProvider(options: OpenCodeGoProviderOptions = {}): ModelProvider {
+export function createOpenCodeGoProvider(options: OpenCodeGoProviderOptions = {}): RoutedProvider {
   return createRoutedProvider({
     id: options.id ?? "opencode-go",
     baseUrl: options.baseUrl ?? OPENCODE_GO_DEFAULT_BASE_URL,

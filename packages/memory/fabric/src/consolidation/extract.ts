@@ -9,9 +9,8 @@
  */
 import type { ModelClient, SecretRedactor, ToolDefinition } from "@arnilo/prism";
 import { redactJson } from "@arnilo/prism-memory-core";
-import { measureWorkerJson, type ResolvedMemoryWorkerLimits, runMemoryWorkerLoop } from "@arnilo/prism-memory-observational";
-import { scanScopedMemoryContent } from "../scoped/trust.js";
-import { type SubjectScopeListing, subjectPromptBlock } from "../ontology/index.js";
+import { measureWorkerJson, type ResolvedMemoryWorkerLimits, runMemoryWorkerLoop } from "@arnilo/prism-memory-core";
+import { scanScopedMemoryContent } from "@arnilo/prism-memory-core";
 import { type MemoryNoteScope, validateAppliesTo, validateNoteKey } from "../types.js";
 import type { ConsolidationCandidate } from "./gather.js";
 import {
@@ -22,7 +21,6 @@ import {
   type ConsolidationSegment,
   candidateIds,
   consolidationExtractSchema,
-  EXTRACT_SUBJECT_NEW,
   EXTRACT_TOOL_NAME,
   EXTRACTED_NOTE_KEYS,
   type ExtractedNoteKind,
@@ -60,11 +58,6 @@ export interface ExtractedNote {
   readonly contradicts?: string;
   /** The segment an episode summarises. */
   readonly segment?: string;
-  /**
-   * A subject shown to the extractor for this note's scope, or `"new"`. Never a slug that was not shown: an
-   * unknown one is dropped, the note stays unbound.
-   */
-  readonly subject?: string;
 }
 
 export interface ConsolidationExtraction {
@@ -180,8 +173,6 @@ export interface ExtractConsolidationNotesInput {
   readonly client: ModelClient;
   readonly candidates: readonly ConsolidationCandidate[];
   readonly segments?: readonly ConsolidationSegment[];
-  /** The ontology tier's subjects per scope, pinned for the session's epoch; absent without concepts. */
-  readonly subjects?: readonly SubjectScopeListing[];
   /**
    * Lexical recall of active notes for one scope. Called four times at most, with the candidate text
    * as the query; the fabric's own recall supplies it, so this module never touches a store.
@@ -218,14 +209,12 @@ export async function extractConsolidationNotes(input: ExtractConsolidationNotes
   const shown = candidateIds(input.candidates);
   const segments = input.segments ?? [];
   const existing = await loadExisting(input, maxNotes);
-  const subjects = subjectPromptBlock(input.subjects ?? []);
   const payload = redactJson(
     buildConsolidationExtractPrompt({
       candidates: input.candidates,
       existing,
       segments,
       maxNotes,
-      ...(subjects === undefined ? {} : { subjects: subjects.prompt }),
     }),
     input.redactor,
   );
@@ -234,7 +223,6 @@ export async function extractConsolidationNotes(input: ExtractConsolidationNotes
     candidateIds: new Set(shown),
     existingIds: new Set(existing.map((note) => note.id)),
     segmentIds: new Set(segments.map((segment) => segment.id)),
-    subjects: subjects?.slugs ?? new Map(),
     maxNotes,
   };
   const parameters = consolidationExtractSchema({ maxNotes });
@@ -405,8 +393,6 @@ interface ParseContext {
   readonly candidateIds: ReadonlySet<string>;
   readonly existingIds: ReadonlySet<string>;
   readonly segmentIds: ReadonlySet<string>;
-  /** The slugs shown per ontology level; empty when no subject list was part of the prompt. */
-  readonly subjects: ReadonlyMap<string, ReadonlySet<string>>;
   readonly maxNotes: number;
 }
 
@@ -518,14 +504,6 @@ function parseExtractedNotes(raw: unknown, context: ParseContext): readonly Extr
       segment = note!.segment;
     }
 
-    // Advisory: a slug that was not shown for this note's scope, or any non-string, is dropped and the note
-    // stays unbound. The harness only trusts a subject the model could see.
-    let subject: string | undefined;
-    if (typeof note!.subject === "string" && context.subjects.size > 0) {
-      const shown = context.subjects.get(scope === "path" ? "project" : scope);
-      if (note!.subject === EXTRACT_SUBJECT_NEW || shown?.has(note!.subject) === true) subject = note!.subject;
-    }
-
     notes.push({
       text: text.trim(),
       kind,
@@ -543,7 +521,6 @@ function parseExtractedNotes(raw: unknown, context: ParseContext): readonly Extr
       derivable: flag(note!.derivable, "derivable"),
       ...(contradicts === undefined ? {} : { contradicts }),
       ...(segment === undefined ? {} : { segment }),
-      ...(subject === undefined ? {} : { subject }),
     });
   }
   return notes;

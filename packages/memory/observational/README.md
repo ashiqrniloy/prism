@@ -1,14 +1,15 @@
 # @arnilo/prism-memory-observational
 
-> **Experimental in 0.13.0.** Install with `bun add @arnilo/prism-memory-observational@experimental`. Outside the stability promise of the stable
-> packages: its API, config, preset contents and defaults may change or be removed in any release until it graduates.
+> **Experimental in 0.13.0.** Install with `bun add @arnilo/prism-memory-observational@experimental`. Outside the
+> [stability promise](https://github.com/ashiqrniloy/prism/blob/main/docs/compatibility.md) of the stable packages: its API,
+> config, preset contents and defaults may change or be removed in any release until it graduates.
 > Graduation is the memory track's final step, which sets the first stable version.
 
 **Tier 0 of Prism's three-tier memory:** it watches the session as it happens. Its ledger of source-backed
 observations compacts the session and, with the ordinary `promote` pass, feeds candidate notes to
-[`@arnilo/prism-memory-fabric`](../fabric/README.md) (T1, the store of record); [`@arnilo/prism-memory-wiki`](../wiki/README.md)
-(T2, opt-in) consolidates those notes into cited concepts. It works alone, and the
-[example](../../../examples/three-tier-memory.ts) runs all three.
+[`@arnilo/prism-memory-fabric`](../fabric/README.md) (T1, the store of record); [`@arnilo/prism-wiki`](../../knowledge/wiki/README.md),
+outside memory, can consolidate those notes into cited concepts in its own store. It works alone, and the
+[example](../../../examples/memory-and-wiki.ts) runs all three.
 
 Observational memory as a package (roadmap §2.11): the observer, the ledger, `recall`, the context
 block, and ledger-driven compaction. Installing the package is the opt-in; the `om` command turns it
@@ -238,7 +239,8 @@ Next steps:
 ## Compatibility (the contract from graduation)
 
 > This is the contract the package will keep once it graduates from the experimental line. Until then it is a statement of
-> intent, not a promise.
+> intent, not a promise. From graduation it sits under the kernel's
+> [compatibility promise](https://github.com/ashiqrniloy/prism/blob/main/docs/compatibility.md).
 
 At API level 1 a host can rely on the export names and signatures in [Stable exports](#stable-exports), the command
 and tool names below, the ledger and state record names, and the `contract` config fields, for the whole `0.13.x` line

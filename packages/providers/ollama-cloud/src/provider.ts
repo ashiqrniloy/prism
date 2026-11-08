@@ -1,4 +1,4 @@
-import type { CredentialValueSource, ModelProvider, ProviderRequest } from "@arnilo/prism";
+import type { ModelProvider, ProviderRequest } from "@arnilo/prism";
 import { trimTrailingSlashes } from "@arnilo/prism";
 import {
   createRoutedProvider,
@@ -6,6 +6,7 @@ import {
   DEFAULT_MAX_BUFFER_BYTES,
   ProviderRequirementError,
   type RoutedProviderRoute,
+  type SecretSource,
 } from "@arnilo/prism/provider-kit";
 import { OLLAMA_CLOUD_DEFAULT_BASE_URL, type OllamaCloudRoute } from "./models.js";
 import { ollamaCloudNativeEvents, stripJsonFence } from "./native.js";
@@ -32,7 +33,7 @@ export const OLLAMA_CLOUD_CHAT_ROUTE: RoutedProviderRoute<"openai-chat"> = {
 export interface OllamaCloudProviderOptions {
   readonly id?: string;
   readonly baseUrl?: string;
-  readonly apiKey?: CredentialValueSource;
+  readonly apiKey?: SecretSource;
   /** Provider-wide default; a model's `compat.route` wins. */
   readonly route?: OllamaCloudRoute;
   readonly fetch?: typeof fetch;

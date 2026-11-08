@@ -1,6 +1,6 @@
 import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
-import type { Agent, AgentEvent, PackageInstance } from "@arnilo/prism";
+import type { Agent, AgentEvent, PackageInstance, RunLimits } from "@arnilo/prism";
 import { type HostConfig, loadHostConfig } from "../host/config.js";
 import { HostStartError, startAgent } from "../host/start.js";
 import { loadAgent, mockPackages } from "./agents.js";
@@ -11,6 +11,8 @@ import { exitLine, type LineIO, writeEvent } from "./jsonl.js";
 export interface RunDeps {
   readonly packages?: readonly PackageInstance[];
   readonly cwd?: string;
+  /** Agent-wide ceilings, handed to the worker (the coding worker honours them). */
+  readonly limits?: RunLimits;
 }
 
 export function configFile(args: { readonly config?: string }, cwd: string): string {
@@ -33,9 +35,9 @@ function terminalOf(event: AgentEvent, current: TerminalStatus | undefined): Ter
   return current;
 }
 
-async function openAgent(name: AgentName, config: HostConfig, packages: readonly PackageInstance[]): Promise<Agent> {
+async function openAgent(name: AgentName, config: HostConfig, packages: readonly PackageInstance[], limits?: RunLimits): Promise<Agent> {
   const create = await loadAgent(name);
-  return startAgent(() => create(config, packages.length === 0 ? {} : { packages }));
+  return startAgent(() => create(config, { ...(packages.length === 0 ? {} : { packages }), ...(limits === undefined ? {} : { limits }) }));
 }
 
 /** One prompt, each session event written as it arrives. No host redactor and no reshaping. */
@@ -44,7 +46,7 @@ export async function runCommand(args: RunArgs, io: LineIO, deps: RunDeps = {}):
   try {
     const config = readHostConfig(configFile(args, deps.cwd ?? process.cwd()));
     const packages = [...(deps.packages ?? []), ...(await mockPackages())];
-    agent = await openAgent(args.agent, config, packages);
+    agent = await openAgent(args.agent, config, packages, deps.limits);
     const session = await agent.session({
       ...(args.session === undefined ? {} : { id: args.session, create: true }),
       actor: { kind: "prism", agent: args.agent },

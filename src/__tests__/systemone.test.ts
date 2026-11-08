@@ -54,7 +54,7 @@ function options(fetchImpl: typeof fetch, overrides: Partial<SystemOneClientOpti
   return {
     provider: "TypeSafe Jev",
     baseUrl: "https://api.typesafe.ai/",
-    apiKey: "sk-secret",
+    apiKey: async () => "sk-secret",
     fetch: fetchImpl,
     jitter: 0,
     baseDelayMs: 0,

@@ -63,7 +63,7 @@ async function waitFor(predicate: () => boolean): Promise<void> {
 function pollingOptions(fetch: TelegramFetch, overrides: Partial<TelegramAdapterOptions> = {}): TelegramAdapterOptions {
   return {
     connectionId: CONNECTION,
-    botToken: TOKEN,
+    botToken: async () => TOKEN,
     checkpoints: createMemoryCheckpointStore(),
     leases: createMemoryLeaseStore(),
     cursorOwnership: OWNER,
@@ -254,8 +254,8 @@ describe("plan 079 Telegram adapter", () => {
     const received: ChannelAdmission[] = [];
     const handler = createTelegramWebhookHandler({
       connectionId: CONNECTION,
-      botToken: TOKEN,
-      webhookSecret: "webhook-secret",
+      botToken: async () => TOKEN,
+      webhookSecret: async () => "webhook-secret",
       leases,
       cursorOwnership: OWNER,
       apiOrigin: "https://telegram.test",
@@ -289,8 +289,8 @@ describe("plan 079 Telegram adapter", () => {
     const leases = createMemoryLeaseStore();
     const handler = createTelegramWebhookHandler({
       connectionId: CONNECTION,
-      botToken: TOKEN,
-      webhookSecret: "webhook-secret",
+      botToken: async () => TOKEN,
+      webhookSecret: async () => "webhook-secret",
       leases,
       cursorOwnership: OWNER,
       apiOrigin: "https://telegram.test",
@@ -301,8 +301,8 @@ describe("plan 079 Telegram adapter", () => {
     assert.equal((await handler(webhookRequest(message(1)))).status, 503);
     const ignored = createTelegramWebhookHandler({
       connectionId: CONNECTION,
-      botToken: TOKEN,
-      webhookSecret: "webhook-secret",
+      botToken: async () => TOKEN,
+      webhookSecret: async () => "webhook-secret",
       leases,
       cursorOwnership: OWNER,
       apiOrigin: "https://telegram.test",
@@ -326,8 +326,8 @@ describe("plan 079 Telegram adapter", () => {
     await adapter.start(async () => ({ status: "accepted" }));
     const handler = createTelegramWebhookHandler({
       connectionId: CONNECTION,
-      botToken: TOKEN,
-      webhookSecret: "webhook-secret",
+      botToken: async () => TOKEN,
+      webhookSecret: async () => "webhook-secret",
       leases,
       cursorOwnership: OWNER,
       apiOrigin: "https://telegram.test",
@@ -893,8 +893,8 @@ describe("plan 080 bounded attachments and voice", () => {
     const received: ChannelInboundEvent[] = [];
     const handler = createTelegramWebhookHandler({
       connectionId: CONNECTION,
-      botToken: TOKEN,
-      webhookSecret: "webhook-secret",
+      botToken: async () => TOKEN,
+      webhookSecret: async () => "webhook-secret",
       leases,
       cursorOwnership: OWNER,
       apiOrigin: "https://telegram.test",

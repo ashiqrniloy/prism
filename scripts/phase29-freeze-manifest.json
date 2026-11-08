@@ -139,7 +139,7 @@
       },
       {
         "name": "@arnilo/prism-wiki",
-        "foldedInto": "@arnilo/prism-memory-wiki",
+        "foldedInto": "@arnilo/prism-wiki",
         "by": "plan 054"
       },
       {

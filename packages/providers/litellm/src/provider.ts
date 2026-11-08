@@ -1,10 +1,11 @@
-import type { CredentialValueSource, JsonObject, ModelProvider, ProviderEvent, ProviderRequest, Usage } from "@arnilo/prism";
+import type { JsonObject, ModelProvider, ProviderEvent, ProviderRequest, Usage } from "@arnilo/prism";
 import {
   createRoutedProvider,
   mapOpenAIChatUsage,
   providerHttpError,
   readRetryAfterMs,
   type RoutedProviderRoute,
+  type SecretSource,
 } from "@arnilo/prism/provider-kit";
 import {
   LITELLM_CALL_ID_HEADER,
@@ -20,7 +21,7 @@ export const LITELLM_CALL_ID_METADATA = "litellmCallId";
 export interface LiteLLMProviderOptions {
   readonly id?: string;
   readonly baseUrl?: string;
-  readonly apiKey?: CredentialValueSource;
+  readonly apiKey?: SecretSource;
   readonly fetch?: typeof fetch;
 }
 

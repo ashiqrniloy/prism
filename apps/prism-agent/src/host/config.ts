@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import type { HookRegistrar, HostPort, HostUi, ModelRef, OwnershipScope, PackageInstance } from "@arnilo/prism";
+import type { HookRegistrar, HostPort, HostUi, ModelRef, OwnershipScope, PackageInstance, RunLimits } from "@arnilo/prism";
 import type { ToolsWebCacheConfig, ToolsWebDomainsConfig, ToolsWebFetchConfig } from "@arnilo/prism-tools-web";
 
 /** Modes the approval package owns. Passed through; the package validates. */
@@ -37,9 +37,10 @@ export interface HostConfig {
   /** Opt-in memory for the research and coding workers. `coding` adds standing decisions and path rules. */
   readonly memory?: "conversational" | "coding";
   /**
-   * Opt-in ontology tier (needs `memory`): adds `@arnilo/prism-memory-wiki` beside the fabric, so a background pass
-   * consolidates the fabric's notes into cited concepts that `memory.recall` returns first. Default off. The pass
-   * is extra model calls, on `ontologyModel` when set and on the agent's own model otherwise.
+   * Opt-in wiki: adds `@arnilo/prism-wiki`, whose store lives under `<workspace>/.prism/wiki`. A background pass
+   * consolidates evidence (its own ingested sources, and the fabric's notes read-only when `memory` is on) into cited
+   * concepts that `wiki.search` returns. Default off. The pass is extra model calls, on `ontologyModel` when set and on
+   * the agent's own model otherwise.
    */
   readonly ontology?: boolean;
   /** The concept pass's model. A ref, never a key. */
@@ -78,6 +79,11 @@ export interface HostDeps {
   /** A bare UI: the factories wrap it as `host: { ui }`. A routed UI from `buildHostUi` goes here. */
   readonly ui?: HostUi;
   readonly packages?: readonly PackageInstance[];
+  /**
+   * Agent-wide run ceilings for the coding worker. Unset keeps the kernel defaults. A run-scoped limit can only
+   * narrow these, so a harness that needs a longer loop (the cache-parity runner) raises them here.
+   */
+  readonly limits?: RunLimits;
   /** Set by the scheduler host: scheduler targets must share the scheduler's ownership scope. */
   readonly ownership?: OwnershipScope;
   /** Host hook registrar, for scenarios and tests that probe a gate. */
@@ -132,10 +138,17 @@ function modelRef(value: unknown, label: string): ModelRef {
   if (typeof value === "string" && value.length > 0) return value;
   if (isRecord(value) && typeof value.provider === "string" && typeof value.model === "string") {
     // A test or offline host may pin limits the provider catalog cannot supply; real refs resolve them.
+    // `compat` and `cache` pass through too: `parseModelRef` keeps every field a model object carries, and some
+    // providers read them off the model spec (Command Code picks its wire from `compat.route` and places
+    // `cache_control` markers only when `cache.kind` says so), so a host that dropped them would run those
+    // models on the default wire with no prompt cache.
     return {
       provider: value.provider,
       model: value.model,
       ...(isRecord(value.limits) ? { limits: value.limits as never } : {}),
+      ...(isRecord(value.compat) ? { compat: value.compat as never } : {}),
+      ...(isRecord(value.cache) ? { cache: value.cache as never } : {}),
+      ...(isRecord(value.capabilities) ? { capabilities: value.capabilities as never } : {}),
     };
   }
   throw new Error(`prism-agent config ${label} must be a model ref`);
@@ -222,9 +235,6 @@ export function loadHostConfig(path: string): HostConfig {
   }
   if (parsed.ontology !== undefined && typeof parsed.ontology !== "boolean") {
     throw new Error("prism-agent config ontology must be a boolean");
-  }
-  if (parsed.ontology === true && parsed.memory === undefined) {
-    throw new Error("prism-agent config ontology needs memory: the ontology tier consolidates the fabric's notes");
   }
   if (parsed.ontologyModel !== undefined && parsed.ontology !== true) {
     throw new Error("prism-agent config ontologyModel needs ontology: true");

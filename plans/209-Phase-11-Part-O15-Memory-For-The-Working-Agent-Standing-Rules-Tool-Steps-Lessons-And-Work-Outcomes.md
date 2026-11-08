@@ -36,6 +36,7 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
 
 - it runs after plan 208 (17d), so the `P+W+O` arm uses the ontology tier as plan 208 Task 5's revision froze it, and W5 reuses plan 208 Task 2's claim-support audit;
 - plan 210 (17f) follows. The memory train is strictly sequential (owner decision 2026-10-31): 202 → 207 → 208 → 209 → 210 → 184 → 185;
+- **Amended 2026-11-08 (owner, memory model).** Plan 210 Tasks 9–10 moved to plan 223 Tasks 2–4. Read every "plan 210 Task 9" in this plan as plan 223 Task 2 (gate A), and "plan 210 Task 10" as plan 223 Task 3 (defaults and claims) and Task 4 (graduation). `work-outcome-criteria.json` is unchanged.
 - **Task 7 moved to plan 210 on 2026-10-31.** The held-out work-outcome arms are plan 210 Task 9, and this plan's defaults and the `PRODUCT.md` positioning are plan 210 Task 10. This plan ends at Task 6 with development evidence.
 
 **Review task included** (Task 1): the plan changes fabric behavior (archive contents, `core.md` from derived to editable, a tool input) and adds config fields. **No kernel contract change** is planned; `run.end`, `turn.completed`, `context.build` and `host.ui` exist. A kernel need stops the plan. **No write-path generative model call** is added anywhere: capture is lexical plus confirmation, nudges are text, and lessons are written by the agent's own tool call in its normal turn. No version bump or publish.

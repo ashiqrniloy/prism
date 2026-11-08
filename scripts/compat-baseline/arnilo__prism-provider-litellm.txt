@@ -1,30 +1,32 @@
-LITELLM_CALL_ID_HEADER	export declare const LITELLM_CALL_ID_HEADER = "x-litellm-call-id"
-LITELLM_CALL_ID_METADATA	export declare const LITELLM_CALL_ID_METADATA = "litellmCallId"
-LITELLM_DEFAULT_API_KEY_REF	export declare const LITELLM_DEFAULT_API_KEY_REF = "env:LITELLM_API_KEY"
-LITELLM_DEFAULT_BASE_URL	export declare const LITELLM_DEFAULT_BASE_URL = "http://127.0.0.1:4000"
-LITELLM_HEADERS	export declare const LITELLM_HEADERS:
-LITELLM_HEADER_VALUE_LIMIT	export declare const LITELLM_HEADER_VALUE_LIMIT = 256
-LITELLM_SPEND_WAIT_CAP_MS	export declare const LITELLM_SPEND_WAIT_CAP_MS = 60000
-LITELLM_SPEND_WAIT_MS	export declare const LITELLM_SPEND_WAIT_MS = 24000
-assertLiteLLMBaseUrl	export declare function assertLiteLLMBaseUrl(baseUrl: string): void
-createLiteLLMProvider	export declare function createLiteLLMProvider(options?: LiteLLMProviderOptions): ModelProvider
-default	export default
-groupLiteLLMModelInfo	export declare function groupLiteLLMModelInfo(entries: readonly LiteLLMModelInfoEntry[], options?:
-isLoopbackHost	export declare function isLoopbackHost(hostname: string): boolean
-listLiteLLMModels	export declare function listLiteLLMModels(options?: ListLiteLLMModelsOptions): Promise<ModelConfig[]>
-liteLLMUsageMetadata	export declare function liteLLMUsageMetadata(telemetry: LiteLLMTelemetry): JsonObject
-litellm	export declare function litellm(options?: LiteLLMProviderPackageOptions & LiteLLMProviderConfig): PackageInstance
-litellmHttpError	export declare function litellmHttpError(response: Response, bodyText: string, secrets: readonly (string | undefined)[]): Error
-litellmSpendLogs	export declare function litellmSpendLogs(options?: LiteLLMSpendLogsOptions): Promise<LiteLLMSpendLogsResult>
-mapLiteLLMUsage	export declare function mapLiteLLMUsage(raw: unknown, chunk?: JsonObject): Usage | undefined
-normalizeSpendRow	export declare function normalizeSpendRow(raw: unknown): LiteLLMSpendRow | undefined
-readLiteLLMApiBase	export declare function readLiteLLMApiBase(value: string | undefined): string | undefined
-readLiteLLMCost	export declare function readLiteLLMCost(value: string | undefined): number | undefined
-readLiteLLMHeaders	export declare function readLiteLLMHeaders(headers: Headers, callId: string): LiteLLMTelemetry
-type ListLiteLLMModelsOptions	export { groupLiteLLMModelInfo, LITELLM_DEFAULT_BASE_URL, type ListLiteLLMModelsOptions, type LiteLLMModelInfoEntry, listLiteLLMModels, } from "./models.js"
-type LiteLLMModelInfoEntry	export { groupLiteLLMModelInfo, LITELLM_DEFAULT_BASE_URL, type ListLiteLLMModelsOptions, type LiteLLMModelInfoEntry, listLiteLLMModels, } from "./models.js"
-type LiteLLMProviderOptions	export { createLiteLLMProvider, LITELLM_CALL_ID_METADATA, type LiteLLMProviderOptions, litellmHttpError, mapLiteLLMUsage, } from "./provider.js"
-type LiteLLMSpendLogsOptions	export { type LiteLLMSpendLogsOptions, type LiteLLMSpendLogsResult, type LiteLLMSpendRow, LITELLM_SPEND_WAIT_CAP_MS, LITELLM_SPEND_WAIT_MS, litellmSpendLogs, normalizeSpendRow, } from "./spend-logs.js"
-type LiteLLMSpendLogsResult	export { type LiteLLMSpendLogsOptions, type LiteLLMSpendLogsResult, type LiteLLMSpendRow, LITELLM_SPEND_WAIT_CAP_MS, LITELLM_SPEND_WAIT_MS, litellmSpendLogs, normalizeSpendRow, } from "./spend-logs.js"
-type LiteLLMSpendRow	export { type LiteLLMSpendLogsOptions, type LiteLLMSpendLogsResult, type LiteLLMSpendRow, LITELLM_SPEND_WAIT_CAP_MS, LITELLM_SPEND_WAIT_MS, litellmSpendLogs, normalizeSpendRow, } from "./spend-logs.js"
-type LiteLLMTelemetry	export { LITELLM_CALL_ID_HEADER, LITELLM_HEADER_VALUE_LIMIT, LITELLM_HEADERS, type LiteLLMTelemetry, liteLLMUsageMetadata, readLiteLLMApiBase, readLiteLLMCost, readLiteLLMHeaders, } from "./headers.js"
+. LITELLM_CALL_ID_HEADER	const LITELLM_CALL_ID_HEADER = "x-litellm-call-id"
+. LITELLM_CALL_ID_METADATA	const LITELLM_CALL_ID_METADATA = "litellmCallId"
+. LITELLM_DEFAULT_API_KEY_REF	const LITELLM_DEFAULT_API_KEY_REF = "env:LITELLM_API_KEY"
+. LITELLM_DEFAULT_BASE_URL	const LITELLM_DEFAULT_BASE_URL = "http://127.0.0.1:4000"
+. LITELLM_HEADERS	const LITELLM_HEADERS: { readonly callId: "x-litellm-call-id"; readonly modelId: "x-litellm-model-id"; readonly modelGroup: "x-litellm-model-group"; readonly apiBase: "x-litellm-model-api-base"; readonly version: "x-litellm-version"; readonly responseCost: "x-litellm-response-cost"; }
+. LITELLM_HEADER_VALUE_LIMIT	const LITELLM_HEADER_VALUE_LIMIT = 256
+. LITELLM_SPEND_WAIT_CAP_MS	const LITELLM_SPEND_WAIT_CAP_MS = 60000
+. LITELLM_SPEND_WAIT_MS	const LITELLM_SPEND_WAIT_MS = 24000
+. ListLiteLLMModelsOptions	interface ListLiteLLMModelsOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly provider?: string; readonly signal?: AbortSignal; }
+. LiteLLMModelInfoEntry	interface LiteLLMModelInfoEntry { readonly litellm_params?: { readonly model?: string; readonly [key: string]: unknown; }; readonly model_id?: string; readonly model_info?: { readonly id?: string; readonly mode?: string | null; readonly max_input_tokens?: number | null; readonly max_output_tokens?: number | null; readonly input_cost_per_token?: number | null; readonly output_cost_per_token?: number | null; readonly cache_read_input_token_cost?: number | null; readonly cache_creation_input_token_cost?: number | null; readonly supports_function_calling?: boolean | null; readonly supports_vision?: boolean | null; readonly supports_reasoning?: boolean | null; readonly supports_response_schema?: boolean | null; readonly litellm_provider?: string | null; }; readonly model_name?: string; }
+. LiteLLMProviderConfig	interface LiteLLMProviderConfig { readonly apiKey?: string; readonly baseUrl?: string; readonly models?: readonly ModelConfig[]; }
+. LiteLLMProviderOptions	interface LiteLLMProviderOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly id?: string; }
+. LiteLLMProviderPackageOptions	interface LiteLLMProviderPackageOptions { readonly fetch?: typeof fetch; readonly id?: string; }
+. LiteLLMSpendLogsOptions	interface LiteLLMSpendLogsOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly callIds?: readonly string[]; readonly fetch?: typeof fetch; readonly pollIntervalMs?: number; readonly provider?: string; readonly signal?: AbortSignal; readonly since?: string | Date; readonly until?: string | Date; readonly waitMs?: number; }
+. LiteLLMSpendLogsResult	interface LiteLLMSpendLogsResult { readonly missing: readonly string[]; readonly rows: readonly LiteLLMSpendRow[]; }
+. LiteLLMSpendRow	interface LiteLLMSpendRow { readonly cacheReadTokens?: number; readonly callId: string; readonly completionTokens: number; readonly endTime: string; readonly model: string; readonly modelGroup: string; readonly modelId?: string; readonly promptTokens: number; readonly spend: number; readonly startTime: string; readonly status?: string; }
+. LiteLLMTelemetry	interface LiteLLMTelemetry { readonly apiBase?: string; readonly callId: string; readonly modelGroup?: string; readonly modelId?: string; readonly responseCost?: number; readonly version?: string; }
+. assertLiteLLMBaseUrl	function assertLiteLLMBaseUrl(baseUrl: string): void
+. createLiteLLMProvider	function createLiteLLMProvider(options?: LiteLLMProviderOptions): ModelProvider
+. default	const definition: import("@arnilo/prism").PackageDefinition<LiteLLMProviderConfig>
+. groupLiteLLMModelInfo	function groupLiteLLMModelInfo(entries: readonly LiteLLMModelInfoEntry[], options?: { readonly provider?: string; }): ModelConfig[]
+. isLoopbackHost	function isLoopbackHost(hostname: string): boolean
+. listLiteLLMModels	function listLiteLLMModels(options?: ListLiteLLMModelsOptions): Promise<ModelConfig[]>
+. liteLLMUsageMetadata	function liteLLMUsageMetadata(telemetry: LiteLLMTelemetry): JsonObject
+. litellm	function litellm(options?: LiteLLMProviderPackageOptions & LiteLLMProviderConfig): PackageInstance
+. litellmHttpError	function litellmHttpError(response: Response, bodyText: string, secrets: readonly (string | undefined)[]): Error
+. litellmSpendLogs	function litellmSpendLogs(options?: LiteLLMSpendLogsOptions): Promise<LiteLLMSpendLogsResult>
+. mapLiteLLMUsage	function mapLiteLLMUsage(raw: unknown, chunk?: JsonObject): Usage | undefined
+. normalizeSpendRow	function normalizeSpendRow(raw: unknown): LiteLLMSpendRow | undefined
+. readLiteLLMApiBase	function readLiteLLMApiBase(value: string | undefined): string | undefined
+. readLiteLLMCost	function readLiteLLMCost(value: string | undefined): number | undefined
+. readLiteLLMHeaders	function readLiteLLMHeaders(headers: Headers, callId: string): LiteLLMTelemetry

@@ -105,8 +105,6 @@ describe("shouldArchive (plan 188.4 Task 4)", () => {
       merged: 0,
       episodesMerged: 0,
       evicted: 0,
-      widened: 0,
-      superseded: 0,
       overBudget: [],
     });
     const archivedRow = await memory.getEntry(stale.id);

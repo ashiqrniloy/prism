@@ -17,12 +17,11 @@ import { validateAgainstJsonSchema } from "@arnilo/prism-memory-core";
 import { createSqliteMemoryStores } from "@arnilo/prism-memory-core/sqlite";
 import fabric, { memoryFabricConfigSchema, parseMemoryNoteMetadata } from "@arnilo/prism-memory-fabric";
 import observational from "@arnilo/prism-memory-observational";
-import { probeEmbedderDimensions } from "@arnilo/prism-memory-rag";
 import { historicalVariants, memoryConfigs, resolvedMemoryConfigs } from "../ablations.mjs";
 import { textOf, tokens } from "../injection-log.mjs";
 import { createAdmission, requireAttemptReservation, stableHash } from "../journal.mjs";
 import { METRIC_DEFINITIONS, METRIC_VERSION } from "../metrics.mjs";
-import { createLiveEmbedder, createMockEmbedder, measuredProvider } from "../replay.mjs";
+import { measuredProvider } from "../replay.mjs";
 import { summarize, writeReport } from "../report.mjs";
 import { liveProviders, loadEnv, refOf } from "../run.mjs";
 import { missingUsageCount } from "../usage.mjs";
@@ -349,14 +348,13 @@ export function recordUsageFailure(report, error) {
 export async function runLifecycle(input = {}) {
   const options = { config: "om+fabric", persona: "scripted", seed: 7, maxInputTokens: 15_000_000, ...input };
   if (
-    !["full", "om", "fabric", "fabric-agentic", "fabric-hybrid", "om+fabric"].includes(options.config) ||
+    !["full", "om", "fabric", "fabric-agentic", "om+fabric"].includes(options.config) ||
     !Number.isSafeInteger(options.maxInputTokens) ||
     options.maxInputTokens < 1 ||
     (!options.offline && (!options.provider || !options.model)) ||
     !["scripted", "llm"].includes(options.persona) ||
     !Number.isSafeInteger(options.seed) ||
-    (options.offline && options.persona !== "scripted") ||
-    (options.config === "fabric-hybrid" && !options.embeddings)
+    (options.offline && options.persona !== "scripted")
   )
     throw new Error("LifecycleSuiteArguments");
   const policy = typeof options.policy === "string" ? JSON.parse(await readFile(options.policy, "utf8")) : (options.policy ?? {});
@@ -576,20 +574,6 @@ export async function runLifecycle(input = {}) {
           ),
         ];
         if (options.config.includes("om")) packages.push(observational(config.observational));
-        if (options.config === "fabric-hybrid") {
-          const embedder = options.offline ? createMockEmbedder(state) : createLiveEmbedder(options, providers, state);
-          if (!options.offline && embedder.dimensions === 0) await probeEmbedderDimensions(embedder);
-          packages.push(
-            definePackage({
-              name: "lifecycle-embeddings",
-              version: "0.13.0",
-              requires: { api: 1 },
-              setup(api) {
-                api.services.provide("embeddings", embedder);
-              },
-            }),
-          );
-        }
         if (options.config.includes("fabric"))
           packages.push(
             fabric({

@@ -1,9 +1,11 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { ArtifactBodyStore, ToolExecutionContext } from "@arnilo/prism";
-import { createMemoryIdempotencyStore, createMicrosoft365HttpAdapter, createWorkTools, WorkToolError } from "../index.js";
+import { ToolExecutionContext } from "@arnilo/prism";
+import { ArtifactBodyStore } from "@arnilo/prism/artifacts";
 import { AgentIdentity } from "../identity.js";
+import { createMemoryIdempotencyStore, createMicrosoft365HttpAdapter, createWorkTools, WorkToolError } from "../index.js";
+
 const identity: AgentIdentity = {
   tenantId: "tenant-1",
   userId: "user-1",

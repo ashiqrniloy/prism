@@ -39,7 +39,6 @@ function runtime(points: readonly DecisionPoint[], answer: (request: DecisionReq
 }
 
 const noul = (value: number): DecisionAnswer => ({ type: "noul", noul: value });
-const choice = (option: string, confidence: number): DecisionAnswer => ({ type: "choice", choice: option, confidence });
 
 describe("decision-model gates (plan 202 Task 12)", () => {
   it("decisions_absent_changes_nothing", () => {
@@ -52,21 +51,20 @@ describe("decision-model gates (plan 202 Task 12)", () => {
   });
 
   it("abstain_band_falls_back_to_incumbent", async () => {
-    const { decisions } = runtime(["P1"], () => ({ P1: noul(DECISION_POINT_SPECS.P1.threshold) }));
+    const { decisions } = runtime(["P4"], () => ({ P4: noul(DECISION_POINT_SPECS.P4.threshold) }));
     assert.deepEqual(await decisions.evaluateTurn({ text: "Use Bun for scripts." }), {});
-    const below = runtime(["P1"], () => ({ P1: noul(DECISION_POINT_SPECS.P1.low - 0.01) }));
-    assert.deepEqual(await below.decisions.evaluateTurn({ text: "What does this function do?" }), { durable: false });
-    const above = runtime(["P1"], () => ({ P1: noul(DECISION_POINT_SPECS.P1.high + 0.01) }));
-    assert.deepEqual(await above.decisions.evaluateTurn({ text: "Always use Bun for scripts." }), { durable: true });
+    const below = runtime(["P4"], () => ({ P4: noul(DECISION_POINT_SPECS.P4.low - 0.01) }));
+    assert.deepEqual(await below.decisions.evaluateTurn({ text: "What does this function do?" }), { needed: false });
+    const above = runtime(["P4"], () => ({ P4: noul(DECISION_POINT_SPECS.P4.high + 0.01) }));
+    assert.deepEqual(await above.decisions.evaluateTurn({ text: "Always use Bun for scripts." }), {});
   });
 
   it("decision_error_falls_back_and_turn_succeeds", async () => {
-    const { decisions } = runtime(["P1", "P3"], () => {
+    const { decisions } = runtime(["P3", "P5"], () => {
       throw new Error("decision endpoint unavailable");
     });
     assert.deepEqual(await decisions.evaluateTurn({ text: "keep this", candidates: [{ id: "a1", text: "note" }] }), {});
     assert.equal(await decisions.sufficient({ query: "q", evidence: [{ id: "a1", text: "note" }] }), undefined);
-    assert.equal(await decisions.applies({ text: "q", paths: ["src/a.ts"], decisions: [{ id: "a1", text: "rule" }] }), undefined);
   });
 
   it("p7_only_adds_refusals", async () => {
@@ -79,15 +77,14 @@ describe("decision-model gates (plan 202 Task 12)", () => {
   });
 
   it("decision_never_deletes_or_archives", () => {
-    const { decisions } = runtime(["P1"], () => ({ P1: noul(0.9) }));
-    assert.deepEqual(Object.keys(decisions).sort(), ["applies", "config", "enabled", "evaluateTurn", "sufficient", "supersession"]);
+    const { decisions } = runtime(["P7"], () => ({ P7: noul(0.9) }));
+    assert.deepEqual(Object.keys(decisions).sort(), ["config", "enabled", "evaluateTurn", "sufficient"]);
   });
 
   it("points_batch_into_at_most_two_calls_per_turn", async () => {
     const candidates = Array.from({ length: 40 }, (_, index) => ({ id: `c${index}`, text: `note ${index}` }));
-    const { decisions, calls } = runtime(["P1", "P3", "P4", "P7"], (request) => {
+    const { decisions, calls } = runtime(["P3", "P4", "P7"], (request) => {
       const answers: Record<string, DecisionAnswer> = {
-        P1: noul(0.9),
         P4: noul(0.9),
         P7: noul(0.1),
       };
@@ -95,18 +92,17 @@ describe("decision-model gates (plan 202 Task 12)", () => {
       return answers;
     });
     const result = await decisions.evaluateTurn({ text: "What changed?", candidates });
-    assert.equal(calls.length, 1, "P1/P3/P4/P7 share one batched request");
-    assert.equal(Object.keys(calls[0]!.questions).length, 35);
-    assert.equal(result.durable, true);
+    assert.equal(calls.length, 1, "P3/P4/P7 share one batched request");
+    assert.equal(Object.keys(calls[0]!.questions).length, 34);
     assert.equal(result.needed, undefined);
     assert.equal(result.instructionLike, undefined);
     assert.equal(result.irrelevant?.size ?? 0, 0);
   });
 
-  it("p1_extractor_and_capture_share_one_turn_call", async () => {
-    const { decisions, calls } = runtime(["P1"], () => ({ P1: noul(DECISION_POINT_SPECS.P1.high + 0.01) }));
-    assert.equal((await decisions.evaluateTurn({ text: "Always use Bun." })).durable, true);
-    assert.equal((await decisions.evaluateTurn({ text: "Always use Bun." })).durable, true);
+  it("p7_extractor_and_capture_share_one_turn_call", async () => {
+    const { decisions, calls } = runtime(["P7"], () => ({ P7: noul(DECISION_POINT_SPECS.P7.high + 0.01) }));
+    assert.equal((await decisions.evaluateTurn({ text: "Always use Bun." })).instructionLike, true);
+    assert.equal((await decisions.evaluateTurn({ text: "Always use Bun." })).instructionLike, true);
     assert.equal(calls.length, 1, "same persisted turn reuses the gate result");
     await decisions.evaluateTurn({ text: "Always use Bun.", candidates: [{ id: "a1", text: "Use Bun." }] });
     assert.equal(calls.length, 2, "a candidate-bearing context build asks afresh");
@@ -114,8 +110,9 @@ describe("decision-model gates (plan 202 Task 12)", () => {
 
   it("unshipped_point_is_not_callable_from_config", () => {
     assert.throws(() => resolveDecisionsConfig({ model: "mock/d1", points: ["P8"] }), /not shipped/);
-    assert.throws(() => resolveDecisionsConfig({ model: "mock/d1", points: ["P1", "P1"] }), /repeated/);
-    assert.throws(() => resolveDecisionsConfig({ model: "", points: ["P1"] }), /model/);
+    assert.throws(() => resolveDecisionsConfig({ model: "mock/d1", points: [`P${1}`] }), /not shipped/, "P1, P2 and P6 were removed");
+    assert.throws(() => resolveDecisionsConfig({ model: "mock/d1", points: ["P3", "P3"] }), /repeated/);
+    assert.throws(() => resolveDecisionsConfig({ model: "", points: ["P3"] }), /model/);
   });
 
   it("p5_abstains_between_bands_and_keeps_incumbent", async () => {
@@ -128,41 +125,5 @@ describe("decision-model gates (plan 202 Task 12)", () => {
     assert.equal(await band.decisions.sufficient(input), undefined);
   });
 
-  it("p6_drops_only_rules_clearly_below_the_band", async () => {
-    const { decisions } = runtime(["P6"], (request) => ({
-      [`P6:a1`]: noul(DECISION_POINT_SPECS.P6.low - 0.01),
-      [`P6:a2`]: noul(DECISION_POINT_SPECS.P6.high + 0.01),
-      [`P6:a3`]: noul(request.questions["P6:a3"] === undefined ? 0 : DECISION_POINT_SPECS.P6.threshold),
-    }));
-    const dropped = await decisions.applies({
-      text: "Edit src/app.ts",
-      paths: ["src/app.ts"],
-      decisions: [
-        { id: "a1", text: "Use tabs." },
-        { id: "a2", text: "Use spaces." },
-        { id: "a3", text: "Keep functions small." },
-      ],
-    });
-    assert.deepEqual([...(dropped ?? [])], ["a1"]);
-  });
 
-  it("p2_uses_choice_confidence_and_abstains_in_band", async () => {
-    const { decisions } = runtime(["P2"], () => ({
-      [`P2:a1`]: choice("replaces", DECISION_POINT_SPECS.P2.high + 0.01),
-      [`P2:a2`]: choice("contradicts", DECISION_POINT_SPECS.P2.threshold),
-      [`P2:a3`]: choice("unrelated", DECISION_POINT_SPECS.P2.high + 0.01),
-    }));
-    const classified = await decisions.supersession("Coffee is now tea.", [
-      { id: "a1", text: "Coffee is coffee.", score: 0.9 },
-      { id: "a2", text: "Coffee is water.", score: 0.8 },
-      { id: "a3", text: "The sky is blue.", score: 0.7 },
-    ]);
-    assert.deepEqual(
-      [...(classified ?? new Map())],
-      [
-        ["a1", "replaces"],
-        ["a3", "unrelated"],
-      ],
-    );
-  });
 });

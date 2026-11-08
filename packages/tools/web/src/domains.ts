@@ -2,7 +2,7 @@
  * Host-owned domain policy: which hosts web search may show and which URLs fetch/extract may touch.
  * Model-supplied `include_domains` is a preference, never a permission; this is the permission.
  */
-import { normalizeHostname } from "@arnilo/prism";
+import { normalizeHostname } from "@arnilo/prism/net";
 import { WebToolError } from "./transport.js";
 
 export interface ToolsWebDomainsConfig {
@@ -19,7 +19,9 @@ export interface DomainPolicy {
   /** Throws `ERR_PRISM_WEB_DOMAIN` naming the host when the URL is not permitted. */
   readonly assert: (url: string) => void;
   /** Keep only permitted rows; `filtered` counts the dropped ones. */
-  readonly filter: <T extends { readonly url: string }>(rows: readonly T[]) => { readonly results: readonly T[]; readonly filtered: number };
+  readonly filter: <T extends { readonly url: string }>(
+    rows: readonly T[],
+  ) => { readonly results: readonly T[]; readonly filtered: number };
 }
 
 const MAX_ENTRIES = 256;
@@ -72,7 +74,8 @@ function compile(entries: readonly string[], field: "allow" | "block"): Compiled
     const isWildcard = trimmed.startsWith("*.");
     const hostPart = isWildcard ? trimmed.slice(2) : trimmed;
     if (hostPart.length === 0) throw new Error(`domains.${field} contains an empty hostname`);
-    if (hostPart.includes("*")) throw new Error(`domains.${field} entry ${JSON.stringify(entry)} may only use a leading "*.", not a partial wildcard`);
+    if (hostPart.includes("*"))
+      throw new Error(`domains.${field} entry ${JSON.stringify(entry)} may only use a leading "*.", not a partial wildcard`);
     let host: string;
     try {
       const parsed = new URL(`https://${hostPart}`);

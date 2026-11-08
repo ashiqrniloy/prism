@@ -103,7 +103,7 @@ describe("Command Code ZDR mapping", () => {
     options: {},
   });
   // Direct provider: the package's credentials slot is not in play, so the ref would stay literal.
-  const provider = () => createCommandCodeProvider({ apiKey: process.env.COMMAND_CODE_API_KEY, zdr: true });
+  const provider = () => createCommandCodeProvider({ apiKey: async () => process.env.COMMAND_CODE_API_KEY, zdr: true });
 
   it.skipIf(skip !== false)(
     "live_zdr_capable_model_succeeds",

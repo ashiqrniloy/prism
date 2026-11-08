@@ -42,6 +42,7 @@ const apiPages = [
   "docs/host-security.md",
   "docs/performance.md",
   "docs/migration.md",
+  "docs/compatibility.md",
 ];
 
 const requiredHeadings = [
@@ -259,6 +260,26 @@ describe("docs", () => {
     }
   });
 
+  // plan 215 Task 29: the stability promise is indexed, linked from the pages it governs, and states the rules.
+  it("docs_compatibility_page_indexed", () => {
+    assert.ok(readFileSync("docs/index.md", "utf8").includes("- [Compatibility](compatibility.md): "), "docs/index.md must link compatibility.md");
+    for (const page of ["docs/host.md", "docs/events.md", "docs/packages.md"]) {
+      assert.ok(readFileSync(page, "utf8").includes("(compatibility.md)"), `${page} must link compatibility.md`);
+    }
+    const text = readFileSync("docs/compatibility.md", "utf8");
+    for (const needle of [
+      "isKnownAgentEventType",
+      '{ status: "unavailable" }',
+      "requires: { api: 1 }",
+      "PRODUCER_ONLY_TYPES",
+      "SESSION_ENTRY_SCHEMA_VERSION",
+      "unknown-entry-kind",
+      '"The compat gate"',
+    ]) {
+      assert.ok(text.includes(needle), `docs/compatibility.md must state ${needle}`);
+    }
+  });
+
   // plan 068 Task 4: the index is a current-line link map — no stale readiness
   // claims, no retired package names presented as live installables.
   // `@arnilo/prism-evals` is not in this list: plan 162 Task 3 reintroduced the name as the live evals host library.
@@ -272,6 +293,8 @@ describe("docs", () => {
       "@arnilo/prism-work-tools",
       "@arnilo/prism-coding-security",
       "@arnilo/prism-impeccable",
+      "@arnilo/prism-memory-wiki",
+      "@arnilo/prism-memory-rag",
     ]) {
       assert.ok(!index.includes(retired), `docs/index.md must not name retired package ${retired} as live`);
     }
@@ -428,6 +451,13 @@ describe("docs", () => {
       "CommandDrivers",
       "CommandWorkflowRun",
       "CommandResult",
+      // plan 216 Task 3: the ontology left memory for the wiki.
+      "MEMORY_FABRIC_SERVICE",
+      "createFabricOntology",
+      "FabricOntologyPort",
+      "MEMORY_FABRIC_CONCEPT_HANDLER_SERVICE",
+      "createConceptDeletionHandler",
+      "memoryWiki",
     ];
     const packages = [
       "@arnilo/prism-agent-sdk",
@@ -441,6 +471,9 @@ describe("docs", () => {
       "@arnilo/prism-code",
       "@arnilo/prism-acp-agent",
       "@arnilo/prism-office",
+      // plan 216 Task 3: renamed, no alias.
+      "@arnilo/prism-memory-wiki",
+      "@arnilo/prism-memory-rag",
     ];
     // Read the frozen 0.12.1 surface so the cross-check cannot drift to names that
     // never shipped. CI checkouts may be shallow (no tags), so the baseline leg is
@@ -600,15 +633,16 @@ describe("docs", () => {
         .filter((n) => !/prism-(documents|sheets|diagrams)$/.test(n) && !(n in truth.versions) && n !== "@arnilo/prism-code");
       // 55 legacy names were retired in 0.4; the
       // two `@arnilo/prism-provider-<vendor>` packages (hyper, opencode-go, typesafe, laya) are current
-      // manifests; restored OpenRouter leaves 49 legacy names that are not
+      // manifests; restored OpenRouter leaves 49 legacy names, and plan 216 Task 3 reuses two of them for the
+      // knowledge packages (`@arnilo/prism-rag`, `@arnilo/prism-wiki`), which leaves 47 that are not
       // publishable. The 55-entry legacy registry plan stays frozen in the evidence file
       // and is asserted by the packaging suite. (`@arnilo/prism-providers` itself is not in
       // this list: the phase54 table names it in a numbered row, not the first-cell form the
       // derivation matches — `no_workspace_imports_prism_providers` guards it instead.)
       assert.equal(
         retired.length,
-        49,
-        `phase54 evidence must enumerate 49 still-retired 0.3 names after OpenRouter restoration, got ${retired.length}`,
+        47,
+        `phase54 evidence must enumerate 47 still-retired 0.3 names after OpenRouter restoration and the knowledge renames, got ${retired.length}`,
       );
       const exemptPages = new Set(["docs/migration.md"]); // per-era records live under docs/history/ (skipped above)
       // Lines tied to dated records (release decisions, plan/phase cites, version-pinned tags) or to
@@ -1020,8 +1054,8 @@ describe("docs", () => {
     for (const seam of [
       "src/contracts.ts",
       "src/resources.ts",
-      "packages/memory/rag/src/indexing.ts",
-      "packages/memory/rag/src/retrieve.ts",
+      "packages/knowledge/rag/src/indexing.ts",
+      "packages/knowledge/rag/src/retrieve.ts",
       "packages/memory/fabric/src/memory.ts",
       "packages/memory/fabric/src/conformance.ts",
       "packages/tools/web/src/normalize.ts",
@@ -1126,9 +1160,9 @@ describe("docs", () => {
       "credentials, settings, redaction, trust roots, permission policies, session and ledger persistence, extension loading, and tool validation",
       "Prism does not sandbox tools/extensions",
       "does not detect arbitrary secrets",
-      "createExplicitCredentialResolver",
-      "createEnvCredentialResolver",
-      "resolveCredentialValue()",
+      "createEnvRefCredentialResolver",
+      "AgentConfig.slots.credentials",
+      "refSource()",
       "createSecretRedactor",
       "createPathTrustPolicy",
       "createStaticPermissionPolicy",
@@ -1145,8 +1179,8 @@ describe("docs", () => {
       "unknown or denied tools emit `tool_execution_blocked`",
       "validator failures emit `tool_execution_blocked` with `validation_failed`",
       "no background watchers, filesystem scanners, network probes, credential polling, or automatic extension discovery",
-      "`createAgent()` and `session.run()` do not automatically call `settings.get()` or `credentials.resolve()`",
-      "Prism does not read `process.env` for credentials",
+      "`createAgent()` and `session.run()` never resolve one eagerly",
+      "rejects a literal with `literal_secret`",
       "Redaction is exact known-secret replacement only",
       "Tool `parameters` metadata is not validated by default",
       "Permission checks happen before tool validation and before `tool.execute()`",
@@ -1278,13 +1312,15 @@ describe("docs", () => {
     assert.ok(bunAdds >= 30, `expected the install voice across the live pages, found ${bunAdds} bun add lines`);
   });
 
-  it("auth docs cover explicit resolver order and no hidden env", () => {
+  it("auth docs cover the credentials slot, refs, and SecretSource", () => {
     const docs = readFileSync("docs/credentials-and-redaction.md", "utf8");
     for (const phrase of [
-      "createExplicitCredentialResolver",
-      "createEnvCredentialResolver",
-      "runtime override",
-      "Prism does not read `process.env`",
+      "AgentConfig.slots.credentials",
+      "createEnvRefCredentialResolver",
+      "`SecretSource`",
+      "refSource(",
+      "a literal string does not type-check",
+      "`literal_secret`",
     ]) {
       assert.ok(docs.includes(phrase), `credential docs missing ${phrase}`);
     }
@@ -1500,9 +1536,8 @@ describe("docs", () => {
         "examples/connected-slack-mcp.ts",
         "examples/host-builder-agent.ts",
         "examples/open-connector-sidecar.ts",
-        "examples/scoped-memory.ts",
         "examples/memory-lifecycle.ts",
-        "examples/three-tier-memory.ts",
+        "examples/memory-and-wiki.ts",
         "examples/skills-progressive-disclosure.ts",
         "examples/package-skills.ts",
         "examples/caveman-ponytail.ts",
@@ -1569,10 +1604,10 @@ describe("docs", () => {
           assert.ok(out.includes('"route":"channel","kind":"confirm","status":"answered"'));
           assert.ok(!out.includes("123456:headless-demo-dummy"), "headless demo emitted its dummy credential");
         }
-        if (file === "examples/three-tier-memory.ts") {
-          const tiers = JSON.parse(out.trim().split("\n").at(-1) ?? "{}") as { tiers: Record<string, number> };
-          assert.deepEqual(tiers.tiers, { t0Observations: 2, t1Facts: 3, t2Concepts: 1 });
-          assert.ok(out.includes("memory.forget: 3 claims -> 2"), "forgetting a cited note removed its claim");
+        if (file === "examples/memory-and-wiki.ts") {
+          const summary = JSON.parse(out.trim().split("\n").at(-1) ?? "{}") as { stored: Record<string, number> };
+          assert.deepEqual(summary.stored, { observations: 2, memoryFacts: 3, wikiConcepts: 1 });
+          assert.ok(out.includes("memory.forget: 4 claims -> 3"), "forgetting a cited memory note removed its wiki claim");
         }
         if (file === "examples/connected-slack-mcp.ts") {
           assert.deepEqual(JSON.parse(out), {
@@ -1903,8 +1938,8 @@ describe("docs", () => {
     const files = [
       "packages/memory/observational/README.md",
       "packages/memory/compaction/README.md",
-      "packages/memory/rag/README.md",
-      "packages/memory/wiki/README.md",
+      "packages/knowledge/rag/README.md",
+      "packages/knowledge/wiki/README.md",
       "packages/memory/fabric/README.md",
       "packages/context/engineering/README.md",
     ];

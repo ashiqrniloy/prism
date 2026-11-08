@@ -30,7 +30,7 @@ import {
   type VectorStore,
 } from "@arnilo/prism-memory-core";
 import { OBSERVATIONS_RECORDED } from "@arnilo/prism-memory-observational";
-import { chunkText, indexChunks, type RagScope, retrieveContext } from "@arnilo/prism-memory-rag";
+import { chunkText, indexChunks, type RagScope, retrieveContext } from "@arnilo/prism-rag";
 import { HARD_REPOINT_RECORDS } from "../../../core/src/repoint.js";
 import { buildObservationalMemoryProjection } from "../../../observational/src/projection.js";
 

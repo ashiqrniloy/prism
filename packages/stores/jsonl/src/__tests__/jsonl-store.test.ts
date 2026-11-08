@@ -402,28 +402,24 @@ describe("jsonl session store", () => {
     assert.equal((await readJsonlSessionEntries(join(dir, "s1.jsonl"))).entries.length, 1);
   });
 
-  it("quarantines unknown entry kinds", async () => {
+  it("unknown_entry_kind_is_kept_as_opaque_entry", async () => {
     const dir = await tempDir();
-    const unknownKind = JSON.stringify({
-      id: "e2",
-      sessionId: "s1",
-      timestamp: "2024-01-01T00:00:00.000Z",
-      kind: "future_kind",
-      label: "x",
-    });
-    await writeFile(join(dir, "s1.jsonl"), [JSON.stringify(entry("e1", "s1")), unknownKind].join("\n"), "utf8");
+    const unknown = { id: "e2", parentId: "e1", sessionId: "s1", timestamp: "2024-01-01T00:00:00.000Z", kind: "future_kind", payload: { a: 1 } };
+    const brokenEnvelope = JSON.stringify({ id: "e3", sessionId: "s1", kind: "future_kind" });
+    await writeFile(join(dir, "s1.jsonl"), [JSON.stringify(entry("e1", "s1")), JSON.stringify(unknown), brokenEnvelope].join("\n"), "utf8");
 
     const store = createJsonlSessionStore({ dir });
+    const rows = await store.list("s1");
     assert.deepEqual(
-      (await store.list("s1")).map((row) => row.id),
-      ["e1"],
+      rows.map((row) => row.id),
+      ["e1", "e2"],
     );
+    assert.deepEqual(rows[1], unknown, "an unknown kind is returned unchanged");
 
     const result = await readJsonlSessionEntries(join(dir, "s1.jsonl"));
-    assert.equal(result.entries.length, 1);
-    assert.equal(result.errors.length, 1);
-    assert.ok(result.errors[0]?.message.includes("Unknown session entry kind"));
-    assert.ok(result.errors[0]?.message.includes("future_kind"));
+    assert.equal(result.entries.length, 2);
+    assert.equal(result.errors.length, 1, "a line without a valid envelope is still an error");
+    assert.equal(result.errors[0]?.line, 3);
   });
 
   it("accepts omitted schemaVersion as v1", async () => {
@@ -437,31 +433,34 @@ describe("jsonl session store", () => {
     assert.equal(result.entries[0]?.schemaVersion, undefined);
   });
 
-  it("rejects unsupported schemaVersion", async () => {
+  it("future_schema_version_is_readable_with_warning", async () => {
     const dir = await tempDir();
-    const futureVersion = JSON.stringify({
-      id: "e2",
-      sessionId: "s1",
-      timestamp: "2024-01-01T00:00:00.000Z",
-      kind: "label",
-      label: "x",
-      schemaVersion: 2,
-    });
-    const badVersion = JSON.stringify({
-      id: "e3",
-      sessionId: "s1",
-      timestamp: "2024-01-01T00:00:00.000Z",
-      kind: "label",
-      label: "x",
-      schemaVersion: "v1",
-    });
-    await writeFile(join(dir, "s1.jsonl"), [JSON.stringify(entry("e1", "s1")), futureVersion, badVersion].join("\n"), "utf8");
+    const future = { id: "e2", parentId: "e1", sessionId: "s1", timestamp: "2024-01-01T00:00:00.000Z", kind: "label", schemaVersion: 2, newShape: { label: 1 } };
+    const futureToo = { ...future, id: "e3", parentId: "e2", schemaVersion: 3 };
+    const badVersion = JSON.stringify({ id: "e4", sessionId: "s1", timestamp: "2024-01-01T00:00:00.000Z", kind: "label", label: "x", schemaVersion: "v1" });
+    const oldVersion = JSON.stringify({ id: "e5", sessionId: "s1", timestamp: "2024-01-01T00:00:00.000Z", kind: "label", label: "x", schemaVersion: 0 });
+    await writeFile(
+      join(dir, "s1.jsonl"),
+      [JSON.stringify(entry("e1", "s1")), JSON.stringify(future), JSON.stringify(futureToo), badVersion, oldVersion].join("\n"),
+      "utf8",
+    );
+    await writeFile(join(dir, "s2.jsonl"), JSON.stringify({ ...future, sessionId: "s2", parentId: undefined }), "utf8");
+
+    const warnings: string[] = [];
+    const store = createJsonlSessionStore({ dir, logger: { warn: (message) => warnings.push(message) } });
+    const rows = await store.list("s1");
+    assert.deepEqual(
+      rows.map((row) => row.id),
+      ["e1", "e2", "e3"],
+    );
+    assert.deepEqual(rows[1], future, "a newer-schema entry is returned unchanged");
+    await store.list("s2");
+    assert.equal(warnings.length, 1, "the store warns once, not per line or per file");
 
     const result = await readJsonlSessionEntries(join(dir, "s1.jsonl"));
-    assert.equal(result.entries.length, 1);
     assert.equal(result.errors.length, 2);
-    assert.ok(result.errors.some((error) => error.message.includes("Unsupported session entry schema version: 2")));
     assert.ok(result.errors.some((error) => error.message.includes("Unsupported session entry schema version: v1")));
+    assert.ok(result.errors.some((error) => error.message.includes("Unsupported session entry schema version: 0")));
   });
 
   it("round trips event and metadata entries with valid payloads", async () => {

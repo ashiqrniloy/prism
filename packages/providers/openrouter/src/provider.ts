@@ -1,4 +1,4 @@
-import type { CredentialValueSource, JsonObject, ModelProvider, ProviderRequest, Usage } from "@arnilo/prism";
+import type { JsonObject, ModelProvider, ProviderRequest, Usage } from "@arnilo/prism";
 import {
   createRoutedProvider,
   mapOpenAIChatUsage,
@@ -7,6 +7,7 @@ import {
   resolveReasoningObject,
   sanitizeCacheKey,
   type RoutedProviderRoute,
+  type SecretSource,
 } from "@arnilo/prism/provider-kit";
 import { OPENROUTER_DEFAULT_BASE_URL } from "./models.js";
 
@@ -25,7 +26,7 @@ export interface OpenRouterRouting {
 export interface OpenRouterProviderOptions {
   readonly id?: string;
   readonly baseUrl?: string;
-  readonly apiKey?: CredentialValueSource;
+  readonly apiKey?: SecretSource;
   readonly fetch?: typeof fetch;
   readonly appUrl?: string;
   readonly appTitle?: string;

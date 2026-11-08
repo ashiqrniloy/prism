@@ -8,7 +8,6 @@
  */
 import type {
   DecisionAnswer,
-  DecisionChoiceAnswer,
   DecisionNoulAnswer,
   DecisionQuestion,
   DecisionsClient,
@@ -16,10 +15,10 @@ import type {
 } from "@arnilo/prism";
 import { MemoryValidationError } from "@arnilo/prism-memory-core";
 
-export const DECISION_POINTS = ["P1", "P2", "P3", "P4", "P5", "P6", "P7"] as const;
+export const DECISION_POINTS = ["P3", "P4", "P5", "P7"] as const;
 export type DecisionPoint = (typeof DECISION_POINTS)[number];
 
-/** Points exposed by this build. All seven are opt-in; Plan 210 Task 9 runs the live qualification screen. */
+/** Points exposed by this build. All four are opt-in (plan 210 Task 7 removed P1, P2 and P6). */
 export const SHIPPED_DECISION_POINTS: readonly DecisionPoint[] = DECISION_POINTS;
 
 export interface DecisionPointSpec {
@@ -31,12 +30,9 @@ export interface DecisionPointSpec {
 }
 
 export const DECISION_POINT_SPECS: Readonly<Record<DecisionPoint, DecisionPointSpec>> = Object.freeze({
-  P1: { threshold: 0.55, low: 0.45, high: 0.65 },
-  P2: { threshold: 0.55, low: 0.45, high: 0.65 },
   P3: { threshold: 0.5, low: 0.4, high: 0.6 },
   P4: { threshold: 0.5, low: 0.4, high: 0.6 },
   P5: { threshold: 0.6, low: 0.5, high: 0.7 },
-  P6: { threshold: 0.55, low: 0.45, high: 0.65 },
   P7: { threshold: 0.7, low: 0.6, high: 0.8 },
 });
 
@@ -86,8 +82,6 @@ export interface EvaluateTurnInput {
 }
 
 export interface TurnDecision {
-  /** P1: `true`/`false` outside the abstain band; `undefined` keeps the lexical incumbent. */
-  readonly durable?: boolean;
   /** P4: `false` only when memory is clearly not needed. */
   readonly needed?: boolean;
   /** P7: `true` only when the text clearly tries to instruct a future agent. */
@@ -101,30 +95,15 @@ export interface SufficientInput {
   readonly evidence: readonly DecisionCandidate[];
 }
 
-export interface AppliesInput {
-  readonly text: string;
-  readonly paths: readonly string[];
-  readonly decisions: readonly DecisionCandidate[];
-}
-
-export interface SupersessionCandidate extends DecisionCandidate {
-  readonly score: number;
-}
-
-export type SupersessionChoice = "replaces" | "refines" | "contradicts" | "unrelated";
-
 /** The runtime the package passes through the write, read, delivery and capture paths. */
 export interface FabricDecisions {
   readonly config: ResolvedDecisionsConfig;
   enabled(point: DecisionPoint): boolean;
   evaluateTurn(input: EvaluateTurnInput): Promise<TurnDecision>;
   sufficient(input: SufficientInput): Promise<boolean | undefined>;
-  applies(input: AppliesInput): Promise<ReadonlySet<string> | undefined>;
-  supersession(text: string, candidates: readonly SupersessionCandidate[]): Promise<ReadonlyMap<string, SupersessionChoice> | undefined>;
 }
 
 const MAX_CANDIDATES = 32;
-const MAX_RULES = 64;
 const MAX_TEXT = 2_000;
 const MAX_NOTE_CHARS = 600;
 
@@ -140,10 +119,6 @@ function noul(answer: DecisionAnswer | undefined): number | undefined {
   if (answer?.type !== "noul") return undefined;
   const value = (answer as DecisionNoulAnswer).noul;
   return Number.isFinite(value) && value >= 0 && value <= 1 ? value : undefined;
-}
-
-function choiceAnswer(answer: DecisionAnswer | undefined): DecisionChoiceAnswer | undefined {
-  return answer?.type === "choice" ? answer : undefined;
 }
 
 function aboveBand(value: number, spec: DecisionPointSpec): boolean {
@@ -164,7 +139,7 @@ export function createFabricDecisions(input: {
 }): FabricDecisions {
   const enabled = (point: DecisionPoint): boolean => input.config.points.includes(point);
   // The same persisted turn reaches the extractor gate and capture; reuse a no-candidate result so
-  // P1/P7 do not cost a second call. A candidate-bearing context build always asks afresh.
+  // P7 does not cost a second call. A candidate-bearing context build always asks afresh.
   const turnCache = new Map<string, TurnDecision>();
   const ask = async (
     state: string | JsonObject,
@@ -192,11 +167,6 @@ export function createFabricDecisions(input: {
         if (cached !== undefined) return cached;
       }
       const questions: Record<string, DecisionQuestion> = {};
-      if (enabled("P1"))
-        questions.P1 = question(
-          "Does this user turn state a lasting decision, preference, or durable fact about the user or project? Questions, code explanations and transient task chatter do not count.",
-          { true: "lasting memory", false: "not durable" },
-        );
       if (enabled("P4"))
         questions.P4 = question(
           "Does answering the user's current request need information from memory? Stable rules and project facts count; general knowledge and the current code do not.",
@@ -226,17 +196,10 @@ export function createFabricDecisions(input: {
       const answers = await ask(state, questions);
       if (answers === undefined) return {};
       const result: {
-        durable?: boolean;
         needed?: boolean;
         instructionLike?: boolean;
         irrelevant?: ReadonlySet<string>;
       } = {};
-      if (enabled("P1")) {
-        const p = noul(answers.P1);
-        if (p !== undefined && !aboveBand(p, DECISION_POINT_SPECS.P1) && !belowBand(p, DECISION_POINT_SPECS.P1)) {
-          // Inside the band: incumbent.
-        } else if (p !== undefined) result.durable = aboveBand(p, DECISION_POINT_SPECS.P1);
-      }
       if (enabled("P4")) {
         const p = noul(answers.P4);
         if (p !== undefined && belowBand(p, DECISION_POINT_SPECS.P4)) result.needed = false;
@@ -256,10 +219,9 @@ export function createFabricDecisions(input: {
       if ((input.candidates?.length ?? 0) === 0) {
         if (turnCache.size >= 16) turnCache.clear();
         turnCache.set(input.text, result);
-      } else if (result.durable !== undefined || result.needed !== undefined || result.instructionLike !== undefined) {
+      } else if (result.needed !== undefined || result.instructionLike !== undefined) {
         if (turnCache.size >= 16) turnCache.clear();
         const common: TurnDecision = {
-          ...(result.durable === undefined ? {} : { durable: result.durable }),
           ...(result.needed === undefined ? {} : { needed: result.needed }),
           ...(result.instructionLike === undefined ? {} : { instructionLike: result.instructionLike }),
         };
@@ -283,65 +245,6 @@ export function createFabricDecisions(input: {
       if (p === undefined || aboveBand(p, DECISION_POINT_SPECS.P5)) return p === undefined ? undefined : true;
       if (belowBand(p, DECISION_POINT_SPECS.P5)) return false;
       return undefined;
-    },
-    async applies(input) {
-      if (!enabled("P6") || input.decisions.length === 0) return undefined;
-      const decisions = input.decisions.slice(0, MAX_RULES);
-      const questions: Record<string, DecisionQuestion> = {};
-      for (const decision of decisions) {
-        questions[`P6:${decision.id}`] = question(
-          `Does standing rule ${decision.id} apply to the current task? Scope or a nearby path alone does not count.`,
-          { true: "applies", false: "does not apply" },
-        );
-      }
-      const answers = await ask(
-        {
-          turn: clean(input.text),
-          paths: input.paths.slice(0, 16).map((path) => clean(path, 256)),
-          decisions: Object.fromEntries(decisions.map((decision) => [decision.id, clean(decision.text, MAX_NOTE_CHARS)])),
-        },
-        questions,
-      );
-      if (answers === undefined) return undefined;
-      const notApplicable = new Set<string>();
-      for (const decision of decisions) {
-        const p = noul(answers[`P6:${decision.id}`]);
-        if (p !== undefined && belowBand(p, DECISION_POINT_SPECS.P6)) notApplicable.add(decision.id);
-      }
-      return notApplicable;
-    },
-    async supersession(text, candidates) {
-      if (!enabled("P2") || candidates.length === 0) return undefined;
-      const eligible = candidates.slice(0, MAX_RULES);
-      const questions: Record<string, DecisionQuestion> = {};
-      for (const candidate of eligible) {
-        questions[`P2:${candidate.id}`] = {
-          type: "choice",
-          instructions: `What is the relation of the new note to memory ${candidate.id}?`,
-          criteria: {
-            replaces: "A newer value replaces this note's value.",
-            refines: "The same subject with a narrower or corrected value.",
-            contradicts: "Both cannot be true at the same time.",
-            unrelated: "A different subject or compatible separate fact.",
-          },
-        };
-      }
-      const answers = await ask(
-        { new: clean(text), candidates: Object.fromEntries(eligible.map((item) => [item.id, clean(item.text, MAX_NOTE_CHARS)])) },
-        questions,
-      );
-      if (answers === undefined) return undefined;
-      const classified = new Map<string, SupersessionChoice>();
-      for (const candidate of eligible) {
-        const answer = choiceAnswer(answers[`P2:${candidate.id}`]);
-        if (answer === undefined) continue;
-        const selected = answer.choice;
-        if (selected !== "replaces" && selected !== "refines" && selected !== "contradicts" && selected !== "unrelated") continue;
-        const confidence = answer.confidence ?? answer.probabilities?.[selected];
-        if (confidence === undefined || !Number.isFinite(confidence) || !aboveBand(confidence, DECISION_POINT_SPECS.P2)) continue;
-        classified.set(candidate.id, selected);
-      }
-      return classified.size === 0 ? undefined : classified;
     },
   };
 }

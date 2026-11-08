@@ -244,11 +244,11 @@ export const PACKAGE_NOTES = {
     "capability — the input budget, tool-result folding, tool search, and the attention compiler as one fixed-order context.build handler",
   "@arnilo/prism-memory-core":
     "library — shared memory contracts, vector stores, lineage, propagation, and scoring; no slot and no capability",
-  "@arnilo/prism-memory-rag": "capability — indexed retrieval with a rag_search tool, an opt-in context block, and the embeddings service",
+  "@arnilo/prism-rag": "capability — indexed retrieval with a rag_search tool, an opt-in context block, and the embeddings service",
   "@arnilo/prism-memory-fabric":
     "capability — T1 of the three-tier memory, the store of record: working, semantic, and scoped notes with the memory.* tools, a context block, and per-session state",
-  "@arnilo/prism-memory-wiki":
-    "capability — T2 of the three-tier memory, opt-in and unmeasured: concept notes over the fabric, consolidated from cited evidence",
+  "@arnilo/prism-wiki":
+    "capability — knowledge outside memory, opt-in and unmeasured: concepts and sources in its own store, consolidated from cited evidence; reads memory read-only",
   "@arnilo/prism-memory-observational":
     "capability — T0 of the three-tier memory: observes the session, keeps a source-backed ledger, and compacts from it",
   "@arnilo/prism-tools-work":

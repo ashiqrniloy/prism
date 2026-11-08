@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { type ArtifactCitation, HARD_CITATION_EXCERPT_BYTES } from "@arnilo/prism";
+import { type ArtifactCitation, HARD_CITATION_EXCERPT_BYTES } from "@arnilo/prism/artifacts";
 import { WebToolError } from "./transport.js";
 import type { WebCitation, WebProvider, WebProviderMetadata, WebSearchProvider, WebSearchResult } from "./types.js";
 
@@ -93,11 +93,16 @@ export function normalizeSearchResults(
   return out;
 }
 /** Where each backend keeps its rows, snippet, and publish date. One table instead of per-provider ternaries. */
-const SEARCH_FIELDS: Readonly<Record<WebSearchProvider, {
-  readonly list: (root: Record<string, unknown>) => unknown;
-  readonly snippet: string;
-  readonly publishedAt: string;
-}>> = {
+const SEARCH_FIELDS: Readonly<
+  Record<
+    WebSearchProvider,
+    {
+      readonly list: (root: Record<string, unknown>) => unknown;
+      readonly snippet: string;
+      readonly publishedAt: string;
+    }
+  >
+> = {
   brave: { list: (root) => object(root.web).results, snippet: "description", publishedAt: "page_age" },
   exa: { list: (root) => root.results, snippet: "text", publishedAt: "publishedDate" },
   searxng: { list: (root) => root.results, snippet: "content", publishedAt: "publishedDate" },

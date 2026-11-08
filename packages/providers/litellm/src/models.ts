@@ -1,13 +1,11 @@
 import {
-  type CredentialValueSource,
   type ModelCapabilities,
   type ModelConfig,
   type ModelCost,
   redactSecrets,
-  resolveCredentialValue,
   trimTrailingSlashes,
 } from "@arnilo/prism";
-import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/provider-kit";
+import { readBoundedResponseJson, readBoundedResponseText, type SecretSource } from "@arnilo/prism/provider-kit";
 
 /** A host-run LiteLLM Proxy answers on loopback by default (`litellm --port 4000`). */
 export const LITELLM_DEFAULT_BASE_URL = "http://127.0.0.1:4000";
@@ -39,7 +37,7 @@ export interface LiteLLMModelInfoEntry {
 export interface ListLiteLLMModelsOptions {
   readonly provider?: string;
   readonly baseUrl?: string;
-  readonly apiKey?: CredentialValueSource;
+  readonly apiKey?: SecretSource;
   readonly fetch?: typeof fetch;
   readonly signal?: AbortSignal;
 }
@@ -141,7 +139,7 @@ async function discover(
   path: string,
 ): Promise<{ response: Response; token: string | undefined }> {
   const provider = options.provider ?? "litellm";
-  const token = await resolveCredentialValue(options.apiKey, { provider, name: "apiKey" });
+  const token = await options.apiKey?.();
   const response = await (options.fetch ?? fetch)(`${trimTrailingSlashes(options.baseUrl ?? LITELLM_DEFAULT_BASE_URL)}${path}`, {
     method: "GET",
     headers: token ? { authorization: `Bearer ${token}` } : {},

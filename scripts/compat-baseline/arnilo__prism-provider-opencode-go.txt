@@ -1,21 +1,23 @@
-OPENCODE_GO_CHAT_ROUTE	export declare const OPENCODE_GO_CHAT_ROUTE: RoutedProviderRoute<"openai-chat">
-OPENCODE_GO_DEFAULT_API_KEY_REF	export declare const OPENCODE_GO_DEFAULT_API_KEY_REF = "env:OPENCODE_GO_API_KEY"
-OPENCODE_GO_DEFAULT_BASE_URL	export declare const OPENCODE_GO_DEFAULT_BASE_URL = "https://opencode.ai/zen/go/v1"
-OPENCODE_GO_MESSAGES_ROUTE	export declare const OPENCODE_GO_MESSAGES_ROUTE: RoutedProviderRoute<"anthropic-messages">
-OPENCODE_SESSION_ID_MAX_LENGTH	export declare const OPENCODE_SESSION_ID_MAX_LENGTH = 128
-createOpenCodeGoProvider	export declare function createOpenCodeGoProvider(options?: OpenCodeGoProviderOptions): ModelProvider
-default	export default
-defineOpenCodeGoModel	export declare function defineOpenCodeGoModel(config: OpenCodeGoModelConfig): ModelConfig
-listOpenCodeGoModels	export declare function listOpenCodeGoModels(options?: ListOpenCodeGoModelsOptions): Promise<ModelConfig[]>
-mapOpenCodeGoModel	export declare function mapOpenCodeGoModel(entry: OpenCodeGoModelEntry, options?:
-openCodeGoModels	export declare const openCodeGoModels: readonly ModelConfig[]
-openCodeGoThinkingFamily	export declare function openCodeGoThinkingFamily(modelId: string): ThinkingCompatFamily | undefined
-openCodeGoThinkingLevels	export declare function openCodeGoThinkingLevels(modelId: string): readonly string[] | undefined
-opencodeGo	export declare function opencodeGo(options?: OpenCodeGoProviderPackageOptions & OpenCodeGoProviderConfig): PackageInstance
-opencodeSession	export declare function opencodeSession(request: ProviderRequest): Record<string, string>
-routeForOpenCodeGoModel	export declare function routeForOpenCodeGoModel(modelId: string): OpenCodeGoRoute
-type ListOpenCodeGoModelsOptions	export { defineOpenCodeGoModel, type ListOpenCodeGoModelsOptions, listOpenCodeGoModels, mapOpenCodeGoModel, OPENCODE_GO_DEFAULT_BASE_URL, type OpenCodeGoModelConfig, type OpenCodeGoModelEntry, type OpenCodeGoRoute, openCodeGoModels, openCodeGoThinkingFamily, openCodeGoThinkingLevels, routeForOpenCodeGoModel, } from "./models.js"
-type OpenCodeGoModelConfig	export { defineOpenCodeGoModel, type ListOpenCodeGoModelsOptions, listOpenCodeGoModels, mapOpenCodeGoModel, OPENCODE_GO_DEFAULT_BASE_URL, type OpenCodeGoModelConfig, type OpenCodeGoModelEntry, type OpenCodeGoRoute, openCodeGoModels, openCodeGoThinkingFamily, openCodeGoThinkingLevels, routeForOpenCodeGoModel, } from "./models.js"
-type OpenCodeGoModelEntry	export { defineOpenCodeGoModel, type ListOpenCodeGoModelsOptions, listOpenCodeGoModels, mapOpenCodeGoModel, OPENCODE_GO_DEFAULT_BASE_URL, type OpenCodeGoModelConfig, type OpenCodeGoModelEntry, type OpenCodeGoRoute, openCodeGoModels, openCodeGoThinkingFamily, openCodeGoThinkingLevels, routeForOpenCodeGoModel, } from "./models.js"
-type OpenCodeGoProviderOptions	export { createOpenCodeGoProvider, type OpenCodeGoProviderOptions, OPENCODE_GO_CHAT_ROUTE, OPENCODE_GO_MESSAGES_ROUTE, opencodeSession, OPENCODE_SESSION_ID_MAX_LENGTH, } from "./provider.js"
-type OpenCodeGoRoute	export { defineOpenCodeGoModel, type ListOpenCodeGoModelsOptions, listOpenCodeGoModels, mapOpenCodeGoModel, OPENCODE_GO_DEFAULT_BASE_URL, type OpenCodeGoModelConfig, type OpenCodeGoModelEntry, type OpenCodeGoRoute, openCodeGoModels, openCodeGoThinkingFamily, openCodeGoThinkingLevels, routeForOpenCodeGoModel, } from "./models.js"
+. ListOpenCodeGoModelsOptions	interface ListOpenCodeGoModelsOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly headers?: Readonly<Record<string, string>>; readonly provider?: string; readonly signal?: AbortSignal; }
+. OPENCODE_GO_CHAT_ROUTE	const OPENCODE_GO_CHAT_ROUTE: RoutedProviderRoute<"openai-chat">
+. OPENCODE_GO_DEFAULT_API_KEY_REF	const OPENCODE_GO_DEFAULT_API_KEY_REF = "env:OPENCODE_GO_API_KEY"
+. OPENCODE_GO_DEFAULT_BASE_URL	const OPENCODE_GO_DEFAULT_BASE_URL = "https://opencode.ai/zen/go/v1"
+. OPENCODE_GO_MESSAGES_ROUTE	const OPENCODE_GO_MESSAGES_ROUTE: RoutedProviderRoute<"anthropic-messages">
+. OPENCODE_SESSION_ID_MAX_LENGTH	const OPENCODE_SESSION_ID_MAX_LENGTH = 128
+. OpenCodeGoModelConfig	interface OpenCodeGoModelConfig extends Omit<ModelConfig, "provider" | "compat"> { readonly compat?: JsonObject & { readonly route?: OpenCodeGoRoute; readonly preserveThinking?: boolean; readonly reasoning_effort?: string; readonly thinking?: boolean | JsonObject; readonly reasoning?: JsonObject; }; readonly provider?: "opencode-go"; }
+. OpenCodeGoModelEntry	interface OpenCodeGoModelEntry { readonly capabilities?: { readonly structured_output?: boolean | "json_schema"; }; readonly created?: number; readonly id: string; readonly object?: string; readonly owned_by?: string; }
+. OpenCodeGoProviderConfig	interface OpenCodeGoProviderConfig { readonly apiKey?: string; readonly baseUrl?: string; readonly models?: readonly ModelConfig[]; }
+. OpenCodeGoProviderOptions	interface OpenCodeGoProviderOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly id?: string; }
+. OpenCodeGoProviderPackageOptions	interface OpenCodeGoProviderPackageOptions { readonly fetch?: typeof fetch; readonly id?: string; }
+. OpenCodeGoRoute	type OpenCodeGoRoute = "openai" | "anthropic"
+. createOpenCodeGoProvider	function createOpenCodeGoProvider(options?: OpenCodeGoProviderOptions): RoutedProvider
+. default	const definition: import("@arnilo/prism").PackageDefinition<OpenCodeGoProviderConfig>
+. defineOpenCodeGoModel	function defineOpenCodeGoModel(config: OpenCodeGoModelConfig): ModelConfig
+. listOpenCodeGoModels	function listOpenCodeGoModels(options?: ListOpenCodeGoModelsOptions): Promise<ModelConfig[]>
+. mapOpenCodeGoModel	function mapOpenCodeGoModel(entry: OpenCodeGoModelEntry, options?: { readonly provider?: string; }): ModelConfig
+. openCodeGoModels	const openCodeGoModels: readonly ModelConfig[]
+. openCodeGoThinkingFamily	function openCodeGoThinkingFamily(modelId: string): ThinkingCompatFamily | undefined
+. openCodeGoThinkingLevels	function openCodeGoThinkingLevels(modelId: string): readonly string[] | undefined
+. opencodeGo	function opencodeGo(options?: OpenCodeGoProviderPackageOptions & OpenCodeGoProviderConfig): PackageInstance
+. opencodeSession	function opencodeSession(request: ProviderRequest): Record<string, string>
+. routeForOpenCodeGoModel	function routeForOpenCodeGoModel(modelId: string): OpenCodeGoRoute

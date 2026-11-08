@@ -41,11 +41,9 @@ export interface LifecycleNoteView {
   /** `noteImportance(S)` as stamped on the note at write time. */
   readonly importance: number;
   readonly archive: LifecycleDecisionView;
-  readonly widen: LifecycleDecisionView;
   readonly contradictedIn?: readonly string[];
   readonly archivedAt?: string;
   readonly archivedFrom?: MemoryNoteStatus;
-  readonly widenedTo?: string;
   readonly mergedInto?: string;
   readonly validTo?: string;
 }
@@ -77,22 +75,6 @@ function archiveReasons(input: InspectNoteInput): readonly string[] {
   return reasons;
 }
 
-/**
- * Note-level widening gates (plan 188.4 Task 6). Replication across projects is not decided here: it
- * needs every project resource, which is `maintain()`'s job, so an eligible note still widens only
- * when another project agrees.
- */
-function widenReasons(input: InspectNoteInput): readonly string[] {
-  const { metadata, status } = input;
-  const reasons: string[] = [];
-  if (status !== "verified") reasons.push("unverified");
-  if (metadata.kind !== "fact" && metadata.kind !== "procedure") reasons.push("kind");
-  if ((metadata.harmful ?? 0) > 0) reasons.push("harmful");
-  if ((metadata.contradictedIn ?? []).length > 0) reasons.push("contradicted");
-  if (metadata.pinned === true) reasons.push("pinned");
-  return reasons;
-}
-
 const round = (value: number): number => Math.round(value * 10_000) / 10_000;
 
 export function inspectNote(input: InspectNoteInput): LifecycleNoteView {
@@ -100,7 +82,6 @@ export function inspectNote(input: InspectNoteInput): LifecycleNoteView {
   const decay = input.decay ?? DEFAULT_DECAY;
   const storage = storageStrength(metadata, input.storageWeights);
   const reasons = archiveReasons(input);
-  const widen = widenReasons(input);
   return {
     id: input.id,
     kind: metadata.kind,
@@ -127,11 +108,9 @@ export function inspectNote(input: InspectNoteInput): LifecycleNoteView {
         }),
       reasons,
     },
-    widen: { eligible: widen.length === 0, reasons: widen },
     ...(metadata.contradictedIn === undefined ? {} : { contradictedIn: metadata.contradictedIn }),
     ...(metadata.archivedAt === undefined ? {} : { archivedAt: metadata.archivedAt }),
     ...(metadata.archivedFrom === undefined ? {} : { archivedFrom: metadata.archivedFrom }),
-    ...(metadata.widenedTo === undefined ? {} : { widenedTo: metadata.widenedTo }),
     ...(metadata.mergedInto === undefined ? {} : { mergedInto: metadata.mergedInto }),
     ...(metadata.validTo === undefined ? {} : { validTo: metadata.validTo }),
   };
@@ -148,9 +127,7 @@ export function describeNote(view: LifecycleNoteView): string {
     `R=${view.retrieval}`,
     `uses=${view.uses.length}/${view.useSessions}`,
     `archive=${view.archive.eligible ? "yes" : `no(${view.archive.reasons.join(",")})`}`,
-    `widen=${view.widen.eligible ? "note-eligible" : `no(${view.widen.reasons.join(",")})`}`,
   ];
-  if (view.widenedTo !== undefined) parts.push(`widenedTo=${view.widenedTo}`);
   if (view.mergedInto !== undefined) parts.push(`mergedInto=${view.mergedInto}`);
   return parts.join(" ");
 }

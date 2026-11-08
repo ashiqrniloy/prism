@@ -1,42 +1,24 @@
-AnswerQuery	export type { AnswerQuery, RoutedAnswer } from "./answers.js"
-DEFAULT_MAX_ANSWERS	export declare const DEFAULT_MAX_ANSWERS = 1000
-HARD_MAX_ANSWERS	export declare const HARD_MAX_ANSWERS = 100000
-HOST_UI_KINDS	export declare const HOST_UI_KINDS: readonly HostUiRequestKind[]
-HeadlessError	export declare class HeadlessError extends Error
-ResumeWhenAnsweredOptions	export type { ResumeWhenAnsweredOptions, ResumeWhenAnsweredResult } from "./resume.js"
-ResumeWhenAnsweredResult	export type { ResumeWhenAnsweredOptions, ResumeWhenAnsweredResult } from "./resume.js"
-RoutedAnswer	export type { AnswerQuery, RoutedAnswer } from "./answers.js"
-ScheduleInput	export type { ScheduleInput, SchedulerFiring, SchedulerTarget, ScheduleState } from "./state.js"
-ScheduleState	export type { ScheduleInput, SchedulerFiring, SchedulerTarget, ScheduleState } from "./state.js"
-SchedulerClock	export type { SchedulerClock } from "./clock.js"
-SchedulerFiring	export type { ScheduleInput, SchedulerFiring, SchedulerTarget, ScheduleState } from "./state.js"
-SchedulerTarget	export type { ScheduleInput, SchedulerFiring, SchedulerTarget, ScheduleState } from "./state.js"
-answerLimit	export declare function answerLimit(value?: number): number
-createAnswerLog	export declare function createAnswerLog(maxAnswers: number, store?: CheckpointStore, ownership?: OwnershipScope):
-createResumeAuthority	export declare function createResumeAuthority(agent: Agent): ResumeAuthority
-createScheduler	export declare function createScheduler(options: SchedulerOptions): Scheduler
-holdFiringLease	export declare function holdFiringLease(store: LeaseStore, input: LeaseAcquireInput): Promise<
-isConflict	export declare const isConflict: (error: unknown) => boolean
-missedOccurrences	export declare function missedOccurrences(state: ScheduleState, now: number):
-nextCron	export declare function nextCron(expression: string, now: number, tz?: string): string
-pendingDecisionsOf	export declare function pendingDecisionsOf(branch: readonly SessionEntry[]): readonly PendingDecision[]
-policyDefault	export declare function policyDefault(answers?: PolicyAnswers): HostUiRoute
-resumeWhenAnswered	export declare function resumeWhenAnswered(authority: ResumeAuthority, supplied: Pick<Session, "id">, pending: readonly PendingDecision[] | undefined, options: ResumeWhenAnsweredOptions, offer: (request: HostUiRequest, approvalId: string, signal?: AbortSignal, accept?: (answer: HostUiResponse, route: string) => boolean) => Promise<
-routeHostUi	export declare function routeHostUi(routes: readonly HostUiRoute[], options?: RouteHostUiOptions): RoutedHostUi
-runFiring	export declare function runFiring(target: SchedulerTarget, input: string | JsonObject, parentId: string, firingId: string): Promise<SchedulerFiring>
-scheduleStore	export declare function scheduleStore(checkpoints: CheckpointStore, ownership: OwnershipScope):
-systemClock	export declare const systemClock: SchedulerClock
-type HeadlessErrorCode	export { HeadlessError, type HeadlessErrorCode } from "./errors.js"
-type HostUiRoute	export { type HostUiRoute, type RoutedHostUi, type RouteHostUiOptions, routeHostUi } from "./route.js"
-type PolicyAnswers	export { type PolicyAnswers, policyDefault } from "./policy.js"
-type ResumeAuthority	export { createResumeAuthority, type ResumeAuthority } from "./authority.js"
-type RouteHostUiOptions	export { type HostUiRoute, type RoutedHostUi, type RouteHostUiOptions, routeHostUi } from "./route.js"
-type RoutedHostUi	export { type HostUiRoute, type RoutedHostUi, type RouteHostUiOptions, routeHostUi } from "./route.js"
-type ScheduleInput	export { createScheduler, type ScheduleInput, type Scheduler, type SchedulerClock, type SchedulerFiring, type SchedulerOptions, type SchedulerTarget, type ScheduleState, } from "./scheduler/index.js"
-type ScheduleState	export { createScheduler, type ScheduleInput, type Scheduler, type SchedulerClock, type SchedulerFiring, type SchedulerOptions, type SchedulerTarget, type ScheduleState, } from "./scheduler/index.js"
-type Scheduler	export { createScheduler, type ScheduleInput, type Scheduler, type SchedulerClock, type SchedulerFiring, type SchedulerOptions, type SchedulerTarget, type ScheduleState, } from "./scheduler/index.js"
-type SchedulerClock	export { createScheduler, type ScheduleInput, type Scheduler, type SchedulerClock, type SchedulerFiring, type SchedulerOptions, type SchedulerTarget, type ScheduleState, } from "./scheduler/index.js"
-type SchedulerFiring	export { createScheduler, type ScheduleInput, type Scheduler, type SchedulerClock, type SchedulerFiring, type SchedulerOptions, type SchedulerTarget, type ScheduleState, } from "./scheduler/index.js"
-type SchedulerOptions	export { createScheduler, type ScheduleInput, type Scheduler, type SchedulerClock, type SchedulerFiring, type SchedulerOptions, type SchedulerTarget, type ScheduleState, } from "./scheduler/index.js"
-type SchedulerTarget	export { createScheduler, type ScheduleInput, type Scheduler, type SchedulerClock, type SchedulerFiring, type SchedulerOptions, type SchedulerTarget, type ScheduleState, } from "./scheduler/index.js"
-validInput	export declare function validInput(target: SchedulerTarget, input: unknown): asserts input is string | JsonObject
+. AnswerQuery	interface AnswerQuery { readonly limit?: number; readonly sessionId?: string; }
+. DEFAULT_MAX_ANSWERS	const DEFAULT_MAX_ANSWERS = 1000
+. HARD_MAX_ANSWERS	const HARD_MAX_ANSWERS = 100000
+. HeadlessError	class HeadlessError extends Error { constructor(code: HeadlessErrorCode); readonly code: HeadlessErrorCode; }
+. HeadlessErrorCode	type HeadlessErrorCode = "invalid_missed_policy" | "unknown_target" | "duplicate_schedule" | "past_one_off" | "invalid_cron" | "invalid_timezone" | "schedule_limit" | "invalid_schedule" | "invalid_schedule_state" | "schedule_not_found" | "scheduler_ownership" | "unknown_workflow_command" | "unknown_command" | "invalid_workflow_result" | "firing_limit" | "scheduler_stopping" | "session_not_found" | "resume_authority_required" | "resume_busy" | "stale_decisions" | "no_routes" | "duplicate_route" | "unknown_kind" | "invalid_timeout" | "invalid_limit" | "invalid_route" | "invalid_policy" | "policy_allow_refused"
+. HostUiRoute	interface HostUiRoute { readonly kinds?: readonly HostUiRequestKind[]; readonly name: string; readonly timeoutMs?: number; readonly ui: HostUi; }
+. PolicyAnswers	type PolicyAnswers = Partial<{ readonly [K in HostUiRequestKind]: "unavailable" | "dismiss" | (K extends "notify" ? "ack" : never); }>
+. ResumeAuthority	interface ResumeAuthority { readonly ownership: OwnershipScope; resume(id: string, decisions: readonly Decision[], options?: RunOptions): AsyncIterable<AgentEvent>; session(id: string): Promise<Session>; }
+. ResumeWhenAnsweredOptions	interface ResumeWhenAnsweredOptions { readonly signal?: AbortSignal; }
+. ResumeWhenAnsweredResult	type ResumeWhenAnsweredResult = { readonly status: "resumed"; readonly events: AsyncIterable<AgentEvent>; } | { readonly status: "aborted" | "already_resolved" | "unavailable"; }
+. RouteHostUiOptions	interface RouteHostUiOptions { readonly answerLog?: CheckpointStore; readonly limits?: { readonly maxAnswers?: number; }; readonly ownership?: OwnershipScope; readonly resumeAuthority?: ResumeAuthority; }
+. RoutedAnswer	interface RoutedAnswer { readonly approvalId?: string; readonly at: string; readonly kind: HostUiRequestKind; readonly route: string; readonly sessionId?: string; readonly status: "answered" | "dismissed" | "unavailable" | "late" | "error"; }
+. RoutedHostUi	interface RoutedHostUi extends HostUi { answers(query?: AnswerQuery): Promise<readonly RoutedAnswer[]>; resumeWhenAnswered(session: Session, pending?: readonly PendingDecision[], options?: ResumeWhenAnsweredOptions): Promise<ResumeWhenAnsweredResult>; }
+. ScheduleInput	type ScheduleInput = { readonly id: string; readonly target: string; } & ({ readonly cron: string; readonly tz?: string; readonly at?: never; } | { readonly at: string | number | Date; readonly cron?: never; readonly tz?: never; })
+. ScheduleState	interface ScheduleState { readonly at?: string; readonly cron?: string; readonly id: string; readonly input: string | JsonObject; readonly lastFiring?: SchedulerFiring; readonly nextRunAt: string | null; readonly scheduleSessionId: string; readonly schemaVersion: 1; readonly status: "active" | "paused" | "completed" | "deleted"; readonly target: string; readonly tz: string; }
+. Scheduler	interface Scheduler { delete(id: string): Promise<void>; list(): Promise<readonly ScheduleState[]>; pause(id: string): Promise<void>; resume(id: string): Promise<void>; schedule(input: ScheduleInput): Promise<ScheduleState>; start(): void; stop(): Promise<void>; trigger(target: string, options?: { readonly input?: unknown; }): Promise<SchedulerFiring>; }
+. SchedulerClock	interface SchedulerClock { now(): number; sleep(ms: number, signal: AbortSignal): Promise<void>; }
+. SchedulerFiring	interface SchedulerFiring { readonly dueAt?: string; readonly fencingToken?: number; readonly firingId: string; readonly missed?: number; readonly policy?: "skip" | "run-once"; readonly sessionId?: string; readonly status: RunResult["status"] | WorkflowRunStatus | "skipped" | "lease_lost"; readonly workflowRunId?: string; }
+. SchedulerOptions	interface SchedulerOptions { readonly checkpoints: CheckpointStore; readonly clock?: SchedulerClock; readonly leases?: LeaseStore; readonly limits?: { readonly maxSchedules?: number; readonly maxConcurrentFirings?: number; readonly firingLeaseMs?: number; }; readonly missed?: "skip" | "run-once"; readonly ownership: OwnershipScope; readonly targets: Readonly<Record<string, SchedulerTarget>>; }
+. SchedulerTarget	type SchedulerTarget = { readonly kind: "agent"; readonly agent: Agent; readonly input: string; readonly runOptions?: RunOptions; } | { readonly kind: "workflow"; readonly agent: Agent; readonly command: string; readonly input: JsonObject; } | { readonly kind: "command"; readonly agent: Agent; readonly command: string; readonly input: JsonObject; }
+. createResumeAuthority	function createResumeAuthority(agent: Agent): ResumeAuthority
+. createScheduler	function createScheduler(options: SchedulerOptions): Scheduler
+. policyDefault	function policyDefault(answers?: PolicyAnswers): HostUiRoute
+. routeHostUi	function routeHostUi(routes: readonly HostUiRoute[], options?: RouteHostUiOptions): RoutedHostUi

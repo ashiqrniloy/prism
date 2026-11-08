@@ -28,9 +28,9 @@ const packages: Array<{ dir: string; name: string; isCore?: boolean; isSubpaths?
   { dir: "packages/memory/core", name: "@arnilo/prism-memory-core" },
   { dir: "packages/memory/compaction", name: "@arnilo/prism-memory-compaction" },
   { dir: "packages/memory/observational", name: "@arnilo/prism-memory-observational" },
-  { dir: "packages/memory/rag", name: "@arnilo/prism-memory-rag" },
+  { dir: "packages/knowledge/rag", name: "@arnilo/prism-rag" },
   { dir: "packages/memory/fabric", name: "@arnilo/prism-memory-fabric" },
-  { dir: "packages/memory/wiki", name: "@arnilo/prism-memory-wiki" },
+  { dir: "packages/knowledge/wiki", name: "@arnilo/prism-wiki" },
   { dir: "packages/tools/browser", name: "@arnilo/prism-tools-browser" },
   { dir: "packages/hosts/ag-ui", name: "@arnilo/prism-ag-ui" },
   { dir: "packages/tools/coding", name: "@arnilo/prism-tools-coding" },
@@ -187,11 +187,11 @@ before(() => {
     ...packages.filter((p) => !p.isCore && !p.isMeta && !p.isSubpaths).map((p) => p.name),
     "@arnilo/prism-acp",
     "@arnilo/prism-ag-ui/renderer",
-    "@arnilo/prism-memory-rag",
+    "@arnilo/prism-rag",
     "@arnilo/prism-memory-fabric",
     "@arnilo/prism-memory-compaction",
     "@arnilo/prism-memory-observational",
-    "@arnilo/prism-memory-wiki",
+    "@arnilo/prism-wiki",
     "@arnilo/prism-tools-browser",
     "@arnilo/prism-tools-web",
     "@arnilo/prism-tools-openapi",
@@ -363,7 +363,7 @@ import { appendEvaluationFeedback, defineScorer, scoreRun } from "@arnilo/prism-
 import { createMemoryEvaluationStore } from "@arnilo/prism-store-codecs";
 import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
 import { createMemory } from "@arnilo/prism-memory-fabric";
-import { chunkMarkdown, indexChunks, retrieveContext } from "@arnilo/prism-memory-rag";
+import { chunkMarkdown, indexChunks, retrieveContext } from "@arnilo/prism-rag";
 import {
   createMemoryWorkflowCheckpoints, createWorkflowCheckpoints,
   defineWorkflow, functionNode, replayWorkflow, resumeWorkflow, runWorkflow, suspend,
@@ -379,7 +379,7 @@ const sse = [
   'data: [DONE]',
 ].join("\\n\\n") + "\\n\\n";
 const hyperProvider = createHyperProvider({
-  apiKey: "packed",
+  apiKey: async () => "packed",
   fetch: async () => new Response(sse, { status: 200, headers: { "content-type": "text/event-stream" } }),
 });
 const hyperAgent = await createAgent({ packages: [providerPackage("test-provider", [hyperProvider])], model: { provider: hyperProvider.id, model: "packed" } });
@@ -537,12 +537,13 @@ console.log("PACKED PHASE20 SECURITY OK");
     join(consumer, "security21.mjs"),
     `
 import assert from "node:assert/strict";
-import { MediaContentError, pinnedFetch } from "@arnilo/prism";
+import { MediaContentError } from "@arnilo/prism";
+import { pinnedFetch } from "@arnilo/prism/net";
 import { createOpenAICompatibleProvider, ProviderTransportError, readBoundedResponseJson } from "@arnilo/prism/provider-kit";
 
 // Truncated OpenAI-compatible stream rejects (strictCompletion shared default).
 const truncated = new Response("data: [DONE]\\n\\n", { status: 200, headers: { "content-type": "text/event-stream" } });
-const provider = createOpenAICompatibleProvider({ apiKey: "k", baseUrl: "https://api.example.com/v1", fetch: async () => truncated });
+const provider = createOpenAICompatibleProvider({ apiKey: async () => "k", baseUrl: "https://api.example.com/v1", fetch: async () => truncated });
 const events = [];
 for await (const event of provider.generate({ model: { provider: "mock", model: "demo" }, messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }] })) events.push(event);
 const streamError = events.find((event) => event.type === "error");

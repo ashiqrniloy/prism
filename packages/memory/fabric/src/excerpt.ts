@@ -114,8 +114,6 @@ export function fitInjection(
   let rank = 0;
   for (const hit of hits) {
     if (chosen.length >= topK) break;
-    // The ontology tier is delivered as a pointer by the caller, never as text here (plan 207 Task 4).
-    if (hit.kind === "concept") continue;
     rank += 1;
     const confidence = hitConfidence(hit);
     if (confidence < minScore) continue;

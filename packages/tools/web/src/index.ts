@@ -162,9 +162,9 @@ function guardService(service: WebFetchService, domains: DomainPolicy | undefine
   };
 }
 
-/** A credential source over a single resolved secret, for the 0.12 adapters. */
+/** A credential source over a secret the package already resolved from its ref. */
 function secretSource(secret: Secret): WebCredentialSource {
-  return { resolve: () => secret };
+  return async () => secret.value;
 }
 
 const definition = definePackage<ToolsWebConfig>({

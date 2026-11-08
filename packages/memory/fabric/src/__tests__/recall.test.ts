@@ -68,9 +68,9 @@ describe("memory fabric recall", () => {
 
   it("adds a linked neighbor that the seed hit points at", async () => {
     const { memory } = makeMemory();
-    const fabric = createMemoryFabric({ memory, linker: { enabled: true, topK: 3 } });
+    const fabric = createMemoryFabric({ memory });
     const neighbor = await fabric.remember({ kind: "fact", content: "Rollout health lives on the deploy dashboard" });
-    const seed = await fabric.remember({ kind: "fact", content: "Canary rollout protects deploys" });
+    const seed = await fabric.remember({ kind: "fact", content: "Canary rollout protects deploys", links: [{ id: neighbor.id }] });
 
     assert.deepEqual(
       seed.links?.map((link) => link.id),

@@ -180,7 +180,7 @@ export function createSessionRowMappers<R>(redacted: RedactedCodec<R>): SessionR
         runId: row.run_id ?? undefined,
         timestamp: row.timestamp,
         kind: row.kind as SessionEntry["kind"],
-        schemaVersion: row.schema_version === 1 ? 1 : undefined,
+        schemaVersion: typeof row.schema_version === "number" ? row.schema_version : undefined,
         message: parseJson(row.message),
         event: parseJson(row.event),
         model: parseJson(row.model),

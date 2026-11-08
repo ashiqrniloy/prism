@@ -1,6 +1,6 @@
 {
   "kind": "210-c1-paid-panel",
-  "checkedAt": "2026-11-08T05:09:44.404Z",
+  "checkedAt": "2026-11-08T06:03:22.977Z",
   "refs": [
     "ollama-cloud/beam",
     "ollama-cloud/clef:27b",
@@ -10,7 +10,7 @@
     "ollama-cloud/nemotron-3-nano:30b"
   ],
   "balance": {
-    "includedUsd": 50.85048,
+    "includedUsd": 49.72661,
     "allowanceUsd": 60,
     "periodUntil": "2026-12-07T20:57:27Z",
     "purchasedUsd": 0,

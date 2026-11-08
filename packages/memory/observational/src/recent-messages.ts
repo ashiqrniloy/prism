@@ -1,7 +1,7 @@
 import type { ContentBlock, ContextBlock, Message, SessionEntry } from "@arnilo/prism";
 import { redactSecrets } from "@arnilo/prism";
 
-import { truncateWorkerText } from "./limits.js";
+import { truncateWorkerText } from "@arnilo/prism-memory-core";
 import { buildObservationalMemoryProjection } from "./projection.js";
 import { memoryBlocksFrom } from "./context.js";
 import { estimateEntryTokens } from "./tokens.js";

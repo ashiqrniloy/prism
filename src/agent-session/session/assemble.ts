@@ -51,6 +51,7 @@ import {
   stageAskDecisions,
   suspendGatedRound,
 } from "./tool-round.js";
+import { requestHostUi } from "../../host/response.js";
 import type { RoundContext, SessionHost } from "./types.js";
 
 const PROMPT_VERSION_MAX_NAME_BYTES = 256;
@@ -155,7 +156,7 @@ async function resolveAskDecisions(
       continue;
     }
     const { call, reason } = request;
-    const response = await ui.request({
+    const response = await requestHostUi(ui, {
       kind: "confirm",
       title: `Approve tool "${call.name}"`,
       detail: `${reason}\n${askArgumentPreview(ctx.session, call.arguments)}`,
@@ -644,10 +645,6 @@ export async function executeRun(
   runId: string,
   resumed?: ActiveDurableRun,
 ): Promise<RunResult> {
-  const legacyMaxToolRounds = (options as { maxToolRounds?: unknown }).maxToolRounds;
-  if (legacyMaxToolRounds !== undefined) {
-    throw new TypeError("RunOptions.maxToolRounds was removed in 0.1.5; use RunOptions.limits.maxToolRounds instead");
-  }
   const promptVersion = assertPromptVersionRef(options.promptVersion);
   const requestedLimits = options.limits;
   const resolvedLimits = resolveRunLimits(session.agent.config.limits, requestedLimits);

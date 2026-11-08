@@ -1,5 +1,5 @@
-import { redactSecrets, resolveCredentialValue, type CredentialValueSource, type ModelConfig } from "@arnilo/prism";
-import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/provider-kit";
+import { redactSecrets, type ModelConfig } from "@arnilo/prism";
+import { readBoundedResponseJson, readBoundedResponseText, type SecretSource } from "@arnilo/prism/provider-kit";
 
 export const OPENROUTER_DEFAULT_BASE_URL = "https://openrouter.ai/api/v1";
 
@@ -76,14 +76,14 @@ export const openRouterModels: readonly ModelConfig[] = [
 export interface ListOpenRouterModelsOptions {
   readonly provider?: string;
   readonly baseUrl?: string;
-  readonly apiKey?: CredentialValueSource;
+  readonly apiKey?: SecretSource;
   readonly fetch?: typeof fetch;
   readonly signal?: AbortSignal;
 }
 
 export async function listOpenRouterModels(options: ListOpenRouterModelsOptions = {}): Promise<ModelConfig[]> {
   const provider = options.provider ?? "openrouter";
-  const token = await resolveCredentialValue(options.apiKey, { provider, name: "apiKey" });
+  const token = await options.apiKey?.();
   const response = await (options.fetch ?? fetch)(`${(options.baseUrl ?? OPENROUTER_DEFAULT_BASE_URL).replace(/\/+$/, "")}/models`, {
     method: "GET",
     headers: token ? { authorization: `Bearer ${token}` } : {},

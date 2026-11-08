@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createSecretRedactor, type JsonObject, type JsonSchema, type ModelClient, validateJsonSchema } from "@arnilo/prism";
 import { providerDone, providerToolCall, toolCallContent } from "@arnilo/prism/testing";
 import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
-import { resolveMemoryWorkerLimits } from "@arnilo/prism-memory-observational";
+import { resolveMemoryWorkerLimits } from "@arnilo/prism-memory-core";
 import { createMemory, createMemoryFabric, createMemoryWorkingStore } from "../../index.js";
 import { ConsolidationExtractionError, type ExtractConsolidationNotesInput, extractConsolidationNotes } from "../extract.js";
 import type { ConsolidationCandidate } from "../gather.js";
@@ -418,65 +418,22 @@ describe("consolidation extractor", () => {
 });
 
 // Plan 207 Task 3: extractor-assisted subject binding.
+// Plan 216 Task 3: LTM never binds a note to a subject. The schema keeps its free `subject` string so the cached tool
+// bytes do not move; the parser ignores it.
 describe("extractor subjects", () => {
-  const subjects = [
-    {
-      level: "project" as const,
-      subjects: [{ subject: "payments", title: "Payments service", aliases: ["billing service"], uses: 0, evidence: 1 }],
-    },
-  ];
-
-  it("extractor_unknown_subject_is_dropped_not_rejected", async () => {
-    const reply = {
-      notes: [
-        note({ subject: "payments" }),
-        note({ subject: "ghost" }),
-        note({ subject: "new" }),
-        note({ subject: "payments", scope: "user" }),
-        note({ subject: 42 }),
-        note({ subject: "payments", scope: "path", applies_to: ["src/**"] }),
-        note({}),
-      ],
-    };
-    const result = await extractConsolidationNotes(input(reply, { subjects }));
-    assert.deepEqual(
-      result.notes.map((extracted) => extracted.subject),
-      ["payments", undefined, "new", undefined, undefined, "payments", undefined],
-      "a shown slug and `new` are kept; an unshown slug, another scope's slug and a non-string are dropped",
+  it("extractor_ignores_subject_and_keeps_its_tool_bytes", async () => {
+    const result = await extractConsolidationNotes(input({ notes: [note({ subject: "payments" }), note({ subject: "new" }), note({})] }));
+    assert.equal(result.notes.length, 3);
+    assert.equal(
+      result.notes.some((extracted) => "subject" in extracted),
+      false,
     );
-    assert.equal(result.correctionCalls, 0, "an unknown subject is not a repair");
-
-    // Nothing was shown, so there is nothing to bind to: even a real slug is advisory noise.
-    const bare = await extractConsolidationNotes(input({ notes: [note({ subject: "payments" }), note({ subject: "new" })] }));
-    assert.deepEqual(
-      bare.notes.map((extracted) => extracted.subject),
-      [undefined, undefined],
-    );
-  });
-
-  it("subject_list_rides_in_the_prompt_and_extractor_segments_stay_stable", async () => {
-    for (const repositoryRules of [false, true]) {
-      const requests: Parameters<ModelClient["generate"]>[0][] = [];
-      for (const shown of [false, true]) {
-        await extractConsolidationNotes(
-          input(
-            { notes: [] },
-            {
-              repositoryRules,
-              ...(shown ? { subjects } : {}),
-              client: client({ notes: [] }, (request) => requests.push(request as (typeof requests)[number])),
-            },
-          ),
-        );
-      }
-      const prefix = (request: (typeof requests)[number]) =>
-        JSON.stringify({ system: request.messages?.filter((message) => message.role === "system"), tools: request.tools });
-      assert.equal(prefix(requests[0]!), prefix(requests[1]!), "system text and tool schema are byte-identical with and without subjects");
-      assert.equal(JSON.stringify(requests[0]!.messages).includes("payments | Payments service"), false);
-      assert.match(JSON.stringify(requests[1]!.messages), /payments \| Payments service \| billing service/);
-      const schema = requests[1]!.tools![0]!.parameters as JsonObject;
-      const properties = (((schema.properties as JsonObject).notes as JsonObject).items as JsonObject).properties as JsonObject;
-      assert.deepEqual(properties.subject, { type: "string", maxLength: 64 }, "a free string: no enum that would change per call");
-    }
+    assert.equal(result.correctionCalls, 0);
+    const requests: Parameters<ModelClient["generate"]>[0][] = [];
+    await extractConsolidationNotes(input({ notes: [] }, { client: client({ notes: [] }, (request) => requests.push(request as (typeof requests)[number])) }));
+    assert.equal(JSON.stringify(requests[0]!.messages).includes("Known subjects"), false, "no subject list rides in the prompt");
+    const schema = requests[0]!.tools![0]!.parameters as JsonObject;
+    const properties = (((schema.properties as JsonObject).notes as JsonObject).items as JsonObject).properties as JsonObject;
+    assert.deepEqual(properties.subject, { type: "string", maxLength: 64 });
   });
 });

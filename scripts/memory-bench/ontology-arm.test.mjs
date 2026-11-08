@@ -184,10 +184,10 @@ test("settle_timeout_is_recorded_deviation", async () => {
 test("readiness_refuses_ontology_manifest_without_criteria_or_prefix_record", async () => {
   const root = await mkdtemp(join(tmpdir(), "prism-ontology-pin-"));
   try {
-    for (const dir of ["packages/memory/fabric/src", "packages/memory/wiki/src", "docs/_evidence/memory-bench/207"])
+    for (const dir of ["packages/memory/fabric/src", "packages/knowledge/wiki/src", "docs/_evidence/memory-bench/207"])
       await mkdir(join(root, dir), { recursive: true });
     await writeFile(join(root, "packages/memory/fabric/src/index.ts"), "export const fabric = 1;\n");
-    await writeFile(join(root, "packages/memory/wiki/src/index.ts"), "export const wiki = 1;\n");
+    await writeFile(join(root, "packages/knowledge/wiki/src/index.ts"), "export const wiki = 1;\n");
     const probeFor = async (extra = {}) => {
       const { sourceFingerprint, PREFIX_PRODUCT_PATHS } = await import("./acceptance.mjs");
       return {
@@ -226,7 +226,7 @@ test("readiness_refuses_ontology_manifest_without_criteria_or_prefix_record", as
     await assert.rejects(assertOntologyManifestPin(pins, { root }), /ontology-prefix-probe-product-changed/);
     // A product edit after the manifest was written makes the manifest stale.
     await writeProbe(await probeFor());
-    await writeFile(join(root, "packages/memory/wiki/src/index.ts"), "export const wiki = 2;\n");
+    await writeFile(join(root, "packages/knowledge/wiki/src/index.ts"), "export const wiki = 2;\n");
     await assert.rejects(assertOntologyManifestPin(pins, { root }), /ontology-manifest-product-unpinned/);
     // The verdict is pure, so each blocker has a name.
     assert.deepEqual(ontologyManifestBlockers({ manifest: {}, probe: undefined, fabricHash: "a", productHash: "b" }), [

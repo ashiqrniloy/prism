@@ -88,19 +88,6 @@ export {
   storageStrength,
   strengthPrior,
 } from "./strength.js";
-export type { SiblingGroup, WidenConfig, WidenGroup, WidenNote } from "./widen.js";
-export {
-  crossProjectGroups,
-  DEFAULT_WIDEN_CONFIG,
-  MAX_WIDEN_CONTRADICTIONS,
-  MAX_WIDEN_PROJECTS,
-  MAX_WIDEN_SIBLINGS,
-  MIN_WIDEN_CONTRADICTIONS,
-  MIN_WIDEN_PROJECTS,
-  MIN_WIDEN_SIBLINGS,
-  narrowingCandidates,
-  siblingGroups,
-} from "./widen.js";
 
 /** Distinct sessions a candidate must be used in before it is verified. */
 export const DEFAULT_VERIFY_AFTER_SESSIONS = 2;
@@ -114,8 +101,6 @@ export interface ArchiveNoteOptions {
   readonly now?: number;
   /** The survivor's id when a capacity merge archived this note. */
   readonly mergedInto?: string;
-  /** The wider-scope note this one was widened into (plan 188.4 Task 6). */
-  readonly widenedTo?: string;
   /** Audit-log verb; merges and evictions name themselves. */
   readonly auditVerb?: string;
   readonly signal?: AbortSignal;
@@ -157,7 +142,7 @@ export interface FabricLifecycle {
   recordUses(sessionKey: string, ids: readonly string[], options?: RecordUsesOptions): Promise<readonly string[]>;
   /**
    * Record the answering turns that cited two or more notes together (plan 207 Task 4). Each note keeps the other
-   * ids and the turn index, never text. Only evidence notes take part: a concept or a working block does not.
+   * ids and the turn index, never text. Only evidence notes take part: a working block does not.
    * Metadata-only, no model call.
    */
   recordCoReads(events: readonly CoReadSet[], options?: RecordCoReadOptions): Promise<number>;
@@ -308,10 +293,10 @@ export function createFabricLifecycle(memory: Memory): FabricLifecycle {
       const ids = [...new Set(event.ids)];
       if (ids.length < 2) continue;
       const records = await memory.get(ids, options);
-      // A concept, a working block or an unreadable note takes no part: the signal is evidence read together.
+      // A working block or an unreadable note takes no part: the signal is evidence read together.
       const evidence = records.filter((record) => {
         const kind = parseMemoryNoteMetadata(record.metadata)?.kind;
-        return kind !== undefined && kind !== "concept" && kind !== "working";
+        return kind !== undefined && kind !== "working";
       });
       if (evidence.length < 2) continue;
       for (const record of evidence) {
@@ -392,7 +377,6 @@ export function createFabricLifecycle(memory: Memory): FabricLifecycle {
           archivedAt,
           archivedFrom: status,
           ...(options.mergedInto === undefined ? {} : { mergedInto: options.mergedInto }),
-          ...(options.widenedTo === undefined ? {} : { widenedTo: options.widenedTo }),
         }),
         status: "archived",
         ...(options.auditVerb === undefined ? {} : { auditVerb: options.auditVerb }),

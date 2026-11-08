@@ -1,9 +1,9 @@
 import type { ModelClient, ProviderRequestOptions, ToolDefinition } from "@arnilo/prism";
 import { createMemoryId } from "../ids.js";
-import { joinWorkerText, type MemoryWorkerLimitOptions, resolveMemoryWorkerLimits } from "../limits.js";
+import { joinWorkerText, type MemoryWorkerLimitOptions, resolveMemoryWorkerLimits } from "@arnilo/prism-memory-core";
 import { estimateTextTokens } from "../tokens.js";
 import { isMemoryReflection, type MemoryObservation, type MemoryReflection } from "../types.js";
-import { runMemoryWorkerLoop } from "../worker-loop.js";
+import { runMemoryWorkerLoop } from "@arnilo/prism-memory-core";
 
 export const DEFAULT_REFLECTOR_INSTRUCTION =
   "Rewrite the entire memory log from existing reflections and new observations. Preserve durable knowledge and cite its underlying observation ids with record_reflection.";

@@ -56,7 +56,7 @@ function errorEvent(events: readonly ProviderEvent[]): Error & { failureClass?: 
 
 async function classify(status: number, bodyText: string) {
   const provider = createLiteLLMProvider({
-    apiKey: secret,
+    apiKey: async () => secret,
     fetch: (async () => new Response(bodyText, { status, headers: { "content-type": "application/json" } })) as typeof fetch,
   });
   return errorEvent(await collectProviderEvents(provider, request()));
@@ -65,14 +65,14 @@ async function classify(status: number, bodyText: string) {
 describe("LiteLLM Chat route", () => {
   it("litellm_call_id_owned_and_minted", async () => {
     const { seen, fetch } = capture();
-    const provider = createLiteLLMProvider({ apiKey: secret, fetch });
+    const provider = createLiteLLMProvider({ apiKey: async () => secret, fetch });
     await collectProviderEvents(provider, request(chatModel, { options: { headers: { "X-LiteLLM-Call-Id": "caller-value" } } }));
     const id = seen[0]?.headers.get(LITELLM_CALL_ID_HEADER);
     assert.match(String(id), /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     assert.notEqual(id, "caller-value", "a caller cannot choose the call id");
 
     const second = capture();
-    const again = createLiteLLMProvider({ apiKey: secret, fetch: second.fetch });
+    const again = createLiteLLMProvider({ apiKey: async () => secret, fetch: second.fetch });
     await collectProviderEvents(again, request());
     await collectProviderEvents(again, request());
     assert.notEqual(second.seen[0]?.headers.get(LITELLM_CALL_ID_HEADER), second.seen[1]?.headers.get(LITELLM_CALL_ID_HEADER), "fresh per call");
@@ -81,7 +81,7 @@ describe("LiteLLM Chat route", () => {
   it("litellm_headers_into_usage_metadata", async () => {
     const exchange = fixture("text");
     const { fetch } = capture(exchange);
-    const provider = createLiteLLMProvider({ apiKey: secret, fetch });
+    const provider = createLiteLLMProvider({ apiKey: async () => secret, fetch });
     const events = await collectProviderEvents(provider, request());
     const usage = events.find((event) => event.type === "usage");
     const done = events.find((event) => event.type === "done");
@@ -119,7 +119,7 @@ describe("LiteLLM Chat route", () => {
       const sse = `data: ${JSON.stringify({ choices: [{ delta: { content: id }, finish_reason: "stop" }], usage: { prompt_tokens: 5, completion_tokens: 1 } })}\n\ndata: [DONE]\n\n`;
       return new Response(sse, { headers: { "content-type": "text/event-stream", "x-litellm-model-id": id } });
     }) as typeof fetch;
-    const provider = createLiteLLMProvider({ apiKey: secret, fetch: fetchImpl });
+    const provider = createLiteLLMProvider({ apiKey: async () => secret, fetch: fetchImpl });
     const [first, second] = await Promise.all([
       collectProviderEvents(provider, request()),
       collectProviderEvents(provider, request()),
@@ -140,7 +140,7 @@ describe("LiteLLM Chat route", () => {
       if (value === undefined) delete headers["x-litellm-response-cost"];
       else headers["x-litellm-response-cost"] = value;
       const { fetch } = capture({ ...base, headers });
-      const events = await collectProviderEvents(createLiteLLMProvider({ apiKey: secret, fetch }), request());
+      const events = await collectProviderEvents(createLiteLLMProvider({ apiKey: async () => secret, fetch }), request());
       const usage = events.find((event) => event.type === "usage");
       return usage?.type === "usage" ? usage.usage : undefined;
     };
@@ -156,7 +156,7 @@ describe("LiteLLM Chat route", () => {
     const bodies: JsonObject[] = [];
     const replay = replayFetch(exchanges as never);
     const provider = createLiteLLMProvider({
-      apiKey: secret,
+      apiKey: async () => secret,
       fetch: (async (input, init) => {
         bodies.push(JSON.parse(String(init?.body)));
         return replay(input, init);
@@ -171,18 +171,18 @@ describe("LiteLLM Chat route", () => {
 
   it("litellm_cache_blocks_opt_in", async () => {
     const { seen, fetch } = capture();
-    const provider = createLiteLLMProvider({ apiKey: secret, fetch });
+    const provider = createLiteLLMProvider({ apiKey: async () => secret, fetch });
     const blocks: ModelConfig = { ...chatModel, compat: { ...chatModel.compat, cacheControl: "anthropic-blocks" } };
     await collectProviderEvents(provider, request(blocks, { options: { cacheRetention: "short" } }));
     assert.equal(JSON.stringify(seen[0]?.body).includes('"cache_control"'), true, "the opt-in route marks the prefix");
     const plain = capture();
-    await collectProviderEvents(createLiteLLMProvider({ apiKey: secret, fetch: plain.fetch }), request());
+    await collectProviderEvents(createLiteLLMProvider({ apiKey: async () => secret, fetch: plain.fetch }), request());
     assert.equal(JSON.stringify(plain.seen[0]?.body).includes("cache_control"), false);
   });
 
   it("litellm_strips_unsupported_cache_params", async () => {
     const { seen, fetch } = capture();
-    const provider = createLiteLLMProvider({ apiKey: secret, fetch });
+    const provider = createLiteLLMProvider({ apiKey: async () => secret, fetch });
     await collectProviderEvents(provider, request(chatModel, { options: { cacheKey: "session-abc", cacheRetention: "long" } }));
     const body = seen[0]?.body ?? {};
     // The proxy accepts both fields (Task 1b) but backends behind it mostly drop them, and Prism's
@@ -238,7 +238,7 @@ describe("LiteLLM Chat route", () => {
 
   it("litellm_error_names_the_call_id", async () => {
     const provider = createLiteLLMProvider({
-      apiKey: secret,
+      apiKey: async () => secret,
       fetch: (async () =>
         new Response(String(fixture("error-unauthorized").responseBody), {
           status: 401,
@@ -256,7 +256,7 @@ describe("LiteLLM Chat route", () => {
     ];
     for (const sse of frames) {
       const provider = createLiteLLMProvider({
-        apiKey: secret,
+        apiKey: async () => secret,
         fetch: (async () => new Response(sse, { headers: { "content-type": "text/event-stream" } })) as typeof fetch,
       });
       const events = await collectProviderEvents(provider, request());

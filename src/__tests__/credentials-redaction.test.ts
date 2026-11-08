@@ -6,20 +6,9 @@ import {
   createProviderRegistry,
   errorToErrorInfo,
   redactSecrets,
-  resolveCredentialValue,
 } from "../index.js";
 
 describe("credential boundary", () => {
-  it("resolves credentials from direct value callback or resolver", async () => {
-    const resolver = {
-      resolve: () => ({ type: "api_key" as const, value: "mock:token" }),
-    };
-
-    assert.equal(await resolveCredentialValue("literal", { name: "api" }), "literal");
-    assert.equal(await resolveCredentialValue(() => "callback", { name: "api" }), "callback");
-    assert.equal(await resolveCredentialValue(resolver, { name: "api", provider: "mock" }), "mock:token");
-  });
-
   it("provider registry does not accept or store credentials", () => {
     const registry = createProviderRegistry();
 
@@ -36,7 +25,7 @@ describe("credential boundary", () => {
   it("credential resolution is explicit and not global", async () => {
     process.env.PRISM_TEST_API_KEY = "unused-test-secret";
     try {
-      assert.equal(await resolveCredentialValue(undefined, { name: "apiKey", provider: "mock" }), undefined);
+      assert.equal(await createEnvRefCredentialResolver({}).resolve("env:PRISM_TEST_API_KEY", {}), undefined);
     } finally {
       delete process.env.PRISM_TEST_API_KEY;
     }

@@ -2,9 +2,6 @@
 
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { type ContextDraft, type HookContext, type SessionEntry } from "@arnilo/prism";
 import { createHashEmbedder } from "@arnilo/prism-memory-core";
 import { createFabricContext } from "../context.js";
@@ -12,7 +9,6 @@ import { createMemory, createMemoryFabric } from "../index.js";
 import { createFabricLifecycle } from "../lifecycle/index.js";
 import { normalizeNoteStatus } from "../lifecycle/status.js";
 import { createFabricRecall } from "../recall.js";
-import { runScopedGcPass } from "../scoped/lifecycle.js";
 import { parseMemoryNoteMetadata } from "../types.js";
 
 const DAY = 86_400_000;
@@ -173,28 +169,4 @@ describe("candidate lifecycle", () => {
     assert.equal(parseMemoryNoteMetadata((await memory.getEntry("b".repeat(12)))?.metadata), undefined);
   });
 
-  it("plain_and_scoped_archive_share_the_lifecycle_rule", async () => {
-    // Plan 188.4 Task 4: the archive rule is one predicate over the two strengths, not calendar days.
-    for (const [clock, acts] of [
-      [5, false],
-      [200, true],
-    ] as const) {
-      const memory = createMemory({ tenantId: "t", resourceId: "r", threadId: "s", embedder: createHashEmbedder() });
-      const fabric = createMemoryFabric({ memory, consolidate: false });
-      const note = await fabric.remember({ kind: "fact", content: "archive rule" }, { status: "candidate" });
-      const dir = await mkdtemp(join(tmpdir(), "prism-promote-"));
-      try {
-        const scoped = await runScopedGcPass({ memory, ledgerFile: join(dir, "state.json"), clock });
-        assert.equal(scoped.proposed === 1, acts, "the scoped approval pass uses the rule");
-        assert.equal((await memory.getEntry(note.id))?.metadata?.status, "candidate", "a proposal never changes the note");
-        if (scoped.proposed > 0) {
-          // The scoped pass only proposes; the plain lifecycle performs the archive on approval.
-          assert.equal(await createFabricLifecycle(memory).archive(note.id), true);
-          assert.equal((await memory.getEntry(note.id))?.metadata?.status, "archived");
-        }
-      } finally {
-        await rm(dir, { recursive: true, force: true });
-      }
-    }
-  });
 });

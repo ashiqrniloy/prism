@@ -469,3 +469,61 @@ it("ollama_native_ndjson_done_line_reports_usage", () => {
   assert.equal(normalizeUsageMetrics(cached).cacheReadTokens, 1000);
   assert.equal(normalizeUsageMetrics(cached).inputTokens, 1200);
 });
+
+it("max_requests_answers_429_without_contacting_the_upstream", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "wire-proxy-ceiling-"));
+  let served = 0;
+  const upstream = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch: () => {
+      served += 1;
+      return Response.json({ id: "g", usage: { prompt_tokens: 3, completion_tokens: 1 } });
+    },
+  });
+  const usageLog = join(dir, "usage.jsonl");
+  const proxy = await startWireProxy({ upstream: `http://127.0.0.1:${upstream.port}`, listen: "127.0.0.1:0", usageLog, maxRequests: 2 });
+  try {
+    const statuses = [];
+    for (let i = 0; i < 4; i++) statuses.push((await fetch(`${proxy.url}/chat/completions`, { method: "POST", body: JSON.stringify({ model: "m" }) })).status);
+    await proxy.drain();
+    assert.deepEqual(statuses, [200, 200, 429, 429]);
+    assert.equal(served, 2);
+    assert.equal(proxy.forwarded(), 2);
+    assert.equal(readFileSync(usageLog, "utf8").trim().split("\n").length, 2);
+  } finally {
+    proxy.stop();
+    upstream.stop(true);
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+it("usage_metrics_read_each_wire_format_inclusively", () => {
+  // OpenAI Chat with a vendor top-level cache_creation_input_tokens (Command Code): not Anthropic's exclusive input.
+  const chat = normalizeUsageMetrics({
+    prompt_tokens: 3277,
+    completion_tokens: 91,
+    total_tokens: 3368,
+    prompt_tokens_details: { cached_tokens: 0 },
+    cache_creation_input_tokens: 3274,
+  });
+  assert.equal(chat.inputTokens, 3277);
+  assert.equal(chat.cacheWriteTokens, 3274);
+  assert.equal(chat.cacheReadTokens, 0);
+
+  // OpenAI Responses: input_tokens is inclusive, the cache counts are under input_tokens_details.
+  const responses = normalizeUsageMetrics({
+    input_tokens: 3045,
+    output_tokens: 5,
+    total_tokens: 3050,
+    input_tokens_details: { cached_tokens: 3042, cache_write_tokens: 0 },
+  });
+  assert.equal(responses.inputTokens, 3045);
+  assert.equal(responses.cacheReadTokens, 3042);
+  assert.equal(responses.cacheWriteTokens, 0);
+
+  // Anthropic Messages stays exclusive-plus-cache.
+  const messages = normalizeUsageMetrics({ input_tokens: 3, output_tokens: 9, cache_read_input_tokens: 2000, cache_creation_input_tokens: 100 });
+  assert.equal(messages.inputTokens, 2103);
+  assert.equal(messages.cacheReadTokens, 2000);
+});

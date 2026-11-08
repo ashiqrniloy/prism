@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import { RuntimeAgentSession } from "../agent-session/session.js";
 import {
-  type AgentDefinition,
   type AgentEvent,
   type ModelProvider,
   type CompactionContext,
@@ -63,35 +62,6 @@ async function take(iterable: AsyncIterable<AgentEvent>, count: number): Promise
 }
 
 describe("agent session runtime", () => {
-  it("rejects legacy RunOptions.maxToolRounds (removed 0.1.5 alias) before any side effects", async () => {
-    const agent = await createAgent({
-      model: { provider: "mock", model: "demo" },
-      packages: [mockProvider([[providerTextDelta("Hello"), providerDone()]])],
-      tools: {
-        add: [
-          {
-            name: "echo",
-            execute: (args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: args }),
-          },
-        ],
-      },
-    });
-    const session = await agent.session({ id: "legacy-alias", create: true });
-
-    await assert.rejects(
-      // @ts-expect-error removed in 0.1.5; use RunOptions.limits.maxToolRounds instead (untyped-JS simulation)
-      session.run("Hi", { maxToolRounds: 1 }),
-      (err) =>
-        err instanceof TypeError &&
-        String(err.message).includes("RunOptions.maxToolRounds was removed in 0.1.5") &&
-        String(err.message).includes("limits.maxToolRounds"),
-    );
-
-    // fail-closed: rejection happens before any session append or provider call (the guard is the
-    // first statement of the run entry, so no events are emitted and no provider request is made)
-    assert.deepEqual(await session.entries(), [], "legacy alias rejection must not append session entries");
-  });
-
   it("streams mock provider text to subscriber", async () => {
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
@@ -1145,18 +1115,6 @@ describe("agent session runtime", () => {
       .map((b) => (b.type === "text" ? b.text : ""))
       .join("\n");
     assert.equal(text.includes("- brief:"), true);
-  });
-
-  it("external agent definition can create runtime agent", async () => {
-    const definition: AgentDefinition = {
-      name: "demo",
-      create: async () => await createAgent({ model: { provider: "mock", model: "demo" }, packages: [mockProvider([[providerDone()]])] }),
-    };
-    const agent = await definition.create!();
-    const session = await agent.session({ id: "s1", create: true });
-
-    await session.run("Hi");
-    assert.equal(session.id, "s1");
   });
 
   it("persists user assistant and tool messages to store", async () => {

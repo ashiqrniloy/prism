@@ -42,7 +42,7 @@ import { parseEnvFile } from "./live-matrix.mjs";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FIXTURES = join(ROOT, "scripts/fixtures/decision-bench.jsonl");
 const MEMORY_FIXTURES = join(ROOT, "scripts/fixtures/decision-bench-memory.jsonl");
-const MEMORY_POINTS = ["P1", "P2", "P3", "P4", "P5", "P6", "P7"];
+const MEMORY_POINTS = ["P3", "P4", "P5", "P7"];
 const MIN_MEMORY_ITEMS_PER_POINT = 100;
 const EVIDENCE_DIR = join(ROOT, "docs/_evidence");
 
@@ -101,8 +101,6 @@ export function validateMemoryItems(items) {
     if (counts[point] < MIN_MEMORY_ITEMS_PER_POINT)
       problems.push(`${point}: expected >= ${MIN_MEMORY_ITEMS_PER_POINT} items, got ${counts[point]}`);
   }
-  const p2 = items.filter((item) => item.point === "P2");
-  if (!p2.some((item) => item.reversed === true)) problems.push("P2: option-order-reversed repeats are missing");
   return problems;
 }
 

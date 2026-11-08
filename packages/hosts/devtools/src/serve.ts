@@ -6,7 +6,8 @@
  * internal. JSON bodies and SSE events pass the agent's redactor on the way out. A bearer token ref
  * guards every route, the page included, when one is set. A non-loopback bind requires one.
  */
-import { type Agent, type AgentEvent, isLoopbackHostname, isSessionNotFound, type SecretRedactor } from "@arnilo/prism";
+import { type Agent, type AgentEvent, isSessionNotFound, type SecretRedactor } from "@arnilo/prism";
+import { isLoopbackHostname } from "@arnilo/prism/net";
 import { parseInspectorCompareBody } from "./compare.js";
 import { DevtoolsError } from "./errors.js";
 import { REPLAY_MAX_LIMIT, replayPage } from "./replay.js";

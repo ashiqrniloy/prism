@@ -60,7 +60,7 @@ const localSkip =
 
 describe("@arnilo/prism-provider-liquid live image probes", () => {
   it.skipIf(hostedSkip !== false)("liquid_live_hosted_decide_with_image", async () => {
-    const provider = createLiquidProvider({ apiKey: "env:LIQUID_API_KEY" });
+    const provider = createLiquidProvider({ apiKey: async () => process.env.LIQUID_API_KEY });
     const result = await provider.decisions!().decide({
       model: "d1.1",
       state: "screenshot",

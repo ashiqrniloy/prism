@@ -1,12 +1,12 @@
-import { createAgent, type CredentialValueSource } from "@arnilo/prism";
-import { createRoutedProvider, providerPackage, replayFetch, type RecordedExchange } from "@arnilo/prism/provider-kit";
+import { createAgent } from "@arnilo/prism";
+import { createRoutedProvider, providerPackage, replayFetch, type RecordedExchange, type SecretSource } from "@arnilo/prism/provider-kit";
 
 /**
  * Custom provider implementation using the routed provider builder.
  * Dispatches between OpenAI-compatible and Anthropic Messages routes.
  */
 export function createAcmeProvider(options: {
-  apiKey?: CredentialValueSource;
+  apiKey?: SecretSource;
   baseUrl?: string;
   fetch?: typeof fetch;
 }) {
@@ -45,7 +45,7 @@ export async function demo(): Promise<Record<string, unknown>> {
   };
 
   const acmeProvider = createAcmeProvider({
-    apiKey: "acme-test-key-demo",
+    apiKey: async () => "acme-test-key-demo",
     fetch: replayFetch(recording),
   });
 

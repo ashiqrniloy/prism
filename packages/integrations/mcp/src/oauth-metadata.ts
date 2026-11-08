@@ -1,4 +1,4 @@
-import { isLoopbackHostname } from "./transport.js";
+import { isLoopbackHostname } from "@arnilo/prism/net";
 import { McpBridgeError, type McpProtectedResource } from "./types.js";
 
 /** RFC 9728 protected-resource metadata path served by the web handler. */

@@ -6,8 +6,8 @@
 // branches: latest-revision approval state (pending/approved/rejected), the error-code map,
 // and the thread-scoped checkpoint key.
 
-import assert from "node:assert/strict";
 import { test } from "bun:test";
+import assert from "node:assert/strict";
 import {
   ARTIFACT_BODY_ERROR_CODES,
   type ArtifactApproval,
@@ -17,7 +17,7 @@ import {
   type ArtifactRevision,
   artifactApprovalState,
   artifactCheckpointKey,
-} from "../artifacts.js";
+} from "../artifacts/index.js";
 
 function rev(version: number): ArtifactRevision {
   return { version, uri: `u${version}`, mime: "text/plain", hash: `h${version}`, createdAt: "2026-01-01T00:00:00.000Z" };

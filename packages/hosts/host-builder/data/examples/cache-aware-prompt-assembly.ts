@@ -99,7 +99,7 @@ function ok(body: ReadableStream<Uint8Array>) {
 
 export async function demo() {
   const hyperProvider = createHyperProvider({
-    apiKey: () => "fake-hyper-key",
+    apiKey: async () => "fake-hyper-key",
     fetch: () =>
       ok(
         sse([
@@ -117,7 +117,7 @@ export async function demo() {
       ),
   });
   const opencodeGoProvider = createOpenCodeGoProvider({
-    apiKey: () => "fake-opencode-go-key",
+    apiKey: async () => "fake-opencode-go-key",
     fetch: () =>
       ok(
         sse([

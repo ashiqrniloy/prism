@@ -8,10 +8,15 @@
 #
 # <waves> is required ("1", "2", "3" or a list such as "1,2"): the owner starts each wave explicitly (gate C-1
 # amendment 6). Jobs of other waves stay in the journal and are reported deferred.
+# Amendment 7 (owner, 2026-11-08) closed the campaign after wave 1: waves 2 and 3 are cancelled and
+# the runner refuses them (C1Closed).
 set -uo pipefail
 cd "$(dirname "$0")/../.."
 WAVES=${1:?usage: c1-supervise.sh <waves, e.g. 1 or 1,2>}
 export PRISM_MEMORY_BENCH_210_WAVES="$WAVES"
+# Every attempt carries one source label, the revision the campaign's write sides and checkpoints were made at, so a
+# commit during the run (git HEAD moves) cannot refuse a resume. Memory, provider and bench code must not change mid-run.
+export PRISM_MEMORY_BENCH_SOURCE=${PRISM_MEMORY_BENCH_210_SOURCE:-ab3606f33749724d1e81867213c228edeead4b34}
 JOURNAL=.cache/memory-bench/210/journal.json
 LOG=.cache/memory-bench/210-campaign.log
 MEMORY_MAX=${PRISM_MEMORY_BENCH_210_MEMORY_MAX:-40G}

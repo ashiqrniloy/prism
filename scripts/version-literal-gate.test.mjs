@@ -380,7 +380,7 @@ test("positive control: the experimental line is accepted for exactly the experi
     "the prerelease anywhere else is reported",
   );
   assert.ok(
-    mutate("packages/memory/wiki/package.json", (m) => {
+    mutate("packages/knowledge/wiki/package.json", (m) => {
       m.dependencies["@arnilo/prism-memory-core"] = `^${current}`;
     }).some((problem) => problem.includes("expected 0.13.0-experimental")),
     "a caret pin into the experimental line is reported",

@@ -87,7 +87,7 @@ The 0.12 config fields and registries are removed, not aliased. Each maps to a h
 
 ## Memory packages
 
-`@arnilo/prism-memory` is replaced by `@arnilo/prism-memory-{core, fabric, rag, wiki, compaction, observational}` (the map above). In 0.13.0 five of them are **experimental**: `core`, `fabric`, `observational`, `wiki` and `rag` ship as `0.13.0-experimental.N` on the npm dist-tag `experimental`, outside the stability promise of the stable packages. A `^0.13.0` range never matches a prerelease, so install them with the tag:
+`@arnilo/prism-memory` is replaced by `@arnilo/prism-memory-{core, fabric, compaction, observational}`, with retrieval and the wiki outside memory as `@arnilo/prism-rag` and `@arnilo/prism-wiki` (the map above). In 0.13.0 five of them are **experimental**: `memory-core`, `memory-fabric`, `memory-observational`, `wiki` and `rag` ship as `0.13.0-experimental.N` on the npm dist-tag `experimental`, outside the stability promise of the stable packages. A `^0.13.0` range never matches a prerelease, so install them with the tag:
 
 ```bash
 bun add @arnilo/prism-memory-fabric@experimental
@@ -110,7 +110,47 @@ Their API, config, preset contents and defaults may change or be removed in any 
 
 `@arnilo/prism-memory-core`'s markdown store: `writeDerivedFile` now keeps a file a person edited (it resolves `false`) instead of overwriting it, accepts `{ replaceEdited: true }`, and the store gains `readDerivedFile(scope, name)`. The `**overwritten**` `log.md` line is gone.
 
-## Wiki → ontology tier
+## Fabric: features removed by the plan 210 audit
+
+Plan 210 measured or tested every optional fabric feature. The 14 below are removed from `@arnilo/prism-memory-fabric` (0.13.0 is unpublished, so there is no alias). A host config that still sets one fails closed when the package loads: `Package @arnilo/prism-memory-fabric config is invalid: <path> unknown key "<field>"`. The error names the field; this table is the migration hint. `conversational` and `coding` preset requests are unchanged, except for the three measured behaviour changes listed after the table.
+
+| Removed | Was | Migration |
+| --- | --- | --- |
+| config `retrieval` (`"hybrid"`) and `limits.maxVectorDimensions`; the `embeddings` service use; `CreateMemoryFabricOptions.retrieval` | an embeddings leg fused with lexical search | none: retrieval is lexical. `createMemory({ embedder })` is a library option and is unchanged; the fabric package no longer reads the `embeddings` service |
+| config `linker`, `evolution`, `passive`; `MemoryFabricLinkerOptions`, `MemoryFabricEvolutionOptions` | workers that wrote `related` links and patched neighbour keywords on a write | none; pass explicit `links` to `memory.insert` / `remember` |
+| config `consolidate.decider` and `consolidate.model`; `createMemoryFabric({ resolveModelClient })` for the decider, `onDeciderFailure`; the `decide_memory` tool | a model call that chose ADD / UPDATE / SUPERSEDE / NOOP per near-duplicate write | Dice consolidation is the only write-time rule; pass `supersedes` to retire a note |
+| `decisions.points` entries `"P1"`, `"P2"`, `"P6"`; `FabricDecisions.applies`, `.supersession`, `TurnDecision.durable`, `SupersessionChoice` | decision-model gates for durable capture, supersession and path-rule applicability | remove them from `points`; `"P3"`, `"P4"`, `"P5"` and `"P7"` stay |
+| config `state` and `StateConfig`; `memory.recall` result field `state` | one model call per explicit recall that wrote a current-state table | none; the grouping markers stay |
+| config `scoped`; `createScopedMemoryPolicy`, `runScopedMemoryEval`, `ScopedMemory*` types, `.memory/state.json` ledger | the 0.12 scoped policy layer (activation floor, approval, fact block, `gcPass`) | `inject` (relevance floor), the note lifecycle (archive rule) and standing rules cover its parts |
+| config `lifecycle.widen`; `memory:maintain` report fields `widened` and `superseded`; note metadata `widenedTo`; `LifecycleNoteView.widen`; `CreateMemoryFabricOptions.openScope` | widening a lesson to the `agent` scope across projects, and narrowing a contradicted wider note | explicit writes choose the scope. The model tools still cannot write `agent`: the error code is now `agent_scope_not_writable` (was `agent_scope_requires_widening`) |
+| `similar` links written by consolidation | a link from a near-duplicate insert to its neighbour | none; pass explicit `links` |
+| config `recall.supersessionHint` | `"all"` (default) or `"keyed-only"` marker for older group members | none: the `"all"` behaviour is the only one |
+| exchange archive keywords (`exchangeKeywords` is no longer written to exchange notes) | deterministic entities, dates and category terms added to each archived exchange | none; the exchange text is indexed as written |
+| exchange `dates` resolution (`resolveDates`) and the `memory.recall` tool parameters `from`, `to` and `order` | resolved event dates and a time window / time order on recall | none; `gather` still lists oldest first |
+
+Measured behaviour changes (plan 210 wave 1, each negative for the feature in the leave-one-out arm): exchange keyword enrichment, the timeline (`dates`, `from`, `to`, `order`) and the `keyed-only` supersession marker. `memory.recall` results for exchange notes no longer carry enrichment keywords or resolved dates, and the `memory.recall` tool schema lost `from`, `to` and `order`. Read-time grouping of archived exchanges by shared subject terms read those keywords, so it no longer groups them; keyed notes and `supersedes` edges still group. The `similar` link and the widening wording also change what the model sees in a `memory.insert` result and the `key` parameter description.
+
+Five features are held in the experimental tier (they may change in a minor version): `recall.multiQuery`, `recall.unmatchedTerms`, `recall.stateGrouping`, `delivery.directory` and `navigation.agenticLexical`; see the fabric README's `## Compatibility`.
+
+## Wiki → knowledge outside memory
+
+Plan 216 Task 3 (owner decision 2026-11-08) moved the ontology out of memory. The development line's package names change with no alias: a manifest or host config that still names an old package fails closed with the loader's own `package_missing` or `import_failed` error, which names the package.
+
+| Before | Now |
+| --- | --- |
+| `@arnilo/prism-memory-wiki` (`packages/memory/wiki`) | `@arnilo/prism-wiki` (`packages/knowledge/wiki`); the factory is `wiki(config)` (was `memoryWiki`) |
+| `@arnilo/prism-memory-rag` (`packages/memory/rag`) | `@arnilo/prism-rag` (`packages/knowledge/rag`); behaviour unchanged |
+| the `memory.fabric` service (`MEMORY_FABRIC_SERVICE`, `FabricOntologyPort`, `createFabricOntology`) | `memory.ltm` (`MEMORY_LTM_SERVICE`, `MemoryLtmPort`, `createMemoryLtmPort`): read-only (`scopes`, `scopeId`, `epoch`, `read`, `scanMetadata`, `activity`, `deletions`); the wiki keeps its own concepts |
+| `memory.fabric.concept-deletion` (`createConceptDeletionHandler`, `MEMORY_FABRIC_CONCEPT_HANDLER_SERVICE`) | none: the wiki reads memory's deletion feed after every retraction epoch and reads every cited id back when it opens |
+| the fabric's `concept` note kind, concept-first `memory.recall`, the concept prior, the directory's concepts line, the passive and path-cue concept pointers, concept sharing (`memory:share`) | concepts live in the wiki's store (markdown under `wiki.root`); `wiki.search` returns them with their cited claims, `wiki.read` drills down, and the wiki adds its own passive pointer. A concept note an older version stored in memory is unreadable there (reason `retired-concept`) |
+| fabric config `ontology.bindThreshold`, `ontology.conceptPrior`, `ontology.maxClaimsRendered` | removed; unknown config fails closed. The wiki takes `bindThreshold` and `search.maxClaimsRendered`; the concept prior is gone |
+| subject binding at memory write time and through the extractor | the wiki binds at ingest and on its pass; memory keeps a `subject` a writer gives as a topic key, and the extractor's `subject` field is ignored |
+| `wiki_ingest` staged under the fabric's `tools.root` as a fabric `file` note | staged under `<wiki.root>/sources/<id>/` and recorded in the wiki's store; no LTM note is written. Keep `wiki.root` outside memory's `tools.root`, which mirrors the files under it as notes |
+| the wiki required `memory.fabric` and failed closed without it | no required service: the wiki runs on its own sources without memory, and `wiki:status` says so. A wiki root serves one project's memory; pointing a second project at it fails closed with `MemoryScopeError` |
+| `resolveMemoryWorkerLimits`, `measureWorkerJson`, `truncateWorkerText`, `runMemoryWorkerLoop` (and their types) from `@arnilo/prism-memory-observational`; `ObservationalMemoryError`/`ObservationalMemoryLimitError` from the worker loop | `@arnilo/prism-memory-core`, with `MemoryWorkerError`/`MemoryWorkerLimitError` |
+| `scanScopedMemoryContent` inside the fabric | `@arnilo/prism-memory-core` (the wiki runs the same trust scan) |
+
+### Wiki before plan 216 → ontology tier
 
 `@arnilo/prism-memory-wiki` is no longer a second page store. It is the ontology tier over the fabric: concept notes in the fabric's own store, each claim citing the notes it rests on. It requires `@arnilo/prism-memory-fabric` (with `semantic` memory on) and fails closed with `missing_service` without it. There is no alias for any 0.12 name.
 
@@ -152,7 +192,19 @@ Their API, config, preset contents and defaults may change or be removed in any 
 | `DelegationTelemetry.childId`, the `prism.delegation.child` attribute | `origin` on the event and `prism.origin.*` span attributes |
 | `CommandDefinition`, `CommandExecutionContext`, `CommandDrivers`, `CommandWorkflowRun`, `CommandResult` | `PackageCommand` / `PackageCommandContext` — a package registers `{ name, description, args?, run(args, { session, host, agent }) }`, and the host-driver seam (`startRun`, `startWorkflow`, `steer`) is gone |
 | `SpeechProvider`, `TranscriptionProvider`, `BatchJobsProvider`, `ModerationProvider`, `RealtimeSession`, `VideoGenerationProvider` | deleted from kernel; implement vendor-specific APIs in provider or host packages |
-| Subpaths `./node/config`, `./node/settings`, `./node/agent-definitions`, `./node/contribution-discovery`, `./testing/agent-event-source-conformance`, `./testing/persistence-schema`, `./testing/feedback` | deleted; `./provider-kit`, `./driver-kit`, `./manifest`, and `./testing` remain |
+| Subpaths `./node/config`, `./node/settings`, `./node/agent-definitions`, `./node/contribution-discovery`, `./testing/agent-event-source-conformance`, `./testing/persistence-schema`, `./testing/feedback` | deleted; `./provider-kit`, `./net`, `./artifacts`, `./driver-kit`, `./manifest`, and `./testing` remain |
+| `pinnedFetch`, `requestPinned`, `resolvePinnedAddress`, `defaultResolver`, `raceAbort`, `boundResponse`, `isLoopbackAddress`, `isLoopbackHostname`, `normalizeHostname`, `PinnedFetchOptions` | `@arnilo/prism/net` (`assertSsrfAllowedUrl` stays on the root) |
+| `ArtifactRecord`, `ArtifactRevision`, `ArtifactApproval`, `ArtifactApprovalState`, `ArtifactDecisionState`, `ArtifactCitation`, `CitationSupport`, `ArtifactDeliveryToken`, `ArtifactBodyRef`, `ArtifactBodyStore`, `ArtifactBodyTransferOptions`, `ArtifactBodyPresignOptions`, `ArtifactBodyErrorCode`, `ARTIFACT_BODY_ERROR_CODES`, `ArtifactBodyStoreError`, `ArtifactError`, `ARTIFACT_CHECKPOINT_NAMESPACE`, `artifactCheckpointKey`, `artifactApprovalState`, `citationBindingDigest`, `HARD_CITATION_EXCERPT_BYTES` | `@arnilo/prism/artifacts` |
+| `MODEL_FAMILY_TOKENS`, `ModelFamilyTokens`, `resolveModelFamily`, the `EventSubscriber` class | deleted; kernel-internal (`estimateMessageTokens` and `session.subscribe()` remain) |
+| `RunLimitTracker` as a value | type only; build one with `createRunLimitTracker(limits)` |
+| `resolveCredentialValue`, `CredentialValueSource` | deleted; a low-level provider factory, discovery helper, or kit client takes `apiKey?: SecretSource` (`() => Promise<string \| undefined>`) from `@arnilo/prism/provider-kit` — build it with `refSource(resolve, "env:…")`; a literal string no longer type-checks. `CredentialRecord` stays on the root |
+| `resolveProviderApiKey(source, providerId, resolveCustom?, request?)` | `resolveProviderApiKey(source, resolveCustom?, request?)` on `@arnilo/prism/provider-kit`; `source` is a `SecretSource` |
+| `AgentDefinition.create()`, `AgentDefinitionResolutionContext.activateAllCapabilities` | deleted; build the agent with `createAgent()` and list `tools` / `skills` by name |
+| `InputAssemblyLayout` `"legacy"`, `RunOptions` / `AgentConfig` `inputLayout: "legacy"` | deleted; `"cache_aware"` is the only layout |
+| `ModelCapabilities.toolCallStrictness: "legacy"` | deleted; `"strict"`, `"lenient"`, or absent (unknown) |
+| The `RunOptions.maxToolRounds` `TypeError` guard (removed in 0.1.5) | deleted; set `RunOptions.limits.maxToolRounds` |
+| `@arnilo/prism-channels/telegram` `CredentialValueSource`; literal `botToken` / `webhookSecret` | `ChannelSecretSource` (`() => Promise<string>`) on `createTelegramAdapter` / `createTelegramWebhookHandler`; `connectTelegram({ webhookSecret })` takes an `env:`/`keyring:` ref and rejects a literal with `ChannelTokenLiteralError` |
+| `@arnilo/prism-tools-web` `WebCredentialSource` (accepted a literal, a callback, or a resolver) | `() => Promise<string \| undefined>`; the package resolves its `x-prism-secret` ref config and builds it |
 | Memory internals that were never documented: prompts, `DEFAULT_*` / `MAX_*` / `MIN_*` / `HARD_*` tuning constants, scoring and eviction helpers, the lifecycle / directory / core builders, the observational workers, settings, flush, commands and compactor, and core's cursor codecs and directory scan (`@arnilo/prism-memory-fabric`, `-core`, `-observational` roots) | no longer exported; the stable set is listed under `## Compatibility` in each package README |
 
 ## Retired interception mechanisms → hooks
@@ -200,7 +252,12 @@ await agent.dispose();
 
 ## Secrets are refs
 
-A 0.12 host that read a literal key from config must move it to a ref. Config and the manifest carry `env:` or `keyring:` refs, resolved at the provider edge. A literal secret in config now fails closed, and secrets never appear in argv, logs, events, `inspect()`, or errors.
+A 0.12 host that read a literal key from config must move it to a ref. Config and the manifest carry `env:` or `keyring:` refs, resolved at the provider edge. A literal secret in config now fails closed, and secrets never appear in argv, logs, events, `inspect()`, or errors. A host that calls a low-level provider factory directly passes a `SecretSource`, never a string:
+
+```ts
+import { refSource } from "@arnilo/prism/provider-kit";
+createOpenRouterProvider({ apiKey: refSource((ref) => resolver.resolve(ref, {}), "env:OPENROUTER_API_KEY") });
+```
 
 ```ts
 // before — a literal key in config

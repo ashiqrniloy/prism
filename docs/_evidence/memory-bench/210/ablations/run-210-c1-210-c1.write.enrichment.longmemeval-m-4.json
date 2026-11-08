@@ -1,0 +1,2383 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 2,
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "usageSource": "local",
+  "phase": "write",
+  "labelInjections": "on",
+  "concurrency": 1,
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "freeOnly": false,
+  "writeGeneration": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "generatedAt": "2026-11-08T06:03:23.807Z",
+  "suite": "longmemeval-m",
+  "subset": "dev",
+  "ability": null,
+  "seed": null,
+  "config": "fabric-x-tools",
+  "ingestion": "product-per-session",
+  "embeddings": null,
+  "provider": "ollama-cloud",
+  "model": "beam",
+  "judge": "ollama-cloud/gpt-oss:120b",
+  "judgePanel": [
+    "ollama-cloud/gpt-oss:120b",
+    "ollama-cloud/gemma4:31b"
+  ],
+  "judgeCalibration": null,
+  "repeats": 1,
+  "judgeProtocol": "enum-json-v1",
+  "dataset": {
+    "file": "longmemeval-m.json",
+    "format": "json-array-stream",
+    "bytes": 2737100077,
+    "sha256": "9d79e5524794a2e6900a3aa9cb7d9152c5a3e8319c9a87c25494ba1eacee495f",
+    "license": "MIT",
+    "url": "https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/resolve/98d7416c24c778c2fee6e6f3006e7a073259d48f/longmemeval_m_cleaned.json",
+    "licenseUrl": "https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/blob/98d7416c24c778c2fee6e6f3006e7a073259d48f/README.md"
+  },
+  "maxInputTokens": 1000000,
+  "ablations": [
+    "fabric.enrichment=off"
+  ],
+  "sourceVariants": [
+    {
+      "path": "packages/memory/fabric/src/exchanges.ts",
+      "originalSha256": "afc866189c5f94919992c6f9458387facf0087ffe225acbf3511bce2d817dc6a",
+      "transformedSha256": "5961767c989751df7eabdf84c9c5d377c636d454fa0395246d563246046a0e06"
+    }
+  ],
+  "sourceRevision": "ab3606f33749724d1e81867213c228edeead4b34",
+  "protocol": {
+    "answerAttempts": 3,
+    "answerBackoffMs": [
+      2000,
+      10000
+    ],
+    "judgeAttempts": 8,
+    "judgeBackoffMs": [
+      1000,
+      2000
+    ],
+    "maxTurns": 8
+  },
+  "memoryConfig": {
+    "observational": null,
+    "fabric": {
+      "preset": {
+        "name": "conversational",
+        "revision": 1,
+        "overridden": []
+      },
+      "enabled": true,
+      "retrieval": "lexical",
+      "semantic": true,
+      "inject": {
+        "query": "task",
+        "kinds": [
+          "exchange"
+        ]
+      },
+      "directory": {
+        "maxTopics": 8,
+        "maxFiles": 10,
+        "maxTokens": 200,
+        "stopWords": false
+      },
+      "rules": {
+        "maxTokens": 600,
+        "scopes": [
+          "user",
+          "project"
+        ],
+        "kinds": [
+          "fact",
+          "preference",
+          "procedure",
+          "decision"
+        ],
+        "capture": "off"
+      },
+      "cues": {
+        "budgetTokens": 300,
+        "maxPerTurn": 2
+      },
+      "team": false,
+      "scopes": {
+        "tenantId": "prism",
+        "threadId": "default",
+        "priors": {
+          "path": 0.15,
+          "project": 0.1,
+          "team": 0.075,
+          "agent": 0.05,
+          "user": 0
+        },
+        "active": [
+          {
+            "level": "project",
+            "resourceId": "projects/bench--00000000"
+          }
+        ],
+        "project": {
+          "resourceId": "projects/bench--00000000",
+          "source": "path"
+        }
+      },
+      "store": "memory",
+      "tools": {},
+      "exchanges": {
+        "enabled": true,
+        "scope": "project",
+        "steps": false
+      },
+      "lessons": {
+        "nudge": false,
+        "minTurnsBetweenNudges": 5,
+        "archiveAfterSessions": 20
+      },
+      "lifecycle": {
+        "verifyAfterSessions": 2,
+        "decay": {
+          "working": 0.4,
+          "episode": 0.8,
+          "fact": 0.4,
+          "preference": 0.2,
+          "procedure": 0.4,
+          "decision": 0.2,
+          "file": 0.4,
+          "exchange": 0.5
+        },
+        "storageWeights": {
+          "explicit": 1,
+          "sessions": 0.5,
+          "helpful": 0.5,
+          "harmful": 1,
+          "outcome": 0.5
+        },
+        "recall": {
+          "retrieval": 0.05,
+          "storage": 0.05
+        },
+        "archive": {
+          "retrievalBelow": -2,
+          "storageBelow": 1,
+          "graceSessions": 10,
+          "lessonSessions": 20
+        },
+        "capacity": {
+          "user": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "agent": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "project": {
+            "notes": 500,
+            "tokens": 60000
+          }
+        },
+        "exchangeCapacity": {
+          "hotTokens": 200000
+        },
+        "merge": {
+          "duplicateDice": 0.8
+        },
+        "widen": {
+          "minProjects": 2,
+          "minSiblings": 2,
+          "contradictionsToSupersede": 2
+        }
+      },
+      "ontology": {
+        "bindThreshold": 2,
+        "conceptPrior": 0.1,
+        "maxClaimsRendered": 8
+      },
+      "recall": {
+        "supersessionHint": "all",
+        "expansion": false,
+        "gather": false
+      },
+      "promote": {
+        "enabled": false,
+        "minScore": 0.5,
+        "maxCandidates": 48,
+        "minTurnsBetween": 8,
+        "derivableFrom": [
+          "AGENTS.md",
+          "README.md",
+          "package.json",
+          "CLAUDE.md"
+        ]
+      },
+      "state": false,
+      "decisions": false
+    }
+  },
+  "inputTokens": 0,
+  "cacheReadTokens": 0,
+  "cacheWriteTokens": 0,
+  "outputTokens": 0,
+  "calls": {
+    "observer": 0,
+    "reflector": 0,
+    "dropper": 0,
+    "embedding": 0,
+    "decider": 0,
+    "consolidate": 0,
+    "judge": 0,
+    "judgeAttempts": 0,
+    "gatewayRetries": 0,
+    "judgeCacheHits": 0,
+    "judgeCacheMisses": 0,
+    "concurrencyHalvings": 0,
+    "overloads": 0
+  },
+  "workerErrors": [],
+  "workerUsage": {
+    "observer": {
+      "calls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0
+    },
+    "reflector": {
+      "calls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0
+    },
+    "dropper": {
+      "calls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0
+    }
+  },
+  "turns": 0,
+  "injectedContextTokens": 0,
+  "injections": [],
+  "attemptId": null,
+  "measurementVersion": "product-phases-delivery-v3",
+  "analysisVersion": "202-paired-cluster-v1",
+  "judgeTemplateVersion": "e3883a2aa5910f76c3f6b377f1758fd4a57ca6dda1449cd86291abd0eea5f306",
+  "gradedTemplateVersion": "f7ff5f9c24afd87f0a5e00bd168103019f6e7140d64031f3e5bec264043c24cb",
+  "protocolHash": "c05b2f959292a6c3490e7ddb23d8d15f602ed9e26e01d9e87c71b3fb047bc1a8",
+  "resumedResults": 0,
+  "results": [
+    {
+      "id": "9aaed6a3",
+      "ability": "multi-session",
+      "cluster": "lme-5d95a068d0e8",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 25028.3
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 5215,
+        "coveredSourceMessages": 5172,
+        "eligibleExchanges": 2587,
+        "refused": 1,
+        "unpairedSourceMessages": 41,
+        "sessions": 480,
+        "entries": 5215,
+        "archived": 2586,
+        "parts": 2586,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 43
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "6071bd76",
+      "ability": "knowledge-update",
+      "cluster": "lme-a63429d2e44c",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 23818.7
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4898,
+        "coveredSourceMessages": 4854,
+        "eligibleExchanges": 2428,
+        "refused": 1,
+        "unpairedSourceMessages": 42,
+        "sessions": 479,
+        "entries": 4898,
+        "archived": 2427,
+        "parts": 2427,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 44
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "gpt4_fa19884d",
+      "ability": "temporal-reasoning",
+      "cluster": "lme-e628bbacf5e4",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 22354.3
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4889,
+        "coveredSourceMessages": 4846,
+        "eligibleExchanges": 2423,
+        "refused": 0,
+        "unpairedSourceMessages": 43,
+        "sessions": 474,
+        "entries": 4889,
+        "archived": 2423,
+        "parts": 2424,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 43
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "6b168ec8",
+      "ability": "single-session-user",
+      "cluster": "lme-91f8f9c25a8d",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 21142.1
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4781,
+        "coveredSourceMessages": 4742,
+        "eligibleExchanges": 2371,
+        "refused": 0,
+        "unpairedSourceMessages": 39,
+        "sessions": 482,
+        "entries": 4781,
+        "archived": 2371,
+        "parts": 2375,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 39
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "8464fc84",
+      "ability": "single-session-assistant",
+      "cluster": "lme-81d89595fc29",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 20012.9
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4968,
+        "coveredSourceMessages": 4928,
+        "eligibleExchanges": 2466,
+        "refused": 2,
+        "unpairedSourceMessages": 36,
+        "sessions": 483,
+        "entries": 4968,
+        "archived": 2464,
+        "parts": 2464,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 40
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "b6025781",
+      "ability": "single-session-preference",
+      "cluster": "lme-e24992a98cc0",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 18054.1
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4915,
+        "coveredSourceMessages": 4864,
+        "eligibleExchanges": 2434,
+        "refused": 2,
+        "unpairedSourceMessages": 47,
+        "sessions": 478,
+        "entries": 4915,
+        "archived": 2432,
+        "parts": 2432,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 51
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "2698e78f_abs",
+      "ability": "abstention",
+      "cluster": "lme-8b9388ab8701",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 19149.1
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4965,
+        "coveredSourceMessages": 4928,
+        "eligibleExchanges": 2465,
+        "refused": 0,
+        "unpairedSourceMessages": 37,
+        "sessions": 465,
+        "entries": 4965,
+        "archived": 2465,
+        "parts": 2465,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 37
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "gpt4_15e38248",
+      "ability": "multi-session",
+      "cluster": "lme-c40ffc9dd119",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 14828.9
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4903,
+        "coveredSourceMessages": 4876,
+        "eligibleExchanges": 2440,
+        "refused": 2,
+        "unpairedSourceMessages": 23,
+        "sessions": 470,
+        "entries": 4903,
+        "archived": 2438,
+        "parts": 2438,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 27
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "618f13b2",
+      "ability": "knowledge-update",
+      "cluster": "lme-c9237bbca798",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 14518.5
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4936,
+        "coveredSourceMessages": 4894,
+        "eligibleExchanges": 2448,
+        "refused": 1,
+        "unpairedSourceMessages": 40,
+        "sessions": 476,
+        "entries": 4936,
+        "archived": 2447,
+        "parts": 2448,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 42
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "gpt4_1e4a8aeb",
+      "ability": "temporal-reasoning",
+      "cluster": "lme-e1d75c9a7f66",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 12957.8
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4651,
+        "coveredSourceMessages": 4610,
+        "eligibleExchanges": 2306,
+        "refused": 1,
+        "unpairedSourceMessages": 39,
+        "sessions": 463,
+        "entries": 4651,
+        "archived": 2305,
+        "parts": 2310,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 41
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "b320f3f8",
+      "ability": "single-session-user",
+      "cluster": "lme-8be9b25994a2",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 21002.2
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4896,
+        "coveredSourceMessages": 4834,
+        "eligibleExchanges": 2421,
+        "refused": 4,
+        "unpairedSourceMessages": 54,
+        "sessions": 476,
+        "entries": 4896,
+        "archived": 2417,
+        "parts": 2417,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 62
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "fea54f57",
+      "ability": "single-session-assistant",
+      "cluster": "lme-50e05720a506",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 18081.5
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4806,
+        "coveredSourceMessages": 4760,
+        "eligibleExchanges": 2382,
+        "refused": 2,
+        "unpairedSourceMessages": 42,
+        "sessions": 470,
+        "entries": 4806,
+        "archived": 2380,
+        "parts": 2382,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 46
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "d24813b1",
+      "ability": "single-session-preference",
+      "cluster": "lme-cdd3b8e161ce",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 15390
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4872,
+        "coveredSourceMessages": 4823,
+        "eligibleExchanges": 2414,
+        "refused": 2,
+        "unpairedSourceMessages": 45,
+        "sessions": 472,
+        "entries": 4872,
+        "archived": 2412,
+        "parts": 2412,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 49
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "80ec1f4f_abs",
+      "ability": "abstention",
+      "cluster": "lme-d0a63c69cfdf",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 19995.9
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4993,
+        "coveredSourceMessages": 4938,
+        "eligibleExchanges": 2471,
+        "refused": 2,
+        "unpairedSourceMessages": 51,
+        "sessions": 488,
+        "entries": 4993,
+        "archived": 2469,
+        "parts": 2471,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 55
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "gpt4_5501fe77",
+      "ability": "multi-session",
+      "cluster": "lme-b7e21e6190b8",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 12825.3
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4786,
+        "coveredSourceMessages": 4742,
+        "eligibleExchanges": 2374,
+        "refused": 3,
+        "unpairedSourceMessages": 38,
+        "sessions": 476,
+        "entries": 4786,
+        "archived": 2371,
+        "parts": 2374,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 44
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "c6853660",
+      "ability": "knowledge-update",
+      "cluster": "lme-d2c42ffe66b1",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 14170.8
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4667,
+        "coveredSourceMessages": 4632,
+        "eligibleExchanges": 2316,
+        "refused": 0,
+        "unpairedSourceMessages": 35,
+        "sessions": 458,
+        "entries": 4667,
+        "archived": 2316,
+        "parts": 2316,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 35
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "gpt4_78cf46a3",
+      "ability": "temporal-reasoning",
+      "cluster": "lme-3292a59ce2f4",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 5120.7
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 2628,
+        "coveredSourceMessages": 2600,
+        "eligibleExchanges": 1303,
+        "refused": 1,
+        "unpairedSourceMessages": 26,
+        "sessions": 243,
+        "entries": 2628,
+        "archived": 1302,
+        "parts": 1302,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 28
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "1e043500",
+      "ability": "single-session-user",
+      "cluster": "lme-6326b043f4dd",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 14028.9
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4914,
+        "coveredSourceMessages": 4873,
+        "eligibleExchanges": 2438,
+        "refused": 1,
+        "unpairedSourceMessages": 39,
+        "sessions": 477,
+        "entries": 4914,
+        "archived": 2437,
+        "parts": 2437,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 41
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "1de5cff2",
+      "ability": "single-session-assistant",
+      "cluster": "lme-4d97b65c47e5",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 15163.9
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4777,
+        "coveredSourceMessages": 4730,
+        "eligibleExchanges": 2367,
+        "refused": 2,
+        "unpairedSourceMessages": 43,
+        "sessions": 470,
+        "entries": 4777,
+        "archived": 2365,
+        "parts": 2365,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 47
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "1da05512",
+      "ability": "single-session-preference",
+      "cluster": "lme-c6e7e0128abc",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 15172.2
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4815,
+        "coveredSourceMessages": 4777,
+        "eligibleExchanges": 2390,
+        "refused": 1,
+        "unpairedSourceMessages": 36,
+        "sessions": 465,
+        "entries": 4815,
+        "archived": 2389,
+        "parts": 2389,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 38
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "19b5f2b3_abs",
+      "ability": "abstention",
+      "cluster": "lme-fb74e311f0a1",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 14737
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4765,
+        "coveredSourceMessages": 4726,
+        "eligibleExchanges": 2363,
+        "refused": 0,
+        "unpairedSourceMessages": 39,
+        "sessions": 471,
+        "entries": 4765,
+        "archived": 2363,
+        "parts": 2365,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 39
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "e831120c",
+      "ability": "multi-session",
+      "cluster": "lme-6de251254b6b",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 15295.6
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4860,
+        "coveredSourceMessages": 4800,
+        "eligibleExchanges": 2403,
+        "refused": 1,
+        "unpairedSourceMessages": 58,
+        "sessions": 467,
+        "entries": 4860,
+        "archived": 2402,
+        "parts": 2402,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 60
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "9bbe84a2",
+      "ability": "knowledge-update",
+      "cluster": "lme-87881e726b4e",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 14353.5
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4807,
+        "coveredSourceMessages": 4768,
+        "eligibleExchanges": 2385,
+        "refused": 1,
+        "unpairedSourceMessages": 37,
+        "sessions": 470,
+        "entries": 4807,
+        "archived": 2384,
+        "parts": 2384,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 39
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "gpt4_21adecb5",
+      "ability": "temporal-reasoning",
+      "cluster": "lme-e444c4657e7a",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 15527.5
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4922,
+        "coveredSourceMessages": 4874,
+        "eligibleExchanges": 2441,
+        "refused": 4,
+        "unpairedSourceMessages": 40,
+        "sessions": 473,
+        "entries": 4922,
+        "archived": 2437,
+        "parts": 2437,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 48
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "36580ce8",
+      "ability": "single-session-user",
+      "cluster": "lme-1cff8e2f6bfb",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 13984.5
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4741,
+        "coveredSourceMessages": 4706,
+        "eligibleExchanges": 2354,
+        "refused": 1,
+        "unpairedSourceMessages": 33,
+        "sessions": 465,
+        "entries": 4741,
+        "archived": 2353,
+        "parts": 2353,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 35
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "1568498a",
+      "ability": "single-session-assistant",
+      "cluster": "lme-0881569b9e2c",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 15133.5
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4933,
+        "coveredSourceMessages": 4896,
+        "eligibleExchanges": 2449,
+        "refused": 1,
+        "unpairedSourceMessages": 35,
+        "sessions": 479,
+        "entries": 4933,
+        "archived": 2448,
+        "parts": 2450,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 37
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "32260d93",
+      "ability": "single-session-preference",
+      "cluster": "lme-8fe991a201d8",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 15580.9
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4837,
+        "coveredSourceMessages": 4794,
+        "eligibleExchanges": 2397,
+        "refused": 0,
+        "unpairedSourceMessages": 43,
+        "sessions": 469,
+        "entries": 4837,
+        "archived": 2397,
+        "parts": 2397,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 43
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "982b5123_abs",
+      "ability": "abstention",
+      "cluster": "lme-fc6403477061",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 9262.2
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 3423,
+        "coveredSourceMessages": 3402,
+        "eligibleExchanges": 1701,
+        "refused": 0,
+        "unpairedSourceMessages": 21,
+        "sessions": 344,
+        "entries": 3423,
+        "archived": 1701,
+        "parts": 1701,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 21
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "6456829e",
+      "ability": "multi-session",
+      "cluster": "lme-2d0700f89843",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 19546.8
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4876,
+        "coveredSourceMessages": 4810,
+        "eligibleExchanges": 2410,
+        "refused": 5,
+        "unpairedSourceMessages": 56,
+        "sessions": 483,
+        "entries": 4876,
+        "archived": 2405,
+        "parts": 2407,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 66
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "89941a94",
+      "ability": "knowledge-update",
+      "cluster": "lme-3e65bfe33b4b",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 20795.6
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4941,
+        "coveredSourceMessages": 4910,
+        "eligibleExchanges": 2455,
+        "refused": 0,
+        "unpairedSourceMessages": 31,
+        "sessions": 469,
+        "entries": 4941,
+        "archived": 2455,
+        "parts": 2455,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 31
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "gpt4_85da3956",
+      "ability": "temporal-reasoning",
+      "cluster": "lme-ce307cd37622",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 17741.3
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 5229,
+        "coveredSourceMessages": 5194,
+        "eligibleExchanges": 2597,
+        "refused": 0,
+        "unpairedSourceMessages": 35,
+        "sessions": 479,
+        "entries": 5229,
+        "archived": 2597,
+        "parts": 2597,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 35
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "faba32e5",
+      "ability": "single-session-user",
+      "cluster": "lme-56e7a48b8ecd",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 19583.4
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 5165,
+        "coveredSourceMessages": 5116,
+        "eligibleExchanges": 2561,
+        "refused": 3,
+        "unpairedSourceMessages": 43,
+        "sessions": 473,
+        "entries": 5165,
+        "archived": 2558,
+        "parts": 2558,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 49
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "a96c20ee_abs",
+      "ability": "abstention",
+      "cluster": "lme-6c65b15e0f3c",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 15084.1
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4960,
+        "coveredSourceMessages": 4904,
+        "eligibleExchanges": 2456,
+        "refused": 4,
+        "unpairedSourceMessages": 48,
+        "sessions": 482,
+        "entries": 4960,
+        "archived": 2452,
+        "parts": 2456,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 56
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "bb7c3b45",
+      "ability": "multi-session",
+      "cluster": "lme-5db4a1cfc303",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 15207.4
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4792,
+        "coveredSourceMessages": 4741,
+        "eligibleExchanges": 2377,
+        "refused": 1,
+        "unpairedSourceMessages": 49,
+        "sessions": 473,
+        "entries": 4792,
+        "archived": 2376,
+        "parts": 2378,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 51
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "6aeb4375",
+      "ability": "knowledge-update",
+      "cluster": "lme-c5337e79e1e7",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 16286
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 5054,
+        "coveredSourceMessages": 5010,
+        "eligibleExchanges": 2506,
+        "refused": 1,
+        "unpairedSourceMessages": 42,
+        "sessions": 486,
+        "entries": 5054,
+        "archived": 2505,
+        "parts": 2505,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 44
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "gpt4_45189cb4",
+      "ability": "temporal-reasoning",
+      "cluster": "lme-dcf1e31f0a87",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 16809.2
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4944,
+        "coveredSourceMessages": 4896,
+        "eligibleExchanges": 2450,
+        "refused": 2,
+        "unpairedSourceMessages": 44,
+        "sessions": 479,
+        "entries": 4944,
+        "archived": 2448,
+        "parts": 2448,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 48
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "e01b8e2f",
+      "ability": "single-session-user",
+      "cluster": "lme-b9ca4357fec1",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 19382.6
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 5045,
+        "coveredSourceMessages": 4986,
+        "eligibleExchanges": 2497,
+        "refused": 4,
+        "unpairedSourceMessages": 51,
+        "sessions": 478,
+        "entries": 5045,
+        "archived": 2493,
+        "parts": 2496,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 59
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "gpt4_70e84552_abs",
+      "ability": "abstention",
+      "cluster": "lme-fa1a7796189f",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 1413.8
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 896,
+        "coveredSourceMessages": 886,
+        "eligibleExchanges": 443,
+        "refused": 0,
+        "unpairedSourceMessages": 10,
+        "sessions": 86,
+        "entries": 896,
+        "archived": 443,
+        "parts": 443,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 10
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "2311e44b",
+      "ability": "multi-session",
+      "cluster": "lme-99287d1f0b0a",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 19822.8
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 5035,
+        "coveredSourceMessages": 4996,
+        "eligibleExchanges": 2500,
+        "refused": 2,
+        "unpairedSourceMessages": 35,
+        "sessions": 481,
+        "entries": 5035,
+        "archived": 2498,
+        "parts": 2498,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 39
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "22d2cb42",
+      "ability": "knowledge-update",
+      "cluster": "lme-915a13776179",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 17140
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4928,
+        "coveredSourceMessages": 4870,
+        "eligibleExchanges": 2438,
+        "refused": 3,
+        "unpairedSourceMessages": 52,
+        "sessions": 474,
+        "entries": 4928,
+        "archived": 2435,
+        "parts": 2435,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 58
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "gpt4_93159ced",
+      "ability": "temporal-reasoning",
+      "cluster": "lme-1883a0e96607",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 7961.4
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 2989,
+        "coveredSourceMessages": 2972,
+        "eligibleExchanges": 1487,
+        "refused": 1,
+        "unpairedSourceMessages": 15,
+        "sessions": 281,
+        "entries": 2989,
+        "archived": 1486,
+        "parts": 1486,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 17
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "ba358f49_abs",
+      "ability": "abstention",
+      "cluster": "lme-f7a330395ddc",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 17141.6
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4947,
+        "coveredSourceMessages": 4896,
+        "eligibleExchanges": 2452,
+        "refused": 4,
+        "unpairedSourceMessages": 43,
+        "sessions": 480,
+        "entries": 4947,
+        "archived": 2448,
+        "parts": 2448,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 51
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "d851d5ba",
+      "ability": "multi-session",
+      "cluster": "lme-90b232d849a1",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 16770.1
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4858,
+        "coveredSourceMessages": 4806,
+        "eligibleExchanges": 2404,
+        "refused": 1,
+        "unpairedSourceMessages": 50,
+        "sessions": 477,
+        "entries": 4858,
+        "archived": 2403,
+        "parts": 2406,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 52
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "ba61f0b9",
+      "ability": "knowledge-update",
+      "cluster": "lme-ff4a804f9c43",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 15324.5
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4813,
+        "coveredSourceMessages": 4770,
+        "eligibleExchanges": 2385,
+        "refused": 0,
+        "unpairedSourceMessages": 43,
+        "sessions": 472,
+        "entries": 4813,
+        "archived": 2385,
+        "parts": 2387,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 43
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "gpt4_7ca326fa",
+      "ability": "temporal-reasoning",
+      "cluster": "lme-049318781167",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 16259.9
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 5058,
+        "coveredSourceMessages": 5002,
+        "eligibleExchanges": 2505,
+        "refused": 4,
+        "unpairedSourceMessages": 48,
+        "sessions": 481,
+        "entries": 5058,
+        "archived": 2501,
+        "parts": 2501,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 56
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "2133c1b5_abs",
+      "ability": "abstention",
+      "cluster": "lme-432d5eaeb6d0",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 11680.4
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 3991,
+        "coveredSourceMessages": 3958,
+        "eligibleExchanges": 1980,
+        "refused": 1,
+        "unpairedSourceMessages": 31,
+        "sessions": 391,
+        "entries": 3991,
+        "archived": 1979,
+        "parts": 1979,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 33
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "7024f17c",
+      "ability": "multi-session",
+      "cluster": "lme-02a7c8fe7c5a",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 17326.5
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4868,
+        "coveredSourceMessages": 4826,
+        "eligibleExchanges": 2415,
+        "refused": 2,
+        "unpairedSourceMessages": 38,
+        "sessions": 470,
+        "entries": 4868,
+        "archived": 2413,
+        "parts": 2413,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 42
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "88432d0a",
+      "ability": "multi-session",
+      "cluster": "lme-f24ee78563dc",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 17688.1
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4850,
+        "coveredSourceMessages": 4804,
+        "eligibleExchanges": 2405,
+        "refused": 3,
+        "unpairedSourceMessages": 40,
+        "sessions": 473,
+        "entries": 4850,
+        "archived": 2402,
+        "parts": 2405,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 46
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "eeda8a6d",
+      "ability": "multi-session",
+      "cluster": "lme-0952e6fda2d5",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 15705.9
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4937,
+        "coveredSourceMessages": 4886,
+        "eligibleExchanges": 2443,
+        "refused": 0,
+        "unpairedSourceMessages": 51,
+        "sessions": 484,
+        "entries": 4937,
+        "archived": 2443,
+        "parts": 2443,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 51
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "ef66a6e5",
+      "ability": "multi-session",
+      "cluster": "lme-f988e8fbf9c8",
+      "outcome": "ingested",
+      "phaseTiming": {
+        "ingestion": 14508.2
+      },
+      "ingest": {
+        "policy": "product-per-session",
+        "sourceMessages": 4848,
+        "coveredSourceMessages": 4810,
+        "eligibleExchanges": 2405,
+        "refused": 0,
+        "unpairedSourceMessages": 38,
+        "sessions": 480,
+        "entries": 4848,
+        "archived": 2405,
+        "parts": 2405,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0,
+        "uncoveredSourceMessages": 38
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    }
+  ],
+  "status": "completed",
+  "limitations": [
+    "Block-level injection accounting until item metadata lands in Tasks 4, 9, 11 and 12.",
+    "Injection token allocations are character estimates, not billing usage.",
+    "OpenCode Go and Hyper judges differ from the papers; scores are not directly comparable."
+  ],
+  "ratesAsOf": "2026-10-29",
+  "ratesStatus": "provider-catalog",
+  "inputCap": 125952,
+  "selectedQuestionIds": [
+    "9aaed6a3",
+    "gpt4_15e38248",
+    "gpt4_5501fe77",
+    "e831120c",
+    "6456829e",
+    "bb7c3b45",
+    "2311e44b",
+    "d851d5ba",
+    "7024f17c",
+    "88432d0a",
+    "eeda8a6d",
+    "ef66a6e5",
+    "6071bd76",
+    "618f13b2",
+    "c6853660",
+    "9bbe84a2",
+    "89941a94",
+    "6aeb4375",
+    "22d2cb42",
+    "ba61f0b9",
+    "gpt4_fa19884d",
+    "gpt4_1e4a8aeb",
+    "gpt4_78cf46a3",
+    "gpt4_21adecb5",
+    "gpt4_85da3956",
+    "gpt4_45189cb4",
+    "gpt4_93159ced",
+    "gpt4_7ca326fa",
+    "6b168ec8",
+    "b320f3f8",
+    "1e043500",
+    "36580ce8",
+    "faba32e5",
+    "e01b8e2f",
+    "8464fc84",
+    "fea54f57",
+    "1de5cff2",
+    "1568498a",
+    "b6025781",
+    "d24813b1",
+    "1da05512",
+    "32260d93",
+    "2698e78f_abs",
+    "80ec1f4f_abs",
+    "19b5f2b3_abs",
+    "982b5123_abs",
+    "a96c20ee_abs",
+    "gpt4_70e84552_abs",
+    "ba358f49_abs",
+    "2133c1b5_abs"
+  ],
+  "runPathFingerprint": "32d70854d2836c77640f5ee971f9fe41a448b5a28696aaf13b0a4047f9280e1d",
+  "measurementPolicy": {
+    "version": "product-phases-v1",
+    "judgeCallsPerHour": 450,
+    "injectionAnnotation": true,
+    "retriesAndBackoffIncluded": true,
+    "queueWaitIncluded": false,
+    "seedSnapshot": false
+  },
+  "sourceMessageTokens": 0,
+  "timing": {
+    "wallMs": 939015.9,
+    "concurrency": {
+      "initial": 1,
+      "active": 1,
+      "floor": 1
+    },
+    "questions": {
+      "n": 50,
+      "wallMs": {
+        "p50": 15597.9,
+        "p95": 22377.2,
+        "mean": 16137.6
+      }
+    },
+    "phases": {
+      "ingestion": {
+        "n": 50,
+        "wallMs": {
+          "p50": 15580.9,
+          "p95": 22354.3,
+          "mean": 16117.4
+        }
+      },
+      "restore": {
+        "n": 0,
+        "wallMs": {
+          "p50": null,
+          "p95": null,
+          "mean": null
+        }
+      },
+      "answer": {
+        "n": 0,
+        "wallMs": {
+          "p50": null,
+          "p95": null,
+          "mean": null
+        }
+      },
+      "evaluation": {
+        "n": 0,
+        "wallMs": {
+          "p50": null,
+          "p95": null,
+          "mean": null
+        }
+      }
+    },
+    "policy": {
+      "answer": "after ingestion, before grading, annotation, final background settlement and disposal",
+      "queueWaitIncluded": false,
+      "retriesAndBackoffIncluded": true
+    },
+    "roles": {},
+    "calls": 0
+  },
+  "metricVersion": 2,
+  "abilities": {
+    "multi-session": {
+      "n": 12,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "multi-session",
+      "definition": "fraction of multi-session answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "knowledge-update": {
+      "n": 8,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "knowledge-update",
+      "definition": "fraction of knowledge-update answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "temporal-reasoning": {
+      "n": 8,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "temporal-reasoning",
+      "definition": "fraction of temporal-reasoning answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-user": {
+      "n": 6,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "single-session-user",
+      "definition": "fraction of single-session-user answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-assistant": {
+      "n": 4,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "single-session-assistant",
+      "definition": "fraction of single-session-assistant answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-preference": {
+      "n": 4,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "single-session-preference",
+      "definition": "fraction of single-session-preference answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "abstention": {
+      "n": 8,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    }
+  },
+  "abilityGroups": {
+    "multi-session": {
+      "n": 12,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "multi-session",
+      "definition": "fraction of multi-session answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "knowledge-update": {
+      "n": 8,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "knowledge-update",
+      "definition": "fraction of knowledge-update answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "temporal-reasoning": {
+      "n": 8,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "temporal-reasoning",
+      "definition": "fraction of temporal-reasoning answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "information-extraction": {
+      "n": 14,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "information-extraction",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "abstention": {
+      "n": 8,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    }
+  },
+  "metricDefinitions": {
+    "multi-session": {
+      "definition": "fraction of multi-session answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "knowledge-update": {
+      "definition": "fraction of knowledge-update answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "temporal-reasoning": {
+      "definition": "fraction of temporal-reasoning answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-user": {
+      "definition": "fraction of single-session-user answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-assistant": {
+      "definition": "fraction of single-session-assistant answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-preference": {
+      "definition": "fraction of single-session-preference answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "abstention": {
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    }
+  },
+  "runLimitRate": 0,
+  "errorRate": 0,
+  "cacheReadRatio": 0,
+  "cacheWriteRatio": 0,
+  "cost": {
+    "currency": "USD",
+    "unit": "per_million_tokens",
+    "rates": {
+      "input": 0.125,
+      "output": 0.4,
+      "cacheRead": 0.015,
+      "cacheWrite": null
+    },
+    "pricingStatus": "priced",
+    "measured": 0,
+    "cachedPrefixSimulation": null,
+    "simulationAssumption": null,
+    "ratesAsOf": "2026-10-29",
+    "ratesStatus": "provider-catalog"
+  },
+  "judgeAgreement": {
+    "n": 0,
+    "judges": {
+      "ollama-cloud/gpt-oss:120b": {
+        "scored": 0,
+        "agreementWithPanel": null
+      },
+      "ollama-cloud/gemma4:31b": {
+        "scored": 0,
+        "agreementWithPanel": null
+      }
+    },
+    "pairs": [
+      {
+        "a": "ollama-cloud/gpt-oss:120b",
+        "b": "ollama-cloud/gemma4:31b",
+        "n": 0,
+        "agreement": null,
+        "kappa": null
+      }
+    ],
+    "fleissKappa": null
+  },
+  "injectionPrecision": {
+    "granularity": "block",
+    "tokensPerTurn": 0,
+    "irrelevantRate": null,
+    "citedIdRate": null,
+    "tokenAccounting": "estimated ceil(characters/4); billing is wire usage"
+  },
+  "injectionPrecisionReason": null,
+  "toolCalls": 0,
+  "toolCallsPerQuestion": 0,
+  "recallCalls": 0,
+  "retrievedSnippetTokens": 0,
+  "answerSessionHitAtK": null,
+  "evidenceRoundCoverage": null,
+  "evidenceAllRequired": null,
+  "fineEvidenceRecall": null,
+  "fineEvidencePrecision": null,
+  "legacyRetrievalRecallAtK": null,
+  "retrievalRecallAtK": null
+}

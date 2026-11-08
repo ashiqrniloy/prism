@@ -160,7 +160,7 @@ export interface ModelCapabilities {
   readonly reasoning?: boolean;
   readonly tools?: boolean;
   /** Advisory, conformance-derived tool-call behavior. Absent means unknown; it never changes runtime tool validation. */
-  readonly toolCallStrictness?: "strict" | "lenient" | "legacy";
+  readonly toolCallStrictness?: "strict" | "lenient";
   readonly streaming?: boolean;
   /** Native JSON-schema structured output support for this model. */
   readonly structuredOutput?: boolean | "json_schema";

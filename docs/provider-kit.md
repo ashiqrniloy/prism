@@ -41,7 +41,7 @@ export interface ProviderRequest {
 A routed provider is configured with `createRoutedProvider(options)`:
 - `id`: Provider ID string.
 - `baseUrl`: Base URL string.
-- `apiKey`: Direct secret string, `CredentialValueSource`, or request-time resolver.
+- `apiKey`: a `SecretSource` (`() => Promise<string | undefined>`; build it with `refSource()` from an `env:`/`keyring:` ref). A literal string does not type-check. `resolveApiKey(request)` resolves per request instead.
 - `routes`: Record of route definitions keyed by route name (`RoutedProviderRoute`). Each route declares `path`, `format` (`"openai-chat" | "anthropic-messages" | "openai-responses"`), `auth`, optional `codec` options, `affinity`, and optional `require`.
 - `fetch`: Optional custom or replay `fetch` implementation.
 
@@ -181,17 +181,17 @@ const configSchema: JsonSchema = {
 `createRoutedProvider` handles multi-route model providers without vendor-specific branching:
 - Dispatches each request to a configured route by reading `request.model.compat?.route` (or defaulting to the first route in `routes`). Unknown routes fail closed with `ProviderRequirementError` (`requirement: "route"`).
 - Enforces pre-fetch requirements before calling `fetch` (e.g. `require.sessionId: true` fails closed with `ProviderRequirementError` (`requirement: "sessionId"`)).
-- Resolves credentials exactly once per request via `resolveApiKey` / `apiKey` (either a direct string, `CredentialValueSource`, or request resolver).
+- Resolves credentials exactly once per request via `resolveApiKey` / `apiKey` (a `SecretSource` or a per-request resolver).
 - Enforces header precedence: provider-owned auth and `content-type` headers are applied after caller headers, preventing caller header hijacking (`assertProviderOwnedHeadersWin`).
 - Enforces bounded error extraction with secret redaction (`assertNoSecretLeak`).
 - `routes[x].mapUsage(usage, chunk)`: per-route usage mapping; the second argument is the decoded SSE chunk, so a
   route can read usage fields that only exist on the chunk (cost telemetry, request ids).
 
 ```ts
-import type { CredentialValueSource, ModelProvider } from "@arnilo/prism";
-import { createRoutedProvider } from "@arnilo/prism/provider-kit";
+import type { ModelProvider } from "@arnilo/prism";
+import { createRoutedProvider, type SecretSource } from "@arnilo/prism/provider-kit";
 
-export function createAcmeProvider(options: { apiKey: CredentialValueSource; baseUrl?: string; fetch?: typeof fetch }): ModelProvider {
+export function createAcmeProvider(options: { apiKey: SecretSource; baseUrl?: string; fetch?: typeof fetch }): ModelProvider {
   return createRoutedProvider({
     id: "acme",
     baseUrl: options.baseUrl ?? "https://api.acme.example/v1",
@@ -424,7 +424,7 @@ Prism decision models (such as `@arnilo/prism-provider-typesafe` and `@arnilo/pr
 
 ## Extension and configuration notes
 
-- Credentials stay factory options or `ModelSpec.credential` refs, never package config. A provider that needs a
+- A low-level factory takes the credential as a `SecretSource` or `ModelSpec.credential` ref, never a literal. A provider that needs a
   key takes a `resolveApiKey(request)` callback and lets the caller resolve the ref through the `credentials`
   slot; a provider *package* takes a `x-prism-secret` ref from config and wraps it with `refSource`.
 - `secretRefProperty` defaults its description to the canonical ref sentence; a vendor-specific field (an
@@ -484,6 +484,10 @@ handles request serialization and SSE event parsing for providers implementing t
   - Both `createRoutedProvider` and individual codecs (`openai-chat`, `anthropic-messages`) accept route affinity hooks: `routes[x].affinity?: (request: ProviderRequest) => Record<string, string>`.
   - Route affinity headers (e.g., `sanitizeCacheKey(modelSpec.options?.promptCache?.key)`) are merged into outgoing request headers after caller headers and before provider-owned auth/content-type headers, allowing sticky routing to the same backend node.
 
+### Cache-friendly encoders
+
+`createRoutedProvider` (and `createOpenAICompatibleProvider`, which is a one-route instance of it) returns a `RoutedProvider`: a `ModelProvider` with `encode(request): Promise<JsonObject>`. `encode` selects the route and runs the codec exactly as `generate` does, then returns the body without resolving a key or touching the network. An upstream prompt cache keys on `tools`, `system` and the earlier messages, so an encoder is cache-friendly when each request's body keeps those segments byte-equal to the previous request's and only appends. Prove it with the `encode` option of `runPrefixStabilityConformance` ([Testing](testing.md#prefix-stability-atarniloprismtestingprefix-stability-conformance)); `hyper` and `opencode-go` run it for both routes over a ten-request tool loop with thinking replay on. The method is not on the kernel `ModelProvider` contract, so a hand-written provider adds its own `encode` (or builds its bodies through a shared function) to take part.
+
 ## Wire replay and stream conformance
 
 `@arnilo/prism/provider-kit` exports offline replay fixtures and stream conformance verification:
@@ -503,7 +507,7 @@ import { providerConformance } from "@arnilo/prism/provider-kit";
 import { createHyperProvider, hyperModels } from "@arnilo/prism-provider-hyper";
 
 const result = await providerConformance(
-  () => createHyperProvider({ apiKey: "test-key" }),
+  () => createHyperProvider({ apiKey: async () => "test-key" }),
   {
     recordings: new URL("./wire/anthropic", import.meta.url),
     models: hyperModels,

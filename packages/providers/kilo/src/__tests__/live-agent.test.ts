@@ -131,7 +131,7 @@ describe("Kilo credentialless and data-collection live checks", () => {
     async () => {
       const bodies: unknown[] = [];
       const provider = createKiloProvider({
-        apiKey: process.env.KILO_API_KEY,
+        apiKey: async () => process.env.KILO_API_KEY,
         dataCollection: "deny",
         fetch: (async (input, init) => {
           bodies.push(init?.body ? JSON.parse(String(init.body)) : undefined);

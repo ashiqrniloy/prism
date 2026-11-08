@@ -1,4 +1,5 @@
-import { assertSsrfAllowedUrl, MediaContentError, pinnedFetch, type SecretRedactor, type SsrfPolicy } from "@arnilo/prism";
+import { assertSsrfAllowedUrl, MediaContentError, type SecretRedactor, type SsrfPolicy } from "@arnilo/prism";
+import { pinnedFetch } from "@arnilo/prism/net";
 import { PolicyError } from "./errors.js";
 import { createPolicyEvaluator } from "./evaluator.js";
 import { assertNoUnrestrictedPayload } from "./prepare.js";

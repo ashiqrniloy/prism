@@ -9,7 +9,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { createSecretRedactor } from "@arnilo/prism";
-import { scanScopedMemoryContent } from "../../packages/memory/fabric/src/scoped/trust.ts";
+import { scanScopedMemoryContent } from "../../packages/memory/core/src/trust.ts";
 import { loadDataset, normalizeDataset } from "./datasets.mjs";
 
 export const TRUST_SCAN_CLASSES = ["prompt-injection", "exfil", "invisible-unicode", "secret"];

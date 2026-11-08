@@ -79,33 +79,16 @@ console.log(`post-publish smoke: PASS (${local ? "local tarballs" : `registry @$
 
 // The consumer-side checks: one import per headline surface plus one real behavior each.
 function smokeSource() {
-  return `import { mkdtemp } from "node:fs/promises";
-import { readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { createAgent, definePackage, providerTextDelta, providerDone } from "@arnilo/prism";
+  return `import { createAgent, definePackage, providerTextDelta, providerDone } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import { createHashEmbedder } from "@arnilo/prism-memory-core";
-import { createMemory, createMemoryFabric, createScopedMemoryPolicy } from "@arnilo/prism-memory-fabric";
+import { createMemory, createMemoryFabric } from "@arnilo/prism-memory-fabric";
 import hooksJson, { hookCommandHash } from "@arnilo/prism-hooks-json";
 
 const checks = [];
 checks.push(["root: createAgent + definePackage", [createAgent, definePackage].every((f) => typeof f === "function")]);
 checks.push(["memory-fabric: createMemory + createMemoryFabric", [createMemory, createMemoryFabric].every((f) => typeof f === "function")]);
-checks.push(["memory-fabric: createScopedMemoryPolicy", typeof createScopedMemoryPolicy === "function"]);
 checks.push(["hooks-json default export", typeof hooksJson === "function" && hooksJson.name === "@arnilo/prism-hooks-json"]);
 checks.push(["hooks-json hash helper", typeof hookCommandHash === "function"]);
-
-const scopeRoot = await mkdtemp(join(tmpdir(), "prism-scoped-smoke-"));
-const memory = createMemory({ tenantId: "smoke", resourceId: scopeRoot, threadId: "scoped", embedder: createHashEmbedder({ dimensions: 8 }) });
-const fabric = createMemoryFabric({ memory, consolidate: false });
-const policy = createScopedMemoryPolicy({ memory, fabric, scopeRoot });
-const miss = await policy.recall("unladenswallow airspeed");
-checks.push(["scoped recall abstains below the floor", miss.hits.length === 0 && miss.abstained === true]);
-await policy.reviewSession("remember", { reviewer: async () => [{ kind: "fact", content: "alphazebra uniquequeryxyz staging ssh listens on port 2222", sourceEntryIds: ["aaaaaaaaaaaa"] }] });
-const hit = await policy.recall("alphazebra uniquequeryxyz staging ssh");
-checks.push(["scoped write then recall above the floor", !hit.abstained && hit.hits.length >= 1]);
-checks.push(["scoped ledger written", readFileSync(join(scopeRoot, ".memory", "state.json"), "utf8").length > 0]);
 
 const provider = { id: "mock", async *generate() { yield providerTextDelta("ok"); yield providerDone(); } };
 const agent = await createAgent({
@@ -158,10 +141,15 @@ checks.push(["building the extractor without the peer fails closed as missingPee
 checks.push(["the failure carries no document content", Boolean(missingPeer) && !String(missingPeer.message).includes("Hello Prism")]);
 
 const ingest = extraction.createDocumentIngest({ extract: async () => ({ markdown: "SMOKE-MARKDOWN", format: "odt", ocrUsed: false }) });
-const wiki = await import("@arnilo/prism-memory-wiki");
+const wiki = await import("@arnilo/prism-wiki");
 checks.push([
-  "the wiki package exports the memoryWiki factory, its definition and the ingest tool name, and no retired CLI",
-  typeof wiki.memoryWiki === "function" && wiki.default === wiki.definition && wiki.WIKI_INGEST_TOOL_NAME === "wiki_ingest" && wiki.runCli === undefined,
+  "the wiki package exports the wiki factory, its definition, the ingest, search and read tool names, and no retired CLI",
+  typeof wiki.wiki === "function" &&
+    wiki.default === wiki.definition &&
+    wiki.WIKI_INGEST_TOOL_NAME === "wiki_ingest" &&
+    wiki.WIKI_SEARCH_TOOL === "wiki.search" &&
+    wiki.WIKI_READ_TOOL === "wiki.read" &&
+    wiki.runCli === undefined,
 ]);
 const parsed = await ingest.parser.parse({ uri: "hello.odt", data: odt, mediaType: "application/vnd.oasis.opendocument.text" });
 checks.push(["rag parser returns the markdown plus untrusted metadata", parsed.text === "SMOKE-MARKDOWN" && parsed.metadata.untrusted === true && parsed.metadata.inert === true && parsed.metadata.injectionCapable === true]);

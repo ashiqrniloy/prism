@@ -2,43 +2,36 @@
 
 ## What it does
 
-Prism provides small helpers for host-owned credentials and known-secret redaction:
+Prism resolves credentials from refs, never from literals, and redacts the values it resolves:
 
-- `resolveCredentialValue()`: resolves a credential from a direct string, callback, or `CredentialResolver`.
-- `createExplicitCredentialResolver()`: tries named resolver sources in caller-provided order, such as runtime override → stored → env object → fallback.
-- `createEnvCredentialResolver()`: reads only a caller-supplied env-like object and map.
-- `CredentialValueSource`: the accepted source type for `resolveCredentialValue()`.
+- The **credentials slot** (`AgentConfig.slots.credentials`, a `CredentialResolver`) resolves `env:` and `keyring:` refs. The kernel default is `createEnvRefCredentialResolver()`, which answers `env:NAME` refs from `process.env` (or an env-like object you pass); `@arnilo/prism-credentials-keyring` answers `keyring:` refs.
+- Packages resolve through `PackageAPI.credentials.resolve(ref)`. Every secret-bearing package config field is an `x-prism-secret` property, so a literal fails with `literal_secret` at load time.
+- `SecretSource` (`@arnilo/prism/provider-kit`): `() => Promise<string | undefined>`, the only credential shape a low-level provider factory, discovery helper, or kit client accepts. `refSource(resolve, ref)` and `optionalRefSource(resolve, ref)` build one from a ref; a literal string does not type-check.
 - `redactSecrets()`: replaces known secret string values inside strings, arrays, and plain objects.
 - `errorToErrorInfo()`: converts unknown errors into `ErrorInfo` and redacts known secret values from error text.
 
-These helpers do not persist credentials, scan environment variables, execute commands, or load settings.
+Every value the slot returns joins the agent's secret set and is redacted from everything the agent raises from then on.
 
 ## When to use it
 
-Use these helpers inside provider adapters or host integration code that needs to resolve a credential at request time and prevent known secret values from appearing in emitted errors or logs.
+Use refs in package config and the manifest, a `SecretSource` when you call a low-level provider factory yourself, and `redactSecrets()` / `errorToErrorInfo()` in host integration code that handles a credential directly.
 
-Do not use them as a credential manager, general secret scanner, vault, settings loader, or permission system.
+Do not use these helpers as a general secret scanner, vault, settings loader, or permission system.
 
 ## Inputs / request
 
 ```ts
-resolveCredentialValue(
-  source: CredentialValueSource | undefined,
-  request: CredentialRequest,
-): Promise<string | undefined>
-```
+interface CredentialResolver {
+  resolve(ref: string, ctx: CredentialContext): Promise<Secret | undefined> | Secret | undefined;
+  store?(ref: string, secret: Secret, ctx: CredentialContext): Promise<void> | void;
+  delete?(ref: string, ctx: CredentialContext): Promise<void> | void;
+}
+createEnvRefCredentialResolver(env?: Readonly<Record<string, string | undefined>>): CredentialResolver
 
-`CredentialValueSource` can be:
+type SecretSource = () => Promise<string | undefined>; // @arnilo/prism/provider-kit
+refSource(resolve: (ref: string) => Promise<Secret | undefined>, ref: string): () => Promise<string>
+optionalRefSource(resolve: (ref: string) => Promise<Secret | undefined>, ref: string): () => Promise<string | undefined>
 
-| Source | Behavior |
-| --- | --- |
-| `string` | Returned directly. |
-| `() => string | undefined | Promise<string | undefined>` | Called when a credential is needed. |
-| `CredentialResolver` | `resolve(request)` is called and `.value` is returned. |
-
-```ts
-createExplicitCredentialResolver(sources: readonly CredentialResolverSource[]): CredentialResolver
-createEnvCredentialResolver(env: Readonly<Record<string, string | undefined>>, map: Readonly<Record<string, string>>): CredentialResolver
 redactSecrets<T>(value: T, secrets: readonly (string | undefined)[]): T
 errorToErrorInfo(error: unknown, secrets?: readonly (string | undefined)[]): ErrorInfo
 ```
@@ -47,7 +40,8 @@ errorToErrorInfo(error: unknown, secrets?: readonly (string | undefined)[]): Err
 
 ## Outputs / response / events
 
-- `resolveCredentialValue()` returns a credential string or `undefined`.
+- `CredentialResolver.resolve()` returns a `Secret` (`{ type, value, metadata? }`) or `undefined` for a ref it does not know.
+- `refSource()` throws `CredentialUnavailableError` (`credential_unavailable`) when the ref resolves to nothing; `optionalRefSource()` returns `undefined`.
 - `redactSecrets()` returns the same value shape with known string secrets replaced by `[REDACTED]`.
 - `errorToErrorInfo()` returns `{ name?, message, code?, cause? }` with known secret values removed from message/cause text.
 
@@ -55,8 +49,8 @@ errorToErrorInfo(error: unknown, secrets?: readonly (string | undefined)[]): Err
 
 ```json
 {
-  "request": { "name": "apiKey", "provider": "demo" },
-  "resolved": "<host-owned credential value>",
+  "ref": "env:DEMO_API_KEY",
+  "resolved": { "type": "api_key", "value": "<host-owned credential value>" },
   "redactedError": { "message": "bad key [REDACTED]" }
 }
 ```
@@ -64,27 +58,15 @@ errorToErrorInfo(error: unknown, secrets?: readonly (string | undefined)[]): Err
 ## Implementation example
 
 ```ts
-import {
-  createEnvCredentialResolver,
-  createExplicitCredentialResolver,
-  errorToErrorInfo,
-  redactSecrets,
-  resolveCredentialValue,
-} from "@arnilo/prism";
+import { createEnvRefCredentialResolver, errorToErrorInfo, redactSecrets } from "@arnilo/prism";
+import { refSource, type SecretSource } from "@arnilo/prism/provider-kit";
 
-const runtime = { resolve: () => undefined };
-const stored = { resolve: () => undefined };
-const env = createEnvCredentialResolver({ DEMO_API_KEY: "fake-demo-key" }, { demo: "DEMO_API_KEY" });
-const resolver = createExplicitCredentialResolver([
-  { name: "runtime", resolver: runtime },
-  { name: "stored", resolver: stored },
-  { name: "env", resolver: env },
-]);
+const credentials = createEnvRefCredentialResolver({ DEMO_API_KEY: "fake-demo-key" });
+const apiKey: SecretSource = refSource(async (ref) => credentials.resolve(ref, {}), "env:DEMO_API_KEY");
 
-const apiKey = await resolveCredentialValue(resolver, { name: "apiKey", provider: "demo" });
-
-const message = redactSecrets(`request failed for ${apiKey}`, [apiKey]);
-const error = errorToErrorInfo(new Error(`bad credential ${apiKey}`), [apiKey]);
+const key = await apiKey();
+const message = redactSecrets(`request failed for ${key}`, [key]);
+const error = errorToErrorInfo(new Error(`bad credential ${key}`), [key]);
 
 console.log(message);
 console.log(error.message);
@@ -92,13 +74,11 @@ console.log(error.message);
 
 ## Extension and configuration notes
 
-- Hosts and extension packages can implement `CredentialResolver` and pass it explicitly to code that needs credentials.
-- Credentials stay host-owned outside `AgentConfig`. `createAgent()` / `session.run()` do not call `credentials.resolve()`. Provider adapters, compaction workers, or request policies should receive and resolve credentials at the provider edge.
-- Use `createExplicitCredentialResolver()` when documenting a fixed order such as runtime override, stored credential, caller-provided env object, then fallback resolver.
-- Use `createEnvCredentialResolver()` only with an object supplied by the host; Prism does not read `process.env` for you.
-- Provider adapters should resolve credentials as late as possible, per request.
+- Assign `AgentConfig.slots.credentials` to replace the default resolver, or install `@arnilo/prism-credentials-keyring`, which provides the slot.
+- `createAgent()` / `session.run()` never resolve credentials eagerly. Packages resolve at the provider edge, per request, through `PackageAPI.credentials.resolve(ref)`.
+- Package config holds refs only: build secret properties with `secretRefProperty()` from `@arnilo/prism/provider-kit`. `refSource()` bridges the ref to the low-level factory's `SecretSource`.
 - Keep resolved credential values local to the request path. Do not put them in registries, model configs, messages, provider events, agent events, session entries, compaction summaries, or logs.
-- Future settings/config loaders may provide credential resolver instances, but core helpers remain storage-free.
+- 0.12's `resolveCredentialValue()` and `CredentialValueSource` (which accepted a literal string) are gone; see [Migrating to 0.13](migrate-to-0.13.md).
 
 ### Subscription OAuth eligibility
 
@@ -123,14 +103,14 @@ A future provider-local OAuth adapter needs published permission for third-party
 - Use placeholders in tests and docs. Never commit real tokens.
 - Live provider/worker tests are gated behind explicit environment variables and skipped by default: `PRISM_LIVE_PROVIDER_TESTS`, `PRISM_LIVE_COMPACTION_TESTS`, `PRISM_LIVE_OBSERVATIONAL_MEMORY_TESTS`. Default `npm test` is network-free; do not add ungated network calls to default tests.
 - Credentials are not eagerly resolved by the core runtime, serialized into provider requests/events/stores, or passed to loops/compaction.
-- `resolveCredentialValue()` and `createExplicitCredentialResolver()` do not cache values. Add host-side caching only if a real credential source needs it.
+- `refSource()` and the kernel's resolvers do not cache values; a rotated secret is read on the next request. Add caching inside a custom `CredentialResolver` only if a real credential source needs it.
 
 
 ## Related APIs
 
-- [Public contracts](packages.md): `CredentialRequest`, `Credential`, `CredentialResolver`, `CredentialResolverSource`, `OAuthCredentials`, and `ErrorInfo`.
+- [Packages](packages.md): `CredentialResolver`, `CredentialContext`, `Secret`, `OAuthCredentials`, `PackageAPI.credentials`, and `ErrorInfo`.
 - [Provider layer](provider-kit.md): `providerError()` uses `errorToErrorInfo()` for redacted provider error events.
 - [LLM compaction package](../packages/memory/compaction/README.md): resolves optional summary-provider credentials per compaction call and redacts exact known values.
 - OpenAI-compatible provider: resolves API keys per request and redacts known values from adapter errors.
 
-Phase 10 added `createMemoryCredentialStore()`, `createChainedCredentialResolver()`, and `createSecretRedactor()` for opt-in in-memory auth and runtime redaction. By default the memory store serves a providerless record for a provider-scoped request of the same name — that record is then shared across every provider; pass `{ allowProviderFallback: false }` for exact-match-only resolution (strict provider scoping). Phase 11 adds OAuth/API-key contracts plus explicit resolver order helpers. Core still has no persistent secret store and does not read environment variables or files for credentials. For durable storage, use [`@arnilo/prism-credentials-keyring`](../packages/credentials/keyring/README.md) encrypted-file or keychain backends. See [Security/auth/trust](settings-auth-trust-security.md).
+`createSecretRedactor()` builds a runtime redactor over known values. Core has no persistent secret store and reads environment variables only through the `env:` resolver the credentials slot defaults to. For durable storage, use [`@arnilo/prism-credentials-keyring`](../packages/credentials/keyring/README.md) encrypted-file or keychain backends. See [Security/auth/trust](settings-auth-trust-security.md).

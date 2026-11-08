@@ -46,8 +46,8 @@ const EXPERIMENTAL = [
   "@arnilo/prism-memory-core",
   "@arnilo/prism-memory-observational",
   "@arnilo/prism-memory-fabric",
-  "@arnilo/prism-memory-wiki",
-  "@arnilo/prism-memory-rag",
+  "@arnilo/prism-wiki",
+  "@arnilo/prism-rag",
 ];
 
 test("reference_host_default_loads_no_experimental_package", async () => {
@@ -93,7 +93,7 @@ test("reference_host_memory_opt_in_loads_om_and_fabric", async () => {
         assert.equal(names.includes("@arnilo/prism-memory-compaction"), true, "compaction stays on the compaction slot");
       }
       assert.equal(
-        research.inspect().packages.some((entry) => entry.name === "@arnilo/prism-memory-rag"),
+        research.inspect().packages.some((entry) => entry.name === "@arnilo/prism-rag"),
         false,
         "rag needs embeddings",
       );
@@ -114,7 +114,7 @@ test("research_worker_loads_memory_rag_only_with_embeddings", async () => {
     const research = await createResearchWorker({ ...config(root), embeddings: { model: "mock/embed" } }, { packages: [provider] });
     try {
       const names = research.inspect().packages.map((entry) => entry.name);
-      assert.equal(names.includes("@arnilo/prism-memory-rag"), true);
+      assert.equal(names.includes("@arnilo/prism-rag"), true);
       assert.equal(names.includes("@arnilo/prism-memory-fabric"), false);
     } finally {
       await research.dispose();
@@ -174,7 +174,7 @@ test("reference_host_ontology_option_recalls_concept_across_sessions", async () 
     assert.equal(result.concepts, 1, "the pass writes one concept on the config-selected model");
     assert.equal(result.claims.length, 3);
     const first = result.recalled.split("\n").find((line) => /^\[?[0-9a-f]{12}\]? /.test(line)) ?? "";
-    assert.match(first, /concept payments/, "memory.recall returns the concept before the notes it cites");
+    assert.match(first, /concept payments/, "wiki.search returns the concept with the ids its claims cite");
     assert.equal(result.claimsAfterForget.length, 2, "forgetting a cited note removes its claim");
   } finally {
     rmSync(root, { recursive: true, force: true });
@@ -198,12 +198,16 @@ test("reference_host_ontology_off_by_default", async () => {
     };
     for (const list of await names({ ...config(root), memory: "coding" })) {
       assert.equal(list.includes("@arnilo/prism-memory-fabric"), true);
-      assert.equal(list.includes("@arnilo/prism-memory-wiki"), false, "memory alone never adds the ontology tier");
+      assert.equal(list.includes("@arnilo/prism-wiki"), false, "memory alone never adds the ontology tier");
     }
     for (const list of await names({ ...config(root), memory: "coding", ontology: true })) {
-      assert.equal(list.includes("@arnilo/prism-memory-wiki"), true, "ontology: true adds the wiki beside the fabric");
+      assert.equal(list.includes("@arnilo/prism-wiki"), true, "ontology: true adds the wiki beside the fabric");
     }
-    await assert.rejects(() => createCodingWorker({ ...config(root), ontology: true }, { packages: [provider] }), /needs memory/);
+    // The wiki runs without memory on its own sources (plan 216 Task 3).
+    for (const list of await names({ ...config(root), ontology: true })) {
+      assert.equal(list.includes("@arnilo/prism-wiki"), true);
+      assert.equal(list.includes("@arnilo/prism-memory-fabric"), false);
+    }
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -226,7 +230,7 @@ test("ontology_option_is_validated_in_the_config_file", () => {
   try {
     assert.equal(load({ memory: "coding", ontology: true, ontologyModel: "openai/gpt-5-mini" }).ontology, true);
     assert.equal(load({ memory: "coding" }).ontology, undefined);
-    assert.throws(() => load({ ontology: true }), /ontology needs memory/);
+    assert.equal(load({ ontology: true }).ontology, true, "the wiki needs no memory");
     assert.throws(() => load({ memory: "coding", ontology: "yes" }), /ontology must be a boolean/);
     assert.throws(() => load({ memory: "coding", ontologyModel: "openai/gpt-5-mini" }), /ontologyModel needs ontology/);
   } finally {

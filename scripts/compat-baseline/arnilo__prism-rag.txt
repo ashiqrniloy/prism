@@ -1,120 +1,168 @@
-ChunkOptions	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-Chunker	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-CreateTeiRerankerOptions	export type { CreateTeiRerankerOptions } from "./tei-reranker.js"
-DEFAULT_CHUNK_OVERLAP	export declare const DEFAULT_CHUNK_OVERLAP = 100
-DEFAULT_CHUNK_SIZE	export declare const DEFAULT_CHUNK_SIZE = 1000
-DEFAULT_EMBED_BATCH_SIZE	export declare const DEFAULT_EMBED_BATCH_SIZE = 32
-DEFAULT_INGESTION_STATUS_PAGE_SIZE	export declare const DEFAULT_INGESTION_STATUS_PAGE_SIZE = 50
-DEFAULT_MAX_CHUNKS	export declare const DEFAULT_MAX_CHUNKS = 2048
-DEFAULT_MAX_CONTEXT_TOKENS	export declare const DEFAULT_MAX_CONTEXT_TOKENS = 2000
-DEFAULT_MAX_DOCUMENT_BYTES	export declare const DEFAULT_MAX_DOCUMENT_BYTES = 1048576
-DEFAULT_MAX_DOCUMENT_CHARS	export declare const DEFAULT_MAX_DOCUMENT_CHARS = 1048576
-DEFAULT_MAX_METADATA_BYTES	export declare const DEFAULT_MAX_METADATA_BYTES: number
-DEFAULT_MAX_PARSE_MS	export declare const DEFAULT_MAX_PARSE_MS = 30000
-DEFAULT_MAX_PDF_PAGES	export declare const DEFAULT_MAX_PDF_PAGES = 256
-DEFAULT_MAX_RERANK_BYTES	export declare const DEFAULT_MAX_RERANK_BYTES: number
-DEFAULT_MAX_RERANK_MS	export declare const DEFAULT_MAX_RERANK_MS = 2000
-DEFAULT_MAX_RESULT_BYTES	export declare const DEFAULT_MAX_RESULT_BYTES: number
-DEFAULT_MAX_VECTOR_DIMENSIONS	export declare const DEFAULT_MAX_VECTOR_DIMENSIONS = 4096
-DEFAULT_QUERY_CANDIDATES	export declare const DEFAULT_QUERY_CANDIDATES = 20
-DEFAULT_RERANK_CONCURRENCY	export declare const DEFAULT_RERANK_CONCURRENCY = 2
-DEFAULT_RRF_K	export declare const DEFAULT_RRF_K = 60
-DEFAULT_TOP_K	export declare const DEFAULT_TOP_K = 5
-DeleteSourceOptions	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-DocumentLoadOptions	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-DocumentLoader	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-DocumentParseOptions	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-FusedCandidate	export type { FusedCandidate, RetrievalLeg } from "./fusion.js"
-HARD_CHUNK_OVERLAP_CAP	export declare const HARD_CHUNK_OVERLAP_CAP = 4096
-HARD_CHUNK_SIZE_CAP	export declare const HARD_CHUNK_SIZE_CAP = 16384
-HARD_EMBED_BATCH_SIZE_CAP	export declare const HARD_EMBED_BATCH_SIZE_CAP = 128
-HARD_INGESTION_STATUS_PAGE_SIZE_CAP	export declare const HARD_INGESTION_STATUS_PAGE_SIZE_CAP = 200
-HARD_MAX_CHUNKS_CAP	export declare const HARD_MAX_CHUNKS_CAP = 8192
-HARD_MAX_CONTEXT_TOKENS_CAP	export declare const HARD_MAX_CONTEXT_TOKENS_CAP = 8000
-HARD_MAX_DOCUMENT_BYTES_CAP	export declare const HARD_MAX_DOCUMENT_BYTES_CAP: number
-HARD_MAX_DOCUMENT_CHARS_CAP	export declare const HARD_MAX_DOCUMENT_CHARS_CAP = 8388608
-HARD_MAX_METADATA_BYTES_CAP	export declare const HARD_MAX_METADATA_BYTES_CAP: number
-HARD_MAX_PARSE_MS_CAP	export declare const HARD_MAX_PARSE_MS_CAP = 30000
-HARD_MAX_PDF_PAGES_CAP	export declare const HARD_MAX_PDF_PAGES_CAP = 256
-HARD_MAX_RERANK_BYTES_CAP	export declare const HARD_MAX_RERANK_BYTES_CAP: number
-HARD_MAX_RERANK_MS_CAP	export declare const HARD_MAX_RERANK_MS_CAP = 10000
-HARD_MAX_RESULT_BYTES_CAP	export declare const HARD_MAX_RESULT_BYTES_CAP: number
-HARD_QUERY_CANDIDATES_CAP	export declare const HARD_QUERY_CANDIDATES_CAP = 128
-HARD_RERANK_CONCURRENCY_CAP	export declare const HARD_RERANK_CONCURRENCY_CAP = 8
-HARD_RETRIEVE_SCOPE_CAP	export declare const HARD_RETRIEVE_SCOPE_CAP = 8
-HARD_RRF_K_CAP	export declare const HARD_RRF_K_CAP = 1000
-HARD_TOP_K_CAP	export declare const HARD_TOP_K_CAP = 32
-IndexChunksOptions	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-IndexChunksResult	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-IngestionState	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-IngestionStatus	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-IngestionStatusQuery	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-IngestionStatusStore	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-LoadedDocument	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-ParsedDocument	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-Parser	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-RagAbortError	export declare class RagAbortError extends RagError
-RagChunk	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-RagCitation	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-RagContentTrust	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-RagContextProvider	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-RagContextProviderOptions	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-RagContextResult	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-RagError	export declare class RagError extends Error
-RagHit	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-RagLimitError	export declare class RagLimitError extends RagError
-RagLimits	export type { RagLimits, RagLimitsInput } from "./limits.js"
-RagLimitsInput	export type { RagLimits, RagLimitsInput } from "./limits.js"
-RagProvenance	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-RagScope	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-RagScopeError	export declare class RagScopeError extends RagError
-RagTelemetry	export type { RagTelemetry, RagTelemetryAttributeValue, RagTelemetrySpan } from "./telemetry.js"
-RagTelemetryAttributeValue	export type { RagTelemetry, RagTelemetryAttributeValue, RagTelemetrySpan } from "./telemetry.js"
-RagTelemetrySpan	export type { RagTelemetry, RagTelemetryAttributeValue, RagTelemetrySpan } from "./telemetry.js"
-RagValidationError	export declare class RagValidationError extends RagError
-ReplaceDocumentOptions	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-ReplaceSourceOptions	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-Reranker	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-RetrievalLeg	export type { FusedCandidate, RetrievalLeg } from "./fusion.js"
-RetrieveContextOptions	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-ReusableEmbedding	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-SourceMutationResult	export type { SourceMutationResult } from "./sources.js"
-SourceVectorStore	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-TransactionalVectorStore	export type { Chunker, ChunkOptions, DeleteSourceOptions, DocumentLoader, DocumentLoadOptions, DocumentParseOptions, IndexChunksOptions, IndexChunksResult, IngestionState, IngestionStatus, IngestionStatusQuery, IngestionStatusStore, LoadedDocument, ParsedDocument, Parser, RagChunk, RagCitation, RagContentTrust, RagContextProvider, RagContextProviderOptions, RagContextResult, RagHit, RagProvenance, RagScope, ReplaceDocumentOptions, ReplaceSourceOptions, Reranker, RetrieveContextOptions, ReusableE
-assertBytes	export declare function assertBytes(value: unknown, limit: number, label: string): void
-assertNotAborted	export declare function assertNotAborted(signal?: AbortSignal): void
-assertScope	export declare function assertScope(expected: RagScope, actual:
-byteLength	export declare function byteLength(value: unknown): number
-chunkMarkdown	export declare function chunkMarkdown(markdown: string, options: ChunkOptions): readonly RagChunk[]
-chunkText	export declare function chunkText(text: string, options: ChunkOptions): readonly RagChunk[]
-createMemoryIngestionStatusStore	export declare function createMemoryIngestionStatusStore(): IngestionStatusStore
-createRagContextProvider	export declare function createRagContextProvider(options: RagContextProviderOptions): ContextProvider
-createResourceDocumentLoader	export declare function createResourceDocumentLoader(options: ResourceDocumentLoaderOptions): DocumentLoader
-createTeiReranker	export declare function createTeiReranker(options: CreateTeiRerankerOptions): Reranker
-createWebFetchDocumentLoader	export declare function createWebFetchDocumentLoader(options: WebFetchDocumentLoaderOptions): DocumentLoader
-deleteSource	export declare function deleteSource(options: DeleteSourceOptions): Promise<SourceMutationResult>
-fuseReciprocalRank	export declare function fuseReciprocalRank(vectorHits: readonly MemoryVectorHit[], lexicalHits: readonly MemoryVectorHit[], rrfK: number): readonly FusedCandidate[]
-fuseReciprocalRankLists	export declare function fuseReciprocalRankLists(lists: readonly
-htmlParser	export declare const htmlParser: Parser
-indexChunkBatches	export declare function indexChunkBatches(options: IndexChunksOptions, write: (records: readonly MemoryVectorRecord[]) => Promise<void>): Promise<IndexChunksResult>
-indexChunks	export declare function indexChunks(options: IndexChunksOptions): Promise<IndexChunksResult>
-ingestionStatus	export declare function ingestionStatus(scope: RagScope, sourceId: string, state: IngestionStatus["state"], bytes: number, chunks: number, error?: string): IngestionStatus
-isJsonObject	export declare function isJsonObject(value: unknown): value is JsonObject
-isValidContentHash	export declare function isValidContentHash(value: unknown): value is string
-jsonEqual	export declare function jsonEqual(left: JsonValue | undefined, right: JsonValue | undefined): boolean
-latestUserText	export declare function latestUserText(messages: readonly Message[]): string | undefined
-listIngestionStatus	export declare function listIngestionStatus(options: IngestionStatusQuery): Promise<
-markdownParser	export declare const markdownParser: Parser
-matchesFilter	export declare function matchesFilter(metadata: JsonObject | undefined, filter: JsonObject | undefined): boolean
-nonEmpty	export declare function nonEmpty(value: unknown, label: string): string
-packageName	export declare const packageName = "@arnilo/prism-rag"
-pdfParser	export declare const pdfParser: Parser
-replaceDocument	export declare function replaceDocument(options: ReplaceDocumentOptions): Promise<SourceMutationResult>
-replaceSource	export declare function replaceSource(options: ReplaceSourceOptions): Promise<SourceMutationResult>
-requireScope	export declare function requireScope(scope: RagScope): RagScope
-requireSourceId	export declare function requireSourceId(value: unknown): string
-rerankHits	export declare function rerankHits(query: string, hits: readonly RagHit[], options:
-resolveRagLimits	export declare function resolveRagLimits(input?: RagLimitsInput): RagLimits
-retrieveContext	export declare function retrieveContext(query: string, options: RetrieveContextOptions): Promise<RagContextResult>
-textParser	export declare const textParser: Parser
-truncateUtf8	export declare function truncateUtf8(text: string, maxBytes: number): string
+. AccessDenial	interface AccessDenial { readonly error?: string; readonly hits: number; readonly reason: AccessDenialReason; readonly scope: { readonly tenantId: string; readonly resourceId: string; readonly threadId: string; }; readonly sourceId: string; }
+. AccessDenialReason	type AccessDenialReason = "no_grant" | "check_failed"
+. AccessRecheck	interface AccessRecheck { allows(hit: RagHit): Promise<boolean>; allowsAfterRerank(hit: RagHit): Promise<boolean>; noteStoreDenials(scope: RagScope, denials: readonly StoreDenial[]): void; report(): readonly AccessDenial[]; }
+. ChunkOptions	interface ChunkOptions { readonly maxChunks?: number; readonly maxDocumentChars?: number; readonly metadata?: JsonObject; readonly overlap?: number; readonly size?: number; readonly sourceId: string; }
+. Chunker	type Chunker = (text: string, options: ChunkOptions) => readonly RagChunk[]
+. CreateAccessRecheckOptions	interface CreateAccessRecheckOptions { readonly authorization: RagAccessConstraint; readonly onDenied?: (denial: AccessDenial) => void; readonly redact?: (value: string) => string; readonly signal?: AbortSignal; readonly store: VectorStore; }
+. CreateLocalRerankerOptions	interface CreateLocalRerankerOptions extends TransformersRerankRuntimeOptions { readonly model?: string; readonly onLoad?: (info: { readonly model: string; readonly loadMs: number; }) => void; readonly runtime?: LocalRerankRuntime; }
+. CreateOpenAiCompatibleRerankerOptions	interface CreateOpenAiCompatibleRerankerOptions extends HostedRerankerOptions {}
+. CreateTeiRerankerOptions	interface CreateTeiRerankerOptions { readonly allowLoopback?: boolean; readonly baseUrl: string; readonly fetch?: typeof globalThis.fetch; readonly maxResponseBytes?: number; readonly model?: string; readonly ssrf?: SsrfPolicy; readonly timeoutMs?: number; }
+. CreateVoyageRerankerOptions	interface CreateVoyageRerankerOptions extends HostedRerankerOptions { readonly apiKey: string; }
+. DEFAULT_CHUNK_OVERLAP	const DEFAULT_CHUNK_OVERLAP = 100
+. DEFAULT_CHUNK_SIZE	const DEFAULT_CHUNK_SIZE = 1000
+. DEFAULT_EMBED_BATCH_SIZE	const DEFAULT_EMBED_BATCH_SIZE = 32
+. DEFAULT_INGESTION_STATUS_PAGE_SIZE	const DEFAULT_INGESTION_STATUS_PAGE_SIZE = 50
+. DEFAULT_LOCAL_RERANK_MODEL	const DEFAULT_LOCAL_RERANK_MODEL = "Xenova/bge-reranker-base"
+. DEFAULT_MAX_CHUNKS	const DEFAULT_MAX_CHUNKS = 2048
+. DEFAULT_MAX_CONTEXT_TOKENS	const DEFAULT_MAX_CONTEXT_TOKENS = 2000
+. DEFAULT_MAX_DOCUMENT_BYTES	const DEFAULT_MAX_DOCUMENT_BYTES = 1048576
+. DEFAULT_MAX_DOCUMENT_CHARS	const DEFAULT_MAX_DOCUMENT_CHARS = 1048576
+. DEFAULT_MAX_METADATA_BYTES	const DEFAULT_MAX_METADATA_BYTES: number
+. DEFAULT_MAX_PARSE_MS	const DEFAULT_MAX_PARSE_MS = 30000
+. DEFAULT_MAX_PDF_PAGES	const DEFAULT_MAX_PDF_PAGES = 256
+. DEFAULT_MAX_RERANK_BYTES	const DEFAULT_MAX_RERANK_BYTES: number
+. DEFAULT_MAX_RERANK_MS	const DEFAULT_MAX_RERANK_MS = 2000
+. DEFAULT_MAX_RESULT_BYTES	const DEFAULT_MAX_RESULT_BYTES: number
+. DEFAULT_MAX_VECTOR_DIMENSIONS	const DEFAULT_MAX_VECTOR_DIMENSIONS = 4096
+. DEFAULT_QUERY_CANDIDATES	const DEFAULT_QUERY_CANDIDATES = 20
+. DEFAULT_RAG_EMBED_BATCH	const DEFAULT_RAG_EMBED_BATCH = 64
+. DEFAULT_RAG_GLOB	const DEFAULT_RAG_GLOB = "**/*.{md,markdown,mdx,txt,html,htm,pdf}"
+. DEFAULT_RAG_SCOPE	const DEFAULT_RAG_SCOPE: Readonly<{ tenantId: "prism"; resourceId: "rag"; corpusId: "default"; }>
+. DEFAULT_RERANK_CONCURRENCY	const DEFAULT_RERANK_CONCURRENCY = 2
+. DEFAULT_SYNC_MAX_PAGES	const DEFAULT_SYNC_MAX_PAGES = 8
+. DEFAULT_SYNC_PAGE_SIZE	const DEFAULT_SYNC_PAGE_SIZE = 50
+. DEFAULT_SYNC_RETRIES	const DEFAULT_SYNC_RETRIES = 3
+. DEFAULT_TOP_K	const DEFAULT_TOP_K = 5
+. DeleteSourceOptions	interface DeleteSourceOptions { readonly scope: RagScope; readonly signal?: AbortSignal; readonly sourceId: string; readonly statusStore?: IngestionStatusStore; readonly store: SourceVectorStore; }
+. DocumentLoadOptions	interface DocumentLoadOptions { readonly maxBytes?: number; readonly signal?: AbortSignal; }
+. DocumentLoader	interface DocumentLoader { load(uri: string, options?: DocumentLoadOptions): Promise<LoadedDocument>; }
+. DocumentParseOptions	interface DocumentParseOptions extends DocumentLoadOptions { readonly maxPages?: number; readonly maxParseMs?: number; }
+. DriveAccessMapping	interface DriveAccessMapping { readonly groupId?: string; readonly principalId?: string; }
+. DrivePermission	interface DrivePermission { readonly emailAddress?: string; readonly id?: string; readonly role?: string; readonly type?: string; }
+. GoogleDriveConnectorOptions	interface GoogleDriveConnectorOptions { readonly allowLoopback?: boolean; readonly baseUrl?: string; readonly driveId?: string; readonly fetch?: typeof globalThis.fetch; readonly folderId?: string; readonly maxResponseBytes?: number; readonly resolveAccess: (permission: DrivePermission) => DriveAccessMapping | undefined; readonly signal?: AbortSignal; readonly ssrf?: SsrfPolicy; readonly tokenProvider: (input?: { readonly signal?: AbortSignal; }) => Promise<string> | string; }
+. HARD_CHUNK_OVERLAP_CAP	const HARD_CHUNK_OVERLAP_CAP = 4096
+. HARD_CHUNK_SIZE_CAP	const HARD_CHUNK_SIZE_CAP = 16384
+. HARD_EMBED_BATCH_SIZE_CAP	const HARD_EMBED_BATCH_SIZE_CAP = 128
+. HARD_INGESTION_STATUS_PAGE_SIZE_CAP	const HARD_INGESTION_STATUS_PAGE_SIZE_CAP = 200
+. HARD_MAX_CHUNKS_CAP	const HARD_MAX_CHUNKS_CAP = 8192
+. HARD_MAX_CONTEXT_TOKENS_CAP	const HARD_MAX_CONTEXT_TOKENS_CAP = 8000
+. HARD_MAX_DOCUMENT_BYTES_CAP	const HARD_MAX_DOCUMENT_BYTES_CAP: number
+. HARD_MAX_DOCUMENT_CHARS_CAP	const HARD_MAX_DOCUMENT_CHARS_CAP = 8388608
+. HARD_MAX_METADATA_BYTES_CAP	const HARD_MAX_METADATA_BYTES_CAP: number
+. HARD_MAX_PARSE_MS_CAP	const HARD_MAX_PARSE_MS_CAP = 30000
+. HARD_MAX_PDF_PAGES_CAP	const HARD_MAX_PDF_PAGES_CAP = 256
+. HARD_MAX_RERANK_BYTES_CAP	const HARD_MAX_RERANK_BYTES_CAP: number
+. HARD_MAX_RERANK_MS_CAP	const HARD_MAX_RERANK_MS_CAP = 10000
+. HARD_MAX_RESULT_BYTES_CAP	const HARD_MAX_RESULT_BYTES_CAP: number
+. HARD_MAX_SOURCE_FILES	const HARD_MAX_SOURCE_FILES = 4096
+. HARD_QUERY_CANDIDATES_CAP	const HARD_QUERY_CANDIDATES_CAP = 128
+. HARD_RERANK_CONCURRENCY_CAP	const HARD_RERANK_CONCURRENCY_CAP = 8
+. HARD_RETRIEVE_SCOPE_CAP	const HARD_RETRIEVE_SCOPE_CAP = 8
+. HARD_SYNC_MAX_PAGES_CAP	const HARD_SYNC_MAX_PAGES_CAP = 64
+. HARD_SYNC_PAGE_SIZE_CAP	const HARD_SYNC_PAGE_SIZE_CAP = 200
+. HARD_SYNC_RETRIES_CAP	const HARD_SYNC_RETRIES_CAP = 8
+. HARD_TOP_K_CAP	const HARD_TOP_K_CAP = 32
+. IndexChunksOptions	interface IndexChunksOptions { readonly batchSize?: number; readonly chunks: readonly RagChunk[]; readonly contentHash?: string; readonly embedder: Embedder; readonly maxChunkChars?: number; readonly maxChunks?: number; readonly maxMetadataBytes?: number; readonly maxVectorDimensions?: number; readonly redactor?: SecretRedactor; readonly reuseEmbeddings?: ReadonlyMap<string, ReusableEmbedding>; readonly scope: RagScope; readonly secrets?: readonly (string | undefined)[]; readonly signal?: AbortSignal; readonly statusStore?: IngestionStatusStore; readonly store: VectorStore; readonly telemetry?: RagTelemetry; readonly telemetryParent?: RagTelemetrySpan; }
+. IndexChunksResult	interface IndexChunksResult { readonly indexed: number; readonly sourceIds: readonly string[]; }
+. IndexSourcesOptions	interface IndexSourcesOptions { readonly embedder: Embedder; readonly onSkip?: (source: RagSourceConfig, reason: string) => void; readonly scope: RagScope; readonly signal?: AbortSignal; readonly sources: readonly RagSourceConfig[]; readonly store: TransactionalVectorStore; readonly webFetch?: WebFetchService; }
+. IndexSourcesResult	interface IndexSourcesResult { readonly files: number; readonly indexed: number; readonly skipped: number; }
+. IngestionState	type IngestionState = "pending" | "indexed" | "failed" | "partial"
+. IngestionStatus	interface IngestionStatus { readonly bytes: number; readonly chunks: number; readonly error?: string; readonly freshness?: SourceFreshness; readonly scope: RagScope; readonly sourceId: string; readonly state: IngestionState; readonly updatedAt: string; }
+. IngestionStatusQuery	interface IngestionStatusQuery { readonly cursor?: string; readonly limit?: number; readonly scope: RagScope; readonly signal?: AbortSignal; readonly store: IngestionStatusStore; }
+. IngestionStatusStore	interface IngestionStatusStore { delete(scope: RagScope, sourceId: string, options?: { readonly signal?: AbortSignal; }): Promise<void>; list(scope: RagScope, options: { readonly limit: number; readonly cursor?: string; readonly signal?: AbortSignal; }): Promise<{ readonly entries: readonly IngestionStatus[]; readonly nextCursor?: string; }>; set(status: IngestionStatus, options?: { readonly signal?: AbortSignal; }): Promise<void>; }
+. KnowledgeChange	type KnowledgeChange = { readonly kind: "upsert"; readonly sourceId: string; readonly text: string; readonly contentHash: string; readonly grants?: SourceAccessGrant; readonly metadata?: import("@arnilo/prism").JsonObject; } | { readonly kind: "delete"; readonly sourceId: string; } | { readonly kind: "acl"; readonly sourceId: string; readonly grants: SourceAccessGrant; } | { readonly kind: "withhold"; readonly sourceId: string; readonly freshness: Exclude<SourceFreshness, "current">; }
+. KnowledgeChangePage	interface KnowledgeChangePage { readonly changes: readonly KnowledgeChange[]; readonly done: boolean; readonly resumeCursor: string; }
+. KnowledgeConnector	interface KnowledgeConnector { listChanges(input: { readonly cursor?: string; readonly limit: number; readonly signal?: AbortSignal; }): Promise<KnowledgeChangePage>; }
+. LoadedDocument	interface LoadedDocument { readonly data?: Uint8Array; readonly mediaType?: string; readonly metadata?: JsonObject; readonly sourceId?: string; readonly text?: string; readonly uri: string; }
+. LocalRerankModel	interface LocalRerankModel { readonly id: string; score(input: { readonly query: string; readonly documents: readonly string[]; readonly signal?: AbortSignal; }): Promise<readonly number[]>; }
+. LocalRerankRuntime	interface LocalRerankRuntime { load(model: string): Promise<LocalRerankModel>; }
+. ParsedDocument	interface ParsedDocument { readonly metadata?: JsonObject; readonly text: string; }
+. Parser	interface Parser { parse(document: LoadedDocument, options?: DocumentParseOptions): Promise<ParsedDocument>; }
+. ProviderEmbedderOptions	interface ProviderEmbedderOptions { readonly batchSize?: number; readonly dimensions?: number; readonly model: string; readonly provider: EmbeddingsProvider; }
+. RagAbortError	class RagAbortError extends RagError { constructor(); }
+. RagAccessConstraint	reexport RagAccessConstraint from "@arnilo/prism-memory-core"
+. RagChunk	interface RagChunk { readonly citationId: string; readonly end: number; readonly id: string; readonly index: number; readonly metadata?: JsonObject; readonly sourceId: string; readonly start: number; readonly text: string; }
+. RagCitation	interface RagCitation { readonly chunkId: string; readonly id: string; readonly metadata?: JsonObject; readonly provenance: RagProvenance; readonly sourceId: string; readonly trust: RagContentTrust; }
+. RagConfig	interface RagConfig { readonly context?: boolean; readonly embeddings?: RagEmbeddingsConfig | RagEmbeddingsServiceConfig; readonly reranker?: RagRerankerConfig; readonly scope?: RagScopeConfig; readonly sources?: readonly RagSourceConfig[]; readonly store?: "memory" | { readonly postgres?: RagPostgresStoreConfig; }; readonly topK?: number; }
+. RagContentTrust	interface RagContentTrust { readonly inert: true; readonly injectionCapable: true; readonly untrusted: true; }
+. RagContextBuild	type RagContextBuild = (hooks: import("@arnilo/prism").HookRegistrar, options: RagContextProviderOptions) => void
+. RagContextProviderOptions	interface RagContextProviderOptions extends Omit<RetrieveContextOptions, "signal"> { readonly name?: string; readonly prepare?: (signal?: AbortSignal) => Promise<void>; readonly query?: string | ((context: { readonly messages: readonly Message[]; }) => string | undefined); readonly title?: string; }
+. RagContextResult	interface RagContextResult { readonly citations: readonly RagCitation[]; readonly hits: readonly RagHit[]; readonly query: string; readonly text: string; readonly truncated: boolean; readonly trust: RagContentTrust; }
+. RagEmbeddingsConfig	interface RagEmbeddingsConfig { readonly batchSize?: number; readonly dimensions?: number; readonly model?: ModelRef; }
+. RagEmbeddingsServiceConfig	interface RagEmbeddingsServiceConfig { readonly service: string; }
+. RagError	class RagError extends Error { constructor(message: string, code?: string); readonly code: string; }
+. RagHit	interface RagHit extends RagChunk { readonly provenance: RagProvenance; readonly retrievalRank: number; readonly score: number; readonly trust: RagContentTrust; }
+. RagLimitError	class RagLimitError extends RagError { constructor(message: string); }
+. RagLimits	interface RagLimits { readonly chunkOverlap: number; readonly chunkSize: number; readonly embedBatchSize: number; readonly ingestionStatusPageSize: number; readonly maxChunks: number; readonly maxContextTokens: number; readonly maxDocumentBytes: number; readonly maxDocumentChars: number; readonly maxMetadataBytes: number; readonly maxParseMs: number; readonly maxPdfPages: number; readonly maxRerankBytes: number; readonly maxRerankMs: number; readonly maxResultBytes: number; readonly maxVectorDimensions: number; readonly queryCandidates: number; readonly rerankConcurrency: number; readonly rrfK: number; readonly topK: number; }
+. RagLimitsInput	type RagLimitsInput = Partial<RagLimits>
+. RagPostgresStoreConfig	interface RagPostgresStoreConfig { readonly connection?: string; readonly schema?: string; readonly table?: string; }
+. RagProvenance	interface RagProvenance { readonly chunkId: string; readonly citationId: string; readonly corpusId: string; readonly provider: string; readonly resourceId: string; readonly retrieval: "vector" | "lexical" | "hybrid"; readonly retrievedAt: string; readonly sourceId: string; readonly tenantId: string; }
+. RagRerankerConfig	type RagRerankerConfig = RagRerankerNoneConfig | RagRerankerFakeConfig | RagRerankerLocalConfig | RagRerankerHttpConfig
+. RagScope	interface RagScope { readonly corpusId: string; readonly resourceId: string; readonly tenantId: string; }
+. RagScopeConfig	interface RagScopeConfig { readonly corpusId?: string; readonly resourceId?: string; readonly tenantId?: string; }
+. RagScopeError	class RagScopeError extends RagError { constructor(message: string); }
+. RagSearchToolOptions	interface RagSearchToolOptions { readonly name?: string; readonly retrieve: (query: string, signal?: AbortSignal) => Promise<RagContextResult>; }
+. RagSourceConfig	interface RagSourceConfig { readonly glob?: string; readonly path?: string; readonly url?: string; }
+. RagSyncCursorError	class RagSyncCursorError extends RagError { constructor(message?: string); }
+. RagSyncThrottleError	class RagSyncThrottleError extends RagError { constructor(retryAfterMs?: number, message?: string); readonly retryAfterMs: number; }
+. RagTelemetry	interface RagTelemetry { startSpan(name: string, attributes?: Readonly<Record<string, RagTelemetryAttributeValue>>, parent?: RagTelemetrySpan): RagTelemetrySpan; }
+. RagTelemetryAttributeValue	type RagTelemetryAttributeValue = string | number | boolean
+. RagTelemetrySpan	interface RagTelemetrySpan { addEvent(name: string, attributes?: Readonly<Record<string, RagTelemetryAttributeValue>>): void; end(): void; recordError(): void; setAttribute(name: string, value: RagTelemetryAttributeValue): void; }
+. RagValidationError	class RagValidationError extends RagError { constructor(message: string); }
+. ReplaceDocumentOptions	interface ReplaceDocumentOptions extends Omit<ReplaceSourceOptions, "sourceId" | "chunks"> { readonly chunk?: Omit<ChunkOptions, "sourceId">; readonly chunker?: Chunker; readonly loader: DocumentLoader; readonly loaderOptions?: DocumentLoadOptions; readonly parser: Parser; readonly parserOptions?: DocumentParseOptions; readonly sourceId?: string; readonly uri: string; }
+. ReplaceSourceOptions	interface ReplaceSourceOptions extends Omit<IndexChunksOptions, "chunks" | "store"> { readonly advanceGeneration?: boolean; readonly chunks: readonly RagChunk[]; readonly contentHash?: string; readonly skipIfUnchanged?: boolean; readonly sourceId: string; readonly store: TransactionalVectorStore; }
+. Reranker	interface Reranker { rerank(input: { readonly query: string; readonly hits: readonly RagHit[]; readonly signal?: AbortSignal; }): Promise<readonly RagHit[]>; }
+. RerankerConfig	type RerankerConfig = { readonly kind: "none"; } | { readonly kind: "fake"; } | ({ readonly kind: "local"; } & CreateLocalRerankerOptions) | ({ readonly kind: "tei"; } & CreateTeiRerankerOptions) | ({ readonly kind: "openai-compatible"; } & CreateOpenAiCompatibleRerankerOptions) | ({ readonly kind: "voyage"; } & CreateVoyageRerankerOptions)
+. ResolvedRagConfig	interface ResolvedRagConfig { readonly context: boolean; readonly embeddings?: RagEmbeddingsConfig | RagEmbeddingsServiceConfig; readonly reranker?: RagRerankerConfig; readonly scope: { readonly tenantId: string; readonly resourceId: string; readonly corpusId: string; }; readonly sources: readonly RagSourceConfig[]; readonly store: "memory" | { readonly postgres?: RagPostgresStoreConfig; }; readonly topK?: number; }
+. RetrieveContextOptions	interface RetrieveContextOptions { readonly authorization?: RagAccessConstraint; readonly embedder: Embedder; readonly filter?: JsonObject; readonly fusion?: "rrf"; readonly lexical?: "fts" | "bm25" | "off"; readonly maxContextTokens?: number; readonly maxMetadataBytes?: number; readonly maxRerankBytes?: number; readonly maxRerankMs?: number; readonly maxResultBytes?: number; readonly maxVectorDimensions?: number; readonly onAccessDenied?: (denial: AccessDenial) => void; readonly queryCandidates?: number; readonly redactor?: SecretRedactor; readonly rerankConcurrency?: number; readonly reranker?: Reranker; readonly rrfK?: number; readonly scope?: RagScope; readonly scopes?: readonly RagScope[]; readonly secrets?: readonly (string | undefined)[]; readonly signal?: AbortSignal; readonly store: VectorStore; readonly telemetry?: RagTelemetry; readonly topK?: number; }
+. ReusableEmbedding	interface ReusableEmbedding { readonly embedding: readonly number[]; readonly text: string; }
+. SourceAccessGrant	reexport SourceAccessGrant from "@arnilo/prism-memory-core"
+. SourceFile	interface SourceFile { readonly path: string; readonly sourceId: string; }
+. SourceFreshness	type SourceFreshness = "current" | "stale" | "unavailable"
+. SourceMutationResult	interface SourceMutationResult { readonly deleted: number; readonly indexed: number; readonly skipped?: true; readonly sourceId: string; }
+. SourceVectorStore	interface SourceVectorStore extends VectorStore { getBySource(scope: { readonly tenantId: string; readonly resourceId: string; readonly threadId: string; }, sourceId: string, options?: { readonly signal?: AbortSignal; }): Promise<readonly MemoryVectorRecord[]>; }
+. SyncKnowledgeOptions	interface SyncKnowledgeOptions { readonly checkpoint: { readonly namespace: string; readonly key: string; } & OwnershipScope; readonly checkpoints: CheckpointStore; readonly chunker?: Chunker; readonly connector: KnowledgeConnector; readonly embedder: Embedder; readonly maxPages?: number; readonly maxRetries?: number; readonly onInvalidCursor?: "resync" | "fail"; readonly pageSize?: number; readonly scope: RagScope; readonly signal?: AbortSignal; readonly sleep?: (ms: number) => Promise<void>; readonly statusStore?: IngestionStatusStore; readonly store: TransactionalVectorStore; }
+. SyncKnowledgeResult	interface SyncKnowledgeResult { readonly cursor?: string; readonly deleted: number; readonly exhausted: boolean; readonly pages: number; readonly skipped: number; readonly upserted: number; readonly withheld: number; }
+. TransactionalVectorStore	interface TransactionalVectorStore extends SourceVectorStore { transaction<T>(operation: (store: SourceVectorStore) => Promise<T>, options?: { readonly signal?: AbortSignal; }): Promise<T>; }
+. TransformersRerankRuntimeOptions	interface TransformersRerankRuntimeOptions { readonly allowRemoteModels?: boolean; readonly cacheDir?: string; readonly device?: string; readonly dtype?: string; }
+. chunkMarkdown	function chunkMarkdown(markdown: string, options: ChunkOptions): readonly RagChunk[]
+. chunkText	function chunkText(text: string, options: ChunkOptions): readonly RagChunk[]
+. createAccessRecheck	function createAccessRecheck(options: CreateAccessRecheckOptions): AccessRecheck
+. createGoogleDriveConnector	function createGoogleDriveConnector(options: GoogleDriveConnectorOptions): KnowledgeConnector
+. createLocalReranker	function createLocalReranker(options?: CreateLocalRerankerOptions): Reranker
+. createMemoryIngestionStatusStore	function createMemoryIngestionStatusStore(): IngestionStatusStore
+. createOpenAiCompatibleReranker	function createOpenAiCompatibleReranker(options: CreateOpenAiCompatibleRerankerOptions): Reranker
+. createProviderEmbedder	function createProviderEmbedder(options: ProviderEmbedderOptions): Embedder
+. createRagDeletionHandler	function createRagDeletionHandler(options: { readonly store: SourceVectorStore; readonly scope: RagScope; readonly statusStore?: IngestionStatusStore; }): DeletionPropagationHandler
+. createRagSearchTool	function createRagSearchTool(options: RagSearchToolOptions): ToolDefinition
+. createResourceDocumentLoader	function createResourceDocumentLoader(options: ResourceDocumentLoaderOptions): DocumentLoader
+. createTeiReranker	function createTeiReranker(options: CreateTeiRerankerOptions): Reranker
+. createTransformersRerankRuntime	function createTransformersRerankRuntime(options?: TransformersRerankRuntimeOptions): LocalRerankRuntime
+. createVoyageReranker	function createVoyageReranker(options: CreateVoyageRerankerOptions): Reranker
+. createWebFetchDocumentLoader	function createWebFetchDocumentLoader(options: WebFetchDocumentLoaderOptions): DocumentLoader
+. default	const definition: import("@arnilo/prism").PackageDefinition<RagConfig>
+. deleteSource	function deleteSource(options: DeleteSourceOptions): Promise<SourceMutationResult>
+. evidenceFromRagCitation	function evidenceFromRagCitation(citation: RagCitation, input: { readonly contentHash: string; readonly revision: string; readonly excerpt?: string; readonly span?: { readonly start: number; readonly end: number; }; readonly uri?: string; }): ArtifactCitation
+. globToRegExp	function globToRegExp(glob: string): RegExp
+. htmlParser	const htmlParser: Parser
+. indexChunks	function indexChunks(options: IndexChunksOptions): Promise<IndexChunksResult>
+. indexSources	function indexSources(options: IndexSourcesOptions): Promise<IndexSourcesResult>
+. isValidContentHash	function isValidContentHash(value: unknown): value is string
+. listIngestionStatus	function listIngestionStatus(options: IngestionStatusQuery): Promise<{ readonly entries: readonly IngestionStatus[]; readonly nextCursor?: string; }>
+. markdownParser	const markdownParser: Parser
+. memoryRag	function memoryRag(config: RagConfig): PackageInstance
+. packageName	const packageName = "@arnilo/prism-rag"
+. pdfParser	const pdfParser: Parser
+. probeEmbedderDimensions	function probeEmbedderDimensions(embedder: Embedder, signal?: AbortSignal): Promise<void>
+. ragConfigSchema	const ragConfigSchema: JsonSchema
+. registerRagContext	function registerRagContext(hooks: HookRegistrar, options: RagContextProviderOptions): void
+. replaceDocument	function replaceDocument(options: ReplaceDocumentOptions): Promise<SourceMutationResult>
+. replaceSource	function replaceSource(options: ReplaceSourceOptions): Promise<SourceMutationResult>
+. resolveRagConfig	function resolveRagConfig(config?: RagConfig): ResolvedRagConfig
+. resolveRagLimits	function resolveRagLimits(input?: RagLimitsInput): RagLimits
+. resolveReranker	function resolveReranker(config: RerankerConfig | undefined): Reranker | undefined
+. resolveSourceFiles	function resolveSourceFiles(source: RagSourceConfig, signal?: AbortSignal): Promise<readonly SourceFile[]>
+. retrieveContext	function retrieveContext(query: string, options: RetrieveContextOptions): Promise<RagContextResult>
+. runRerankerConformance	function runRerankerConformance(createReranker: () => Reranker): Promise<void>
+. syncKnowledge	function syncKnowledge(options: SyncKnowledgeOptions): Promise<SyncKnowledgeResult>
+. textParser	const textParser: Parser

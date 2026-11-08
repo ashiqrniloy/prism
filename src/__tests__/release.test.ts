@@ -440,7 +440,7 @@ test("release_tag_is_never_latest_for_an_experimental_package_in_the_real_graph"
   const experimental = release.packages.filter((pkg: { experimental: boolean }) => pkg.experimental);
   assert.deepEqual(
     experimental.map((pkg: { manifest: { name: string } }) => pkg.manifest.name).sort(),
-    ["@arnilo/prism-memory-core", "@arnilo/prism-memory-fabric", "@arnilo/prism-memory-observational", "@arnilo/prism-memory-rag", "@arnilo/prism-memory-wiki"],
+    ["@arnilo/prism-memory-core", "@arnilo/prism-memory-fabric", "@arnilo/prism-memory-observational", "@arnilo/prism-rag", "@arnilo/prism-wiki"],
   );
   for (const pkg of experimental) {
     const args = publishArgs(pkg, pkg.manifest.version);

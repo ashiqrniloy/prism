@@ -158,35 +158,15 @@ function hitTime(hit: MemoryNoteHit): number {
   return Number.isFinite(ms) ? ms : Date.parse(hit.ingestedAt) || 0;
 }
 
-/** What labels an older group member "superseded by" a newer one (plan 210 Task 3.1, `recall.supersessionHint`). */
-export type SupersessionHintMode = "all" | "keyed-only";
-export interface GroupRecallOptions {
-  /** `all` (default): every older member of a group. `keyed-only`: only members joined by a key or a `supersedes` edge. */
-  readonly supersessionHint?: SupersessionHintMode;
-}
-
 /**
  * Read-time grouping (plan 202 Task 7): same key, an explicit `supersedes` edge, or exchange subject
  * terms shared with the group's best-ranked seed put hits in one group (terms common to nearly every
  * hit of the result do not count). Each group keeps the position of its best-ranked member and is
  * ordered newest-first; every earlier member gets a `supersededBy` hint. No hit is removed.
  */
-export function groupRecallHits(hits: readonly MemoryNoteHit[], options: GroupRecallOptions = {}): MemoryNoteHit[] {
+export function groupRecallHits(hits: readonly MemoryNoteHit[]): MemoryNoteHit[] {
   if (hits.length < 2) return [...hits];
-  const keyedOnly = options.supersessionHint === "keyed-only";
   const parent = Array.from({ length: hits.length }, (_, index) => index);
-  // Key and `supersedes` unions only, kept apart so `keyed-only` can tell a keyed update from a shared-subject neighbour.
-  const keyedParent = Array.from({ length: hits.length }, (_, index) => index);
-  const keyedFind = (value: number): number => {
-    let root = value;
-    while (keyedParent[root] !== root) root = keyedParent[root]!;
-    return root;
-  };
-  const keyedUnion = (left: number, right: number): void => {
-    const a = keyedFind(left);
-    const b = keyedFind(right);
-    if (a !== b) keyedParent[Math.max(a, b)] = Math.min(a, b);
-  };
   const find = (value: number): number => {
     let root = value;
     while (parent[root] !== root) root = parent[root]!;
@@ -211,7 +191,6 @@ export function groupRecallHits(hits: readonly MemoryNoteHit[], options: GroupRe
       if (first === undefined) byKey.set(identity, index);
       else {
         union(index, first);
-        keyedUnion(index, first);
       }
     }
     if (hit.supersedes !== undefined) {
@@ -222,7 +201,6 @@ export function groupRecallHits(hits: readonly MemoryNoteHit[], options: GroupRe
         subjectClass(hits[older]!) === subjectClass(hit)
       ) {
         union(index, older);
-        keyedUnion(index, older);
       }
     }
   }
@@ -265,17 +243,7 @@ export function groupRecallHits(hits: readonly MemoryNoteHit[], options: GroupRe
         out.push(member.hit);
         continue;
       }
-      // `all`: the member just before it. `keyed-only`: the nearest newer member it shares a key or `supersedes` edge with.
-      const newer = keyedOnly
-        ? members
-            .slice(0, index)
-            .reverse()
-            .find((candidate) => keyedFind(candidate.index) === keyedFind(member.index))
-        : members[index - 1]!;
-      if (newer === undefined) {
-        out.push(member.hit);
-        continue;
-      }
+      const newer = members[index - 1]!;
       out.push({
         ...member.hit,
         supersededBy: { id: newer.hit.id, at: new Date(hitTime(newer.hit)).toISOString() },
@@ -333,8 +301,6 @@ export function createFabricRecall(deps: {
   readonly getNotes?: (ids: readonly string[], signal?: AbortSignal) => Promise<readonly MemoryVectorRecord[]>;
   /** Additive priors applied by the scope loader; used here only for shadowed explain rows. */
   readonly priors?: import("./scope/recall.js").ScopePriors;
-  /** `recall.supersessionHint` (plan 210 Task 3.1); absent means `all`. */
-  readonly supersessionHint?: SupersessionHintMode;
   /** `recall.expansion` (plan 210 Task 3.1); absent means off. */
   readonly queryExpansion?: boolean;
 }): MemoryFabric["recall"] {
@@ -374,7 +340,6 @@ export function createFabricRecall(deps: {
     };
   }
 
-  const groupOptions: GroupRecallOptions = deps.supersessionHint === undefined ? {} : { supersessionHint: deps.supersessionHint };
   return async function recall(query: string, recallOptions: MemoryFabricRecallOptions = {}): Promise<MemoryFabricRecallResult> {
     if (
       recallOptions.tRef &&
@@ -507,10 +472,7 @@ export function createFabricRecall(deps: {
     const rankedById = new Map(ranked.map((item) => [item.candidate.hit.id, item]));
     const ordered = timeOrder
       ? ranked
-      : groupRecallHits(
-          ranked.map((item) => toHit(item.candidate)),
-          groupOptions,
-        ).map((hit) => rankedById.get(hit.id)!);
+      : groupRecallHits(ranked.map((item) => toHit(item.candidate))).map((hit) => rankedById.get(hit.id)!);
     const picked = new Set(
       selectWithScopeReserve(ordered, {
         ...(budget === undefined ? {} : { budget }),
@@ -548,6 +510,6 @@ export function createFabricRecall(deps: {
     } catch {
       /* Diagnostic observers cannot affect retrieval. */
     }
-    return { hits: timeOrder ? hits : groupRecallHits(hits, groupOptions), explain };
+    return { hits: timeOrder ? hits : groupRecallHits(hits), explain };
   };
 }

@@ -62,7 +62,7 @@ describe("@arnilo/prism-provider-liquid package", () => {
       captured = new Headers(init.headers);
       return ok();
     }) as typeof fetch;
-    await providerConformance(() => createLiquidProvider({ apiKey: key, fetch: fetchImpl }), {
+    await providerConformance(() => createLiquidProvider({ apiKey: async () => key, fetch: fetchImpl }), {
       request,
       secrets: [key],
       headers: {

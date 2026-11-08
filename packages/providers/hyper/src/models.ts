@@ -1,13 +1,11 @@
 import {
-  type CredentialValueSource,
   type JsonObject,
   type ModelConfig,
   type ModelCost,
   redactSecrets,
-  resolveCredentialValue,
   trimTrailingSlashes,
 } from "@arnilo/prism";
-import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/provider-kit";
+import { readBoundedResponseJson, readBoundedResponseText, type SecretSource } from "@arnilo/prism/provider-kit";
 
 /** Official Hyper API base (`/chat/completions`, `/messages`, `/models`, `/credits`). */
 export const HYPER_DEFAULT_BASE_URL = "https://hyper.charm.land/v1";
@@ -31,7 +29,7 @@ export interface HyperModelConfig extends Omit<ModelConfig, "provider" | "compat
 }
 
 export interface ListHyperModelsOptions {
-  readonly apiKey?: CredentialValueSource;
+  readonly apiKey?: SecretSource;
   readonly fetch?: typeof fetch;
   /** Defaults to official `https://hyper.charm.land/v1`. */
   readonly baseUrl?: string;
@@ -127,7 +125,7 @@ export function defineHyperModel(config: HyperModelConfig): ModelConfig {
 export async function listHyperModels(options: ListHyperModelsOptions = {}): Promise<ModelConfig[]> {
   const provider = options.provider ?? "hyper";
   const baseUrl = trimTrailingSlashes(options.baseUrl ?? HYPER_DEFAULT_BASE_URL);
-  const token = await resolveCredentialValue(options.apiKey, { provider, name: "apiKey" });
+  const token = await options.apiKey?.();
   const response = await (options.fetch ?? fetch)(`${baseUrl}/models`, {
     method: "GET",
     headers: { ...options.headers, ...(token ? { authorization: `Bearer ${token}` } : {}) },

@@ -1,8 +1,8 @@
 /**
  * Laya provider: a decision model behind the standard ModelProvider seam.
  */
-import type { CredentialValueSource, ModelProvider } from "@arnilo/prism";
-import { createSystemOneDecisionProvider } from "@arnilo/prism/provider-kit";
+import type { ModelProvider } from "@arnilo/prism";
+import { createSystemOneDecisionProvider, type SecretSource } from "@arnilo/prism/provider-kit";
 import { LAYA_DEFAULT_BASE_URL, layaModels } from "./models.js";
 
 export interface LayaProviderOptions {
@@ -10,7 +10,7 @@ export interface LayaProviderOptions {
   readonly baseUrl?: string;
   /** Endpoint path; defaults to `/v1/systemone`. Must start with `/`. */
   readonly path?: string;
-  readonly apiKey?: CredentialValueSource;
+  readonly apiKey?: SecretSource;
   readonly fetch?: typeof fetch;
   /** Retries after the first attempt; forwarded to the shared System One client (default 2). */
   readonly maxRetries?: number;

@@ -372,15 +372,18 @@ describe("team project store (plan 188.5 Task 3)", () => {
     }
   });
 
-  it("team_notes_never_count_toward_widening", async () => {
+  it("maintenance_leaves_team_notes_unchanged", async () => {
     const { teamDir, fabric, team } = await harness({
       seed: [teamRecord({ id: "eeeeeeeeeeee", text: "Always pin the toolchain version in CI.", key: "ci.toolchain" })],
     });
-    const report = await fabric.maintain();
-    assert.equal(report.widened, 0, "the team store is never a widening source");
+    const factsDir = join(teamDir, "team", "project", "facts");
+    const fileName = () => readdirSync(factsDir).find((entry) => entry.includes("eeeeeeee"));
+    const before = fileName() === undefined ? undefined : readFileSync(join(factsDir, fileName()!), "utf8");
+    await fabric.maintain();
     const [note] = await team.memory.get(["eeeeeeeeeeee"]);
-    assert.equal(note?.metadata?.fabric !== undefined && (note.metadata.fabric as { widenedTo?: string }).widenedTo, undefined);
-    const file = readdirSync(join(teamDir, "team", "project", "facts")).find((entry) => entry.includes("eeeeeeee"));
-    assert.ok(file !== undefined && !readFileSync(join(teamDir, "team", "project", "facts", file), "utf8").includes("widenedTo"));
+    assert.equal(note?.metadata?.status, undefined, "the team store is read-only to maintenance");
+    assert.ok(before !== undefined && fileName() !== undefined);
+    assert.equal(readFileSync(join(factsDir, fileName()!), "utf8"), before);
   });
+
 });

@@ -1,12 +1,13 @@
 # @arnilo/prism-memory-core
 
-> **Experimental in 0.13.0.** Install with `bun add @arnilo/prism-memory-core@experimental`. Outside the stability promise of the stable
-> packages: its API, config, preset contents and defaults may change or be removed in any release until it graduates.
+> **Experimental in 0.13.0.** Install with `bun add @arnilo/prism-memory-core@experimental`. Outside the
+> [stability promise](https://github.com/ashiqrniloy/prism/blob/main/docs/compatibility.md) of the stable packages: its API,
+> config, preset contents and defaults may change or be removed in any release until it graduates.
 > Graduation is the memory track's final step, which sets the first stable version.
 
 The memory contracts, in-memory, SQLite, Postgres, and markdown vector stores, lineage, deletion propagation, source
-repointing, recall scoring, limits, and JSON-schema helpers that `@arnilo/prism-memory-rag`,
-`@arnilo/prism-memory-fabric`, `@arnilo/prism-memory-wiki`, and `@arnilo/prism-memory-observational`
+repointing, recall scoring, limits, and JSON-schema helpers that `@arnilo/prism-rag`,
+`@arnilo/prism-memory-fabric`, `@arnilo/prism-wiki`, and `@arnilo/prism-memory-observational`
 share, so four packages cannot drift on how a memory record is scoped, scored, invalidated, or
 stored.
 
@@ -228,7 +229,8 @@ render, so a readable note edited by a newer version keeps them through a touch,
 ## Compatibility (the contract from graduation)
 
 > This is the contract the package will keep once it graduates from the experimental line. Until then it is a statement of
-> intent, not a promise.
+> intent, not a promise. From graduation it sits under the kernel's
+> [compatibility promise](https://github.com/ashiqrniloy/prism/blob/main/docs/compatibility.md).
 
 At API level 1 the export names and signatures in [Stable exports](#stable-exports), the `VectorStore` and
 `Embedder` contracts, the DDL builders and the note-file rule below are frozen for the whole `0.13.x` line and every

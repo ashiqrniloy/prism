@@ -57,7 +57,7 @@ async function capture(wire: Wire): Promise<Capture> {
   const sessionId = reference(wire).request.headers[KILO_TASK_ID_HEADER.toLowerCase()]!;
   assert.match(sessionId, /^ses_[A-Za-z0-9]+$/, `${wire}: fixture carries the CLI task id`);
   const provider = createKiloProvider({
-    apiKey: "offline-fixture-never-used",
+    apiKey: async () => "offline-fixture-never-used",
     fetch: (async (_url, init) => {
       headers.push(new Headers(init?.headers));
       bodies.push(JSON.parse(String(init?.body)));

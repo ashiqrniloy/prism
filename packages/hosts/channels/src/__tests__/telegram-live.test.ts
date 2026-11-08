@@ -15,7 +15,7 @@ describe("plan 079 telegram live", () => {
     async () => {
       const adapter = createTelegramAdapter({
         connectionId: "live-telegram",
-        botToken: () => process.env.TELEGRAM_BOT_TOKEN ?? "",
+        botToken: async () => process.env.TELEGRAM_BOT_TOKEN ?? "",
         checkpoints: createMemoryCheckpointStore(),
         leases: createMemoryLeaseStore(),
         cursorOwnership: { tenantId: "live-telegram" },

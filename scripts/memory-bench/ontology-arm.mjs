@@ -1,7 +1,8 @@
 /**
- * Plan 208 Task 3: the ontology arm (`--ontology`). `@arnilo/prism-memory-wiki` is installed next to the arm's
- * fabric and runs as it would for a user: the fabric binds notes at write time, and the concept pass is a background
- * job that a session opening schedules. This module owns what the bench adds around that:
+ * Plan 208 Task 3: the ontology arm (`--ontology`). `@arnilo/prism-wiki` is installed next to the arm's
+ * fabric and runs as it would for a user: since plan 216 Task 3 the wiki keeps concepts in its own store (a temp root
+ * per arm), reads the fabric through the read-only `memory.ltm` port and binds notes on its own pass; the concept pass
+ * is a background job that a session opening schedules. This module owns what the bench adds around that:
  *
  * - the settle wait: after a history is ingested the bench reopens the session until a pass finds nothing to do,
  *   bounded by {@link ONTOLOGY_SETTLE_MS} per history. A pass still running at the bound is aborted by the session
@@ -9,11 +10,13 @@
  * - the report: counts, ids and times only (the no-text rule), including the `concept` evidence stage;
  * - the private claim bundle the claim-support audit reads (`ontology-claims-v1`, text-bearing, gitignored).
  */
+import { mkdtempSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { definePackage } from "@arnilo/prism";
-import { MEMORY_FABRIC_SERVICE, parseConceptBody } from "@arnilo/prism-memory-fabric";
-import { memoryWiki } from "@arnilo/prism-memory-wiki";
+import { MEMORY_LTM_SERVICE } from "@arnilo/prism-memory-fabric";
+import { createMarkdownWikiStore, createWikiOntology, parseConceptBody, wiki } from "@arnilo/prism-wiki";
 import { bundleFromConcepts } from "./ontology-audit.mjs";
 
 /** Bounded wait per history for background concept passes (plan 208 Task 3). */
@@ -71,7 +74,16 @@ const rate = (count, total) => (total ? count / total : null);
 
 /** The arm for one history. `config` is the resolved `wiki` memory config (explicit settings only). */
 export function createOntologyArm({ config = {}, settleMs = ONTOLOGY_SETTLE_MS } = {}) {
-  let port;
+  // The wiki's own store: the root the bench hands it (inside the history's memory root, so the per-history cache
+  // keeps the concepts with the notes they cite), else a temp root; a run never writes into a workspace.
+  let root = config.root;
+  const resolveRoot = () => (root ??= mkdtempSync(join(tmpdir(), "memory-bench-wiki-")));
+  let ltm;
+  /** A read-only view of what the agent's wiki wrote: its store on disk, over the same `memory.ltm` port. */
+  const port = () => {
+    const service = ltm?.();
+    return createWikiOntology({ store: createMarkdownWikiStore({ root: resolveRoot() }), ltm: () => service });
+  };
   const passes = [];
   /** Passes that did something: a model call, an edit or a bind. A pass that only leaves items due is not progress. */
   const progress = () =>
@@ -81,7 +93,7 @@ export function createOntologyArm({ config = {}, settleMs = ONTOLOGY_SETTLE_MS }
     version: "0.13.0",
     requires: { api: 1 },
     setup(prism) {
-      port = () => prism.services.consume(MEMORY_FABRIC_SERVICE);
+      ltm = () => prism.services.consume(MEMORY_LTM_SERVICE);
       // A package event is observable by hooks, not by `agent.subscribe()`: the wiki emits one per pass that did work.
       prism.hooks.on("package.event", (event) => {
         if (event.name === "wiki.consolidated" && event.data) passes.push(event.data);
@@ -93,8 +105,17 @@ export function createOntologyArm({ config = {}, settleMs = ONTOLOGY_SETTLE_MS }
   let stream;
   let watching;
 
+  let packages;
   const arm = {
-    packages: [memoryWiki(structuredClone(config)), capture],
+    /** Where the wiki keeps its store; call before `packages` is read. */
+    useRoot(dir) {
+      if (packages !== undefined) throw new Error("the ontology arm's packages were already built");
+      root = dir;
+    },
+    get packages() {
+      packages ??= [wiki({ ...structuredClone(config), root: resolveRoot(), store: "markdown" }), capture];
+      return packages;
+    },
     /** Start reading the agent's event stream. Call once, right after the agent is created. */
     watch(agent) {
       stream = agent.subscribe();

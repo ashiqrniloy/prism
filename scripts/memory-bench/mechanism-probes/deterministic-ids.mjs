@@ -9,7 +9,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const root = join(import.meta.dir, "../../..");
-const ID_SOURCES = ["packages/memory/fabric/src/create.ts", "packages/memory/fabric/src/ontology/port.ts", "src/ids.ts"];
+const ID_SOURCES = ["packages/memory/fabric/src/create.ts", "packages/knowledge/wiki/src/store.ts", "src/ids.ts"];
 const files = new Set(ID_SOURCES.map((path) => join(root, path)));
 
 globalThis.__prismMechanismProbe ??= {
@@ -20,7 +20,7 @@ globalThis.__prismMechanismProbe ??= {
 Bun.plugin({
   name: "mechanism-probe-deterministic-ids",
   setup(build) {
-    build.onLoad({ filter: /(?:memory\/fabric\/src\/(?:create|ontology\/port)|\/src\/ids)\.ts$/ }, ({ path }) => {
+    build.onLoad({ filter: /(?:memory\/fabric\/src\/create|knowledge\/wiki\/src\/store|\/src\/ids)\.ts$/ }, ({ path }) => {
       const source = readFileSync(path, "utf8");
       if (!files.has(path)) return { contents: source, loader: "ts" };
       assert.ok(source.includes("randomUUID()"), `mechanism probe id source drift: ${path}`);

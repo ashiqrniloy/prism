@@ -22,6 +22,7 @@ import {
 } from "../contracts.js";
 import { reconstructToolCallDeltas } from "../models/events.js";
 import { SECRET_REF } from "../packages/schema.js";
+import type { SecretSource } from "./provider-package.js";
 import { canonicalizeJsonSchema } from "./schema.js";
 import { type RecordedExchange, recordingHasErrorFrame, replayFetch } from "./wire-replay.js";
 
@@ -912,7 +913,7 @@ async function assertEmbeddingsErrorCode(run: () => Promise<unknown>, code: Embe
 export interface SystemOneConformanceOptions {
   readonly factory: (
     fetchImpl?: typeof fetch,
-    options?: { readonly apiKey?: unknown; readonly fetch?: typeof fetch; readonly path?: string },
+    options?: { readonly apiKey?: SecretSource; readonly fetch?: typeof fetch; readonly path?: string },
   ) => ModelProvider;
   readonly recordings?: string | URL;
   readonly keyRequired?: boolean;
@@ -1034,7 +1035,7 @@ export async function systemOneConformance(options: SystemOneConformanceOptions)
       return new Response(JSON.stringify(OK_RESPONSE), { status: 200, headers: { "content-type": "application/json" } });
     }) as unknown as typeof fetch;
 
-    const provider = options.factory(happyFetch, { apiKey: canaryKey });
+    const provider = options.factory(happyFetch, { apiKey: async () => canaryKey });
     const events = await collectProviderEvents(provider, baseRequest);
     const types = events.map((e) => e.type);
     if (types[0] !== "message_start") throw new Error("systemOneConformance: expected message_start as first event");
@@ -1125,7 +1126,7 @@ export async function systemOneConformance(options: SystemOneConformanceOptions)
         headers: { "content-type": "application/json" },
       });
     }) as unknown as typeof fetch;
-    const events401 = await collectProviderEvents(options.factory(fetch401, { apiKey: canary401 }), baseRequest);
+    const events401 = await collectProviderEvents(options.factory(fetch401, { apiKey: async () => canary401 }), baseRequest);
     if (attempts401 !== 1) throw new Error(`systemOneConformance: 401 must not be retried, attempts: ${attempts401}`);
     const term401 = events401.at(-1);
     if (!term401 || term401.type !== "error" || !term401.error.message.includes("401")) {
@@ -1179,14 +1180,9 @@ export async function systemOneConformance(options: SystemOneConformanceOptions)
   {
     let resolutions = 0;
     const secret = "rotating-systemone-conformance-credential";
-    const keySource = {
-      resolve: ({ provider }: { provider: string }) => {
-        resolutions++;
-        if (provider !== probe.id && !provider.toLowerCase().includes(probe.id.toLowerCase())) {
-          throw new Error(`systemOneConformance: provider mismatch in credential resolution: expected ${probe.id}, got ${provider}`);
-        }
-        return { type: "api_key", value: secret };
-      },
+    const keySource: SecretSource = async () => {
+      resolutions++;
+      return secret;
     };
     const failingFetch = (async (_input: unknown, init?: RequestInit) => {
       const auth = new Headers(init?.headers).get("authorization");
@@ -1332,7 +1328,7 @@ export async function systemOneConformance(options: SystemOneConformanceOptions)
           headers: { "content-type": "application/json" },
         });
       }) as unknown as typeof fetch;
-      const failingAdapter = options.factory(failingFetch, { apiKey: canary }).decisions?.();
+      const failingAdapter = options.factory(failingFetch, { apiKey: async () => canary }).decisions?.();
       let mapped: unknown;
       try {
         await failingAdapter!.decide({ model: modelConfig.model, state: "ticket", questions });
@@ -1349,11 +1345,9 @@ export async function systemOneConformance(options: SystemOneConformanceOptions)
     // Credential resolves once per decide, and a transport failure carries no secret.
     let resolutions = 0;
     const secret = "rotating-decide-credential";
-    const keySource = {
-      resolve: () => {
-        resolutions++;
-        return { type: "api_key", value: secret };
-      },
+    const keySource: SecretSource = async () => {
+      resolutions++;
+      return secret;
     };
     const throwingFetch = (async (_input: unknown, init?: RequestInit) => {
       const auth = new Headers(init?.headers).get("authorization");
@@ -1406,7 +1400,7 @@ export async function systemOneConformance(options: SystemOneConformanceOptions)
         }
 
         const replay = replayFetch(exchanges);
-        const provider = options.factory(replay as unknown as typeof fetch, { apiKey: "conformance-wire-key" });
+        const provider = options.factory(replay as unknown as typeof fetch, { apiKey: async () => "conformance-wire-key" });
 
         const events = await collectProviderEvents(provider, requestForScenario);
         const terminal = events.at(-1);

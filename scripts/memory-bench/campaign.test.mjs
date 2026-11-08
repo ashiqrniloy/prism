@@ -13,6 +13,7 @@ import {
   isBudgetQuotaCause,
   nextDailyReset,
   reservation,
+  retryUncounted,
   transientCooldownMs,
   transientFailure,
   writeManifest,
@@ -93,15 +94,40 @@ test("daily_free_quota_halts_resumable_without_consuming_attempt", async () => {
   assert.equal(isBudgetQuotaCause("failed"), false);
   // A transient provider fault is re-run from its checkpoint and never spends the job's attempts.
   assert.equal(isBudgetQuotaCause("transient"), true);
-  const failed = (code, message) => ({ status: "failed", failure: { code, message: code, cause: { code: code.split(":").at(-1), message } } });
+  const failed = (code, message) => ({
+    status: "failed",
+    failure: { code, message: code, cause: { code: code.split(":").at(-1), message } },
+  });
   assert.equal(transientFailure(failed("MemoryBenchJudgeError:429", "Kilo's free models are limited to 200 requests per hour")), true);
-  assert.equal(transientFailure(failed("MemoryBenchAnswerError:400", "Kilo request failed: 400 ... error:message:Provider returned error,code:4")), true);
+  assert.equal(
+    transientFailure(failed("MemoryBenchAnswerError:400", "Kilo request failed: 400 ... error:message:Provider returned error,code:4")),
+    true,
+  );
   // An intermittent upstream content filter is transient: the same question passed on reruns.
-  assert.equal(transientFailure(failed("MemoryBenchAnswerError:400", "Command Code request failed: 400 error:message:400 InternalError.Algo.DataInspectionFailed: Input text data may contain inappropriate content.,type:invalid_request_error")), true);
+  assert.equal(
+    transientFailure(
+      failed(
+        "MemoryBenchAnswerError:400",
+        "Command Code request failed: 400 error:message:400 InternalError.Algo.DataInspectionFailed: Input text data may contain inappropriate content.,type:invalid_request_error",
+      ),
+    ),
+    true,
+  );
   // A 400 the gateway pins on the request itself fails the same way on every re-run.
-  assert.equal(transientFailure(failed("MemoryBenchAnswerError:400", "opencode-go request failed: 400 error:type:invalid_request_error,message:Upstream request failed: invalid_value Validation: tools array cannot be empty")), false);
+  assert.equal(
+    transientFailure(
+      failed(
+        "MemoryBenchAnswerError:400",
+        "opencode-go request failed: 400 error:type:invalid_request_error,message:Upstream request failed: invalid_value Validation: tools array cannot be empty",
+      ),
+    ),
+    false,
+  );
   assert.equal(transientFailure(failed("MemoryBenchAnswerError:502", "bad gateway")), true);
-  assert.equal(transientFailure({ status: "failed", failure: { message: "TypeError: ECONNRESET: The socket connection was closed unexpectedly" } }), true);
+  assert.equal(
+    transientFailure({ status: "failed", failure: { message: "TypeError: ECONNRESET: The socket connection was closed unexpectedly" } }),
+    true,
+  );
   assert.equal(transientFailure(failed("MemoryBenchAnswerError:400", "invalid schema")), false, "an input 400 is not transient");
   assert.equal(transientFailure(failed("MemoryBenchAnswerError:401", "unauthorized")), false);
   assert.equal(transientFailure({ status: "failed", failure: { message: "maximum context length exceeded" } }), false);
@@ -247,4 +273,13 @@ test("cache_probe_rows_are_listed_beside_the_verdict_without_the_per_request_bod
   assert.equal(rows[0].informational, true);
   assert.equal(rows[0].route, "commandcode/muse");
   assert.equal("perRequest" in rows[0], false);
+});
+
+test("interrupted_attempts_cost_only_wall_time_on_retrying_routes", () => {
+  const retrying = { freeRouteRetries: true };
+  assert.equal(retryUncounted(retrying, { status: "abandoned" }), true);
+  assert.equal(retryUncounted(retrying, { status: "failed", cause: "transient" }), true);
+  assert.equal(retryUncounted(retrying, { status: "setup-failure" }), false);
+  assert.equal(retryUncounted(retrying, { status: "failed", cause: "answer-error" }), false);
+  assert.equal(retryUncounted({}, { status: "abandoned" }), false);
 });

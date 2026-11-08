@@ -23,8 +23,8 @@ import {
   repointSource,
 } from "@arnilo/prism-memory-core";
 import { createPostgresVectorStore } from "@arnilo/prism-memory-core/postgres";
-import { chunkText, createRagDeletionHandler, indexChunks, retrieveContext } from "@arnilo/prism-memory-rag";
-import type { RagScope } from "@arnilo/prism-memory-rag";
+import { chunkText, createRagDeletionHandler, indexChunks, retrieveContext } from "@arnilo/prism-rag";
+import type { RagScope } from "@arnilo/prism-rag";
 
 const postgresUrl = process.env.PRISM_TEST_POSTGRES_URL;
 

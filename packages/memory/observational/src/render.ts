@@ -1,5 +1,5 @@
 import { redactSecrets } from "@arnilo/prism";
-import { DEFAULT_MAX_TASK_STATE_BYTES, truncateWorkerText } from "./limits.js";
+import { DEFAULT_MAX_TASK_STATE_BYTES, truncateWorkerText } from "@arnilo/prism-memory-core";
 import { HARD_MAX_RENDERED_MEMORY_BYTES } from "./memory-bounds.js";
 import type { MemoryObservation, MemoryReflection, MemoryTaskState } from "./types.js";
 

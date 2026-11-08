@@ -30,7 +30,7 @@ it("cache_levers_match_pi_ollama_cloud", async () => {
     const bodies: JsonObject[] = [];
     const provider = createOllamaCloudProvider({
       route,
-      apiKey: "offline-fixture",
+      apiKey: async () => "offline-fixture",
       fetch: (async (url, init) => {
         assert.equal(String(url).endsWith(route === "native" ? "/api/chat" : "/v1/chat/completions"), true);
         for (const name of new Headers(init?.headers).keys()) assert.doesNotMatch(name, /cache|session|affinity/i);

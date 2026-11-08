@@ -568,7 +568,7 @@ export function mapOpenAIResponsesUsage(usage: unknown): Usage | undefined {
     readonly input_tokens?: number;
     readonly output_tokens?: number;
     readonly total_tokens?: number;
-    readonly input_tokens_details?: { readonly cached_tokens?: number };
+    readonly input_tokens_details?: { readonly cached_tokens?: number; readonly cache_write_tokens?: number; readonly cache_creation_input_tokens?: number };
     readonly output_tokens_details?: { readonly reasoning_tokens?: number };
   };
   const reasoningTokens = wire.output_tokens_details?.reasoning_tokens;
@@ -577,6 +577,8 @@ export function mapOpenAIResponsesUsage(usage: unknown): Usage | undefined {
     outputTokens: wire.output_tokens,
     totalTokens: wire.total_tokens,
     cacheReadTokens: wire.input_tokens_details?.cached_tokens,
+    // Command Code reports cache writes here; both are subsets of the inclusive `input_tokens`.
+    cacheWriteTokens: wire.input_tokens_details?.cache_write_tokens ?? wire.input_tokens_details?.cache_creation_input_tokens,
     ...(typeof reasoningTokens === "number" && reasoningTokens > 0 ? { metadata: { reasoningTokens } } : {}),
   });
 }

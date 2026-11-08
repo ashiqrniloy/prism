@@ -15,10 +15,7 @@ import type { Memory, MemoryVectorRecord, VectorStore } from "@arnilo/prism-memo
 import { MemoryValidationError } from "@arnilo/prism-memory-core";
 import { type MemoryNoteStatus, normalizeNoteStatus } from "../lifecycle/status.js";
 import { createMemory } from "../memory.js";
-import { conceptSources, renderConceptBody } from "../ontology/codec.js";
-import { readConceptBody } from "../ontology/render.js";
-import { reviewConceptEdit } from "../ontology/review.js";
-import { scanScopedMemoryContent } from "../scoped/trust.js";
+import { scanScopedMemoryContent } from "@arnilo/prism-memory-core";
 import {
   encodeMemoryNoteMetadata,
   MEMORY_NOTE_METADATA_KEY,
@@ -35,10 +32,10 @@ const TEAM_THREAD = "default";
 const DEFAULT_TEAM_DIR = ".prism/memory";
 
 /**
- * Kinds a person may share: the durable lessons, and a verified concept (plan 207 Task 4). A file snapshot or a
- * session view is not shared. A shared concept keeps its current claims and cited ids but never the cited notes.
+ * Kinds a person may share: the durable lessons. A file snapshot or a session view is not shared. Concepts left
+ * memory with the ontology (plan 216 Task 3).
  */
-const SHAREABLE_KINDS: ReadonlySet<MemoryNoteKind> = new Set(["fact", "preference", "procedure", "concept"]);
+const SHAREABLE_KINDS: ReadonlySet<MemoryNoteKind> = new Set(["fact", "preference", "procedure"]);
 
 const TEAM_SCAN_PAGE = 500;
 const TEAM_SCAN_MAX_PAGES = 8;
@@ -115,7 +112,7 @@ export type FabricTeamShareResult =
 
 export interface FabricTeam {
   readonly memory: Memory;
-  /** The team store itself, for the read-only ontology scope. */
+  /** The team store itself, for the read-only `memory.ltm` team scope. */
   readonly store: VectorStore;
   readonly options: ResolvedFabricTeamOptions;
   /** Absolute path of the derived index, outside the checked-in tree. */
@@ -144,12 +141,7 @@ export async function createFabricTeam(input: {
     throw new MemoryValidationError("the team index must live outside the team directory");
   }
   await mkdir(dirname(indexPath), { recursive: true, mode: 0o700 });
-  // A person's git change to a shared concept is reviewed like any edit: the codec, the trust scan, the human marker.
-  const stores = await createMarkdownMemoryStores({
-    root: input.options.dir,
-    index: { path: indexPath },
-    reviewEdit: (record, previous) => reviewConceptEdit(record, previous),
-  });
+  const stores = await createMarkdownMemoryStores({ root: input.options.dir, index: { path: indexPath } });
   const scope = { tenantId: TEAM_TENANT, resourceId: TEAM_RESOURCE, threadId: TEAM_THREAD };
   const memory = createMemory({ ...scope, vectorStore: stores.vectorStore, workingStore: stores.workingStore });
   const signal = input.signal;
@@ -223,7 +215,7 @@ export async function createFabricTeam(input: {
     if (record === undefined) return { ok: false, reason: "not_found", text: `No note ${shareInput.id} in this scope.` };
     const note = parseMemoryNoteMetadata(record.metadata);
     if (note === undefined || !SHAREABLE_KINDS.has(note.kind)) {
-      return { ok: false, reason: "not_shareable", text: `Note ${record.id} is not a fact, preference, procedure or concept.` };
+      return { ok: false, reason: "not_shareable", text: `Note ${record.id} is not a fact, preference or procedure.` };
     }
     const status = normalizeNoteStatus(record.metadata?.status as string | undefined, "verified");
     if (status !== "verified" || (note.flags?.length ?? 0) > 0) {
@@ -232,42 +224,9 @@ export async function createFabricTeam(input: {
     if (!scanScopedMemoryContent(record.text).ok) {
       return { ok: false, reason: "flagged", text: `Note ${record.id} trips the trust scan; nothing was shared.` };
     }
-    // A concept travels as its current claims only: stale items and open questions about private evidence stay home.
-    let text = record.text;
-    let shared: MemoryNoteMetadata = { ...note };
-    let existingConcept: string | undefined;
-    if (note.kind === "concept") {
-      const doc = readConceptBody(record.text);
-      const stale = new Set(note.stale ?? []);
-      const claims = doc?.claims.filter((claim) => !stale.has(claim.id)) ?? [];
-      if (doc === undefined || claims.length === 0) {
-        return { ok: false, reason: "not_shareable", text: `Concept ${record.id} has no current claim to share.` };
-      }
-      const current = { title: doc.title, claims, questions: [], contradictions: [] };
-      text = renderConceptBody(current);
-      // The citations stay as provenance; the cited notes are private and do not travel with the concept.
-      shared = {
-        ...note,
-        sources: conceptSources(current),
-        stale: undefined,
-        dirty: undefined,
-        links: undefined,
-        uses: undefined,
-        useSessions: undefined,
-      } as MemoryNoteMetadata;
-      // One concept per subject per scope: a repeat share replaces the team's earlier concept for that subject.
-      for await (const records of pages()) {
-        for (const candidate of records) {
-          const other = parseMemoryNoteMetadata(candidate.metadata);
-          if (other?.kind === "concept" && other.subject === note.subject) existingConcept = candidate.id;
-        }
-      }
-    }
-    if (!scanScopedMemoryContent(text).ok) {
-      return { ok: false, reason: "flagged", text: `Note ${record.id} trips the trust scan; nothing was shared.` };
-    }
-    const id =
-      existingConcept ?? createHash("sha256").update(`fabric:team:${record.id}\u0000${record.text}`, "utf8").digest("hex").slice(0, 12);
+    const text = record.text;
+    const shared: MemoryNoteMetadata = { ...note };
+    const id = createHash("sha256").update(`fabric:team:${record.id}\u0000${record.text}`, "utf8").digest("hex").slice(0, 12);
     const path = noteRelPath({
       tenantId: TEAM_TENANT,
       resourceId: TEAM_RESOURCE,
@@ -278,9 +237,7 @@ export async function createFabricTeam(input: {
     });
     const answer = await shareInput.approve({
       title: `Share note ${record.id} with the team store?`,
-      detail: `${text}\n\n${
-        note.kind === "concept" ? `Shares ${shared.sources?.length ?? 0} citation id(s) without the cited notes; they stay private. ` : ""
-      }Writes ${join(input.options.dir, path)}. Review it before you commit.`,
+      detail: `${text}\n\nWrites ${join(input.options.dir, path)}. Review it before you commit.`,
     });
     if (answer === "unavailable") {
       return { ok: false, reason: "host_unavailable", text: "No host UI answered; a share needs a person's approval." };

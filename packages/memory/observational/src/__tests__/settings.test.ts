@@ -11,7 +11,7 @@ function createStaticSettingsProvider(settings: Record<string, unknown>) {
   };
 }
 import { defaultObservationalMemorySettings, type ObservationalMemorySettingsInput, resolveObservationalMemorySettings } from "../settings.js";
-import { HARD_MAX_WORKER_TURNS } from "../limits.js";
+import { HARD_MAX_WORKER_TURNS } from "@arnilo/prism-memory-core";
 
 const workerModel = { provider: "mock", model: "legacy" };
 

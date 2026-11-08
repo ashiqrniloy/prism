@@ -1,17 +1,30 @@
-AdapterConformanceError	export declare class AdapterConformanceError extends Error
-ProcessDriverError	export declare class ProcessDriverError extends Error
-ProcessDriverInspection	export type { ProcessDriverInspection } from "./inspect.js"
-adapterConformance	export declare function adapterConformance(adapter: AgentAdapter, options: AdapterConformanceOptions): Promise<DriverConformanceResult>
-adapterDriver	export declare function adapterDriver(adapter: AgentAdapter): DriverDefinition<ProcessDriverConfig>
-assertAdapter	export declare function assertAdapter(adapter: AgentAdapter): void
-createTurn	export declare function createTurn(adapter: AgentAdapter, ctx: DriverRunContext<ProcessDriverConfig>, redact: <T>(value: T) => T, beforeNextTurn?: (encoding: import("./adapter.js").EncodeContext) => Promise<void>):
-extendAdapter	export declare function extendAdapter(base: AgentAdapter, overrides: AdapterOverrides): AgentAdapter
-inspectDriver	export declare function inspectDriver(adapter: AgentAdapter, config: DriverConfig<ProcessDriverConfig>, binary?: DriverBinary): ProcessDriverInspection
-jsonRpc	export declare function jsonRpc(child: ChildProcessWithoutNullStreams, adapter: AgentAdapter, ctx: DriverRunContext<ProcessDriverConfig>, encoding: EncodeContext, redact: <T>(value: T) => T): Transport
-jsonlStream	export declare function jsonlStream(child: ChildProcessWithoutNullStreams, redact: (text: string) => string): Transport
-processDriver	export declare function processDriver(adapter: AgentAdapter): PackageDefinition<DriverConfig<ProcessDriverConfig>>
-processSession	export declare function processSession(adapter: AgentAdapter, ctx: DriverRunContext<ProcessDriverConfig>, context: SessionContext, redact: <T>(value: T) => T): Promise<
-processShutdown	export declare function processShutdown(child: ChildProcessWithoutNullStreams, exited: Promise<void>, adapter: AgentAdapter, transport: Transport, encoding: EncodeContext, graceMs: number):
-quoteCommand	export declare function quoteCommand(argv: readonly string[]): string
-type AdapterOverrides	export { type AdapterOverrides, extendAdapter } from "./extend.js"
-type ProcessDriverErrorCode	export { ProcessDriverError, type ProcessDriverErrorCode } from "./errors.js"
+. AbortStep	type AbortStep = { readonly rpc: string; readonly params?: (ctx: EncodeContext) => JsonValue; } | { readonly closeStdin: true; } | { readonly signal: "SIGINT" | "SIGTERM"; }
+. AdapterIdentity	interface AdapterIdentity { readonly extends?: AdapterIdentity; readonly name: string; readonly revision: string; }
+. AdapterOverrides	type AdapterOverrides = Pick<AgentAdapter, "name" | "revision"> & Partial<Pick<AgentAdapter, "transport" | "vendor" | "permissionTool" | "abort" | "requests">> & { readonly [K in FunctionMembers]?: FunctionOverride<NonNullable<AgentAdapter[K]>>; } & { readonly descriptor?: Partial<Omit<DriverDescriptor, "controls" | "capture" | "auth">> & { readonly controls?: Partial<DriverDescriptor["controls"]>; readonly capture?: Partial<DriverDescriptor["capture"]>; readonly auth?: Partial<DriverDescriptor["auth"]>; }; readonly binary?: Partial<AgentAdapter["binary"]>; readonly profile?: Partial<AgentAdapter["profile"]>; readonly encode?: Partial<AgentAdapter["encode"]>; readonly hooks?: Partial<NonNullable<AgentAdapter["hooks"]>>; readonly session?: Partial<AgentAdapter["session"]>; }
+. AgentAdapter	interface AgentAdapter { configure(spec: ExternalAgentSpec, ctx: ConfigureContext): LaunchPlan | Promise<LaunchPlan>; decode(frame: JsonValue): Decoded; notices?(activity: ExternalActivity): LimitSignal | undefined; open?(ctx: OpenContext): readonly OutboundFrame[]; readonly abort: readonly AbortStep[]; readonly binary: { readonly command: readonly string[]; readonly versionArgs?: readonly string[]; version(stdout: string): string | undefined; }; readonly descriptor: DriverDescriptor; readonly encode: { prompt(input: AgentInput, ctx: EncodeContext): OutboundFrame; steer?(message: Message, ctx: EncodeContext): OutboundFrame; continue?(reason: string, ctx: EncodeContext): OutboundFrame; }; readonly extends?: AdapterIdentity; readonly hooks?: { readonly codec: HookCodec; readonly failClosed: RelayAnswer; readonly timeoutMs?: number; }; readonly name: string; readonly permissionTool?: string; readonly profile: { readonly parseStatus: ParseStatus; }; readonly requests?: Readonly<Record<string, RequestHandler>>; readonly revision: string; readonly session: { readonly strategy: "store" | "vendor" | "none"; archive?(ctx: SessionContext): Promise<JsonValue[]>; restore?(entries: readonly JsonValue[], ctx: SessionContext): Promise<RestorePlan>; }; readonly transport: "jsonl-stream" | "json-rpc"; readonly vendor?: JsonSchema; }
+. ConfigureContext	interface ConfigureContext extends SessionContext { readonly endpoint?: McpEndpoint; readonly hook: { readonly argv: readonly string[]; readonly command: string; }; readonly resume: ResumeContext; readonly skills?: MaterializedSkills; }
+. Decoded	interface Decoded { readonly activity: readonly ExternalActivity[]; readonly sessionId?: string; readonly stop?: string | true; readonly turnEnd?: boolean; readonly turnId?: string; readonly unmapped?: boolean; }
+. EncodeContext	interface EncodeContext { readonly sessionId?: string; readonly turnId?: string; }
+. LaunchPlan	interface LaunchPlan { readonly args?: readonly string[]; readonly env?: Readonly<Record<string, string>>; readonly files?: readonly MaterializedFile[]; readonly overlays?: readonly MaterializedFile[]; }
+. OpenContext	interface OpenContext extends EncodeContext { readonly resume: ResumeContext; readonly tools: readonly ToolDefinition[]; }
+. OutboundFrame	type OutboundFrame = JsonValue | RpcFrame
+. ProcessDriverConfig	interface ProcessDriverConfig { readonly args?: readonly string[]; readonly binary?: string; readonly capture?: "mapped" | "all"; readonly cwd?: string; readonly graceMs?: number; }
+. ProcessDriverError	class ProcessDriverError extends Error { constructor(code: ProcessDriverErrorCode, message: string, deferUntil?: string | undefined); readonly code: ProcessDriverErrorCode; readonly deferUntil?: string | undefined; }
+. ProcessDriverErrorCode	type ProcessDriverErrorCode = "vendor_request_unhandled" | "vendor_request_failed" | "vendor_limit" | "adapter_invalid" | "vendor_process_exited"
+. ProcessDriverInspection	interface ProcessDriverInspection { readonly acknowledgements: readonly string[]; readonly adapter: AdapterIdentity; readonly binary?: DriverBinary; readonly capture: "mapped" | "all"; readonly deployment: "local" | "hosted"; readonly isolation: "strict" | "inherit"; readonly policy: DriverDescriptor["auth"]; readonly transport: AgentAdapter["transport"]; }
+. RelayAnswer	type RelayAnswer = ReturnType<HookCodec["encode"]>
+. RequestContext	interface RequestContext extends EncodeContext { readonly ask: RunController["ask"]; readonly bridge: ToolBridge; readonly host: DriverRunContext["host"]; readonly params: JsonValue; readonly run: RunController; readonly tools: readonly ToolDefinition[]; }
+. RequestHandler	type RequestHandler = (ctx: RequestContext) => JsonValue | Promise<JsonValue>
+. RestorePlan	type RestorePlan = LaunchPlan
+. ResumeContext	interface ResumeContext { readonly args?: readonly string[]; readonly entries: readonly JsonValue[]; readonly sessionId?: string; }
+. RpcFrame	interface RpcFrame { readonly method: string; readonly notify?: boolean; readonly onResult?: (result: JsonValue) => Decoded | undefined; readonly params?: JsonValue; }
+. SessionContext	interface SessionContext extends EncodeContext { readonly cwd: string; readonly home: string; readonly runDir: RunDirectory; }
+. adapterDriver	function adapterDriver(adapter: AgentAdapter): DriverDefinition<ProcessDriverConfig>
+. assertAdapter	function assertAdapter(adapter: AgentAdapter): void
+. extendAdapter	function extendAdapter(base: AgentAdapter, overrides: AdapterOverrides): AgentAdapter
+. processDriver	function processDriver(adapter: AgentAdapter): PackageDefinition<DriverConfig<ProcessDriverConfig>>
+. quoteCommand	function quoteCommand(argv: readonly string[]): string
+./testing AdapterConformanceError	class AdapterConformanceError extends Error { constructor(leg: string, message: string); readonly leg: string; }
+./testing AdapterConformanceFixtures	interface AdapterConformanceFixtures extends DriverConformanceFixtures { readonly recorded?: string; readonly scriptFor?: (activity: ExternalActivity) => readonly ScriptStep[]; }
+./testing AdapterConformanceOptions	interface AdapterConformanceOptions extends DriverConformanceOptions { readonly fixtures: AdapterConformanceFixtures; }
+./testing adapterConformance	function adapterConformance(adapter: AgentAdapter, options: AdapterConformanceOptions): Promise<DriverConformanceResult>

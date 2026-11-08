@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-06T19:41:45.659Z",
+  "generatedAt": "2026-11-08T16:21:03.726Z",
   "root": {
     "name": "@arnilo/prism",
     "version": "0.13.0"
@@ -25,12 +25,12 @@
     "@arnilo/prism-delegate": "0.13.0",
     "@arnilo/prism-workflows": "0.13.0",
     "@arnilo/prism-advisor": "0.13.0",
+    "@arnilo/prism-wiki": "0.13.0-experimental.0",
+    "@arnilo/prism-rag": "0.13.0-experimental.0",
     "@arnilo/prism-memory-compaction": "0.13.0",
     "@arnilo/prism-memory-observational": "0.13.0-experimental.0",
     "@arnilo/prism-memory-core": "0.13.0-experimental.0",
-    "@arnilo/prism-memory-rag": "0.13.0-experimental.0",
     "@arnilo/prism-memory-fabric": "0.13.0-experimental.0",
-    "@arnilo/prism-memory-wiki": "0.13.0-experimental.0",
     "@arnilo/prism-approval": "0.13.0",
     "@arnilo/prism-guardrail-packs": "0.13.0",
     "@arnilo/prism-governance": "0.13.0",
@@ -106,10 +106,9 @@
     "@arnilo/prism-memory-core",
     "@arnilo/prism-memory-fabric",
     "@arnilo/prism-memory-observational",
-    "@arnilo/prism-memory-rag",
-    "@arnilo/prism-memory-wiki",
     "@arnilo/prism-model-router",
     "@arnilo/prism-observability",
+    "@arnilo/prism-rag",
     "@arnilo/prism-remote",
     "@arnilo/prism-store-codecs",
     "@arnilo/prism-store-jsonl",
@@ -122,6 +121,7 @@
     "@arnilo/prism-tools-research",
     "@arnilo/prism-tools-web",
     "@arnilo/prism-tools-work",
+    "@arnilo/prism-wiki",
     "@arnilo/prism-workflows"
   ],
   "umbrella": {},

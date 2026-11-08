@@ -9,7 +9,7 @@
   3. **measure** the fixed variant once where a credible fix exists;
   4. **remove** it when no justification is found: no benefit, no safety role, no cost role, and no credible gap fix.
 - Freeze a smaller memory surface whose every remaining feature has a recorded justification. Unmeasured mechanisms do not become permanent API-level-1 obligations.
-- Then, on that final product, run the **one held-out acceptance** for every memory claim (plan 202's robustness rows, plan 208's ontology rows, plan 209's work-outcome rows), and set the preset revision, the defaults and the published claims from its verdicts. These were plan 202 Tasks 18–19, plan 208 Tasks 6–7 and plan 209 Task 7 until the owner moved them here on 2026-10-31.
+- Then, on that final product, run the **one held-out acceptance** for every memory claim (plan 202's robustness rows, plan 208's ontology rows, plan 209's work-outcome rows), and set the preset revision, the defaults and the published claims from its verdicts. These were plan 202 Tasks 18–19, plan 208 Tasks 6–7 and plan 209 Task 7 until the owner moved them here on 2026-10-31. *(Moved to plan 223 on 2026-11-08: the final product is now the rebuilt memory system.)*
 
 ## Expected Outcome
 
@@ -19,9 +19,9 @@
 - `scripts/memory-bench/cleanup-criteria.json`: pre-registered decision rules, committed before the ablation campaign.
 - One owner-gated ablation campaign (gate C-1): leave-one-out for preset members, add-one for opt-ins, and fixed variants, on development partitions of the robustness and work-outcome suites. Held-out partitions stay unread until Task 9.
 - A decision record, approved by the owner. Removals land with deleted code, config fields, exports, docs and tests; regenerated baselines; a repo-wide sweep; and migration notes.
-- A combined non-inferiority check and a product freeze (Task 8).
-- One held-out acceptance under owner gate 3 (Task 9), with one verdict per criterion of `robustness-criteria.json`, `three-tier-criteria.json` and `work-outcome-criteria.json`, all on the frozen product.
-- `conversational` revision 2 (or the last passing revision), the memory, ontology and working-agent defaults, `scripts/memory-bench/defaults.json`, and every README and `PRODUCT.md` memory claim, in one change (Task 10). The memory surface is handed to plan 184/185.
+- A combined non-inferiority check and a product freeze (Task 8). *(Amended 2026-11-08: Task 8 dropped; its offline parts are in Task 7, and the combined check and freeze moved to plan 223 Task 1.)*
+- One held-out acceptance under owner gate 3 (Task 9), with one verdict per criterion of `robustness-criteria.json`, `three-tier-criteria.json` and `work-outcome-criteria.json`, all on the frozen product. *(Moved to plan 223 Task 2, 2026-11-08.)*
+- `conversational` revision 2 (or the last passing revision), the memory, ontology and working-agent defaults, `scripts/memory-bench/defaults.json`, and every README and `PRODUCT.md` memory claim, in one change (Task 10). The memory surface is handed to plan 184/185. *(Moved to plan 223 Tasks 3–4, 2026-11-08.)*
 
 This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-part 16). **Owner decision 2026-10-31:** an end-of-build audit inside 0.13.0 identifies memory features with no measured benefit or a negative impact, detects mechanism errors, analyses conceptual gaps, and removes what cannot be justified. It runs as release step **17f**, the last plan of a strictly sequential memory train (owner decision 2026-10-31): 202 → 207 → 208 → 209 → **210** → 184 → 185.
 
@@ -33,11 +33,47 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
 - **Amended 2026-11-03 (owner decision): hot-path performance fixes land first, as Tasks 0.1–0.3.** A compiled-language (Rust) evaluation on 2026-11-03 rejected a native port. The kernel adds 3–6 ms per run against seconds of model latency, most store CPU is already native (bun:sqlite, JSON, fs), and the measured costs are algorithmic. Two came out of it: the markdown store rewrites three whole files on every write, and the session snapshot re-reads and `structuredClone`s the whole branch on every provider turn. The owner wants both fixed, with a regression gate, before the memory evaluations. They are unrelated to the audit. They are numbered 0.x so every existing "plan 210 Task N" reference (plans 202, 208, 209, the plan index) stays valid. They add no kernel contract, hook, slot or export, so no review task is needed. Both change sources that plan 202's cache-stability pin fingerprints (`src`, `packages/memory/core/src`), so Task 0.3 ends by re-attesting the pin with byte-identical provider requests. Task 1 starts only after that. **Amended 2026-11-07 (Task 0.1 finding):** Task 0.4 was added for a third algorithmic cost, the SQLite (and possibly Postgres) branch read, which is O(depth × session size). It is a store-only change outside the pin's fingerprinted sources. Task 1 starts after Tasks 0.3 and 0.4.
 - **Amended 2026-11-04 (owner decision, plan 215): post-0.13.0 memory track.** 0.13.0 no longer waits for this plan. Plan 215 publishes the five memory packages as an experimental prerelease line (`0.13.0-experimental.N`, dist-tag `experimental`) and freezes only the stable surface. This plan runs after plan 209, after 0.13.0 ships. Wherever it says "before plan 184/185", "the freeze", "plan 186" or "plan 187", read: plan 215's cache-parity runner, plan 215's experimental compat classification, and this plan's own graduation (Task 10). Task 11 (memory skills) moved here from plan 211 Task 6.
 - **Amended 2026-11-05 (owner request, from plan 208 Task 5's accuracy investigation): recall-quality remediation, Task 3.1.** Plan 208's screen reported low accuracy, and the investigation (`docs/_evidence/memory-bench/208/accuracy-investigation-2026-11-04.json`, counts only) split it into harness defects (fixed in plan 208), small samples, a benchmark ceiling, and a modest memory gap. The memory gap is real and has named causes. They enter this plan as fixed variants the audit already knows how to handle: built behind opt-in tuning fields in Task 3.1, predicted in Task 3's `gap-predictions.json`, measured once in Task 5 (gate C-1), kept or removed in Task 6. No default changes before Task 6. The number 3.1 keeps every existing "plan 210 Task N" reference valid. **Sequencing exception (owner instruction, 2026-11-05):** Task 3.1 was started before plan 209 Task 6, against this plan's own start rule above, because the screen's evidence made the fixes the cheaper next step. Task 3.2 (panel calibration, from the same screen's O3 early read) is added the same day; both are development-only and change no default. *(2026-11-07: the 208 claim bundles were deleted before Task 3.2 ran, so its live calibration moved to the head of Task 5 by owner decision; Task 3.2 closed its offline half.)*
+- **Amended 2026-11-08 (owner): observational memory becomes episodic memory, Tasks 7.1–7.6.** A review of the OM package on 2026-11-08 found pass and wiring defects, and the owner redefined the workers' roles:
+  - the observer records everything that happens, with verbatim source chunks in a deletable local store, read back through `recall`;
+  - the reflector reads a host-set natural-language episode scope and derives episode-relevant facts and retention verdicts;
+  - the dropper drops observations by that scope mid-episode and against the whole project at `episode:end`. It converts dropped content to durable facts (promoting project facts to fabric) and is the only code that deletes chunks.
+  The package is renamed `@arnilo/prism-memory-episodic`, after a check of Mastra's Observational Memory (Task 7.1). These tasks are the gap fix for the OM workers (Objectives step 3). They run after Task 7 and before the Task 8 freeze, and are measured against Task 5's `OM` rows.
+- **Amended 2026-11-08, later the same day (owner): the memory model redesign narrows this plan.** The owner decided to rebuild memory as one system modelled on human memory, and to move the ontology out of memory into the wiki. The design record is [`docs/_evidence/memory-model/design.md`](../docs/_evidence/memory-model/design.md); plans 216–223 implement it after this plan.
+  - **Supersedes Tasks 7.1–7.6.** They are dropped. Their requirements carry into plans 216–219 under the new taxonomy, and the "episodic" name now belongs to a long-term memory kind:
+    - 7.1, 7.2 → plan 216 Task 4;
+    - 7.3 → plan 217;
+    - 7.4 → plan 218;
+    - 7.5 → plan 219;
+    - 7.6 → plans 217–219's fixtures and gates.
+  - **This plan keeps** the decisions on what wave 1 measured: long-term memory retrieval and the write side (enrichment, navigation, timeline, grouping, tool affordances, supersession hint, directory) and the plan 202 Task 5 deferred rows. It also keeps the offline inert removals (Task 7).
+  - **No further paid runs (owner, 2026-11-08).** Task 5 closes on wave 1, which finished: 64 jobs completed, about 676M input tokens. Waves 2 and 3 are cancelled, not deferred:
+    - most of wave 2 measures features plans 220–221 rebuild (the delivery tiers become priming; lessons, standing rules and the work legs become procedural and conditioned memory; `maintain` and the archive exemption become Sleep's forgetting job);
+    - the Task 3.1 recall variants in wave 2 stay opt-in and unmeasured (Task 6);
+    - wave 3's oracle leg has nothing left to interpret.
+  - **Moved out of Task 5.** The redesign replaces these mechanisms, or the ontology is leaving memory, so measuring them here would spend money on code that is about to change:
+    - the panel calibration and the evasive-lure residual → plan 222 Task 2;
+    - the ontology arms → plan 222 Task 3;
+    - the F4 leg and the conditional plan 202 Task 17 arm → plan 219 Task 7;
+    - the `OM` reference arm → plan 217 Task 6, where it is the "before" baseline;
+    - `om-reflector-loo` and `om-dropper-deterministic` are not run: the workers they ablate are replaced, and plans 218–219 measure their replacements against `OM`.
+  - **`transferred` verdicts.** Rows the redesign replaces, or gives the producer they lacked, are excluded from this plan's verdicts and receive the Task 6 verdict `transferred`, naming the plan that decides them (Task 6). The `inertRemoval` list loses the transferred rows (Task 7).
+  - **The freeze and the acceptance move.** Task 8 is dropped. Its offline parts (the slimmed product's hash and the readiness cache-stability pin) move into Task 7. Plan 223 Task 1's combined check, with bisection over this plan's removals, replaces its paid check. Plan 223 owns:
+    - the product freeze → Task 1;
+    - the one held-out acceptance → Task 2;
+    - the preset revision, defaults and claims → Task 3;
+    - graduation → Task 4;
+    - the memory skills → Task 5.
+
+    Tasks 9–11 are dropped here.
+  - **Order.** This plan → 216 → 217 → 218 → 219 → 219.1 → 220 → 221 → 222 → 223, strictly sequential.
+  - **Retrieval (owner, 2026-11-08, after the retrieval review; design §5.11).** Plan 219.1 rebuilds LTM query recall and measures it at gate M-T.
+    - The retrieval rows this plan holds or leaves unmeasured get their final disposition there: `retrieval.strength-priors`, `recall.multi-query`, `recall.unmatched-terms`, `recall.state-grouping`, `navigation.agentic-lexical`, `recall.gather`, `recall.expansion`, `decisions.P5`.
+    - Task 7's removals of `timeline`, `write.keyword-enrichment` and `recall.supersession-hint` stand as decided. Plan 219.1's time cue and Rehearsal-written cues are separate mechanisms with their own leave-one-out arms, and reuse none of the removed config fields.
 - **Audit before acceptance.** Removals happen on development evidence only, before any held-out item is read. The held-out acceptance then measures the product that ships, so no claim has to be re-pointed and no removal needs a second held-out read.
 
-**Scope:** `memory-observational`, `memory-fabric`, `memory-wiki` and the parts of `memory-core` only they use. `memory-rag` (document retrieval, a separate capability the owner keeps outside memory) and `memory-compaction` (measured by plan 194's rot curve) are out of scope; the ledger lists them as excluded with that reason.
+**Scope:** `memory-observational`, `memory-fabric`, `memory-wiki` and the parts of `memory-core` only they use. *(Amended 2026-11-08: OM, the session-consolidation path and the ontology are transferred to plans 216–222; see the header amendment.)* `memory-rag` (document retrieval, a separate capability the owner keeps outside memory) and `memory-compaction` (measured by plan 194's rot curve) are out of scope; the ledger lists them as excluded with that reason.
 
-**No new kernel contract or package:** the audit primarily removes existing surface. The sole conditional addition authorized by the 2026-11-02 handoff is plan 202 Task 17's already-reviewed opt-in facts preset, only after its residual threshold is measured; its implementation must include the original tests, docs and compatibility-baseline updates. A removal is planned the way a retirement is: baseline regeneration, sweep, and migration note. The preset revision and defaults Task 10 sets are the ones plans 202, 208 and 209 reviewed and specified. **Paid work is owner-gated twice:** C-1 (ablations and the combined check) and gate 3 (held-out acceptance, plus a fresh approval for the one remediation round). Live runs stay on plan 202's providers, never `openrouter/free`. No version bump or publish: every package ships in plan 187's lockstep 0.13.0 publish.
+**No new kernel contract or package:** the audit primarily removes existing surface. The sole conditional addition authorized by the 2026-11-02 handoff is plan 202 Task 17's already-reviewed opt-in facts preset, only after its residual threshold is measured; its implementation must include the original tests, docs and compatibility-baseline updates. A removal is planned the way a retirement is: baseline regeneration, sweep, and migration note. The preset revision and defaults Task 10 sets are the ones plans 202, 208 and 209 reviewed and specified. **Paid work is owner-gated twice:** C-1 (ablations and the combined check) and gate 3 (held-out acceptance, plus a fresh approval for the one remediation round). *(Amended 2026-11-08: C-1 closed after wave 1; gate 3 moved to plan 223 gate A. This plan has no further paid work.)* Live runs stay on plan 202's providers, never `openrouter/free`. No version bump or publish: every package ships in plan 187's lockstep 0.13.0 publish.
 
 **Release gating** (moved from plan 202 with its Task 18, unchanged):
 
@@ -1047,9 +1083,32 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
       - Biome: clean on the changed files.
       - No product code or export changed, so there is no baseline diff and no sweep.
 
-- [ ] Task 5: Ablation and re-measurement campaign (owner gate C-1, paid)
+- [x] Task 5: Ablation and re-measurement campaign (owner gate C-1, paid)
   - Acceptance Criteria:
-    - Functional: **Panel calibration first (moved from Task 3.2, owner, 2026-11-07).** The plan 208 claim bundles are gone, so the claims are fresh. Before any O3-bearing arm is scored:
+    - Functional: **Amended 2026-11-08 (owner, memory model): scope narrowed to what this plan audits and the redesign keeps.**
+      - **Gate C-1 amendment 7 (owner, 2026-11-08): the campaign closes after wave 1.** Wave 1 has finished. Waves 2 and 3 are cancelled; no job of theirs runs. The gate record states the closure, the spend so far and the budget left unused. The cancelled arms go as follows:
+
+        | Cancelled arm | Disposition |
+        |---|---|
+        | wave 3: `P+O`, `trigger-co-read-loo`, `trigger-accumulation-loo`, `concept-prior-loo`, `concept-pointer-loo` | moved to plan 222 Task 3, re-expressed for the wiki outside memory |
+        | wave 3: `f4-readtime` | moved to plan 219 Task 7 |
+        | wave 3: `OM` | moved to plan 217 Task 6 as the "before" baseline |
+        | wave 3: `om-reflector-loo`, `om-dropper-deterministic` | not run: plans 218–219 replace those workers |
+        | wave 3: `oracle` | not run |
+        | wave 2: `tools-only`, `rules-add`, `W.P`, `W.P+W`, `W.steps-loo`, `W.rules-loo`, `W.lessons-loo` | transferred with their features (Task 6) to plans 219–220 |
+        | wave 2: `maintain`, `archive-exchange-exempt` | transferred to plan 221, which decides the archive exemption from the offline growth evidence (`210/offline/growth-*`: month-1 retrieval 0.5625 → 1.0 with the exemption) |
+        | wave 2: `gather`, `expansion`, `card-excerpt`, `precision-filter`, `strength-0.15`, `aggregation-loo`, `decisions-p3`, `decisions-p5`, `W.decisions-p4` | not run: the features stay at their current defaults and are recorded `unmeasured` in Task 6 |
+
+      - **Criteria amendment.** `cleanup-criteria.json` gains a `transferred` list: each excluded feature id with its destination plan (Task 6). The feature is removed from `inertRemoval`. The file is re-hashed, and the C-1 manifest pins the new `cleanupCriteriaHash`.
+        - A test proves no rule, threshold or verdict precedence changed for any remaining feature. Only the membership of `transferred` and `inertRemoval` differs.
+        - Results already recorded for wave 1 stay valid under the new hash.
+      - **The panel calibration and the evasive-lure residual** (the first criterion below) move to plan 222 Task 2. They calibrate claim support for the wiki, which leaves memory.
+      - **The conditional Task 17 arm and the F4 diagnosis** move to plan 219 Task 7: session fact extraction is Rehearsal's job in the new design.
+      - **The plan 202 closure rows.** The "OM/promotion" row of "Remaining plan 202 development targets" moves to plan 219 Task 7. Rows wave 1 measured are scored here. Rows only waves 2–3 would have measured are recorded `unverified`, as this criterion already allows for unavailable measurements, and plan 223's held-out acceptance still scores `robustness-criteria.json` in full. Those rows are passive delivery, aggregation/abstention, P1–P7, weak-caller sessions and coding decisions.
+      - **Report.** `acceptance-report.mjs --plan 210 --partition dev` reads wave 1 only. It reports cancelled arms as `cancelled` and transferred rows as `transferred`, never as a miss.
+      - Test: `plan_210_c1_closed_after_wave_1_and_report_reads_wave_1_only`. It fails if any wave 2–3 job is scheduled, or if a cancelled arm is scored as a miss.
+      - Test: `cleanup_criteria_transfer_changes_no_rule_for_remaining_features`.
+    - Functional: *(Moved to plan 222 Task 2 on 2026-11-08; kept here as the record of the requirement.)* **Panel calibration first (moved from Task 3.2, owner, 2026-11-07).** The plan 208 claim bundles are gone, so the claims are fresh. Before any O3-bearing arm is scored:
       - **Labelled set.** One `P+O` run on the post-remediation product, development partitions only, curated by a model on no judge panel. `bun scripts/memory-bench/ontology-audit.mjs --campaign <campaign> --arm <arm> --build-human-set <dir>` draws 60 claims through `selectHumanAuditClaims`. Claim text stays in the cache and in `.cache/scratch`.
       - **Blind labels.** The assistant labels first (plan 208 gate amendment 1), or the owner does via `review.html`. The labels are written before any panel verdict on these claims is read, and the label file is hashed into the run record first. An assistant-only label set is `development` evidence; Task 9 repeats O3 with a person's labels.
       - **Calibration run.** `ontology-audit.mjs --labels <labels.json> --judges <two families, neither the curator>`. `assertNoCuratorJudge` refuses a curator through any route. Before the run, the gate check in `liveJudges` must accept the C-1 record (today it accepts only plan 208's O-1); change it with a test. Report the supported-versus-not kappa with its interval, the four-label kappa and the confusion table, counts only, in `docs/_evidence/memory-bench/210/audit/claim-calibration.json`. Name the judges and the spend.
@@ -1070,7 +1129,7 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
       - scored with the plan 202 Task 5.2 rules **as frozen**: the candidate-gap halving per suite, and the ability guard as a **veto** (every suite × ability stratum `>= -0.03`, missing strata unverified and blocking). Pin the original `criteriaHash` (version `202-task5-candidate-gap-v1`); a criteria drift is refused. *(Amended 2026-11-07 by Task 4: the frozen manifest carries `202-task5-candidate-gap-v2`, hash `07383989…`. It is v1 with only the transport changed, at gate 16. `cleanup-criteria.json` pins v2, and so must the C-1 manifest.)*
       These rows are reported next to the `cleanup-criteria.json` verdict and feed it as evidence. They do not replace it, and the cleanup verdict does not override them. A Task 5.2 miss here is a plan 202 Task 5 miss: Task 6 records it, and the feature goes to fix-and-measure or removal under `cleanup-criteria.json`. The arms run on plan 202's providers per this plan's header; the model may differ from Task 5's free route, and the report names the change.
     - Functional: **Remaining plan 202 development targets.** C-1 lists a disposition and measurement for every row in the closure handoff, including timeline, state/wrapper calibration, passive delivery, aggregation/abstention, realistic weak-caller sessions, coding decisions, each P1–P7 gate, live safety, growth QA and OM/promotion. Applicable original targets remain named and scored separately from cleanup verdicts; unavailable suites or attribution stay unverified. Build fresh compatible paired bases as needed; do not combine pre-cache-change fabric cells with current cells or silently resume the incomplete broad baseline.
-    - Functional: **Conditional Task 17 arm.** Before calls, Task 4's criteria and C-1 pin the residual-diagnosis protocol, ≥5% trigger and the original Task 17 acceptance bars. If Task 3 lacks complete evidence, run the pre-registered diagnostic leg first under C-1 and update the gap analysis. Only a qualifying development diagnosis permits the minimal fabric extractor repair and opt-in `conversational-facts` add-one arm. Write its named regressions first; include exchange citations, scope/consent inheritance, unchanged `conversational`, ≤2% session failures, cheap-model per-session/per-1k-exchange write cost, `product-extract` cache-read/write tokens and costs with/without cache reads, target-ability benefit and no regression. Update changed exports/baselines and README/changelog in the same task. Otherwise no preset is added. Task 6 records `not-needed`, measured outcome, or `unmeasured`/F4 unresolved before Task 8's freeze; held-out data cannot trigger this implementation.
+    - Functional: *(Moved to plan 219 Task 7 on 2026-11-08; kept here as the record of the requirement.)* **Conditional Task 17 arm.** Before calls, Task 4's criteria and C-1 pin the residual-diagnosis protocol, ≥5% trigger and the original Task 17 acceptance bars. If Task 3 lacks complete evidence, run the pre-registered diagnostic leg first under C-1 and update the gap analysis. Only a qualifying development diagnosis permits the minimal fabric extractor repair and opt-in `conversational-facts` add-one arm. Write its named regressions first; include exchange citations, scope/consent inheritance, unchanged `conversational`, ≤2% session failures, cheap-model per-session/per-1k-exchange write cost, `product-extract` cache-read/write tokens and costs with/without cache reads, target-ability benefit and no regression. Update changed exports/baselines and README/changelog in the same task. Otherwise no preset is added. Task 6 records `not-needed`, measured outcome, or `unmeasured`/F4 unresolved before Task 8's freeze; held-out data cannot trigger this implementation.
     - Functional: **Task 3 arms and prerequisites (amended 2026-11-07).**
       - The arms are the `arm` fields of `210/gap-predictions.json`: 29 distinct arms for 30 `fix-and-measure` rows. The `measure-elsewhere` entries name their instruments.
       - Two prerequisites are built before the arms. Each needs a regression test, and neither may change a preset default before Task 6:
@@ -1117,7 +1176,7 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
       - evidence README; conditionally the fabric README and CHANGELOG.md for Task 17, with its per-session write-call/cost contract.
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
-  - Notes (in progress, 2026-11-08; the box stays open until the campaign, calibration and report finish):
+  - Notes (executed 2026-11-08; closed after wave 1 by gate C-1 amendment 7):
     - **Gate C-1** is `docs/_evidence/memory-bench/210/gates/owner-gate-c1.json`, bound to `ablations/c1-manifest.json` (163 jobs, development partition only). It has five amendments:
       - Approved free-only on 2026-11-07.
       - Amendment 3 replaced the judges after glyph-cluster's shared 1000-a-day allowance ran out.
@@ -1132,10 +1191,13 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
         - wave 2: 2,080 questions and 12 work-outcome jobs — the other recall and delivery arms, P3/P5 and the work leg;
         - wave 3: 2,040 questions — ontology arms with the panel calibration, the F4 leg and OM.
         No arm, question, model or criterion is dropped. Each wave starts only on the owner's word (`c1-supervise.sh <waves>`).
-    - **Run state (2026-11-08, stopped on the owner's instruction):**
-      - 3 of 163 jobs are complete: both beam-1m write sides and `large.P.beam-100k`. Partial checkpoints carry into wave 1.
-      - About $58 of the $60 allowance is left.
-      - Wave 1 is ready and not started.
+    - **Run state (2026-11-08):**
+      - Wave 1 started at 11:09 on the owner's word ("Start wave 1"). It carried in 3 of 163 jobs (both beam-1m write sides and `large.P.beam-100k`) and the partial checkpoints.
+      - About $58 of the $60 allowance was left at the start.
+      - Two fixes landed during the wave, after the LongMemEval-M write sides failed at restart:
+        - Commits during the run moved git HEAD, so `run.mjs` refused to resume their checkpoints (`MemoryBenchResumeMismatch`). `c1-supervise.sh` now pins `PRISM_MEMORY_BENCH_SOURCE` to `ab3606f3`, the revision the write sides and checkpoints were made at. Memory, provider and bench run-path code is unchanged from `ab3606f3` to HEAD (`git diff`). `campaign.mjs` drops a checkpoint stamped with another label and reruns that job fresh.
+        - Interrupted attempts (the oomd kill and the owner's stop) had counted toward `maxAttempts`, so the write sides were reported attempts-exhausted. `retryUncounted` in `campaign.mjs` no longer counts them on retrying routes, per the owner's rule that interruptions cost only wall time. The supervisor's 200-run limit bounds a job that keeps killing its host.
+        - Test: `interrupted_attempts_cost_only_wall_time_on_retrying_routes`.
     - **Built for this task:**
       - `scripts/memory-bench/cleanup-campaign.mjs` holds the arms, jobs, manifest, gate, preflight, allowance guard and report. Its 10 tests include the five named above, all passing.
       - Mode `--plan 210` in `campaign.mjs` and `acceptance-report.mjs`.
@@ -1162,11 +1224,55 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
       - `acceptance-report.mjs --plan 210 --partition dev`, which produces verdicts, prediction hits and misses, the plan 202 Task 5 rows and the F4 disposition;
       - the conditional Task 17 arm, only if F4 qualifies;
       - the evidence README and the link from 202 Task 5.
+    - **Remaining, as amended 2026-11-08 (memory model; no further spend):**
+      - the gate C-1 amendment 7 record (the campaign closed after wave 1);
+      - the `transferred` criteria amendment and its test;
+      - `acceptance-report.mjs --plan 210 --partition dev` over wave 1;
+      - the evidence README and the link from 202 Task 5.
 
-- [ ] Task 6: Decision record and owner review
+      Waves 2–3, the panel calibration, the evasive-lure residual, the F4 leg and the conditional Task 17 arm are no longer this task's (plans 217, 219, 221 and 222, or not run).
+    - **Closure (executed 2026-11-08, Task 6 session):**
+      - **Wave 1 finished.** All 61 wave-1 jobs completed (journal `campaign-96c896b2afef`, status `finished`, run ended 14:38; 93.7M confirmed input tokens; 24 abandoned and 6 setup-failure attempts along the way). Waves 2 (54 jobs) and 3 (48 jobs) are cancelled. No campaign process or unit remains.
+      - **Criteria amendment.** `cleanup-criteria.json` gained `transferred` (40 rows, each with its destination plan), `closure` (28 cancelled arms with dispositions) and `amendments`; `inertRemoval` dropped to 9 features (the 2 conditional ones stay). The hash moved from `eea138eb…` to `ee1a7b58…`. The Task 6 review added `ownerNegativeOverrides` (`retrieval.lexical`); that step is the second amendment and has its own `previousHash`. `verifyCleanupCriteria` checks the transferred list.
+      - **Gate record.** Amendment 7 is in `gates/owner-gate-c1.json`; manifest hash re-bound to `d5e14094…` (job list, arms, models, routes and caps unchanged). The dollar spend is not recorded: this session had no `OLLAMA_API_KEY`, so `/api/balance` was not read. The last balance on file is $49.73 of $60 (06:03Z, shortly after wave 1 started). The unused allowance is the owner's to read.
+      - **Code.** `C1_CLOSED_AFTER_WAVE`; `parseC1Waves` and `buildExecutableC1Manifest` refuse waves above it (`C1Closed`); `c1Deferred` defers them; `c1Scheduled` lists what may start; the manifest carries `closure`. `buildC1Report` reads wave-1 jobs only and reports `cancelled` arms, `transferred` rows, `unmeasured` features and `plan202Closure` rows.
+      - **Tests.** `plan_210_c1_closed_after_wave_1_and_report_reads_wave_1_only`, `cleanup_criteria_transfer_changes_no_rule_for_remaining_features` (rebuilds the earlier file from each amendment and gets the earlier hash) and `owner_negative_override_waives_only_the_ability_ci_trigger`, all passing. Two existing wave tests were updated for the closure. The stale provider-list regex in `run.test.mjs` (`provider_list_includes_the_litellm_pool`, failing since ollama-cloud joined the refusal text) was fixed.
+      - **Report.** `acceptance-report.mjs --plan 210 --partition dev` read 61 jobs. Verdicts: `retrieval.lexical` remove (negative; overridden in Task 6), `write.keyword-enrichment`, `timeline` and `recall.supersession-hint` remove (negative), five features inconclusive. Predictions: `memory-off` hit, five missed, the rest `cancelled` or `not-scored`. Plan 202 Task 5 rows: both deferred arms miss (halving 0 pass, 8 miss, 2 inconclusive per feature; ability veto in 8 and 7 cells). F4 reads `unmeasured`.
+      - **Findings that affect later tasks.**
+        - The negative rule fires on any ability stratum whose CI is wholly below 0, and strata hold 12 questions. Three of the four negatives rest on one such stratum. Task 6 recorded this and the owner overrode only `retrieval.lexical`.
+        - The report scores accuracy only. It has no cost or p95 delta per arm, so the `costOrLatency` keep reason could not fire for any feature. Plan 223 Task 3 should not read that as "no cost role".
+      - **Docs.** Evidence README (closure, wave-1 report, Task 6 sections), `scripts/memory-bench/README.md`, and the verdict link in `202/task5/README.md`. No product code, export or baseline changed, so no baseline diff and no sweep.
+
+- [x] Task 6: Decision record and owner review
   - Acceptance Criteria:
     - Functional: **Task 3.1 hand-off (2026-11-05).** The owner decides whether BEAM's contradiction-resolution questions may use an answer prompt that asks the model to surface contradictions. That prompt departs from BEAM's published one. Contradiction resolution is 0/4 under both recall and oracle, so no product change can move it. The decision is recorded here, with any claim limited accordingly.
     - Functional: `docs/_evidence/memory-bench/210/decisions.md` lists each candidate with its verdict (keep, fix-kept, remove, owner-hold → experimental) and evidence, and the list of removals. The owner reviews it, and every owner-hold carries a written reason. *(Amended 2026-11-07 by Task 4: the record also lists `inconclusive` verdicts, which are experimental. For each, the owner removes the feature or holds it with a reason. The record pins `cleanupCriteriaHash`.)*
+    - Functional: ~~**Amended 2026-11-08 by Tasks 7.3–7.6.** The OM worker rows (observer, reflector, dropper) read `fix-kept pending Task 7.6`, not removal; Task 7.6 writes their final verdict.~~ Superseded the same day by the memory-model amendment below.
+    - Functional: **Amended 2026-11-08 (owner, memory model): `transferred` verdicts.** These rows are not kept, fixed or removed here. Each gets the verdict `transferred → plan NNN`, and that plan writes its final disposition.
+
+      | Destination | Rows |
+      |---|---|
+      | plan 216 (retired by owner decision) | `delivery.working-memory`, `kind.episode`, `lifecycle.episode-merge` |
+      | plan 216 (carried into the new package; still `safety-proven`) | `om.commands`, `om.worker-limits` |
+      | plan 216 (extracted into the wiki; verdict in plan 222) | `kind.concept`, `ontology.tier`, `ontology.binding-deterministic`, `ontology.binding-extractor`, `ontology.curator-pass`, `ontology.trigger.co-read`, `ontology.trigger.accumulation`, `ontology.trigger.repair`, `ontology.concept-prior`, `ontology.passive-pointer`, `ontology.concept-sharing`, `ontology.source-ingest`, `ontology.coding-o6` |
+      | plan 216 (moves with the wiki; stays `safety-proven`) | `ontology.claim-lint` |
+      | plan 217 (STM) | `om.observer`, `om.task-state` |
+      | plan 218 (WM) | `om.reflector`, `om.compaction`, `om.pinned-context` |
+      | plan 219 (Rehearsal and declarative LTM) | `om.dropper-model`, `om.dropper-lowest-relevance`, `om.recall-tool`, `write.om-promotion`, `write.session-consolidation`, `lifecycle.verification`, `write.exchange-steps` |
+      | plan 220 (non-declarative LTM and priming) | `kind.procedure`, `retrieval.decay-per-kind`, `delivery.passive-tail`, `delivery.standing-rules`, `delivery.rule-capture`, `lessons` |
+      | plan 221 (Sleep) | `lifecycle.duplicate-merge`, `lifecycle.maintain`, `lifecycle.archive-revival` |
+
+      `decisions.md` lists them in their own section, with the destination and the reason. The test `decision_record_lists_transferred_rows_with_destination` fails if a transferred row carries a keep or remove verdict, or lacks a destination.
+    - Functional: **Amended 2026-11-08 (owner): rows waves 2–3 would have measured.** These rows are recorded `unmeasured — wave cancelled 2026-11-08`:
+      - the Task 3.1 recall variants (`recall.gather`, `recall.expansion`, the card excerpt, `delivery.precision-filter`, `retrieval.strength-priors` at 0.15);
+      - `delivery.aggregation-abstention`;
+      - `decisions.P3`, `decisions.P4` and `decisions.P5`.
+
+      They are not the `inconclusive` of Task 4's rules, because no removal is proposed, and they are not removed:
+      - opt-in variants stay opt-in at their current defaults;
+      - default-on features stay on.
+
+      Plan 223 Task 3 lists them as unmeasured, with no claim. The test `cancelled_wave_rows_recorded_unmeasured_not_removed` covers this.
     - Performance: n/a.
     - Code Quality: The record is generated from the ledger and the Task 5 verdicts, plus the owner's notes.
     - Security: n/a.
@@ -1185,17 +1291,44 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
       - Task 4.
   - Test Cases to Write:
     - `decision_record_matches_ledger_and_verdicts`.
+    - `decision_record_lists_transferred_rows_with_destination`.
+    - `cancelled_wave_rows_recorded_unmeasured_not_removed`.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: no — decision record.
     - Docs pages to create/edit:
       - evidence files.
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed 2026-11-08):
+    - **What changed.**
+      - `scripts/memory-bench/decision-record.mjs` (new) builds `docs/_evidence/memory-bench/210/decisions.{json,md}` from the ledger, the gap predictions, the cleanup criteria, `c1-report.json` and `owner-decisions.json`. Every verdict is `cleanupVerdict()`'s. The owner file supplies holds and written reasons and cannot set a verdict; a hold on a negative verdict, or on a feature with no wave-1 verdict, throws. `assertDecisionRecord` checks the structure and `--check` compares the committed files with a fresh build.
+      - `owner-decisions.json` (new) holds the five holds with reasons, the inert-removal approval, the unmeasured policy and the BEAM decision.
+      - `scripts/memory-bench/decision-record.test.mjs` (new) holds the three named tests. Each guard is proven by an altered input that must fail with a named message.
+    - **Owner decisions (2026-11-08; each the recommended option).**
+      - **Negatives.** `write.keyword-enrichment`, `timeline` and `recall.supersession-hint` are removed as computed. `retrieval.lexical` is kept under a recorded override in `cleanup-criteria.json` `ownerNegativeOverrides`: its only evidence is the `memory-off` arm, which does not isolate lexical retrieval, and the rule fired on one 12-question `adversarial` stratum against an overall +26 to +60 points. The override waives only the per-ability CI trigger.
+      - **Experimental tier.** `recall.multi-query`, `recall.unmatched-terms`, `recall.state-grouping`, `delivery.directory` and `navigation.agentic-lexical` are held, each with a written reason.
+      - **Unmeasured rows.** The 31 candidates wave 1 did not measure (the cancelled-wave rows, the measure-elsewhere rows, and `lifecycle.exchange-capacity`, which only the offline growth stream measured) are `unmeasured`: not removed, not moved to the experimental tier. Plan 223 Task 3 lists them with no claim.
+      - **Inert removals.** All 11 (the 9 inert features and the 2 conditional ones) are `remove`, on the condition that Task 7's byte-identical-preset test passes.
+      - **BEAM contradiction resolution.** No modified answer prompt. BEAM's published prompt stays in force for every headline number, and the 0/4 is a stated limit with no claim.
+    - **Result.** 108 ledger rows, each once: 9 measured (1 keep, 3 remove, 5 owner-hold), 11 inert removals, 40 transferred, 31 unmeasured, 17 accepted. The removals list for Task 7 has 14 features. Transferred rows carry their destination plan (216: 19 rows, 217: 2, 218: 3, 219: 7, 220: 6, 221: 3) and none carries a keep or remove verdict.
+    - **Findings that affect later tasks.**
+      - **Task 7.** It executes 14 removals, not 20: the 3 measured negatives and the 11 inert ones. `write.keyword-enrichment` and `timeline` are always on and `recall.supersession-hint` defaults to `all`; no preset sets any of them. Removing them changes default behaviour of the shipped presets, so each removal needs a measured-behaviour note in the Task 7 record, and a host config that sets `recall.supersessionHint` must fail with the named migration error (`docs/migrate-to-0.13.md`). `rules.capture` is transferred to plan 220, so Task 7's fail-closed capture validation does not apply here; it goes with that plan. Task 7's text is amended.
+      - **Task 7.** Neither conditional feature has an open paid arm to fall back on (gate C-1 is closed). If one is not byte-identical, the owner decides then.
+      - **Plan 223 Task 3.** The `unmeasured` list and the `inconclusive`-turned-hold list are its inputs. The cost and p95 role was not measured for any feature (see Task 5 notes).
+    - **Checks.** `bun test scripts/memory-bench`: 542 pass, 3 skip, 0 fail after the `run.test.mjs` fix. `bun run typecheck` and `biome check` on the changed files are clean. No product code or export changed.
 
-- [ ] Task 7: Removal, experimental tier and sweep
+- [x] Task 7: Removal, experimental tier and sweep
   - Acceptance Criteria:
-    - Functional: **Task 3 hand-off (amended 2026-11-07).** If `rules.capture` survives Task 6, config validation rejects a capture mode other than `"off"` without `exchanges`, naming the field. It replaces Task 2's setup warning; Task 3 decided to keep the dependency and fail closed.
-    - Functional: **Task 4 hand-off (2026-11-07).** Each removal of a feature in `cleanup-criteria.json` `inertRemoval` (the 18 inert features and the 2 conditional ones) lands with its byte-identical-preset test. With the code removed, the `conversational` and `coding` presets' provider requests and tool schemas must be byte-identical on the offline replay fixtures. If a conditional feature's test is not byte-identical, its removal waits for a leave-one-out arm under C-1.
+    - Functional: **Task 6 hand-off (2026-11-08).** The removals are the list in `docs/_evidence/memory-bench/210/decisions.json` `removals` (14): `write.keyword-enrichment`, `timeline` and `recall.supersession-hint` (negative in wave 1) and the 11 inert ones. `retrieval.lexical` is kept. The five owner-held features (`recall.multi-query`, `recall.unmatched-terms`, `recall.state-grouping`, `delivery.directory`, `navigation.agentic-lexical`) move to the experimental tier with the documentation below.
+    - Functional: **Task 3 hand-off (amended 2026-11-07; superseded 2026-11-08).** `rules.capture` (`delivery.rule-capture`) is transferred to plan 220, so the capture validation (config rejects a capture mode other than `"off"` without `exchanges`, naming the field) moves with it and is not done here.
+    - Functional: **Amended 2026-11-08 (owner, memory model).** The transferred rows (Task 6) are not removed here. `inertRemoval` keeps nine features: `retrieval.hybrid`, `workers.linker`, `workers.evolution`, `write.consolidate-model-decider`, `recall.state-wrapper`, `decisions.P1`, `decisions.P2`, `decisions.P6` and `scoped.policy`. The two conditional ones (`retrieval.similar-links`, `lifecycle.widen-narrow`) stay as written. Plan 216 retires the fabric working memory, the episode view and episode merge, and plan 216 Task 3 moves the ontology; this task touches neither.
+    - Functional: **Amended 2026-11-08 (owner): Task 8's offline parts land here.** After the removals, this task:
+      - records the slimmed product's hash in `docs/_evidence/memory-bench/210/slimmed/record.json`, generated by `readiness.mjs` and listing every removal of this task with its evidence. This is the `P` baseline plans 216–223 use;
+      - re-attests the readiness cache-stability pin (plan 202 Tasks 4.11–4.15) for that hash with `prefix-probe.mjs --equivalence`.
+
+      No paid check runs. The removals are either inert (byte-identical by test) or individually measured in wave 1. Plan 223 Task 1's combined check bisects over them if the final product misses.
+      - Test: `slimmed_record_lists_every_removal_and_passes_cache_pin`.
+    - Functional: **Task 4 hand-off (2026-11-07).** Each removal of a feature in `cleanup-criteria.json` `inertRemoval` (amended 2026-11-08: the 9 inert features and the 2 conditional ones) lands with its byte-identical-preset test. With the code removed, the `conversational` and `coding` presets' provider requests and tool schemas must be byte-identical on the offline replay fixtures. If a conditional feature's test is not byte-identical, its removal waits for a leave-one-out arm under C-1.
     - Functional: Each removal deletes, with no alias:
       - the code;
       - the config fields (and their rows in the config stability table and `stability.test.ts`);
@@ -1222,7 +1355,7 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
       timeout 1800 bun scripts/release.mjs gate --update-baseline
       ```
     - Files to Create/Edit:
-      - `packages/memory/{fabric,observational,wiki,core}/**` (as decided);
+      - `packages/memory/fabric/**` (all 14 removals landed in the fabric; `core`, `observational` and `wiki` needed no change);
       - `apps/prism-agent/**`, `examples/**`, `scripts/**` callers;
       - READMEs, `docs/migrate-to-0.13.md`, `CHANGELOG.md`;
       - `scripts/compat-baseline/*`, `scripts/budgets.json`.
@@ -1241,13 +1374,552 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
       - `CHANGELOG.md`.
     - `docs/index.md` update: yes, only if a package's scope sentence changes
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (executed 2026-11-08):
+    - **What changed.** All 14 removals landed in `packages/memory/fabric`: fabric source 82 → 67 files and 22,582 → 19,805 lines (−15 files, −2,777 lines, −12.3%). By feature (the code, config field, exports, docs, tests, examples and bench harness each went in the same step):
+      - `scoped.policy`: `src/scoped/` keeps only `trust.ts` (`scanScopedMemoryContent` and friends, used by nine other modules; the ledger-based `listScopedPending`/`approveScopedPending`/`rejectScopedPending` went with the policy). `examples/scoped-memory.ts` deleted.
+      - `decisions.P1/P2/P6` and `write.consolidate-model-decider`: `decisions.ts` keeps P3, P4, P5, P7 (`DECISION_POINTS = ["P3","P4","P5","P7"]`); `decider.ts`, `consolidate.decider`/`consolidate.model`, `onDeciderFailure` and the `decide_memory` call deleted. `scripts/decision-bench.mjs` and its fixture drop the 300 P1/P2/P6 items.
+      - `recall.state-wrapper`: `state.ts`, config `state`, the `state` field of the recall result, and the tool-deps `resolveModelClient` that only it used.
+      - `workers.linker`, `workers.evolution`: `workers.ts` is now only the consolidation settings; `links.ts` keeps `mergeNoteLinks`. Config `linker`, `evolution`, `passive` gone.
+      - `retrieval.hybrid`: config `retrieval` and `limits.maxVectorDimensions`, the `embeddings` service consumption, the provisional-floor status note, `createMemoryFabric({ retrieval })`. **Scoping decision:** `createMemory({ embedder })` and the Memory-level hybrid mode stay. They are the library `Memory`/vector-store contract that dozens of fabric and core tests and four examples build on, and the audited surface (ledger `config: fabric:retrieval, fabric:limits.maxVectorDimensions`) is the package. The owner can widen this to a core redesign in a later plan.
+      - `recall.supersession-hint`: config `recall.supersessionHint`, `GroupRecallOptions`, `SupersessionHintMode`, the `keyed-only` branch. The default `all` marker is the behaviour that remains, so the presets are byte-identical.
+      - `write.keyword-enrichment`: the exchange archive no longer writes `exchangeKeywords(content)`. The function stays because the ontology port derives keywords from it for evidence notes stored without any (plan 216 Task 3 moves the ontology; this task touches neither).
+      - `timeline`: `dates.ts` (`resolveDates`), the archive's `dates`, and the `memory.recall` tool parameters `from`, `to`, `order`. The note-format field `dates`, `tRef` and the library `from`/`to`/`order` recall options stay (they are note-model features an import can carry; `gather` still lists oldest first).
+      - `lifecycle.widen-narrow`: `lifecycle/widen.ts`, config `lifecycle.widen`, `widenedTo`, `openScope`, the `widened`/`superseded` report fields, `LifecycleNoteView.widen`. The model tools still cannot write `agent` (error code `agent_scope_not_writable`, was `agent_scope_requires_widening`), because allowing it would weaken the poisoning bound the widening rule enforced. `contradictedIn` is still written by the consolidation exception path (plan 219 owns it) and read only by `memory:lifecycle`.
+      - `retrieval.similar-links`: consolidation no longer writes the `similar` link; the general link expansion (exchange `part` links, `evidence` links, explicit `links`) is unchanged.
+    - **Byte-identical test.** `packages/memory/fabric/src/__tests__/removal-byte-identical.test.ts` replays 12 provider requests per preset (`conversational`, `coding`: inserts, near-duplicate and same-subject facts, two recalls, quiet turns, a second session) and compares each request, its tool schemas and its context blocks to `fixtures/removal-byte-identical.json`. The harness normalises temp paths, dates, UUIDs, the random note ids and the directory's file order (a real filesystem-order tie, left alone). The golden was first taken before any removal; the final check of the nine inert removals plus the default-preserving `supersession-hint` against a clean `HEAD` worktree matched on all 12 requests × 3 hashes × 2 presets. **Results:** 10 removals byte-identical (the nine inert ones and `supersession-hint`). Four changed what the model sees and the golden was re-pinned once per removal (recorded per row in `slimmed/record.json` `presets`): keyword enrichment (requests 11–12, recall results), timeline (all 12, the recall tool schema), `similar-links` (requests 10–12, the insert result lost `links`), `widen-narrow` (all 12, the `key` parameter description and the agent-scope error). Context blocks never moved.
+    - **Owner decisions (2026-11-08).** Neither conditional feature was byte-identical, so the plan's rule ("the owner decides then") applied. Question 1, `retrieval.similar-links`: *remove, re-pin golden*. Question 2, `lifecycle.widen-narrow`: *remove, re-pin golden*. Both are the recommended options and are recorded in the migration page.
+    - **Removed config fails closed.** The kernel schema rejects an unknown key with `Package @arnilo/prism-memory-fabric config is invalid: <path> unknown key "<field>"`; for `consolidate` (a boolean-or-object field) it names the path, and a removed decision point fails the enum. That is the named error. `docs/migrate-to-0.13.md` (`## Fabric: features removed by the plan 210 audit`) is the migration hint, one row per field. `removed-config.test.ts` (`previous_revision_host_config_still_validates_or_fails_with_named_migration_error`) loads each 0.12-era config, asserts the error, asserts the page lists the field, and loads both presets. No preset revision changed: the presets set none of the removed fields, so Task 10 owns any revision bump.
+    - **Experimental tier.** The five holds are marked `> **Experimental.**` in their README sections, listed under "May change in a minor version" and in `### Experimental features after graduation` with the owner's written reason, and `directory` plus `directory.*` carry tier `experimental` in the README table. **The kernel schema vocabulary has two tiers** (`contract`, `tuning`; `src/packages/schema.ts` rejects a third), and the kernel stays package-blind, so those five fields are annotated `tuning` in the schema, exported as `EXPERIMENTAL_CONFIG_FIELDS`, and `stability.test.ts` carries the `experimental` tier (`experimental_tier_enforced_by_stability_test`). The other four holds have no config field.
+    - **Sweep.** `removed-names.test.ts` (`removed_memory_names_absent_repo_wide`) scans `src packages apps scripts examples docs README.md PRODUCT.md` for ten groups of removed names and is green. It skips evidence, history, plans, changelogs, migration pages, `budgets.json` history strings, the generated `host-builder/data` mirrors (regenerated with `scripts/host-builder-index.mjs`; `--check` is fresh), the two tests that name removed fields on purpose, and `scripts/memory-bench/**`. The last is the frozen measurement harness: its arms patch the pre-removal product and run only against the commit in `c1-manifest.json` (stated in `scripts/memory-bench/README.md`). In the harness I removed only what would otherwise break live code: the `fabric-hybrid` arm (now refuses with a named error), the `fabric.enrichment=off` and `fabric.timeline=off` variants, the P1/P2/P6 bench items, the `consolidate.decider=model` campaign job, and the `defaults.json` rows for fields that no longer exist. `bun test scripts/memory-bench scripts/__tests__`: 543 pass, 3 skip, 0 fail (`split_phase_arm_is_faster_than_serial_on_delayed_mock` is a 5 s timing test that flakes under load).
+    - **Baseline diff (`bun scripts/release.mjs gate --update-baseline`).** The gate run rewrote seven baselines plus `budgets.json`; the gate itself still fails on the kernel's `packedBytes`/`unpackedBytes`/`sourceLines` ceilings (+4,039 / +11,641 / +7 over), which this plan did not touch. I kept only `arnilo__prism-memory-fabric.txt` and restored the other six files and `budgets.json`, because their drift comes from earlier tasks (plan 210 Task 0.2's markdown index in `-memory-core`, plan 215 kernel work, the host-builder kit). Fabric diff, removals attributed to this plan: `DECISION_POINTS` narrows to P3/P4/P5/P7 and `SupersessionChoice` goes; `DEFAULT_LINKER_TOP_K`, `HARD_MAX_FABRIC_LINK_TOP_K`, `resolveNoteLinks`, `runFabricEvolutionWorker`, `MemoryFabricLinkerOptions`, `MemoryFabricEvolutionOptions` (linker/evolution); `decideConsolidation` (decider); `MemoryFabricStateConfig`, `ResolvedStateConfig`, `resolveStateConfig`, `buildStateTable`, `STATE_INPUT_TOKEN_CAP` (state wrapper); `createScopedMemoryPolicy`, `runScopedMemoryEval`, `runScopedGcPass`, the ledger, reviewer, mirror and health helpers, the `ScopedMemory*` types, `MemoryFabricScopedConfig` (scoped policy); `DEFAULT_WIDEN_CONFIG`, `MIN_/MAX_WIDEN_*` (6), `crossProjectGroups`, `siblingGroups`, `narrowingCandidates`, `mergedKeywords`, `normalizeWidenText`, `WidenConfig`/`WidenGroup`/`WidenNote`/`SiblingGroup`, `ResolvedWidenConfig`, `MemoryFabricScopeOpenInput` (widen-narrow); `resolveDates` (timeline); `groupRecallHits` loses its options argument (supersession hint). Additions: `EXPERIMENTAL_CONFIG_FIELDS` (this task), and `createNoteNavigator` (plan 210 Task 2, not yet in the baseline). The remaining churn is the generator re-sorting long re-export lines.
+    - **Slimmed record and cache pin.** `docs/_evidence/memory-bench/210/slimmed/record.json` (written by `bun scripts/memory-bench/audit/readiness.mjs --slimmed`) pins product hash `867f82771643…` (fabric `src`, which includes its tests), lists all 14 removals with evidence and preset effect, the golden's sha256, and the cache-stability pin. `prefix-probe.mjs --equivalence --base <HEAD worktree>` compared 54 answer-path requests: `status: different` for `preset-r1` and `passive-only` (the enrichment and timeline removals change recall results), `mergeWithPreChangeCells: false`, so those arms' pre-removal cells can never be merged with new ones. `readiness.mjs --cache-stability`: 29 pass, 0 fail, and the 202 pin (`docs/_evidence/memory-bench/202/cache-stability/{equivalence,record}.json`) is re-attested to the new hash. `slimmed_record_lists_every_removal_and_passes_cache_pin` checks the record in `readiness.test.mjs`. No paid call ran.
+    - **Performance (measured, offline).** Fabric source −15 files / −2,777 lines (−12.3%). Package load (module import plus `createAgent` with the `conversational` preset, mock provider, 11 runs per tree, `HEAD` worktree against this tree): 77–108 ms before, 83–135 ms after, medians 90 vs 95 ms, no measurable change. Per-turn work (200 turns, same setup): p50 8.1–11.8 ms before, 8.6–11.6 ms after, medians 9.9 vs 10.1 ms; p95 about 17–19 ms in both. The reduction is in source and surface, not in work: nothing removed ran in the shipped presets, and the three measured removals trim recall output size rather than time. `scripts/budgets.json` has no fabric row to ratchet, so it is unchanged.
+    - **Findings that affect later tasks.**
+      - **Plan 223 Task 3 / the held state-grouping feature.** `sameSubject` groups archived exchanges by their `keywords`, which the removed enrichment wrote. The archive now writes none, so exchange subject grouping fires only for exchanges that carry keywords (imports, `remember`). Keyed notes and `supersedes` still group. The two approved decisions interact: the owner held state grouping as experimental, and removing enrichment all but turns off its exchange branch. The README and migration page say so; plan 223 should read it as one finding, not two.
+      - **Plan 216 Task 3.** `exchangeKeywords` (in `exchanges.ts`) is now used only by the ontology port; move it with the ontology. The removal of `openScope` also dropped the one place that attached an unbound project's `Memory` to the ontology cascade during maintenance.
+      - **Plan 219.** Writes still cannot target `agent` (the rule held; the reason in the code is now "not writable", not "widening-only"). `contradictedIn` is written, never acted on.
+      - **Pre-existing failures, not caused here.** `@arnilo/prism-memory-wiki` `package_metadata_ships_one_entry_and_no_bin_or_skills` and `retired_wiki_names_absent_repo_wide` fail identically on a clean `HEAD` worktree (peer range, and `packages/hosts/host-builder/skills/.../upgrading.md` names `wiki_search`). `bun scripts/release.mjs gate` is red on the kernel size ceilings before and after.
+    - **Checks.** `packages/memory/fabric`: `tsc` clean, 606 pass, 0 fail (29 PostgreSQL integration tests skip without `PRISM_TEST_POSTGRES_URL`). `observational` 102, `core` 72, `rag` 100 pass. `bun run typecheck` (all workspaces) exit 0. `bun run --filter @arnilo/prism-agent test`: 63 pass. `scripts/memory-bench/audit/readiness.test.mjs` 11 pass; docs, host-builder and package-truth tests pass (`host_builder_index_is_fresh` needs `--timeout=0`, as the package scripts set).
+
+- [ ] Task 7.1: Rename observational memory to episodic memory (added 2026-11-08, owner)
+  - Notes: Dropped by plan 216 (2026-11-08, owner): Superseded by the memory model. The package becomes `@arnilo/prism-memory-system` (plan 216 Task 4), not `@arnilo/prism-memory-episodic`, because *episodic* is now a long-term memory kind (design §5.6). Design record: `docs/_evidence/memory-model/design.md`.
+  - Owner direction (2026-11-08): "I also want to rename observational memory to working memory. Because I think it significantly deviates from Observational memory from Mastra. Validate this claim." After the validation below showed `working memory` is already a Prism and Mastra term for a different feature, the owner chose **Episodic memory**.
+  - Validation of the claim (2026-11-08, Mastra docs via Context7 `/mastra-ai/mastra`: `docs/memory/observational-memory.mdx`, `docs/memory/overview.mdx`, `packages/memory/src/processors/observational-memory/ARCHITECTURE.md`):
+    - **Shared today.** An observer model turns unobserved messages into dated, prioritised observations past a token threshold. A reflector condenses accumulated observations into reflections that replace the previous set (Mastra's "generation", Prism's superseded reflections). Older raw history is replaced while recent unobserved messages stay.
+    - **Different today.** Prism's observations are tool-recorded with source entry ids and are recallable by id. Prism has a dropper, a task state and an append-only ledger. Prism injects memory at compaction, while Mastra replaces history continuously with a buffered observer.
+    - **Different after Tasks 7.3–7.5.** The roles change. The observer becomes an event log with locally stored verbatim excerpts. The reflector derives episode-scoped facts from a host-supplied episode scope; Mastra's reflector compresses observations. The dropper deletes source chunks and promotes durable facts to fabric; Mastra has no dropper.
+    - **Verdict:** the claim holds for the redesigned product, so the rename lands with it.
+    - **Why not `working memory`.** Mastra's "Working memory" is a persistent per-thread or per-resource scratchpad updated by the agent. Prism already ships the same idea under that name: `WorkingMemoryStore` and `WorkingMemoryRecord` in `packages/memory/core/src/types.ts`, and `working/<thread>.md` in `packages/memory/core/src/fabric/okf.ts:288`.
+  - Acceptance Criteria:
+    - Functional: The package `@arnilo/prism-memory-observational` becomes `@arnilo/prism-memory-episodic` (directory `packages/memory/episodic`). Every public name moves with no alias:
+      - exports (`createObservationalFlush` → `createEpisodicFlush`, `ObservationalMemory*` → `EpisodicMemory*`, `runObserver` and friends keep their role names);
+      - commands (`om`, `om:model`, `om:status`, `om:view` → `episodic`, `episodic:model`, `episodic:status`, `episodic:view`);
+      - the event (`om.status` → `episodic.status`);
+      - state and ledger keys and record types (`om.*` → `episodic.*`);
+      - the rendered heading (`# Observational Memory` → `# Episodic Memory`);
+      - the context-block title and source tag;
+      - config field names that say "observational".
+      Role names (observer, reflector, dropper) and the observation and reflection vocabulary stay.
+    - Functional: Callers move in the same task:
+      - fabric and wiki imports and the `observational` option of `createMemoryFabric` (→ `episodic`);
+      - presets and `defaults.json`;
+      - the reference host (`apps/prism-agent`);
+      - host-builder data (`packages/hosts/host-builder/data/examples/observational-memory.ts`, `autonomous-coding-loop.ts`, its indexes);
+      - examples;
+      - the memory-bench configs (`om`, `om+fabric` → `episodic`, `episodic+fabric`), `ablations.mjs`, `variants.mjs` path keys and `cleanup-campaign.mjs` arm ids for later waves.
+      Task 5's finished evidence keeps its recorded names; it is history.
+    - Functional: Repo-wide sweep over `src/ packages/ apps/ scripts/ examples/ docs/ README.md PRODUCT.md roadmap.md` (excluding `dist/`, `plans/`, `docs/history/`, `docs/_evidence/`). No `observational`, `Observational` or `om:` identifier remains except in the CHANGELOG's rename entry and the migration notes.
+    - Functional: A host config that still names `@arnilo/prism-memory-observational`, or uses an `om` key, fails with a named error and a migration hint. `docs/migrate-to-0.13.md` gains the rename row.
+    - Functional: npm. If the old name was published on the experimental line (plan 215), the publish plan records `npm deprecate @arnilo/prism-memory-observational "renamed to @arnilo/prism-memory-episodic"` as an owner action. Nothing is published by this task.
+    - Performance: Rename only; budgets unchanged (`scripts/budgets.json` keys renamed).
+    - Code Quality: `git mv` keeps history. Workspace, tsconfig references, `package.json` `exports`, release manifests and package lists are updated. The compat baseline is renamed and regenerated, with the diff attributed (all renames).
+    - Security: Capability declarations are unchanged. The sweep includes the redaction and security docs that name the package.
+  - Approach:
+    - Documentation Reviewed:
+      - the Mastra docs listed above;
+      - `packages/memory/core/src/{types.ts,fabric/okf.ts}`;
+      - `graft callers` over the package's exports;
+      - the release and package-list scripts (`scripts/release.mjs`, `scripts/compat-baseline/`).
+    - Options Considered:
+      - `working memory`. Rejected: it collides with Prism's and Mastra's existing working memory.
+      - `session memory`. Offered; the owner chose `episodic`, which matches the episode scope introduced in Task 7.4.
+      - Keep the old name with a doc note. Rejected by the owner.
+    - Chosen Approach:
+      - One mechanical rename first, so Tasks 7.2–7.6 are written against the final names.
+    - API Notes and Examples:
+      ```ts
+      import episodicMemory from "@arnilo/prism-memory-episodic";
+      await agent.commands.run("episodic", {}, { session });
+      ```
+    - Files to Create/Edit:
+      - `packages/memory/observational/**` → `packages/memory/episodic/**`;
+      - fabric, wiki, core callers;
+      - `apps/prism-agent/**`;
+      - `packages/hosts/host-builder/**`;
+      - `examples/**`;
+      - `scripts/memory-bench/**`;
+      - `scripts/compat-baseline/arnilo__prism-memory-episodic.txt` (from the old file);
+      - root workspace and release lists;
+      - `docs/**`, `PRODUCT.md`, `docs/migrate-to-0.13.md`;
+      - CHANGELOGs.
+    - References:
+      - the owner decision above.
+  - Test Cases to Write:
+    - `observational_names_absent_repo_wide`
+    - `old_package_name_in_host_config_fails_with_rename_hint`
+    - `episodic_commands_and_status_event_registered`
+    - The existing package suites pass under the new name.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes — package and command names.
+    - Docs pages to create/edit:
+      - the package README (title, scope sentence);
+      - fabric, wiki and core READMEs;
+      - `docs/index.md` package list;
+      - `docs/migrate-to-0.13.md`;
+      - `PRODUCT.md`;
+      - CHANGELOGs.
+    - `docs/index.md` update: yes — package name.
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+
+- [ ] Task 7.2: Episodic memory — package wiring and pass robustness (added 2026-11-08, owner; from the OM mechanism review)
+  - Notes: Dropped by plan 216 (2026-11-08, owner): Its three fixes (worker settings forwarded, oversized tails batched with per-batch coverage, honest worker tool results) carry unchanged into plan 216 Task 4. Design record: `docs/_evidence/memory-model/design.md`.
+  - Context: an owner-requested review of the package on 2026-11-08 found defects that do not depend on the role redesign in Tasks 7.3–7.5. They land first, so the redesign starts from a pass that cannot stall and a package that forwards its settings. No product change lands while Task 5 runs: the campaign pins its source revision (`c1-supervise.sh`), and Tasks 7.1–7.6 start only after Task 5's wave 3 OM arms finish.
+  - Acceptance Criteria:
+    - Functional: **The package forwards worker settings.** Today `index.ts` (`clientFor`, and the calls in `flush.ts:117`, `flush.ts:146` and `flush.ts:170`) passes no `instruction`, `secrets`, `thinkingLevel` or `providerOptions` to the workers. The library path accepts them (`settings.ts:8–80`), but a package user only ever runs the default prompts. After this task:
+      - the package config accepts `observer.instruction`, `reflector.instruction` and `dropper.instruction` (appended to the default prompt);
+      - it also accepts `observer.thinkingLevel`, `reflector.thinkingLevel` and `dropper.thinkingLevel`;
+      - every worker call carries the session's secret set.
+      A test fails if any worker request lacks the configured instruction, or if a secret appears in a worker request.
+    - Functional: **A large unread tail no longer stalls observation.** Today the observer serializes the whole unread tail into one prompt (`observer.ts:166–169`). If the tail exceeds `worker.maxMessageBytes` (1 MB), `joinWorkerText` or `serializeSourceEntries` throws before the coverage cursor moves, and every later pass retries a larger tail. After this task:
+      - the pass splits the eligible tail into ordered batches that each fit the budget, and advances `coversUpToId` after each recorded batch;
+      - a single entry larger than the budget is sent truncated, with a marker naming the entry id and its full size;
+      - a failed batch leaves coverage at the last recorded batch.
+    - Functional: **Worker tools report rejection.** `record_reflection` (`reflector.ts:66`) and `drop_observations` (`dropper.ts:64`) answer `{ ok: true }` even when they stored nothing. Each worker tool returns `ok: false` with a named reason (`no_valid_ids`, `unknown_id`, `empty_content`, …) whenever the record was not stored, so the model can correct itself.
+    - Performance: No added model call. Batching adds one ledger append per batch, only on a tail that previously failed. The `session-turn-overhead` budget row is unchanged.
+    - Code Quality:
+      - New config fields are typed, schema-validated and tagged `contract` (instructions) or `tuning` (thinking level).
+      - `settings.ts` and the package config resolve through one helper.
+      - Compat baseline regenerated.
+    - Security: Secrets come from the kernel's secret set, never from config text. Instructions cannot widen the tool set. A truncation marker never includes the truncated bytes.
+  - Approach:
+    - Documentation Reviewed:
+      - `src/{index,flush,worker-loop,limits,serialize,settings,config}.ts`;
+      - `workers/*`;
+      - `src/packages/api.ts:76–188`.
+    - Options Considered:
+      - Raise `maxMessageBytes`. Rejected: it moves the cliff.
+      - Drop the oversized tail. Rejected: it loses evidence silently.
+    - Chosen Approach:
+      - Batch by bytes with per-batch coverage, forward settings through one resolver, and return honest tool results.
+    - API Notes and Examples:
+      ```ts
+      episodicMemory({ observer: { thinkingLevel: "low" }, reflector: { instruction: "…" } });
+      ```
+    - Files to Create/Edit:
+      - `packages/memory/episodic/src/{index,flush,config,settings,serialize}.ts`;
+      - `workers/*`;
+      - tests (`workers`, `coverage`, `settings`);
+      - README (`## Configuration`, `## Cost, security, and failure behavior`);
+      - CHANGELOG;
+      - compat baseline.
+    - References:
+      - the 2026-11-08 review.
+  - Test Cases to Write:
+    - `package_workers_receive_configured_instruction_thinking_and_secrets`
+    - `oversized_unread_tail_is_observed_in_batches_and_coverage_reaches_the_end`
+    - `single_entry_larger_than_budget_is_truncated_with_marker_and_cited`
+    - `failed_batch_leaves_coverage_at_last_recorded_batch`
+    - `worker_tools_return_ok_false_with_reason_when_nothing_is_stored`
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes — config fields; tool results.
+    - Docs pages to create/edit:
+      - the README sections above;
+      - CHANGELOG.
+    - `docs/index.md` update: no
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+
+- [ ] Task 7.3: Episodic memory — the observer records what happened, with verbatim source chunks in a deletable local store (added 2026-11-08, owner)
+  - Notes: Dropped by plan 216 (2026-11-08, owner): Carried into plan 217 (STM): events not facts, verbatim chunks in a deletable store, scope-blindness and outcome records; plus habituation and event boundaries. Design record: `docs/_evidence/memory-model/design.md`.
+  - Owner direction (2026-11-08):
+    - "the observer is not for facts. The observer is for recording everything that is happening. It then records observations with id and a description of what happened with enough information such that later a model can understand if this observation and its details are useful for a later task."
+    - Each observation is "scoped with a chunk from the original text and saved locally so that recall can also for example look into the results of a particular tool call without actually running that tool or bash command again. It could be also a snippet of a code that the model read before."
+    - For continuity, it records "what was changed and achieved in a particular task so that the next task, if it has a relevance to the previous task, can directly know this without grepping the codebase."
+    - The observer does **not** see the episode scope (Task 7.4).
+  - Acceptance Criteria:
+    - Functional: **Role.** The observer records events, not facts. `DEFAULT_OBSERVER_INSTRUCTION` (`observer.ts:17`) is rewritten so that the observer records every meaningful thing that happened in the batch, in order:
+      - user requests and statements;
+      - actions the agent took (tool calls, commands, files read or edited);
+      - results (tool output, test results, errors);
+      - decisions and their reasons;
+      - task outcomes.
+      Each description is self-contained enough that a later model, seeing only the description, can judge whether the observation and its chunks are useful for a new task. The prompt no longer says "Find durable source-backed facts".
+    - Functional: **The observer is scope-blind.** Its request never contains the episode scope (Task 7.4) or any fact. It sees only the batch, the task state, and an index of recent observations. A test fails if an episode-scope string appears in an observer request.
+    - Functional: **Continuity of tasks.** When a task or sub-task completes or is abandoned, the observer records an `outcome` observation. It states:
+      - what was asked;
+      - what changed, naming the files, symbols, commands, config keys or ids touched;
+      - what was achieved or left unfinished;
+      - how it was verified (tests or commands run and their result).
+      The offline continuity fixture (Task 7.6) asserts that task B, related to task A, is answered from episodic memory with no `grep`, `read` or `bash` call that re-derives what A changed.
+    - Functional: **Observation shape.** `record_observation` takes:
+      - `kind`: one of `request`, `action`, `result`, `change`, `decision`, `outcome`, `error`, `statement`;
+      - `description`: one line, shown in context; renamed from `content`, no alias;
+      - `sourceEntryIds` (required);
+      - `chunks`: optional, up to `observer.maxChunksPerObservation`;
+      - `referencedAt`, `relevance`, `supersedes`.
+      `MemoryObservation` gains `kind` and `chunkRefs` (an id, the source entry id, a sha256 and the byte length of each stored chunk).
+    - Functional: **Chunks are verbatim.** Each chunk is `{ sourceEntryId, text }`: the part of a tool result, command output, code read or message that the description refers to.
+      - The package accepts a chunk only if `text`, after whitespace normalisation, is a substring of that source entry's serialized content; otherwise the tool returns `ok: false` with `chunk_not_verbatim`.
+      - Each chunk is capped at `observer.maxChunkBytes` (default 4 KB, `tuning`) and redacted with the session's secrets before it is written.
+    - Functional: **Chunks live in a deletable local store, never on the session branch.** The session branch is append-only, so a chunk written there could never be deleted. Owner decision 2026-11-08: only the dropper deletes, and only these chunks; the raw transcript is the kernel's record and is not touched.
+      - Chunks go to an `EpisodicChunkStore` (`put`, `get`, `delete`, `list(sessionId)`) owned by this package. Its default implementation is a local SQLite file through memory-core's local store helpers, in the host's data directory. A host may supply another implementation.
+      - The ledger carries only `chunkRefs`.
+      - `delete` is a hard delete. The test reads the store file after the drop and finds no chunk bytes, and the store compacts or vacuums so deleted bytes are not left in free pages.
+      - Fork and clone: a forked session reads its parent's chunks by reference. A chunk is deleted only when no live session that references it still holds the observation, using reference counting by session.
+    - Functional: **Recall reads chunks without re-running anything.** `recall` with an observation id returns the description, kind, time, the stored chunks verbatim, and the source ids. A dropped chunk reads as `chunk dropped` with its drop reason. With `detail: "full"` it also returns the raw source entries. A test reads a tool result's chunk through `recall` after the original entry has left context, and asserts that no tool other than `recall` ran.
+    - Functional: **Rendering.** The context block shows each observation as `- [id] HH:MM (kind, relevance) description`, with a `[chunk]` marker when chunks exist. It never shows chunk text; chunk text enters context only through `recall`.
+    - Functional: **The observer's view for de-duplication.** Today it sees only the newest `dropper.targetTokens / 4` tokens of observations (`flush.ts:124`). It now sees an index of recent observations (id, kind, first 120 characters) within `observer.contextTokens` (default 4,000, `tuning`), and is told to use `supersedes` instead of re-recording an event.
+    - Functional: **Consumers move in the same task.** Fabric and wiki read observations as facts today (`packages/memory/fabric/src/consolidation/gather.ts` takes high-relevance observations; `create.ts:369–378` builds `episode` from an observation; `packages/memory/wiki/src/consolidate/pass.ts`). They read the new shape:
+      - episodes come from observations (description and kind);
+      - fact candidates from reflections (completed in Task 7.4).
+      The memory-bench ablation patches (`scripts/memory-bench/variants.mjs`) are updated, and their probes pass.
+    - Performance:
+      - The task reports, on the offline long-session fixture:
+        - chunk bytes stored per 10,000 eligible tokens;
+        - added observer output tokens;
+        - one chunk-store transaction per pass.
+      - Default caps keep stored chunks under 25% of the transcript bytes they cover. That trade-off and the knobs go in the README cost section.
+      - `context.build` cost is unchanged.
+    - Code Quality:
+      - One module (`chunks.ts`) owns validation, the store contract and the default store; `recall.ts` reads through it.
+      - `content` → `description` with no alias.
+      - Compat baselines for episodic, fabric and wiki are regenerated.
+    - Security:
+      - Chunks are redacted before they are written; the verbatim check prevents invented evidence.
+      - The default store file is created with mode 0600 under the host's data directory.
+      - `recall` reads only chunks referenced by the executing session.
+      - Chunks never enter the context block or fabric's shared stores.
+  - Approach:
+    - Documentation Reviewed:
+      - `workers/observer.ts`, `recall.ts`, `recall-tool.ts`, `render.ts`, `ledger.ts`, `types.ts`;
+      - `src/packages/api.ts:153–166` (`state.log` is append-only on the branch, which is why chunks cannot live there);
+      - memory-core's SQLite store (`packages/memory/core/src/sqlite/index.ts`);
+      - fabric `consolidation/gather.ts`, `create.ts:360–420`;
+      - wiki `consolidate/pass.ts`.
+    - Options Considered:
+      - Store chunks in `state.log`. Rejected: package-state entries persist on the append-only branch, so the dropper could never delete them.
+      - Store offsets into the raw entry. Rejected: no independent redaction or deletion, and offsets dangle if a host prunes large tool results.
+      - Choose chunks heuristically. Rejected: only the model knows which part its description refers to.
+    - Chosen Approach:
+      - Model-chosen verbatim chunks, validated and redacted by the package, in a deletable local store referenced from the ledger.
+    - API Notes and Examples:
+      ```ts
+      { kind: "outcome", description: "Campaign retries: interrupted attempts no longer count toward maxAttempts (campaign.mjs retryUncounted); 35 campaign tests pass.",
+        sourceEntryIds: ["e41", "e47"], chunks: [{ sourceEntryId: "e47", text: "Ran 35 tests across 3 files. 0 fail" }], relevance: "high" }
+      ```
+    - Files to Create/Edit:
+      - `packages/memory/episodic/src/{workers/observer,types,ledger,flush,render,context,recall,recall-tool,config,index}.ts`;
+      - new `src/chunks.ts` and tests;
+      - fabric `consolidation/{gather,extract}.ts`, `create.ts`, `context.ts`, `blocks.ts` and tests;
+      - wiki `consolidate/pass.ts`, `extension.ts` and tests;
+      - `scripts/memory-bench/{variants,ablations}.mjs`, `mechanism-probes/om.mjs`;
+      - host-builder example;
+      - READMEs and CHANGELOGs;
+      - compat baselines.
+    - References:
+      - owner direction;
+      - Tasks 7.1–7.2.
+  - Test Cases to Write:
+    - `observer_prompt_records_events_not_facts`
+    - `observer_request_never_contains_episode_scope_or_facts`
+    - `outcome_observation_names_changes_and_verification`
+    - `chunk_must_be_verbatim_substring_of_cited_entry`
+    - `chunk_is_redacted_capped_and_never_written_to_the_session_branch`
+    - `chunk_store_delete_is_hard_and_respects_fork_references`
+    - `recall_returns_tool_result_chunk_without_rerunning_any_tool`
+    - `context_block_never_renders_chunk_text`
+    - `observer_sees_recent_observation_index_within_budget`
+    - `fabric_and_wiki_read_the_new_observation_shape`
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes — observation shape, tool schema, chunk store, recall output.
+    - Docs pages to create/edit:
+      - episodic README (`## Observations`, `## Ledger`, new `## Chunks`, `## Cost, security, and failure behavior`);
+      - fabric and wiki READMEs;
+      - `PRODUCT.md` where it describes this memory tier;
+      - CHANGELOGs.
+    - `docs/index.md` update: no
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+
+- [ ] Task 7.4: Episodic memory — the episode scope, and a reflector that derives episode-relevant facts (added 2026-11-08, owner)
+  - Notes: Dropped by plan 216 (2026-11-08, owner): Carried into plan 218 (episode scope and WM). The ratio is pressure, the STM surface is tombstoned rather than deleted, and edits are incremental only. Design record: `docs/_evidence/memory-model/design.md`.
+  - Owner direction (2026-11-08):
+    - "The reflector is actually supposed to gather facts from the observations."
+    - "scope of episodic memory should be definable. Not programmatically. Rather it is telling the model what we are trying to achieve in this particular episode. For example: a host could deliver a plan document. The observer should not know this. The reflector should. So when it filters important information, it also takes what will be done in the future as part of this session till when the memory will live is known to it and it only retains observations that are relevant within that episode."
+    - "The reflector also keeps the original content so that if the model wants, it can see it later." Owner decision 2026-11-08: a chunk cited by a live fact is protected from deletion until that fact is itself dropped or superseded.
+  - Acceptance Criteria:
+    - Functional: **Episode scope.** A host or user sets the episode scope as natural-language text, for example a plan document or a goal and its planned steps:
+      - with the `episode:scope` command (text, or a file path the host resolves);
+      - or with the package config's `episode.scope` at session start.
+      Rules:
+      - Replacing the scope appends an `episodic.scope.set` record (hash, byte length, time).
+      - The text is bounded by `episode.maxScopeBytes` (default 32 KB, `tuning`) and redacted.
+      - Scope text is stored in the session's package state; it is the host's input, not a chunk.
+      - Only the reflector and the dropper receive the scope. The observer never does (Task 7.3 test).
+      - With no scope set, the reflector and dropper are told the episode is the session's current work as shown by the task state.
+    - Functional: **Reflector role.** `DEFAULT_REFLECTOR_INSTRUCTION` (`reflector.ts:8`) is rewritten. With the episode scope (including what is planned for the rest of the episode), the current facts and the new observations, the reflector:
+      1. derives facts that hold beyond the event that produced them and matter within the episode, including future planned work;
+      2. gives every new observation a retention verdict: `relevant` (needed for the episode's remaining work) or `not-relevant` (finished or outside the episode), with a one-line reason.
+      The reflector deletes nothing. Its verdicts are the dropper's input (Task 7.5). It no longer "rewrites the entire memory log".
+    - Functional: **Fact shape.** `record_reflection` takes `content`, `supportingObservationIds`, `scope` (`episode` or `project`), `relevance`, and `supersedes`. `MemoryReflection` gains these fields.
+      - `episode` means useful for this episode's work.
+      - `project` means durable beyond the episode: conventions, how the code or system now works, user preferences, decisions in force.
+      `mark_observations` records the retention verdicts.
+    - Functional: **The reflector keeps the original content.** Every fact's supporting observations, and their chunks, are protected while the fact is active. The chunk store refuses deletion of a protected chunk (Task 7.5 relies on it). `recall` on a fact returns its supporting observations with their chunks.
+    - Functional: **Incremental update with no silent loss.** This fixes the review's main finding: today any non-empty reflector result marks every observation it was sent as consumed and every earlier reflection as superseded (`flush.ts:150–160`). After this task:
+      - only facts named in `supersedes` are superseded;
+      - observations get a reflection-coverage cursor (they are not re-sent) but stay in the ledger and timeline until the dropper drops them;
+      - a test sends a result covering half the observations and asserts the other half stay active and rendered.
+    - Functional: **Consumers.** Fabric's gather takes fact candidates from reflections, `project` scope first. `episode`-scope facts are not promoted to cross-session stores. Fabric's reflection-backed `fact`/`procedure` creation (`create.ts:393–413`) reads `scope`. Wiki consolidation does the same. Tests are updated in this task.
+    - Performance:
+      - The reflector input adds the scope (capped) and drops the full-rewrite prompt. The task reports reflector input tokens per pass, before and after, on the fixture.
+      - One model call per threshold crossing, as today.
+    - Code Quality:
+      - The fold applies per-fact supersession and the retention verdicts.
+      - `observationsUncoveredByReflection` becomes a cursor.
+      - The whole-log replacement path is deleted.
+      - Baselines are regenerated.
+    - Security:
+      - The scope is untrusted host or user text. It goes to the reflector and dropper as data inside a delimited block, under a system instruction that it describes goals and is not an instruction to change tools or reveal memory.
+      - Facts cite only this session's observation ids.
+      - A `supersedes` id outside the active set is refused.
+  - Approach:
+    - Documentation Reviewed:
+      - `workers/reflector.ts`, `flush.ts:139–163`, `ledger.ts`, `coverage-helpers.ts:29–51`, `recall.ts:96–150`, `commands.ts`;
+      - `src/__tests__/reflection-replacement.test.ts`;
+      - fabric `create.ts:393–413`, `consolidation/gather.ts`.
+    - Options Considered:
+      - A programmatic scope (globs, tags). Rejected by the owner: the scope is a statement of intent the model reads.
+      - Give the observer the scope too. Rejected by the owner: the observer must record neutrally.
+      - Let the reflector drop. Rejected by the owner: only the dropper deletes.
+    - Chosen Approach:
+      - A host-set natural-language scope read by the reflector and dropper; incremental cited facts with retention verdicts.
+    - API Notes and Examples:
+      ```ts
+      await agent.commands.run("episode:scope", { text: planMarkdown }, { session });
+      // record_reflection
+      { content: "Campaign resumes must pin PRISM_MEMORY_BENCH_SOURCE; commits mid-run move git HEAD.", supportingObservationIds: ["3f…"], scope: "project", relevance: "high", supersedes: [] }
+      // mark_observations
+      { verdicts: [{ id: "a1…", retention: "not-relevant", reason: "one-off status check, finished" }] }
+      ```
+    - Files to Create/Edit:
+      - `packages/memory/episodic/src/{workers/reflector,flush,ledger,coverage-helpers,types,render,recall,commands,config,state,chunks}.ts` and tests;
+      - fabric `create.ts`, `consolidation/{gather,extract}.ts` and tests;
+      - wiki `consolidate/pass.ts` and tests;
+      - `scripts/memory-bench/variants.mjs`;
+      - READMEs and CHANGELOGs;
+      - compat baselines.
+    - References:
+      - owner direction;
+      - Task 5 arm `om-reflector-loo` (the "before" reflector).
+  - Test Cases to Write:
+    - `episode_scope_reaches_reflector_and_dropper_only`
+    - `episode_scope_is_bounded_redacted_and_delimited_as_data`
+    - `reflector_prompt_asks_for_episode_relevant_facts_and_retention_verdicts`
+    - `partial_reflection_keeps_unreflected_observations_active_and_rendered`
+    - `only_named_facts_are_superseded`
+    - `chunks_cited_by_active_facts_are_protected`
+    - `fact_scope_round_trips_through_fold_render_and_recall`
+    - `fabric_promotes_project_facts_not_episode_facts`
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes — new command and config, reflection shape and lifecycle.
+    - Docs pages to create/edit:
+      - episodic README (new `## Episode scope`, `## Reflections`, `## Commands`);
+      - fabric README (promotion inputs);
+      - CHANGELOGs.
+    - `docs/index.md` update: no
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+
+- [ ] Task 7.5: Episodic memory — the dropper deletes what the episode no longer needs and keeps durable facts (added 2026-11-08, owner)
+  - Notes: Dropped by plan 216 (2026-11-08, owner): Carried into plan 219 (Rehearsal). Chunks are deleted by reference count across tiers, writes go to typed LTM candidates, and episode end is the main trigger. Design record: `docs/_evidence/memory-model/design.md`.
+  - Owner direction (2026-11-08):
+    - The dropper today "is just asked to follow a budget without any instructions on what to drop. This I think is concerning."
+    - It "should be given the instructions to drop observations, mid-session based on the session scope from that particular session and at the end of the session, in the context of the whole project and codebase."
+    - "even when an observation is dropped mid session because it is not relevant to the session anymore, it can decide that it is a durable fact and keep it separately. May be in the fabric somehow."
+    - "only the dropper drops the original session content from local storage … when drops something, it should delete the chunk relevant to that observation and essentially convert everything it drops to durable facts if applicable and relevant to the session or the overall project."
+    - Owner decisions 2026-11-08:
+      - deletion covers the episodic chunk store only, never the raw transcript;
+      - chunks cited by a live fact are protected;
+      - the end-of-episode pass runs on an explicit signal.
+  - Acceptance Criteria:
+    - Functional: **Mid-episode pass.** It runs when active observations exceed `dropper.targetTokens`, or after a reflector pass that marked observations `not-relevant`. The dropper receives:
+      - the episode scope;
+      - the active facts;
+      - the observations with their retention verdicts and chunk sizes.
+      `DEFAULT_DROPPER_INSTRUCTION` (`dropper.ts:6`, today one sentence about the budget) is rewritten with explicit criteria.
+      - **Drop:** observations the episode's remaining work does not need (finished one-off steps, intermediate output, superseded events, duplicates).
+      - **Keep:** observations the remaining planned work needs, unresolved failures and open questions, and anything the task state or an active fact cites.
+      - **Budget:** a target, not a reason to drop needed observations.
+    - Functional: **Every drop decides on a durable fact first.** `drop_observations` takes `{ id, reason, fact? }` items:
+      - `reason` is one of `episode-finished`, `out-of-scope`, `superseded`, `duplicate`;
+      - `fact` is optional: `{ content, scope: "episode" | "project", relevance }`.
+      The package then:
+      1. records any `fact` as a reflection citing the dropped observation, which stays in the ledger without its chunk;
+      2. marks the observation dropped;
+      3. deletes its chunks from the chunk store, unless an active fact protects them (Task 7.4). Protected chunks are deleted when their last protecting fact is dropped or superseded.
+      Dropped observations stay in the ledger with id and description, and `recall` reports `chunk dropped` and the reason.
+    - Functional: **Project facts reach fabric.** When fabric is installed (resolved via `prism.services.consume`), a `project`-scope fact is offered to fabric's reflection-backed promotion (`create.ts:393–413`) under fabric's own promotion policy, and fabric records whether it accepted. Without fabric, the fact stays as an episodic `project` fact and `episodic:status` lists it as unpromoted.
+    - Functional: **End-of-episode pass.** The `episode:end` command (or the equivalent host API) runs one final dropper pass in the context of the whole project and codebase, not the episode. It:
+      - keeps or promotes `project` facts;
+      - drops `episode` facts and the observations only they needed, deleting their chunks;
+      - records an `episodic.episode.ended` record.
+      If the session is disposed without `episode:end`, a bounded best-effort pass runs (one model call, time-limited); on failure it records that the pass was skipped. A new scope may then be set to start the next episode.
+    - Functional: **Only the dropper deletes.** No other code path (observer, reflector, compaction, recall) calls the chunk store's `delete`. A test spies on the store across a full fixture run.
+    - Functional: **Protections are enforced by the package, not the prompt.** Refused with `ok: false`, `protected`:
+      - dropping an observation cited by the task state or an active fact;
+      - dropping a `project` fact with relevance `high` or `critical` at episode end, unless the reason is `superseded` or `duplicate`.
+      The deterministic policy (`lowest-relevance`) becomes: `not-relevant` verdicts first, then lowest relevance, then oldest. It honours the same protections and never writes facts.
+    - Functional: **The dropper runs.** The review found it rarely fires (the reflector consumed observations before the active set crossed the target, and `config.ts` enforces `targetTokens >= observationTokens`). That validation rule is removed and the default is re-sized on the fixture. The offline fixture shows at least one mid-episode pass and one end-of-episode pass, with reasons, facts and deletions recorded.
+    - Performance:
+      - One dropper call per crossing, one per end-of-episode pass; the deterministic policy makes none.
+      - Chunk deletion is one store transaction per pass.
+      - The README cost section states the trade-off between the budget and the dropper's model calls.
+    - Code Quality:
+      - `dropObservationsToTarget`'s observation-only form and the old tool schema are replaced (no alias).
+      - The `om.dropper.policy=lowest-relevance` ablation in `cleanup-campaign.mjs` and `variants.mjs` is updated.
+      - Baselines are regenerated; repo-wide sweep for removed names.
+    - Security:
+      - Deletion is hard (Task 7.3 store test).
+      - Promotion to fabric goes through fabric's existing gates and ACLs.
+      - A dropper prompt cannot delete protected chunks.
+      - The episode scope is data, not instructions (Task 7.4).
+  - Approach:
+    - Documentation Reviewed:
+      - `workers/dropper.ts`, `flush.ts:165–190`, `memory-bounds.ts`, `strategy.ts:36–80`, `config.ts` validation;
+      - fabric `create.ts:393–413` and its promotion policy;
+      - Task 5 arm `om-dropper-deterministic`.
+    - Options Considered:
+      - Drop facts instead of observations. Superseded by the owner's 2026-11-08 clarification: the dropper drops observations, deletes their chunks, and turns what matters into facts.
+      - Delete raw transcript entries too. Rejected by the owner (it needs a kernel contract for the append-only branch).
+    - Chosen Approach:
+      - A scope-guided dropper that converts before it deletes, with package-enforced protections, fabric promotion when present, and an explicit end-of-episode pass.
+    - API Notes and Examples:
+      ```ts
+      { drops: [{ id: "a1…", reason: "episode-finished", fact: { content: "Bench retries live in campaign.mjs retryUncounted", scope: "project", relevance: "medium" } }] }
+      await agent.commands.run("episode:end", {}, { session });
+      ```
+    - Files to Create/Edit:
+      - `packages/memory/episodic/src/{workers/dropper,flush,config,render,context,strategy,memory-bounds,ledger,types,chunks,commands,index}.ts` and tests;
+      - fabric promotion entry (if a service adapter is needed) and tests;
+      - `scripts/memory-bench/{cleanup-campaign,variants}.mjs`;
+      - READMEs and CHANGELOGs;
+      - compat baselines.
+    - References:
+      - owner direction;
+      - Tasks 7.3 and 7.4.
+  - Test Cases to Write:
+    - `dropper_prompt_states_drop_keep_and_fact_criteria_with_scope`
+    - `drop_converts_to_fact_then_deletes_unprotected_chunks`
+    - `protected_chunk_deleted_only_after_last_citing_fact_goes`
+    - `project_fact_offered_to_fabric_under_its_promotion_policy`
+    - `episode_end_pass_judges_against_project_and_records_end`
+    - `dispose_without_episode_end_runs_bounded_best_effort_pass`
+    - `only_the_dropper_calls_chunk_store_delete`
+    - `deterministic_policy_order_and_protections`
+    - `dropper_fires_mid_episode_and_at_end_on_fixture`
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes — dropper role, tool schema, `episode:end`, fabric promotion.
+    - Docs pages to create/edit:
+      - episodic README (`## Dropper`, `## Episode scope`, `## Cost…`);
+      - fabric README (episodic promotion input);
+      - CHANGELOGs.
+    - `docs/index.md` update: no
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+
+- [ ] Task 7.6: Episodic memory — long-session tests and paired measurement (added 2026-11-08, owner)
+  - Notes: Dropped by plan 216 (2026-11-08, owner): Its offline probes are split across plans 217–219's fixtures. Its paired measurement becomes gates M-1 to M-3, against the `OM` arm moved from Task 5. Design record: `docs/_evidence/memory-model/design.md`.
+  - Acceptance Criteria:
+    - Functional: **Offline long-session fixture.** `scripts/memory-bench/mechanism-probes/om.mjs`, renamed `episodic.mjs` in Task 7.1, gains a replayed coding session of at least 6 tasks over at least 200 entries (offline and free). It has:
+      - an episode scope (a plan document whose later steps depend on earlier ones);
+      - related task pairs;
+      - a large tool result;
+      - a code read;
+      - a user preference stated once;
+      - a superseded fact;
+      - an `episode:end`.
+      Probes assert:
+      1. every task ends with an `outcome` observation naming changes and verification;
+      2. task B makes no `grep`, `read` or `bash` call that re-derives A's changes, and cites A's outcome id;
+      3. `recall` returns the earlier tool output and code snippet verbatim from chunks, and no other tool runs;
+      4. the observer never saw the scope;
+      5. the reflector's retention verdicts follow the scope (steps planned later keep their inputs);
+      6. the dropper converts before deleting, deletes only unprotected chunks, and protected chunks survive until their fact goes;
+      7. the preference survives as a `project` fact through every pass and reaches fabric when installed;
+      8. after `episode:end`, only project facts and their protected chunks remain, and the chunk store's bytes shrink accordingly;
+      9. no pass throws on the oversized tail;
+      10. nothing but the dropper deleted anything.
+    - Functional: **Paid paired measurement under gate C-1.** The redesigned episodic memory runs against the pre-redesign OM on development partitions only:
+      - QA: `beam-1m` and `longmemeval-m`, with the episode scope set to the suite's task framing;
+      - work-outcome: plan 209's W legs.
+      The "before" rows are Task 5's `OM` arm results, read from its evidence, not rerun. Pre-registered rules go into `cleanup-criteria.json` before any run:
+      - non-inferior within 2 points on each QA suite;
+      - non-inferior on W1–W6, with a gain on continuity (re-derivation calls per related task, lower is better).
+      A miss goes to the owner, with per-task evidence, before Task 8. The spend is a C-1 amendment with its own budget, after the allowance resets.
+    - Functional: **Task 6 record.** The OM worker rows in `decisions.md` read `fix-kept pending Task 7.6`; this task writes their final verdict.
+    - Performance: The task reports, against Task 5's `OM` rows:
+      - worker model calls and tokens per 10,000 eligible tokens;
+      - chunk-store bytes at peak and after `episode:end`;
+      - context-block bytes.
+      A rise of more than 25% in worker tokens needs a written justification.
+    - Code Quality: The arm runs through `cleanup-campaign.mjs` (a wave 4 `episodic-redesign` arm): same journal, source pin and retry machinery. No ad-hoc runner.
+    - Security: Evidence carries counts, ids and hashes only, never chunk, scope, question, answer or claim text. Held-out partitions stay unread.
+  - Approach:
+    - Documentation Reviewed:
+      - `scripts/memory-bench/mechanism-probes/{harness,run}.mjs`;
+      - `cleanup-campaign.mjs` (waves, predictions);
+      - `cleanup-criteria.json`;
+      - plan 209's work-outcome runner.
+    - Options Considered:
+      - Offline only. Rejected: the owner's goal is long-session usefulness.
+      - Rerun the before arm. Rejected: Task 5 already measured it.
+    - Chosen Approach:
+      - An offline fixture that proves each owner requirement mechanically, then one paired paid read.
+    - API Notes and Examples:
+      ```sh
+      timeout 1800 bun scripts/memory-bench/mechanism-probes/run.mjs --only episodic
+      scripts/memory-bench/c1-supervise.sh 4   # owner-started, after the C-1 amendment
+      ```
+    - Files to Create/Edit:
+      - `scripts/memory-bench/mechanism-probes/episodic.mjs`, `probes.test.mjs`;
+      - `scripts/memory-bench/fixtures/episodic-long-session/`;
+      - `scripts/memory-bench/{cleanup-campaign.mjs,cleanup-criteria.json,README.md}`;
+      - `docs/_evidence/memory-bench/210/{episodic-redesign/*,decisions.md,README.md}`;
+      - `gates/owner-gate-c1.json` (amendment).
+    - References:
+      - Tasks 5, 6 and 7.1–7.5.
+  - Test Cases to Write:
+    - `episodic_long_session_probe_covers_every_owner_requirement`: fails if any of probes 1–10 is missing.
+    - `episodic_redesign_before_rows_come_from_task5_evidence`
+    - `episodic_redesign_rules_registered_before_first_attempt`
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: no — evidence and harness.
+    - Docs pages to create/edit:
+      - evidence README;
+      - `scripts/memory-bench/README.md`.
+    - `docs/index.md` update: no
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
 - [ ] Task 8: Combined check and product freeze
+  - Notes: Dropped (2026-11-08, owner): no further paid runs in this plan. The slimmed product's hash and cache-pin re-attestation moved to Task 7. The combined check moved to plan 223 Task 1, which bisects over this plan's removals on a miss. The freeze moved to plan 223 Task 1. The text below is kept as the record of the requirement.
   - Acceptance Criteria:
     - Functional: On the slimmed product:
       - every offline memory suite, the safety suite (offline, with plan 208's ontology probes), the prefix probe, the growth simulation (offline) and the mechanism probes pass;
       - a paired development run (inside gate C-1's reserved budget) shows the slimmed product non-inferior (2 points) to the pre-cleanup product on every suite and on W1–W6.
       A miss reverts the removal responsible, found by bisecting the removals.
+    - Functional: ~~**Amended 2026-11-08 by Tasks 7.1–7.6.** The slimmed product includes episodic memory (the renamed and redesigned observational memory). The non-inferiority baseline stays the pre-cleanup product, and the freeze record lists Tasks 7.1–7.6 and the Task 7.6 verdict.~~ Superseded the same day.
+    - Functional: **Amended 2026-11-08 (owner, memory model): development check only.**
+      - The combined non-inferiority check covers this plan's removals: the fabric `conversational` and `coding` presets with Task 7's removals, against the pre-cleanup product, on development partitions and W1–W6.
+      - OM and the ontology are outside the check: they are transferred.
+      - The product hash freeze, the readiness record for held-out use and the "no product change before Task 9" rule move to plan 223 Task 1.
+      - This task still records the slimmed product's hash and passes the readiness cache-stability pin for it, because plan 216 starts from that product and its behaviour-preservation checks compare against it.
     - Functional: The product is then frozen by product hash for Task 9:
       - the readiness cache-stability pin (plan 202 Tasks 4.11–4.15) passes for that hash;
       - `docs/_evidence/memory-bench/210/freeze/record.json` lists what the hash includes: every executed plan 202 lever, plan 207, plan 208 Task 5's tuning revision, plan 209 Task 6's tuning revision, and this plan's fixes and removals.
@@ -1286,6 +1958,7 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
 - [ ] Task 9: Held-out acceptance of every memory claim on the final product (owner gate 3, paid)
+  - Notes: Dropped by plan 223 (2026-11-08, owner): moved to plan 223 Task 2 (gate A). The final product is the rebuilt memory system plus the wiki. Every criterion here carries over in substance, with `memory-model-criteria.json` added to the one manifest. The text below is kept as the record of the requirement.
   - Moved here on 2026-10-31 from plan 202 Task 18, plan 208 Task 6 and the held-out part of plan 209 Task 7. Their criteria are unchanged in substance.
   - Acceptance Criteria:
     - Functional: The candidate is Task 8's frozen product. The arms are:
@@ -1355,6 +2028,7 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
 - [ ] Task 10: Preset revision 2, defaults, published claims and graduation from the experimental line
+  - Notes: Dropped by plan 223 (2026-11-08, owner): moved to plan 223 Tasks 3 (preset, defaults, claims) and 4 (graduation). The packages that graduate are those plan 216 leaves: `memory-system`, `memory-core`, `memory-rag`, and the wiki outside memory. The text below is kept as the record of the requirement.
   - Moved here on 2026-10-31 from plan 202 Task 19, plan 208 Task 7 and the defaults part of plan 209 Task 7. Their criteria are unchanged in substance.
   - Acceptance Criteria:
     - Functional: **Preset revision (plan 202).**
@@ -1432,6 +2106,7 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
 - [ ] Task 11: Memory skills on the surface this plan leaves (moved from plan 211 Task 6 via plan 215, 2026-11-04)
+  - Notes: Dropped by plan 223 (2026-11-08, owner): moved to plan 223 Task 5, written on the final surface: `memory.recall` across tiers, plus the wiki's own tools. The text below is kept as the record of the requirement.
   - Acceptance Criteria:
     - Functional:
       - **Entry check.** Before writing, re-run plan 215 Task 5 (a)'s ledger for the memory packages on the post-210 tree and record their model-visible tools and `when` gates. This plan's removals (Task 7) win: a skill is written only for a tool that survived.
@@ -1495,6 +2170,7 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
 - `timeout 900 bun run --cwd packages/memory/wiki test`
 - `timeout 900 bun run --cwd packages/memory/core test`
 - `timeout 1800 bun scripts/memory-bench/mechanism-probes/run.mjs`
+- ~~Tasks 7.1–7.6~~ (dropped 2026-11-08; plans 216–219 carry them)
 - `timeout 900 bun test --timeout=0 scripts/memory-bench`
 - `timeout 3600 bun scripts/memory-bench/safety/run.mjs --suite offline --ontology`
 - `timeout 600 bun scripts/memory-bench/work-outcome/run.mjs --offline`
@@ -1506,12 +2182,8 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
 - `timeout 3600 bun scripts/memory-bench/growth.mjs --offline`
 - `timeout 900 bun examples/long-term-memory.ts`
 - `timeout 300 bunx biome check <changed files>`
-- Paid, in order, after their gates:
-  1. Task 5 ablations (gate C-1);
-  2. Task 8 combined development check (gate C-1's reserved budget);
-  3. Task 9 held-out acceptance (gate 3), with one live cache probe per acceptance route, and only after a miss the one remediation round on `heldout-b` (fresh approval);
-  4. `acceptance-report.mjs --plan 202`, `--plan 208` and `--plan 209`;
-  5. confirm no owned paid process remains.
+- Paid (amended 2026-11-08): none remaining. Wave 1 of Task 5 is complete; waves 2–3 are cancelled and Task 8 is dropped. Run `timeout 600 bun scripts/memory-bench/acceptance-report.mjs --plan 210 --partition dev` (wave 1, no spend), then confirm no owned paid process remains. The episodic-memory read, the combined check, the held-out acceptance (gate 3) and the acceptance reports moved to plans 217–223.
+- Task 7 (amended): `timeout 900 bun scripts/memory-bench/readiness.mjs --cache-stability` and `timeout 600 bun scripts/memory-bench/prefix-probe.mjs --equivalence --out docs/_evidence/memory-bench/210/slimmed/equivalence.json`.
 
 ## Compromises Made
 

@@ -9,10 +9,8 @@ Use these APIs when a host wants one explicit place to compose settings, resolve
 ## Inputs / request
 - `createStaticSettingsProvider(settings)` reads dotted keys from an in-memory JSON object.
 - `createChainedSettingsProvider(providers)` returns the first defined setting.
-- `createMemoryCredentialStore(initial?)` stores explicit credentials in memory only.
-- `createChainedCredentialResolver(resolvers)` returns the first credential found.
-- `createExplicitCredentialResolver(sources)` documents and applies named source order such as runtime override → stored → host env object → fallback.
-- `createEnvCredentialResolver(env, map)` reads only the caller-supplied object; it does not read `process.env`.
+- `AgentConfig.slots.credentials` (a `CredentialResolver`) resolves `env:`/`keyring:` refs; `createEnvRefCredentialResolver(env?)` is the kernel default for `env:` refs.
+- `SecretSource` / `refSource()` / `optionalRefSource()` (`@arnilo/prism/provider-kit`) hand a ref-resolved credential to a low-level provider factory; a literal string does not type-check.
 - `assertTrusted(policy, request)` and `assertPermission(policy, request)` fail closed on denial.
 - `createSecretRedactor(secrets)` redacts exact known strings.
 - Node-only subpaths: `@arnilo/prism/node/settings` for caller-named JSON settings files and `@arnilo/prism/node/trust` for explicit trusted path roots with symlink-aware realpath checks.
@@ -33,7 +31,7 @@ console.log(await settings.get("demo.enabled"));
 
 ## Implementation example
 ```ts
-import { createAgent, createMemoryCredentialStore, createSecretRedactor, resolveCredentialValue } from "@arnilo/prism";
+import { createAgent, createEnvRefCredentialResolver } from "@arnilo/prism";
 import { loadSettingsFiles } from "@arnilo/prism/node/settings";
 import { createPathTrustPolicy } from "@arnilo/prism/node/trust";
 import { homedir } from "node:os";
@@ -42,18 +40,16 @@ import { join } from "node:path";
 const settings = await loadSettingsFiles([
   { name: "user", path: join(homedir(), ".config", "prism", "settings.json"), optional: true },
 ]);
-const credentials = createMemoryCredentialStore();
-credentials.set({ name: "api", provider: "demo", credential: { type: "api_key", value: "token-value" } });
+// The credentials slot resolves `env:`/`keyring:` refs; packages ask it per request, and every value it
+// returns joins the agent's secret set for redaction.
+const credentials = createEnvRefCredentialResolver({ DEMO_API_KEY: "token-value" });
 const trust = createPathTrustPolicy({ trustedRoots: [process.cwd()] });
-const apiKey = await resolveCredentialValue(credentials, { name: "api", provider: "demo" });
 
 const agent = createAgent({
   model: { provider: "demo", model: "model" },
-  // Resolve credentials at the provider edge; register known secrets for redaction.
-  redactor: apiKey ? createSecretRedactor([apiKey]) : undefined,
+  slots: { credentials },
 });
 void settings;
-void credentials;
 void trust;
 void agent;
 ```
@@ -80,7 +76,7 @@ Boundary hardening summary:
 ## Related APIs
 - [Host security guide](host-security.md): fail-closed checklist for wiring credentials, redaction, trust, permissions, persistence, extension loading, and tool validation in an embedding app.
 - `createStaticSettingsProvider`, `createChainedSettingsProvider`
-- `createMemoryCredentialStore`, `createChainedCredentialResolver`, `createExplicitCredentialResolver`, `createEnvCredentialResolver`, `resolveCredentialValue`
+- `AgentConfig.slots.credentials`, `createEnvRefCredentialResolver`, `SecretSource` / `refSource` / `optionalRefSource` from `@arnilo/prism/provider-kit` — see [Credentials and redaction](credentials-and-redaction.md)
 - `createStaticTrustPolicy`, `assertTrusted`, `isTrusted`, `TrustDeniedError`
 - `createStaticPermissionPolicy`, `assertPermission`, `checkPermission`, `PermissionDeniedError`
 - `ExecutionPolicy`, `assertExecutionAllowed`, `checkExecution`, `ExecutionDeniedError` (core); `@arnilo/prism-tools-coding` for coding-tool approval adapters — see [Coding execution approval and sandboxing](coding-security.md)

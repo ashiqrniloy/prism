@@ -1,13 +1,11 @@
 import {
-  type CredentialValueSource,
   type JsonObject,
   type ModelConfig,
   type ModelCost,
   redactSecrets,
-  resolveCredentialValue,
   trimTrailingSlashes,
 } from "@arnilo/prism";
-import { readBoundedResponseJson, readBoundedResponseText, type ThinkingCompatFamily } from "@arnilo/prism/provider-kit";
+import { readBoundedResponseJson, readBoundedResponseText, type ThinkingCompatFamily, type SecretSource } from "@arnilo/prism/provider-kit";
 
 /** Official OpenCode Go API base (`/chat/completions`, `/messages`, `/models`). */
 export const OPENCODE_GO_DEFAULT_BASE_URL = "https://opencode.ai/zen/go/v1";
@@ -31,7 +29,7 @@ export interface OpenCodeGoModelConfig extends Omit<ModelConfig, "provider" | "c
 }
 
 export interface ListOpenCodeGoModelsOptions {
-  readonly apiKey?: CredentialValueSource;
+  readonly apiKey?: SecretSource;
   readonly fetch?: typeof fetch;
   /** Defaults to official `https://opencode.ai/zen/go/v1`. */
   readonly baseUrl?: string;
@@ -138,7 +136,7 @@ export function routeForOpenCodeGoModel(modelId: string): OpenCodeGoRoute {
 export async function listOpenCodeGoModels(options: ListOpenCodeGoModelsOptions = {}): Promise<ModelConfig[]> {
   const provider = options.provider ?? "opencode-go";
   const baseUrl = trimTrailingSlashes(options.baseUrl ?? OPENCODE_GO_DEFAULT_BASE_URL);
-  const token = await resolveCredentialValue(options.apiKey, { provider, name: "apiKey" });
+  const token = await options.apiKey?.();
   const response = await (options.fetch ?? fetch)(`${baseUrl}/models`, {
     method: "GET",
     headers: { ...options.headers, ...(token ? { authorization: `Bearer ${token}` } : {}) },

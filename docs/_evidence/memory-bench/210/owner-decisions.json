@@ -1,0 +1,22 @@
+{
+  "kind": "210-owner-decisions",
+  "plan": 210,
+  "task": 6,
+  "decided": "2026-11-08",
+  "by": "owner (answers to the Task 6 review questions; the assistant wrote the reasons from the wave-1 report and the owner approved the recommended option)",
+  "note": "The owner supplies holds with written reasons and policy choices. Verdicts are cleanupVerdict()'s and are never set here.",
+  "holds": {
+    "recall.multi-query": "Experimental tier. Removing the tool affordances (arm tool-affordances-loo) is not shown non-inferior: the CI lower bound is -7.3 to -17.9 points against the -2 margin, and the benefit CI lower bound is -4.4 (large) and -9.2 (small), so there is no keep reason either. Task 3's prediction missed. Kept in the experimental tier until a measured benefit or a non-inferior removal.",
+    "recall.unmatched-terms": "Experimental tier. It shares the tool-affordances-loo arm with recall.multi-query, so the evidence is the same: removal CI lower bound -7.3 to -17.9 points against the -2 margin, benefit CI lower bound below 0 on both answer models, prediction missed. Kept in the experimental tier until a measured benefit or a non-inferior removal.",
+    "recall.state-grouping": "Experimental tier. Removal is not shown non-inferior (CI lower bound -4.5 to -21.3 points against the -2 margin) and the benefit CI lower bound is -15.4 (large) and -4.3 (small). Task 3's prediction missed. Kept in the experimental tier until a measured benefit or a non-inferior removal.",
+    "delivery.directory": "Experimental tier. Removal is not shown non-inferior on LoCoMo (CI lower bound -14.9 large, -9.8 small) and the benefit CI lower bound is -4.4 (large) and -8.2 (small). Task 3's prediction missed. Kept in the experimental tier until a measured benefit or a non-inferior removal.",
+    "navigation.agentic-lexical": "Experimental tier. It missed the frozen plan 202 Task 5 rules (candidate-gap halving and the ability veto), which bars a keep on benefit, and removal is not shown non-inferior (CI lower bound as low as -20 points on MemoryAgentBench-CR and -17.1 on BEAM-1M against the -2 margin). The tool is how an agent pages through neighbours and sessions, and the wave-1 losses say removing it could harm. Kept in the experimental tier until a measured benefit or a non-inferior removal."
+  },
+  "inertApproval": "Approve all 11: the 9 inert features (retrieval.hybrid, workers.linker, workers.evolution, write.consolidate-model-decider, recall.state-wrapper, decisions.P1, decisions.P2, decisions.P6, scoped.policy) and the 2 conditional ones (retrieval.similar-links, lifecycle.widen-narrow), each as `remove` pending the byte-identical-preset test that Task 7 builds.",
+  "negativeOverrides": "Recorded in cleanup-criteria.json `ownerNegativeOverrides` (retrieval.lexical). The three other negative verdicts (write.keyword-enrichment, timeline, recall.supersession-hint) stand as computed and are removed.",
+  "unmeasuredPolicy": "Every candidate that wave 1 did not measure is recorded `unmeasured`: not removed, and not moved to the experimental tier by this plan. Opt-in variants stay opt-in at their current defaults and default-on features stay on, as the plan's amendment of 2026-11-08 already says for the cancelled-wave rows. Plan 223 Task 3 lists them with no claim.",
+  "beamContradictionPrompt": {
+    "allowed": false,
+    "decision": "No. BEAM's published answer prompt stays in force for every headline number. Contradiction resolution is 0/4 under both recall and oracle, so no product change can move it. It is reported as a limit (0/4, no claim) and is not scored with a prompt that asks the model to surface contradictions."
+  }
+}

@@ -24,7 +24,7 @@ test("packed extraction wires wiki and rag; unrelated imports do not need anydoc
     assert.equal(existsSync(join(pkg, "docling", "ocr.py")), true);
     const extractionJs = readFileSync(join(pkg, "src/document-extraction/index.ts"), "utf8");
     const documentsJs = readFileSync(join(pkg, "src/documents/index.ts"), "utf8");
-    const wikiTs = readFileSync(join(ROOT, "packages/memory/wiki/src/ingest.ts"), "utf8");
+    const wikiTs = readFileSync(join(ROOT, "packages/knowledge/wiki/src/ingest.ts"), "utf8");
     assert.doesNotMatch(extractionJs, /^import\s+.*@firecrawl\/anydoc/m);
     assert.equal(documentsJs.includes("@firecrawl/anydoc"), false);
     assert.equal(wikiTs.includes("@firecrawl/anydoc"), false);
@@ -32,7 +32,7 @@ test("packed extraction wires wiki and rag; unrelated imports do not need anydoc
 
     const extraction = await import(pathToFileURL(join(pkg, "src/document-extraction/index.ts")).href);
     const documents = await import(pathToFileURL(join(pkg, "src/documents/index.ts")).href);
-    const memory = await import(pathToFileURL(join(ROOT, "packages/memory/wiki/src/ingest.ts")).href);
+    const memory = await import(pathToFileURL(join(ROOT, "packages/knowledge/wiki/src/ingest.ts")).href);
     assert.equal(typeof documents.parseDocument, "function");
     assert.equal(typeof memory.ingestWikiSource, "function");
 
@@ -72,7 +72,7 @@ test.skipIf(process.env.PRISM_TEST_DOCLING !== "1")("prefetched worker stages a 
     pathToFileURL(join(ROOT, "packages/tools/work/src/document-extraction/index.ts")).href
   );
   const { spawn } = await import("node:child_process");
-  const { ingestWikiSource } = await import(pathToFileURL(join(ROOT, "packages/memory/wiki/src/ingest.ts")).href);
+  const { ingestWikiSource } = await import(pathToFileURL(join(ROOT, "packages/knowledge/wiki/src/ingest.ts")).href);
   const extractor = await createDocumentExtractor({
     ocr: (request) =>
       new Promise((resolve, reject) => {

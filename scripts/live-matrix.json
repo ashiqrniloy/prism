@@ -542,9 +542,9 @@
     },
     {
       "id": "memory/rag-rerankers-live",
-      "package": "@arnilo/prism-memory-rag",
+      "package": "@arnilo/prism-rag",
       "status": "active",
-      "source": "packages/memory/rag/src/__tests__/live.test.ts",
+      "source": "packages/knowledge/rag/src/__tests__/live.test.ts",
       "command": "bun test --timeout=0 src/__tests__/live.test.ts",
       "requires": [],
       "optional": [
@@ -552,7 +552,7 @@
       ],
       "scope": "Real TEI / OpenAI-compatible rerank endpoints; each leg self-skips when its endpoint env is unset.",
       "notes": "Permutation-only reorder + descending-score conformance on live responses; optional TEI gateway key rides the trusted-transport seam; credential never appears in error transcripts.",
-      "cwd": "packages/memory/rag",
+      "cwd": "packages/knowledge/rag",
       "requiresAny": [
         "PRISM_TEST_TEI_RERANKER_URL",
         "PRISM_TEST_HOSTED_RERANK_URL"
@@ -573,11 +573,11 @@
     },
     {
       "id": "memory/local-rerank-live",
-      "package": "@arnilo/prism-memory-rag",
+      "package": "@arnilo/prism-rag",
       "status": "active",
-      "source": "packages/memory/rag/src/__tests__/local-reranker-live.test.ts",
+      "source": "packages/knowledge/rag/src/__tests__/local-reranker-live.test.ts",
       "command": "bun test --timeout=0 src/__tests__/local-reranker-live.test.ts",
-      "cwd": "packages/memory/rag",
+      "cwd": "packages/knowledge/rag",
       "requires": [
         "PRISM_TEST_LOCAL_RERANK"
       ],
@@ -597,9 +597,9 @@
     },
     {
       "id": "memory/drive-sync-live",
-      "package": "@arnilo/prism-memory-rag",
+      "package": "@arnilo/prism-rag",
       "status": "active",
-      "source": "packages/memory/rag/src/__tests__/google-drive-live.test.ts",
+      "source": "packages/knowledge/rag/src/__tests__/google-drive-live.test.ts",
       "command": "bun test --timeout=0 src/__tests__/google-drive-live.test.ts",
       "requires": [
         "PRISM_TEST_DRIVE_ACCESS_TOKEN"
@@ -609,7 +609,7 @@
         "PRISM_TEST_DRIVE_SHARED_DRIVE_ID"
       ],
       "scope": "Delegated Drive readonly token; least privilege: one throwaway folder. Folder/shared-drive ids optional.",
-      "cwd": "packages/memory/rag",
+      "cwd": "packages/knowledge/rag",
       "cost": "<=2 Drive list/changes pages plus file media for that page; replay must not re-embed."
     },
     {
@@ -708,14 +708,14 @@
     {
       "id": "memory/wiki",
       "status": "active",
-      "source": "packages/memory/wiki/src/__tests__/commands.test.ts",
+      "source": "packages/knowledge/wiki/src/__tests__/commands.test.ts",
       "command": "bun test --timeout=0 src",
-      "cwd": "packages/memory/wiki",
+      "cwd": "packages/knowledge/wiki",
       "requires": [],
-      "scope": "Ontology tier package over the real fabric: the memory.fabric requirement, wiki:status counts, the scripted concept pass (cited edits, fail-closed answers, repair), claim lint and source staging over real fs trees.",
+      "scope": "The wiki, knowledge outside memory, over the real fabric read through memory.ltm and on its own sources without it: wiki:status counts, the scripted concept pass (cited edits, fail-closed answers, repair), the deletion cascade from memory, claim lint and source staging over real fs trees.",
       "cost": "Hermetic; no network.",
       "notes": "Always-runnable leg; the concept pass has no live leg (plan 208 measures it).",
-      "package": "@arnilo/prism-memory-wiki"
+      "package": "@arnilo/prism-wiki"
     },
     {
       "id": "coding-tools/lsp-forge",
@@ -906,6 +906,48 @@
       "scope": "Manual-only reference-host evaluation gate on Hyper over the heldout split (coding approval, denied write, research citations, and web_fetch prompt injection) with trials: 4 and regression comparison against the last stored live report.",
       "cost": "4 heldout items x 4 trials (~32 provider turns); hard ceiling of 2M input tokens enforced by the test. Never scheduled.",
       "notes": "Use workflow_dispatch with filter release/eval-gate and PRISM_LIVE_EVAL_GATE_MANUAL=1. Appends the content-free ExperimentReportRecord to the durable SQLite store."
+    },
+    {
+      "id": "release/cache-parity",
+      "package": "@arnilo/prism-provider-commandcode",
+      "status": "active",
+      "source": "scripts/cache-parity/live.mjs",
+      "command": "bun scripts/cache-parity/live.mjs",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "PRISM_LIVE_CACHE_PARITY",
+        "COMMAND_CODE_API_KEY",
+        "OLLAMA_API_KEY"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_PARITY_COMMANDCODE_CHAT_MODEL",
+          "default": "minimax/minimax-m3.1-flash",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_PARITY_COMMANDCODE_RESPONSES_MODEL",
+          "default": "gpt-5.6-luna",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_PARITY_COMMANDCODE_MESSAGES_MODEL",
+          "default": "claude-haiku-5-5",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_PARITY_OLLAMA_MODEL",
+          "default": "gemma4:31b",
+          "wired": true
+        }
+      ],
+      "scope": "Manual-only cache parity against pi (headless) on a real coding task: Command Code chat, Responses and Messages, and Ollama Cloud. Passes when Prism's median hitRate is at least pi's on every conclusive cell with no usage_mismatch; an inconclusive cell is rerun once and fails strict mode. Needs `pi` on PATH with pi-commandcode-provider and pi-ollama-cloud installed (a missing binary or extension skips the row with a reason; strict mode fails it). Hyper, OpenCode Go and the paid OpenRouter Anthropic cell are deferred to after 0.13.0 (owner, 2026-11-08) and recorded as deferred, not failed.",
+      "cost": "120 requests per enabled cell (3 runs x 2 harnesses x a 20-request ceiling), so at most 480 requests for the four cells plus at most 120 for each inconclusive rerun; the separate provider probe's `turns` generation requests (default 4) plus catalog discovery for the probe cells. Never scheduled.",
+      "notes": "Use workflow_dispatch with filter release/cache-parity. Reports pin under docs/_evidence/cache-parity/ and the first run is summarised in docs/_evidence/cache-parity-0.13.0.md. Command Code and Ollama Cloud gate their own releases (plans 205, 206), so a miss here is investigated and reported and does not block 0.13.0 unless it shows a defect in shared kit code.",
+      "optional": [
+        "PRISM_LIVE_OPENROUTER_PAID",
+        "OPENROUTER_API_KEY"
+      ]
     },
     {
       "id": "providers/kilo",

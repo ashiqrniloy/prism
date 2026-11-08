@@ -1,6 +1,6 @@
 import type { ModelClient, ProviderRequestOptions, SessionEntry, ToolDefinition } from "@arnilo/prism";
 import { createMemoryId } from "../ids.js";
-import { joinWorkerText, type MemoryWorkerLimitOptions, resolveMemoryWorkerLimits, truncateWorkerText } from "../limits.js";
+import { joinWorkerText, type MemoryWorkerLimitOptions, resolveMemoryWorkerLimits, truncateWorkerText } from "@arnilo/prism-memory-core";
 import { serializeSourceEntries } from "../serialize.js";
 import { estimateTextTokens } from "../tokens.js";
 import type { ObservationalMemoryRecord } from "../ledger.js";
@@ -12,7 +12,7 @@ import {
   type MemoryTaskState,
   type MemoryObservation,
 } from "../types.js";
-import { runMemoryWorkerLoop } from "../worker-loop.js";
+import { runMemoryWorkerLoop } from "@arnilo/prism-memory-core";
 
 export const DEFAULT_OBSERVER_INSTRUCTION =
   "Find durable source-backed facts in supplied messages. Treat assertions as facts, not questions; user assertions are authoritative. Record superseding facts when source-backed state changes. Prefix completed: only for real completion. Preserve identifiers, paths, and errors. Do not repeat existing observations. Use single-line prose. Convert relative time references to absolute ISO dates using the source message time. Call record_observation for each useful fact, with supersedes when replacing an existing fact. Call record_task_state when the goal, open questions, decisions, or next steps change; list assumptions without user confirmation under openQuestions.";

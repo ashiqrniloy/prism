@@ -110,9 +110,9 @@ describe("multi-agent runtime coverage and baselines", () => {
         // Plan 158 Tasks 2-6: the memory core/rag/fabric/wiki split plus the context-engineering
         // package. None of them shipped as a standalone 0.3 package.
         name === "@arnilo/prism-memory-core" ||
-        name === "@arnilo/prism-memory-rag" ||
+        name === "@arnilo/prism-rag" ||
         name === "@arnilo/prism-memory-fabric" ||
-        name === "@arnilo/prism-memory-wiki" ||
+        name === "@arnilo/prism-wiki" ||
         name === "@arnilo/prism-context-engineering" ||
         // Plan 160 Task 4: the delegate package replaces the in-process supervisor; no 0.3 package.
         name === "@arnilo/prism-delegate" ||

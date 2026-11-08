@@ -425,7 +425,7 @@ export function searchLinearSessions(
       if (bytesScanned >= caps.bytes) break;
       entriesScanned += 1;
       turn += 1;
-      const kindMatches = q.kind === undefined || q.kind.includes(entry.kind);
+      const kindMatches = q.kind === undefined || (q.kind as readonly string[]).includes(entry.kind);
       if (kindMatches) matchedKind = true;
       const text = entrySearchText(entry);
       bytesScanned += utf8Bytes(text) + utf8Bytes(entry.label) + utf8Bytes(entry.summary);

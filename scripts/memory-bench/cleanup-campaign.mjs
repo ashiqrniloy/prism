@@ -549,6 +549,8 @@ export const C1_WAVES = Object.freeze({
 });
 export const C1_WORK_WAVE = 2;
 export const C1_ONTOLOGY_WAVE = 3;
+/** Gate C-1 amendment 7 (owner, 2026-11-08): the campaign closed after wave 1; waves 2 and 3 never run. */
+export const C1_CLOSED_AFTER_WAVE = CLEANUP_CRITERIA.closure.afterWave;
 
 /** The wave of one job: write sides 1, work-outcome 2, ontology 3, robustness by its arm. */
 export function c1WaveOf(job) {
@@ -568,6 +570,10 @@ export function parseC1Waves(value) {
     .map((item) => Number(item.trim()));
   if (!waves.length || waves.some((wave) => ![1, 2, 3].includes(wave)))
     throw new Error(`C1Waves: PRISM_MEMORY_BENCH_210_WAVES must list waves 1-3, got "${value}"`);
+  if (waves.some((wave) => wave > C1_CLOSED_AFTER_WAVE))
+    throw new Error(
+      `C1Closed: gate C-1 closed after wave ${C1_CLOSED_AFTER_WAVE} (amendment 7); waves above it are cancelled and never run`,
+    );
   return [...new Set(waves)].sort();
 }
 
@@ -735,6 +741,7 @@ export async function buildC1Manifest({ root = "." } = {}) {
       ontology: C1_ONTOLOGY_ARMS.map((arm) => ({ ...arm, suites: [...C1_ONTOLOGY_SUITES] })),
       work: C1_WORK_ARMS.map((arm) => ({ ...arm })),
     },
+    closure: structuredClone(CLEANUP_CRITERIA.closure),
     predictionsCovered: c1PredictionCoverage(predictions.predictions),
     unmeasurable: { ...C1_UNMEASURABLE },
     results: [],
@@ -832,6 +839,8 @@ export async function buildExecutableC1Manifest({
   smoke = process.env.PRISM_MEMORY_BENCH_210_SMOKE === "1",
   waves = parseC1Waves(process.env.PRISM_MEMORY_BENCH_210_WAVES),
 } = {}) {
+  if (waves?.some((wave) => wave > C1_CLOSED_AFTER_WAVE))
+    throw new Error(`C1Closed: gate C-1 closed after wave ${C1_CLOSED_AFTER_WAVE} (amendment 7); waves above it never run`);
   const manifest = await buildC1Manifest({ root });
   const gate = assertC1Gate(await readC1Gate({ root }), manifest);
   const patterns = String(only ?? "")
@@ -855,7 +864,8 @@ export async function buildExecutableC1Manifest({
         }
       : {}),
     // The job list (and so the journal) is the whole campaign; jobs outside the active waves are deferred at run time.
-    ...(waves ? { activeWaves: waves } : {}),
+    // After amendment 7 the active waves never exceed the closure, whatever the environment says.
+    activeWaves: waves ?? Array.from({ length: C1_CLOSED_AFTER_WAVE }, (_, index) => index + 1),
     status: "approved",
     executable: true,
     gate: { path: C1_GATE, manifestHash: gate.manifestHash, approvedAt: gate.approvedAt },
@@ -864,7 +874,13 @@ export async function buildExecutableC1Manifest({
 
 /** A job the run must not start: outside the manifest's active waves. */
 export function c1Deferred(manifest, job) {
+  if (job.wave > C1_CLOSED_AFTER_WAVE) return true;
   return Array.isArray(manifest.activeWaves) && !manifest.activeWaves.includes(job.wave);
+}
+
+/** The jobs a run of this manifest may start: none of waves 2-3, which gate C-1 amendment 7 cancelled. */
+export function c1Scheduled(manifest) {
+  return manifest.jobs.filter((job) => !c1Deferred(manifest, job));
 }
 
 /** Every route the jobs call is in Ollama Cloud's live catalog, and the allowance is open; nothing runs otherwise. */
@@ -1233,8 +1249,13 @@ export function c1FeatureEvidence(feature, { arms, ledgerRow, prediction, robust
   return { evidence, verdict: cleanupVerdict(evidence) };
 }
 
-export function buildC1Report({ reports, manifest, ledger, predictions }) {
+export function buildC1Report({ reports: allReports, manifest, ledger, predictions }) {
   const pin = cleanupManifestPin();
+  // Gate C-1 amendment 7: the report reads wave 1 only. A job outside it is never read, whatever files exist.
+  const waveOfJob = new Map((manifest?.jobs ?? []).map((job) => [job.id, job.wave]));
+  const reports = new Map([...allReports].filter(([id]) => (waveOfJob.get(id) ?? 1) <= C1_CLOSED_AFTER_WAVE));
+  const cancelledArms = CLEANUP_CRITERIA.closure.cancelledArms;
+  const transferredRows = new Map(CLEANUP_CRITERIA.transferred.features.map((row) => [row.feature, row]));
   const models = C1_MODELS.map((model) => model.key);
   const arms = [...C1_ROBUSTNESS_ARMS, ...C1_ONTOLOGY_ARMS];
   const robustness = {};
@@ -1294,6 +1315,14 @@ export function buildC1Report({ reports, manifest, ledger, predictions }) {
     .map((prediction) => {
       const target = C1_PREDICTION_ARMS[prediction.arm];
       const armIds = [target].flat();
+      // A cancelled arm is never a miss: it is reported `cancelled` with its disposition.
+      if (armIds.every((id) => cancelledArms[id]))
+        return {
+          feature: prediction.feature,
+          arm: prediction.arm,
+          outcome: "cancelled",
+          disposition: armIds.map((id) => ({ arm: id, ...cancelledArms[id] })),
+        };
       const effectsByModel = Object.fromEntries(
         models.map((model) => [model, armIds.flatMap((armId) => Object.values(robustness[model]?.[armId] ?? {}))]),
       );
@@ -1302,8 +1331,29 @@ export function buildC1Report({ reports, manifest, ledger, predictions }) {
   // Verdicts per candidate feature, from cleanupVerdict() only.
   const candidates = (ledger?.features ?? []).filter((row) => row.candidate);
   const verdicts = candidates.map((row) => {
-    const featureArms = [...arms, ...C1_WORK_ARMS].filter((arm) => (arm.features ?? []).some((name) => name.split("#")[0] === row.id));
+    const allFeatureArms = [...arms, ...C1_WORK_ARMS].filter((arm) => (arm.features ?? []).some((name) => name.split("#")[0] === row.id));
+    const featureArms = allFeatureArms.filter((arm) => !cancelledArms[arm.id]);
     const prediction = (predictions ?? []).find((item) => item.feature === row.id && item.verdict === "fix-and-measure");
+    const transfer = transferredRows.get(row.id);
+    if (transfer)
+      return {
+        feature: row.id,
+        measured: false,
+        cells: 0,
+        verdict: "transferred",
+        plan: transfer.plan,
+        reason: `transferred -> plan ${transfer.plan}: ${transfer.reason}`,
+      };
+    if (!featureArms.length && allFeatureArms.length)
+      return {
+        feature: row.id,
+        measured: false,
+        cells: 0,
+        verdict: null,
+        status: "unmeasured",
+        cancelled: allFeatureArms.map((arm) => ({ arm: arm.id, ...cancelledArms[arm.id] })),
+        reason: "unmeasured: every arm of this feature was in a wave gate C-1 cancelled on 2026-11-08",
+      };
     if (C1_UNMEASURABLE[row.id])
       return { feature: row.id, measured: false, cells: 0, verdict: null, reason: `unmeasurable under C-1: ${C1_UNMEASURABLE[row.id]}` };
     if (!featureArms.length)
@@ -1326,11 +1376,29 @@ export function buildC1Report({ reports, manifest, ledger, predictions }) {
     const cells = evidence.removal?.suites.length ?? 0;
     return { feature: row.id, measured: cells > 0, cells, arms: featureArms.map((arm) => arm.id), evidence, ...verdict };
   });
+  const verdictOf = new Map(verdicts.map((row) => [row.feature, row]));
+  // The plan 202 closure rows: scored here only where wave 1 measured the row's features.
+  const plan202Closure = (ledger?.closure202?.rows ?? []).map((row) => {
+    const features = row.features ?? [];
+    const scored = features.filter((id) => verdictOf.get(id)?.measured);
+    const moved = features.filter((id) => transferredRows.has(id));
+    const status = !features.length
+      ? "unverified"
+      : scored.length === features.length
+        ? "scored"
+        : scored.length
+          ? "partial"
+          : moved.length === features.length
+            ? "transferred"
+            : "unverified";
+    return { sourceTask: row.sourceTask, title: row.title, features, status, scored, ...(moved.length ? { transferred: moved } : {}) };
+  });
   return {
     kind: "210-c1-report",
     plan: C1_PLAN,
     task: C1_TASK,
     partition: C1_PARTITION,
+    closure: { afterWave: C1_CLOSED_AFTER_WAVE, decided: CLEANUP_CRITERIA.closure.decided, by: CLEANUP_CRITERIA.closure.by },
     ...pin,
     manifestHash: manifest?.manifestHash ?? null,
     productHash: manifest?.productHash ?? null,
@@ -1340,9 +1408,12 @@ export function buildC1Report({ reports, manifest, ledger, predictions }) {
     oriented: robustness,
     work,
     plan202Task5: task5,
-    f4: { rows: f4Rows, disposition: f4Disposition(f4Rows) },
+    f4: { rows: f4Rows, disposition: f4Disposition(f4Rows), moved: "plan 219 Task 7 (amendment 7)" },
     predictions: scored,
     verdicts,
+    plan202Closure,
+    cancelled: Object.entries(cancelledArms).map(([arm, row]) => ({ arm, ...row, outcome: "cancelled" })),
+    transferred: [...transferredRows.values()].map((row) => ({ ...row, verdict: "transferred" })),
   };
 }
 

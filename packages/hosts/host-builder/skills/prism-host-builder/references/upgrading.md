@@ -54,7 +54,7 @@ Left column is the retired name. Everything in it is gone.
 | `beforeProviderTurn` | the `model.call` around hook |
 | `forwardAgentEvents` | an `observe` hook |
 | `createSecureAgent` | `createAgent` with `@arnilo/prism-governance` and `@arnilo/prism-approval` listed |
-| `wiki_search`, `wiki_read_page`, `wiki_record_insight` | `memory.recall`, `memory.read`, `memory.insert` |
+| `wiki_search`, `wiki_read_page`, `wiki_record_insight` | `wiki.search` and `wiki.read` (`@arnilo/prism-wiki`), `memory.insert` |
 
 Plain words that are still valid config names (`loop`, `context`, `permission`, `middleware` when used as a
 hook concept) are not listed: judge them by whether `api.json` or the docs define them in 0.13. `middleware` and

@@ -10,7 +10,16 @@ import assert from "node:assert/strict";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { liveEnvPath, loadMatrix, parseEnvFile, REPO_ROOT, resolveSuiteState, runLiveMatrix, validateMatrix } from "./live-matrix.mjs";
+import {
+  liveEnvPath,
+  loadMatrix,
+  parseEnvFile,
+  REPO_ROOT,
+  resolveSuiteState,
+  runLiveMatrix,
+  SECRET_SHAPED,
+  validateMatrix,
+} from "./live-matrix.mjs";
 
 const matrix = loadMatrix();
 
@@ -259,4 +268,44 @@ test("credential file default is out-of-repo: ~/.config/prism/live.env, never a 
   for (const file of ["live-matrix.mjs", "decision-bench.mjs", "cache-parity/provider-probe.mjs"]) {
     assert.doesNotMatch(readFileSync(join(REPO_ROOT, "scripts", file), "utf8"), /scripts["',\s/]+live\.env/, file);
   }
+});
+
+// Plan 215 Task 30: the committed template holds names and placeholders only.
+test("live_env_example_has_no_values", () => {
+  const path = join(REPO_ROOT, "scripts", "live.env.example");
+  const text = readFileSync(path, "utf8");
+  // A verbatim copy enables nothing: every assignment is commented out.
+  assert.deepEqual(parseEnvFile(path), {}, "live.env.example must not carry an active assignment");
+  assert.doesNotMatch(text, /node --env-file|dist\//, "template commands are Bun, not node --env-file over dist/");
+  const SECRET_NAME = /(?:KEY|TOKEN|SECRET|PASSWORD)$/;
+  const assignments = new Map();
+  for (const [index, raw] of text.split(/\r?\n/).entries()) {
+    // "# NAME=value" is a template entry; indented header examples are not.
+    const m = /^# ([A-Z][A-Z0-9_]*)=(.*)$/.exec(raw);
+    if (!m) continue;
+    const [, name, value] = m;
+    const where = `live.env.example:${index + 1} ${name}`;
+    assignments.set(name, value);
+    assert.doesNotMatch(value, /\s#/, `${where}: inline comment would become part of the value`);
+    assert.doesNotMatch(value, SECRET_SHAPED, `${where}: secret-shaped value`);
+    if (SECRET_NAME.test(name)) assert.equal(value, "", `${where}: a secret variable must have an empty placeholder`);
+    const userinfo = /^[a-z][a-z0-9+.-]*:\/\/([^@/\s]+)@/i.exec(value);
+    if (userinfo) assert.match(userinfo[1], /^<[^>]+>(?::<[^>]+>)?$/, `${where}: URL credentials must be <placeholders>`);
+  }
+  // Every env name the manifest reads is documented in the template.
+  const { suites } = loadMatrix();
+  const names = new Set();
+  for (const suite of suites) {
+    for (const key of ["requires", "requiresAny", "optional"]) for (const name of suite[key] ?? []) names.add(name);
+    for (const model of suite.model ?? []) names.add(model.env);
+  }
+  const missing = [...names].filter((name) => !assignments.has(name)).sort();
+  assert.deepEqual(missing, [], "manifest env names missing from scripts/live.env.example");
+  for (const name of [
+    "PRISM_LIVE_RELEASE_JOURNEY",
+    "PRISM_LIVE_HYPER_JOURNEY_MODEL",
+    "PRISM_LIVE_OPENCODE_GO_JOURNEY_MODEL",
+    "LAYA_BASE_URL",
+  ])
+    assert.ok(assignments.has(name), `release acceptance variable ${name} is documented`);
 });

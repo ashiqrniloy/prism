@@ -23,7 +23,7 @@ import { performance } from "node:perf_hooks";
 import { describe, it } from "bun:test";
 import { trimTrailingSlashes } from "@arnilo/prism";
 import { sanitizeCacheKey } from "@arnilo/prism/provider-kit";
-import { htmlParser, pdfParser } from "@arnilo/prism-memory-rag";
+import { htmlParser, pdfParser } from "@arnilo/prism-rag";
 import { parseCodingPlanTodos } from "@arnilo/prism-tools-coding";
 
 describe("phase38 codeql regressions", () => {

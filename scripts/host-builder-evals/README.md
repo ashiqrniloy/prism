@@ -56,6 +56,20 @@ Pre-registered in `criteria.json` and locked in `criteria.lock.json`. Per provid
   re-measured once (`--round 2`). If it still regresses the owner decides and the decision is recorded.
 - An unscored record (provider or harness failure) makes the result `inconclusive`: rerun, never publish.
 
+## Results so far
+
+No claim passed. The record is in `docs/_evidence/host-builder/212/`:
+
+- `kit-v1/`: the kit as first published, run on `gemma4:31b` (natural and preload), `beam` and `gpt-oss:120b` (natural).
+  `beam` wrote no files in most runs; `gpt-oss:120b` lost 12 records to server errors.
+- `ollama-gemma4.*`: kit-v2, run on `gemma4:31b` only (owner decision). Natural: skill over `none` +0.43 acceptance,
+  q 0.125, no claim. Preload: inconclusive twice (`attempts/` holds the first), 2 of 63 runs lost to network errors each
+  time, with the complete cells at q 0.25 or above.
+
+`criteria.json` `kitRevisions` records why the kit changed between the runs: the first run's transcripts and a
+comparison of each failing task with the indexes. The claim rules, fixtures, hidden tests and trials did not change.
+Tuning the kit from kit-v2 results is ruled out in the same place.
+
 ## Running
 
 ```bash

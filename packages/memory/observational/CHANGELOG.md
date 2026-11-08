@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Worker loop and limits moved to `@arnilo/prism-memory-core` (plan 216 Task 3).** `runMemoryWorkerLoop`, `resolveMemoryWorkerLimits`, `measureWorkerJson`, `truncateWorkerText` and their types leave this package's root with no alias; `ObservationalMemoryError`/`ObservationalMemoryLimitError` are replaced by core's `MemoryWorkerError`/`MemoryWorkerLimitError`. Behaviour is unchanged.
+
 - **Experimental in 0.13.0 (plan 215 Task 4).** The README opens with the experimental notice: install with `bun add @arnilo/prism-memory-observational@experimental`, outside the stability promise of the stable packages, and the API, config, preset contents and defaults may change or be removed in any release until the package graduates. The `## Compatibility` section is retitled as the contract the package will keep from graduation.
 
 - Plan 202 Task 16 measured OM's T0 role: seven offline lifecycle seeds put OM+fabric at 0.732 task success with promotion off and on, while promotion wrote 0.25 candidates per session with zero later use. The reference host keeps promotion off. A six-run live smoke on two models completed `om`, `om+fabric`, and the preset arm with zero worker errors. Live cost on one LongMemEval-S question: observer 233,494 input and reflector 1,702 input tokens per 10k source-message tokens. The historical benchmark `MemoryBenchWorkerError` was the harness aborting on a background worker failure; the harness now retains the cause, treats token-ceiling as budget, and continues on other worker failures. Evidence: `docs/_evidence/memory-bench/202/observational/`.

@@ -1,270 +1,195 @@
-ARCHIVE_DIRECTORY	export declare const ARCHIVE_DIRECTORY = "archive"
-DEFAULT_DIRECTORY	export declare const DEFAULT_DIRECTORY = "entries"
-DEFAULT_EMBED_BATCH_SIZE	export declare const DEFAULT_EMBED_BATCH_SIZE = 32
-DEFAULT_MAX_ENTRY_TEXT_CHARS	export declare const DEFAULT_MAX_ENTRY_TEXT_CHARS = 16384
-DEFAULT_MAX_INJECTED_TOKENS	export declare const DEFAULT_MAX_INJECTED_TOKENS = 2000
-DEFAULT_MAX_MEMORY_EXPORT_BYTES	export declare const DEFAULT_MAX_MEMORY_EXPORT_BYTES: number
-DEFAULT_MAX_PAYLOAD_BYTES	export declare const DEFAULT_MAX_PAYLOAD_BYTES: number
-DEFAULT_MAX_VECTOR_DIMENSIONS	export declare const DEFAULT_MAX_VECTOR_DIMENSIONS = 4096
-DEFAULT_MAX_WORKING_MEMORY_BYTES	export declare const DEFAULT_MAX_WORKING_MEMORY_BYTES: number
-DEFAULT_MEMORY_EXPORT_MS	export declare const DEFAULT_MEMORY_EXPORT_MS = 10000
-DEFAULT_MEMORY_EXPORT_PAGE_SIZE	export declare const DEFAULT_MEMORY_EXPORT_PAGE_SIZE = 100
-DEFAULT_MEMORY_REBUILD_BATCH	export declare const DEFAULT_MEMORY_REBUILD_BATCH = 32
-DEFAULT_MEMORY_REBUILD_MS	export declare const DEFAULT_MEMORY_REBUILD_MS = 10000
-DEFAULT_MEMORY_RETENTION_BATCH	export declare const DEFAULT_MEMORY_RETENTION_BATCH = 500
-DEFAULT_MEMORY_SCHEMA	export declare const DEFAULT_MEMORY_SCHEMA = "prism_memory"
-DEFAULT_MESSAGE_RANGE	export declare const DEFAULT_MESSAGE_RANGE = 0
-DEFAULT_TOP_K	export declare const DEFAULT_TOP_K = 5
-DEFAULT_VECTOR_TABLE	export declare const DEFAULT_VECTOR_TABLE = "semantic_memory"
-DELETION_REASON	export declare const DELETION_REASON: MemoryInvalidationReason
-FILE_MAP_FILE	export declare const FILE_MAP_FILE = ".index-files.json"
-HARD_ACL_GRANT_BATCH_CAP	export declare const HARD_ACL_GRANT_BATCH_CAP = 1024
-HARD_ACL_GROUP_CAP	export declare const HARD_ACL_GROUP_CAP = 32
-HARD_DIRECTORY_TAGS	export declare const HARD_DIRECTORY_TAGS = 500
-HARD_EMBED_BATCH_CAP	export declare const HARD_EMBED_BATCH_CAP = 128
-HARD_INVALIDATION_BATCH	export declare const HARD_INVALIDATION_BATCH = 64
-HARD_LINEAGE_DEPTH	export declare const HARD_LINEAGE_DEPTH = 8
-HARD_LINEAGE_EDGES	export declare const HARD_LINEAGE_EDGES = 256
-HARD_LINEAGE_SOURCE_IDS	export declare const HARD_LINEAGE_SOURCE_IDS = 32
-HARD_MAX_ENTRY_TEXT_CHARS_CAP	export declare const HARD_MAX_ENTRY_TEXT_CHARS_CAP = 64384
-HARD_MAX_INJECTED_TOKENS_CAP	export declare const HARD_MAX_INJECTED_TOKENS_CAP = 8000
-HARD_MAX_MEMORY_EXPORT_BYTES_CAP	export declare const HARD_MAX_MEMORY_EXPORT_BYTES_CAP: number
-HARD_MAX_PAYLOAD_BYTES_CAP	export declare const HARD_MAX_PAYLOAD_BYTES_CAP: number
-HARD_MAX_VECTOR_DIMENSIONS_CAP	export declare const HARD_MAX_VECTOR_DIMENSIONS_CAP = 4096
-HARD_MAX_WORKING_MEMORY_BYTES_CAP	export declare const HARD_MAX_WORKING_MEMORY_BYTES_CAP: number
-HARD_MEMORY_EXPORT_MS_CAP	export declare const HARD_MEMORY_EXPORT_MS_CAP = 60000
-HARD_MEMORY_EXPORT_PAGE_SIZE_CAP	export declare const HARD_MEMORY_EXPORT_PAGE_SIZE_CAP = 200
-HARD_MEMORY_REBUILD_BATCH_CAP	export declare const HARD_MEMORY_REBUILD_BATCH_CAP = 128
-HARD_MEMORY_REBUILD_MS_CAP	export declare const HARD_MEMORY_REBUILD_MS_CAP = 60000
-HARD_MEMORY_RETENTION_BATCH_CAP	export declare const HARD_MEMORY_RETENTION_BATCH_CAP = 5000
-HARD_MESSAGE_RANGE_CAP	export declare const HARD_MESSAGE_RANGE_CAP = 4
-HARD_PROPAGATION_EDGES	export declare const HARD_PROPAGATION_EDGES = 4096
-HARD_REPOINT_RECORDS	export declare const HARD_REPOINT_RECORDS = 4096
-HARD_SHARE_SOURCE_IDS	export declare const HARD_SHARE_SOURCE_IDS = 32
-HARD_TOP_K_CAP	export declare const HARD_TOP_K_CAP = 32
-INDEX_DB_FILE	export declare const INDEX_DB_FILE = ".index.sqlite"
-INDEX_FILE	export declare const INDEX_FILE = "index.md"
-KIND_DIRECTORIES	export declare const KIND_DIRECTORIES: Readonly<Record<string, string>>
-LINEAGE_META_KEY	export declare const LINEAGE_META_KEY = "_lineage"
-LINEAGE_SCHEMA_VERSION	export declare const LINEAGE_SCHEMA_VERSION: 1
-LOCK_FILE	export declare const LOCK_FILE = ".lock"
-LOG_FILE	export declare const LOG_FILE = "log.md"
-MemoryAbortError	export declare class MemoryAbortError extends MemoryError
-MemoryConflictError	export declare class MemoryConflictError extends MemoryError
-MemoryError	export declare class MemoryError extends Error
-MemoryLimitError	export declare class MemoryLimitError extends MemoryError
-MemoryScopeError	export declare class MemoryScopeError extends MemoryError
-MemoryValidationError	export declare class MemoryValidationError extends MemoryError
-NEUTRAL_IMPORTANCE	export declare const NEUTRAL_IMPORTANCE = 0.5
-OKF_METADATA_KEY	export declare const OKF_METADATA_KEY = "okf"
-OKF_VERSION	export declare const OKF_VERSION = "0.2"
-RECALL_OVERSAMPLE	export declare const RECALL_OVERSAMPLE = 4
-SQLITE_MEMORY_APPLICATION_ID	export declare const SQLITE_MEMORY_APPLICATION_ID = 1347571021
-SQLITE_MEMORY_SCHEMA_VERSION	export declare const SQLITE_MEMORY_SCHEMA_VERSION = 3
-STATE_FILE	export declare const STATE_FILE = ".state.json"
-WORKING_DIRECTORY	export declare const WORKING_DIRECTORY = "working"
-activeDirectoryNote	export declare function activeDirectoryNote(record: MemoryVectorRecord, invalidations: ReadonlyMap<string, MemoryInvalidationRecord>, asOfMs: number):
-applySourceRenames	export declare function applySourceRenames(options: ApplySourceRenamesOptions): Promise<ApplySourceRenamesResult>
-assertAccessConstraint	export declare function assertAccessConstraint(authorization: RagAccessConstraint): RagAccessConstraint
-assertAccessGrants	export declare function assertAccessGrants(grants: readonly SourceAccessGrant[]): readonly SourceAccessGrant[]
-assertAuthorizationTenant	export declare function assertAuthorizationTenant(authorization: RagAccessConstraint, tenantId: string): void
-assertByteLimit	export declare function assertByteLimit(value: unknown, maxBytes: number, label: string): void
-assertFiniteVector	export declare function assertFiniteVector(value: unknown, label: string, expectedLength?: number): asserts value is readonly number[]
-assertInsideRoot	export declare function assertInsideRoot(root: string, target: string): Promise<void>
-assertInvalidationBatch	export declare function assertInvalidationBatch(entries: readonly MemoryInvalidationRecord[]): readonly MemoryInvalidationRecord[]
-assertInvalidationRecord	export declare function assertInvalidationRecord(value: unknown): MemoryInvalidationRecord
-assertLineage	export declare function assertLineage(value: unknown): MemoryLineage
-assertNotAborted	export declare function assertNotAborted(signal?: AbortSignal): void
-assertRecordEmbedding	export declare function assertRecordEmbedding(record:
-assertSafeJsonKey	export declare function assertSafeJsonKey(key: string): void
-assertSameScope	export declare function assertSameScope(expected: MemoryScope, actual: MemoryScope, label: string): void
-assertShareGrant	export declare function assertShareGrant(grant: MemoryShareGrant): MemoryShareGrant
-assertTextLimit	export declare function assertTextLimit(text: string, maxChars: number, label: string): void
-atomicWriteFile	export declare function atomicWriteFile(path: string, content: string): Promise<void>
-buildMemoryDdl	export declare function buildMemoryDdl(schemaInput?: string, tableInput?: string): string
-buildSqliteMemoryDdl	export declare function buildSqliteMemoryDdl(tableInput?: string): string
-buildSqliteMemoryV3Migration	export declare function buildSqliteMemoryV3Migration(): string
-buildVectorSearchDdl	export declare function buildVectorSearchDdl(schemaInput?: string, tableInput?: string, dimension?: number): string
-byteLengthOfJson	export declare function byteLengthOfJson(value: unknown): number
-chunkArray	export declare function chunkArray<T>(items: readonly T[], size: number): T[][]
-clampImportance	export declare function clampImportance(value: number | undefined): number
-cloneJsonObject	export declare function cloneJsonObject(value: JsonObject): JsonObject
-collectInvalidationIds	export declare function collectInvalidationIds(records: readonly MemoryVectorRecord[], roots: readonly string[], options?:
-compareMemoryRecord	export declare function compareMemoryRecord(record: MemoryVectorRecord, cursor: MemoryCursor | undefined, order: MemoryVectorOrder): number
-compareMemoryRecords	export declare function compareMemoryRecords(a: MemoryVectorRecord, b: MemoryVectorRecord, order: MemoryVectorOrder): number
-contentToText	export declare function contentToText(content: readonly unknown[]): string
-cosineSimilarity	export declare function cosineSimilarity(a: readonly number[], b: readonly number[]): number
-createDeletionPropagator	export declare function createDeletionPropagator(options: DeletionPropagatorOptions): DeletionPropagator
-createHashEmbedder	export declare function createHashEmbedder(options?: HashEmbedderOptions): Embedder
-createMarkdownMemoryStores	export declare function createMarkdownMemoryStores(options: CreateMarkdownMemoryStoresOptions): Promise<MarkdownMemoryStores>
-createMemoryVectorStore	export declare function createMemoryVectorStore(options?: MemoryVectorStoreOptions): SourceStore &
-createPostgresMemoryStores	export declare function createPostgresMemoryStores(options: PostgresMemoryStoresOptions): Promise<PostgresMemoryStores>
-createPostgresVectorStore	export declare function createPostgresVectorStore(options: PostgresVectorStoreOptions): Promise<PostgresVectorStore &
-createSqliteMemoryStores	export declare function createSqliteMemoryStores(options: SqliteMemoryStoresOptions): Promise<SqliteMemoryStores>
-createWriteLock	export declare function createWriteLock(root: string): WriteLock
-decodeMemoryCursor	export declare function decodeMemoryCursor(cursor: string | undefined, order: MemoryVectorOrder): MemoryCursor | undefined
-decodeMetadataCursor	export declare function decodeMetadataCursor(cursor: string | undefined): MetadataScanCursor | undefined
-deriveEntryImportance	export declare function deriveEntryImportance(entry: Pick<MemoryEntryInput, "importance" | "reflection">, hook: ImportanceFromReflection | undefined, redactor?: SecretRedactor): number | undefined
-deserializeGeneration	export declare function deserializeGeneration(value: ThreadState["generation"]): bigint | number | undefined
-directoryForKind	export declare function directoryForKind(kind: string | undefined): string
-embedBatched	export declare function embedBatched(embedder: Embedder, texts: readonly string[], batchSize: number, options:
-encodeMemoryCursor	export declare function encodeMemoryCursor(record: MemoryVectorRecord, order: MemoryVectorOrder): string
-encodeMetadataCursor	export declare function encodeMetadataCursor(cursor: MetadataScanCursor): string
-estimateTokens	export declare function estimateTokens(text: string): number
-explainRecord	export declare function explainRecord(record: Pick<MemoryVectorRecord, "id" | "tenantId" | "resourceId" | "threadId" | "createdAt" | "metadata">, invalidation?: MemoryInvalidationRecord): MemoryRecallExplanation
-fabricFlags	export declare function fabricFlags(record: Pick<MemoryVectorRecord, "metadata">): readonly string[]
-fabricKind	export declare function fabricKind(record: Pick<MemoryVectorRecord, "metadata">): string | undefined
-fuseRankings	export declare function fuseRankings(lists: readonly
-grantAllows	export declare function grantAllows(grant:
-indexInvalidations	export declare function indexInvalidations(entries: readonly MemoryInvalidationRecord[]): ReadonlyMap<string, MemoryInvalidationRecord>
-invalidateAcrossLayers	export declare function invalidateAcrossLayers(input:
-isArchived	export declare function isArchived(record: Pick<MemoryVectorRecord, "metadata">, invalidated: boolean, nowMs: number): boolean
-isIndexOnlyKind	export declare function isIndexOnlyKind(kind: string | undefined): boolean
-isNoteRelPath	export declare function isNoteRelPath(relPath: string): boolean
-isPlainObject	export declare function isPlainObject(value: unknown): value is Record<string, unknown>
-kindForOkfType	export declare function kindForOkfType(type: unknown): string | undefined
-latestUserText	export declare function latestUserText(messages: readonly
-lexicalCoverage	export declare function lexicalCoverage(queryTerms: ReadonlySet<string>, docTerms: ReadonlySet<string>): number
-lexicalDice	export declare function lexicalDice(a: ReadonlySet<string>, b: ReadonlySet<string>): number
-lexicalKeys	export declare function lexicalKeys(record: Pick<MemoryVectorRecord, "metadata">): string
-lexicalMatches	export declare function lexicalMatches(queryTerms: ReadonlySet<string>, docTerms: ReadonlySet<string>): string[]
-lexicalTermString	export declare function lexicalTermString(text: string): string
-lexicalTerms	export declare function lexicalTerms(text: string): Set<string>
-listInvalidatedIds	export declare function listInvalidatedIds(vectorStore: VectorStore, scope: MemoryScope, options?:
-mergeJsonObjects	export declare function mergeJsonObjects(base: JsonObject, patch: JsonObject): JsonObject
-normalizeImportance	export declare function normalizeImportance(value: number | undefined): number | undefined
-noteDescription	export declare function noteDescription(text: string): string
-noteRelPath	export declare function noteRelPath(input: NotePathInput): string
-noteTitle	export declare function noteTitle(text: string): string
-okfTypeForKind	export declare function okfTypeForKind(kind: string | undefined): string
-parseLineage	export declare function parseLineage(metadata: MemoryVectorRecord["metadata"]): ParsedLineage
-parseLogFile	export declare function parseLogFile(content: string): LogEntry[]
-parseNoteFile	export declare function parseNoteFile(content: string, filePath: string, classify?: NoteClassifier): MemoryVectorRecord
-parseWorkingFile	export declare function parseWorkingFile(content: string, filePath: string): WorkingMemoryRecord
-provenanceActor	export declare function provenanceActor(record: Pick<MemoryVectorRecord, "metadata">): string | undefined
-qualifyTable	export declare function qualifyTable(schema: string, table: string): string
-queryPostgres	export declare function queryPostgres(pool: Queryable, sql: string, params?: unknown[]): Promise<import("pg").QueryResult<any>>
-quoteIdentifier	export declare function quoteIdentifier(value: string): string
-rankDirectoryTags	export declare function rankDirectoryTags(tags: ReadonlyMap<string, number>, limit: number): readonly MemoryTagCount[]
-readFileMap	export declare function readFileMap(path: string): Promise<FileMap>
-readResourceState	export declare function readResourceState(path: string): Promise<ResourceState | undefined>
-realPathNearest	export declare function realPathNearest(target: string): Promise<string>
-recencyOf	export declare function recencyOf(createdAt: string, halfLifeMs: number, now: number): number
-recordBlocked	export declare function recordBlocked(record: Pick<MemoryVectorRecord, "id" | "metadata">, invalidations: ReadonlyMap<string, MemoryInvalidationRecord>): boolean
-recordLexicalTerms	export declare function recordLexicalTerms(record: Pick<MemoryVectorRecord, "text" | "metadata">): Set<string>
-redactJson	export declare function redactJson<T>(value: T, redactor?: SecretRedactor): T
-renderIndexFile	export declare function renderIndexFile(entries: readonly IndexEntry[]): string
-renderLogFile	export declare function renderLogFile(entries: readonly LogEntry[]): string
-renderNoteFile	export declare function renderNoteFile(record: MemoryVectorRecord): string
-renderTemplate	export declare function renderTemplate(template: string, value: JsonObject): string
-renderWorkingFile	export declare function renderWorkingFile(record: WorkingMemoryRecord): string
-repointSource	export declare function repointSource(options: RepointSourceOptions): Promise<RepointSourceResult>
-requireNonEmptyString	export declare function requireNonEmptyString(value: unknown, label: string): string
-requireScope	export declare function requireScope(scope: MemoryScope, requireThread?: boolean): Required<MemoryScope> | MemoryScope
-rerankRecallHits	export declare function rerankRecallHits(hits: readonly MemoryVectorHit[], scoring: ResolvedRecallScoring, now?: number): MemoryVectorHit[]
-resolveDirectoryAsOf	export declare function resolveDirectoryAsOf(asOf: string | undefined): string
-resolveDirectoryLimit	export declare function resolveDirectoryLimit(limit: number | undefined): number
-resolveMemoryLimits	export declare function resolveMemoryLimits(input?: MemoryLimitsInput): MemoryLimits
-resolveRecallScoring	export declare function resolveRecallScoring(options: RecallScoringOptions | undefined): ResolvedRecallScoring | undefined
-revokedIdsAbsent	export declare function revokedIdsAbsent(environment:
-scanDirectory	export declare function scanDirectory(records: Iterable<MemoryVectorRecord>, invalidations: ReadonlyMap<string, MemoryInvalidationRecord>, asOf: string):
-scopeDirectory	export declare function scopeDirectory(tenantId: string, resourceId: string): string
-scopeKey	export declare function scopeKey(scope: MemoryScope): string
-selectAdjacentRecords	export declare function selectAdjacentRecords(threadRecords: readonly MemoryVectorRecord[], hits: readonly MemoryVectorHit[], messageRange: number): MemoryVectorRecord[]
-serializeGeneration	export declare function serializeGeneration(value: bigint | number): number |
-shareGrantAllows	export declare function shareGrantAllows(grant: MemoryShareGrant, request:
-slugify	export declare function slugify(text: string): string
-sourceIdFromRecord	export declare function sourceIdFromRecord(record:
-stampLineage	export declare function stampLineage(metadata: MemoryVectorRecord["metadata"] | undefined, lineage: unknown | undefined): MemoryVectorRecord["metadata"] | undefined
-stateRelPath	export declare function stateRelPath(tenantId: string, resourceId: string): string
-stemLexical	export declare function stemLexical(term: string): string
-toInvalidationEvent	export declare function toInvalidationEvent(reason: MemoryInvalidationReason, ids: readonly string[], hold: boolean): MemoryInvalidationEvent
-tokenizeLexical	export declare function tokenizeLexical(text: string): Set<string>
-type ApplySourceRenamesOptions	export { applySourceRenames, type ApplySourceRenamesOptions, type ApplySourceRenamesResult, type RepointContext, type RepointHandler, repointSource, type RepointSourceOptions, type RepointSourceResult, type RepointStore, type SourceRename, type SourceRenameEvent, } from "./repoint.js"
-type ApplySourceRenamesResult	export { applySourceRenames, type ApplySourceRenamesOptions, type ApplySourceRenamesResult, type RepointContext, type RepointHandler, repointSource, type RepointSourceOptions, type RepointSourceResult, type RepointStore, type SourceRename, type SourceRenameEvent, } from "./repoint.js"
-type CreateMemoryOptions	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type DeletionPropagationContext	export { createDeletionPropagator, DELETION_REASON, type DeletionPropagationContext, type DeletionPropagationHandler, type DeletionPropagationResult, type DeletionPropagationStore, type DeletionPropagator, type DeletionPropagatorOptions, } from "./propagation.js"
-type DeletionPropagationHandler	export { createDeletionPropagator, DELETION_REASON, type DeletionPropagationContext, type DeletionPropagationHandler, type DeletionPropagationResult, type DeletionPropagationStore, type DeletionPropagator, type DeletionPropagatorOptions, } from "./propagation.js"
-type DeletionPropagationResult	export { createDeletionPropagator, DELETION_REASON, type DeletionPropagationContext, type DeletionPropagationHandler, type DeletionPropagationResult, type DeletionPropagationStore, type DeletionPropagator, type DeletionPropagatorOptions, } from "./propagation.js"
-type DeletionPropagationStore	export { createDeletionPropagator, DELETION_REASON, type DeletionPropagationContext, type DeletionPropagationHandler, type DeletionPropagationResult, type DeletionPropagationStore, type DeletionPropagator, type DeletionPropagatorOptions, } from "./propagation.js"
-type DeletionPropagator	export { createDeletionPropagator, DELETION_REASON, type DeletionPropagationContext, type DeletionPropagationHandler, type DeletionPropagationResult, type DeletionPropagationStore, type DeletionPropagator, type DeletionPropagatorOptions, } from "./propagation.js"
-type DeletionPropagatorOptions	export { createDeletionPropagator, DELETION_REASON, type DeletionPropagationContext, type DeletionPropagationHandler, type DeletionPropagationResult, type DeletionPropagationStore, type DeletionPropagator, type DeletionPropagatorOptions, } from "./propagation.js"
-type Embedder	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type ExportMemoryOptions	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type FusedCandidate	export { type FusedCandidate, fuseRankings, type RetrievalLeg, } from "./fusion.js"
-type HashEmbedderOptions	export { createHashEmbedder, embedBatched, type HashEmbedderOptions, } from "./embedder.js"
-type ImportanceFromReflection	export { deriveEntryImportance, type ImportanceFromReflection, RECALL_OVERSAMPLE, rerankRecallHits, type ResolvedRecallScoring, resolveRecallScoring, } from "./scoring.js"
-type LexicalMode	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type Memory	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type MemoryConsent	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type MemoryConsentInput	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type MemoryConsentScope	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type MemoryConsentSource	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type MemoryContextProviderOptions	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type MemoryDirectoryQuery	export { type MemoryDirectoryQuery, type MemoryTagCount, type MemoryTopTagsQuery, } from "./directory.js"
-type MemoryEntryInput	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type MemoryExportIdentity	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type MemoryExportResult	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type MemoryInvalidationEvent	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type MemoryInvalidationReason	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type MemoryInvalidationRecord	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type MemoryLimits	export { DEFAULT_MAX_ENTRY_TEXT_CHARS, DEFAULT_MEMORY_RETENTION_BATCH, estimateTokens, HARD_MEMORY_RETENTION_BATCH_CAP, HARD_TOP_K_CAP, type MemoryLimits, type MemoryLimitsInput, resolveMemoryLimits, } from "./limits.js"
-type MemoryLimitsInput	export { DEFAULT_MAX_ENTRY_TEXT_CHARS, DEFAULT_MEMORY_RETENTION_BATCH, estimateTokens, HARD_MEMORY_RETENTION_BATCH_CAP, HARD_TOP_K_CAP, type MemoryLimits, type MemoryLimitsInput, resolveMemoryLimits, } from "./limits.js"
-type MemoryRecallExplanation	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type MemoryRetentionPolicy	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type MemoryRetentionResult	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type MemoryScope	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type MemoryShareGrant	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type MemoryTagCount	export { type MemoryDirectoryQuery, type MemoryTagCount, type MemoryTopTagsQuery, } from "./directory.js"
-type MemoryTopTagsQuery	export { type MemoryDirectoryQuery, type MemoryTagCount, type MemoryTopTagsQuery, } from "./directory.js"
-type MemoryVectorHit	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type MemoryVectorListQuery	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type MemoryVectorMetadataPage	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type MemoryVectorMetadataRow	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type MemoryVectorOrder	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type MemoryVectorPage	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type MemoryVectorRecord	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type MemoryVectorStoreOptions	export { createMemoryVectorStore, type MemoryVectorStoreOptions, selectAdjacentRecords, tokenizeLexical, } from "./vector-memory.js"
-type RagAccessConstraint	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type RebuildIndexOptions	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type RebuildIndexResult	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type RecallOptions	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type RecallResult	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type RecallScoringOptions	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type RememberInput	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type RememberOptions	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type RememberResult	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type RepointContext	export { applySourceRenames, type ApplySourceRenamesOptions, type ApplySourceRenamesResult, type RepointContext, type RepointHandler, repointSource, type RepointSourceOptions, type RepointSourceResult, type RepointStore, type SourceRename, type SourceRenameEvent, } from "./repoint.js"
-type RepointHandler	export { applySourceRenames, type ApplySourceRenamesOptions, type ApplySourceRenamesResult, type RepointContext, type RepointHandler, repointSource, type RepointSourceOptions, type RepointSourceResult, type RepointStore, type SourceRename, type SourceRenameEvent, } from "./repoint.js"
-type RepointSourceOptions	export { applySourceRenames, type ApplySourceRenamesOptions, type ApplySourceRenamesResult, type RepointContext, type RepointHandler, repointSource, type RepointSourceOptions, type RepointSourceResult, type RepointStore, type SourceRename, type SourceRenameEvent, } from "./repoint.js"
-type RepointSourceResult	export { applySourceRenames, type ApplySourceRenamesOptions, type ApplySourceRenamesResult, type RepointContext, type RepointHandler, repointSource, type RepointSourceOptions, type RepointSourceResult, type RepointStore, type SourceRename, type SourceRenameEvent, } from "./repoint.js"
-type RepointStore	export { applySourceRenames, type ApplySourceRenamesOptions, type ApplySourceRenamesResult, type RepointContext, type RepointHandler, repointSource, type RepointSourceOptions, type RepointSourceResult, type RepointStore, type SourceRename, type SourceRenameEvent, } from "./repoint.js"
-type ResolvedRecallScoring	export { deriveEntryImportance, type ImportanceFromReflection, RECALL_OVERSAMPLE, rerankRecallHits, type ResolvedRecallScoring, resolveRecallScoring, } from "./scoring.js"
-type RetrievalLeg	export { type FusedCandidate, fuseRankings, type RetrievalLeg, } from "./fusion.js"
-type ScopeCounterKey	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type ScopeCounterName	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type ScopeCounterStore	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type SourceAccessGrant	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type SourceRename	export { applySourceRenames, type ApplySourceRenamesOptions, type ApplySourceRenamesResult, type RepointContext, type RepointHandler, repointSource, type RepointSourceOptions, type RepointSourceResult, type RepointStore, type SourceRename, type SourceRenameEvent, } from "./repoint.js"
-type SourceRenameEvent	export { applySourceRenames, type ApplySourceRenamesOptions, type ApplySourceRenamesResult, type RepointContext, type RepointHandler, repointSource, type RepointSourceOptions, type RepointSourceResult, type RepointStore, type SourceRename, type SourceRenameEvent, } from "./repoint.js"
-type StoreDenial	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type StoreDenialReason	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type VectorDeleteFilter	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type VectorLexicalQuery	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type VectorListResourcesQuery	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type VectorQuery	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type VectorScanMetadataQuery	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type VectorStore	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type WorkingMemoryKey	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type WorkingMemoryProcessorOptions	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type WorkingMemoryRecord	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type WorkingMemoryStore	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type WorkingMemoryUpdateMode	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-type WorkingMemoryUpdateOptions	export { type CreateMemoryOptions, type Embedder, type ExportMemoryOptions, type LexicalMode, type Memory, type MemoryConsent, type MemoryConsentInput, type MemoryConsentScope, type MemoryConsentSource, type MemoryContextProviderOptions, type MemoryEntryInput, type MemoryExportIdentity, type MemoryExportResult, type MemoryInvalidationEvent, type MemoryInvalidationReason, type MemoryInvalidationRecord, type MemoryRecallExplanation, type MemoryRetentionPolicy, type MemoryRetentionResult, type Memo
-unreadableReason	export declare function unreadableReason(record: Pick<MemoryVectorRecord, "metadata">): string | undefined
-validateAgainstJsonSchema	export declare function validateAgainstJsonSchema(value: unknown, schema: JsonObject, path?: string): void
-validateIdentifier	export declare function validateIdentifier(value: string, label: string): string
-withTailContext	export declare function withTailContext(draft: ContextDraft, blocks: readonly ContextBlock[]): ContextDraft
-workingRelPath	export declare function workingRelPath(tenantId: string, resourceId: string, threadId: string): string
-writeFileMap	export declare function writeFileMap(path: string, map: FileMap): Promise<void>
-writeResourceState	export declare function writeResourceState(path: string, state: ResourceState): Promise<void>
+. ApplySourceRenamesOptions	interface ApplySourceRenamesOptions extends Omit<RepointSourceOptions, "from" | "to" | "cursor"> { readonly continueOnError?: boolean; readonly onRenamed?: (event: SourceRenameEvent) => void; readonly redact?: (value: string) => string; readonly renames: readonly SourceRename[]; }
+. ApplySourceRenamesResult	interface ApplySourceRenamesResult { readonly failures: readonly { readonly from: string; readonly to: string; readonly error: string; }[]; readonly results: readonly RepointSourceResult[]; }
+. CreateMemoryOptions	interface CreateMemoryOptions extends MemoryScope { readonly embedder?: Embedder; readonly importanceFrom?: import("./scoring.js").ImportanceFromReflection; readonly limits?: MemoryLimitsInput; readonly onInvalidate?: (event: MemoryInvalidationEvent) => void | Promise<void>; readonly redactor?: SecretRedactor; readonly requireConsent?: boolean; readonly schema?: JsonObject; readonly secrets?: readonly (string | undefined)[]; readonly validateWorkingMemory?: (value: JsonObject) => undefined | string | Error | Promise<undefined | string | Error>; readonly vectorStore?: VectorStore; readonly workingMemoryTemplate?: string; readonly workingStore?: WorkingMemoryStore; }
+. DEFAULT_MAX_ENTRY_TEXT_CHARS	const DEFAULT_MAX_ENTRY_TEXT_CHARS = 16384
+. DEFAULT_MAX_TASK_STATE_BYTES	const DEFAULT_MAX_TASK_STATE_BYTES = 2048
+. DEFAULT_MAX_WORKER_ARGUMENT_BYTES	const DEFAULT_MAX_WORKER_ARGUMENT_BYTES: number
+. DEFAULT_MAX_WORKER_ERROR_BYTES	const DEFAULT_MAX_WORKER_ERROR_BYTES = 1024
+. DEFAULT_MAX_WORKER_MESSAGE_BYTES	const DEFAULT_MAX_WORKER_MESSAGE_BYTES: number
+. DEFAULT_MAX_WORKER_RESULT_BYTES	const DEFAULT_MAX_WORKER_RESULT_BYTES: number
+. DEFAULT_MAX_WORKER_TOOL_CALLS	const DEFAULT_MAX_WORKER_TOOL_CALLS = 128
+. DEFAULT_MAX_WORKER_TOOL_CALLS_PER_TURN	const DEFAULT_MAX_WORKER_TOOL_CALLS_PER_TURN = 32
+. DEFAULT_MAX_WORKER_TURNS	const DEFAULT_MAX_WORKER_TURNS = 16
+. DEFAULT_MEMORY_RETENTION_BATCH	const DEFAULT_MEMORY_RETENTION_BATCH = 500
+. DELETION_REASON	const DELETION_REASON: MemoryInvalidationReason
+. DeletionPropagationContext	interface DeletionPropagationContext { readonly ids: readonly string[]; readonly reason?: MemoryInvalidationReason; readonly scope: Required<MemoryScope>; readonly signal?: AbortSignal; readonly sourceId: string; }
+. DeletionPropagationHandler	interface DeletionPropagationHandler { delete(context: DeletionPropagationContext): number | Promise<number>; readonly kind: string; }
+. DeletionPropagationResult	interface DeletionPropagationResult { readonly batched: boolean; readonly ids: readonly string[]; readonly layers: Readonly<Record<string, number>>; readonly sourceId: string; readonly tombstoned: number; }
+. DeletionPropagationStore	interface DeletionPropagationStore extends VectorStore { transaction?<T>(operation: (store: VectorStore) => Promise<T>, options?: { readonly signal?: AbortSignal; }): Promise<T>; }
+. DeletionPropagator	interface DeletionPropagator { propagate(sourceId: string, options?: { readonly signal?: AbortSignal; }): Promise<DeletionPropagationResult>; readonly kinds: readonly string[]; register(handler: DeletionPropagationHandler): void; }
+. DeletionPropagatorOptions	interface DeletionPropagatorOptions { readonly authorization: RagAccessConstraint; readonly handlers?: readonly DeletionPropagationHandler[]; readonly reason?: MemoryInvalidationReason; readonly scope: MemoryScope; readonly vectorStore: DeletionPropagationStore; }
+. Embedder	interface Embedder { embed(texts: readonly string[], options?: { readonly signal?: AbortSignal; }): Promise<readonly (readonly number[])[]>; readonly available?: () => boolean; readonly dimensions: number; readonly id: string; }
+. ExportMemoryOptions	interface ExportMemoryOptions { readonly cursor?: string; readonly identity: MemoryExportIdentity; readonly limit?: number; readonly maxBytes?: number; readonly maxMs?: number; readonly signal?: AbortSignal; }
+. FusedCandidate	interface FusedCandidate { readonly hit: MemoryVectorHit; readonly retrieval: RetrievalLeg | "hybrid"; readonly score: number; }
+. HARD_INVALIDATION_BATCH	const HARD_INVALIDATION_BATCH = 64
+. HARD_MAX_TASK_STATE_BYTES	const HARD_MAX_TASK_STATE_BYTES: number
+. HARD_MAX_WORKER_ARGUMENT_BYTES	const HARD_MAX_WORKER_ARGUMENT_BYTES: number
+. HARD_MAX_WORKER_ERROR_BYTES	const HARD_MAX_WORKER_ERROR_BYTES: number
+. HARD_MAX_WORKER_MESSAGE_BYTES	const HARD_MAX_WORKER_MESSAGE_BYTES: number
+. HARD_MAX_WORKER_RESULT_BYTES	const HARD_MAX_WORKER_RESULT_BYTES: number
+. HARD_MAX_WORKER_TOOL_CALLS	const HARD_MAX_WORKER_TOOL_CALLS = 1024
+. HARD_MAX_WORKER_TOOL_CALLS_PER_TURN	const HARD_MAX_WORKER_TOOL_CALLS_PER_TURN = 256
+. HARD_MAX_WORKER_TURNS	const HARD_MAX_WORKER_TURNS = 64
+. HARD_MEMORY_RETENTION_BATCH_CAP	const HARD_MEMORY_RETENTION_BATCH_CAP = 5000
+. HARD_TOP_K_CAP	const HARD_TOP_K_CAP = 32
+. HashEmbedderOptions	interface HashEmbedderOptions { readonly dimensions?: number; readonly id?: string; }
+. ImportanceFromReflection	type ImportanceFromReflection = (reflection: JsonObject) => number
+. LexicalMode	type LexicalMode = "fts" | "bm25"
+. Memory	interface Memory { applyRetention(policy: MemoryRetentionPolicy, options?: { readonly signal?: AbortSignal; }): Promise<MemoryRetentionResult>; contextBlocks(draft: import("@arnilo/prism").ContextDraft, context: import("@arnilo/prism").HookContext, options?: MemoryContextProviderOptions): Promise<import("@arnilo/prism").ContextDraft | undefined>; correct(entryId: string, text: string, options?: { readonly signal?: AbortSignal; }): Promise<MemoryVectorRecord>; countByKind(query?: MemoryDirectoryQuery): Promise<Readonly<Record<string, number>>>; createWorkingMemoryProcessor(options: WorkingMemoryProcessorOptions): { process(messages: readonly Message[], options?: { readonly signal?: AbortSignal; }): Promise<WorkingMemoryRecord | undefined>; }; deleteWorking(options?: { readonly signal?: AbortSignal; }): Promise<boolean>; exportMemory(options: ExportMemoryOptions): Promise<MemoryExportResult>; forget(filter?: { readonly ids?: readonly string[]; readonly hold?: boolean; }, options?: { readonly signal?: AbortSignal; }): Promise<number>; get(ids: readonly string[], options?: { readonly signal?: AbortSignal; }): Promise<readonly MemoryVectorRecord[]>; getEntry(entryId: string, options?: { readonly signal?: AbortSignal; }): Promise<MemoryVectorRecord | undefined>; getWorking(options?: { readonly signal?: AbortSignal; }): Promise<WorkingMemoryRecord | undefined>; listInvalidated?(options?: { readonly signal?: AbortSignal; }): Promise<readonly MemoryInvalidationRecord[]>; patchMetadata(entryId: string, mutate: (metadata: JsonObject) => JsonObject, options?: { readonly signal?: AbortSignal; }): Promise<boolean>; readonly limits: MemoryLimits; readonly retrieval?: "lexical" | "hybrid"; readonly scope: MemoryScope; rebuildIndex(options?: RebuildIndexOptions): Promise<RebuildIndexResult>; recall(query: string, options?: RecallOptions): Promise<RecallResult>; registerContextBuild(hooks: import("@arnilo/prism").HookRegistrar, options?: MemoryContextProviderOptions): void; remember(input: RememberInput, options?: RememberOptions): Promise<RememberResult>; renderWorking(template?: string): Promise<string | undefined>; revokeShare(childThreadId: string, options?: { readonly signal?: AbortSignal; }): Promise<void>; setConsent(entryId: string, consent: MemoryConsentInput, options?: { readonly signal?: AbortSignal; }): Promise<MemoryVectorRecord>; shareWith(childThreadId: string, sourceIds: readonly string[], options?: { readonly expiresAt?: string; readonly signal?: AbortSignal; }): Promise<void>; topTags(query?: MemoryTopTagsQuery): Promise<readonly MemoryTagCount[]>; touch(ids: readonly string[], options?: { readonly signal?: AbortSignal; }): Promise<void>; updateWorking(patch: JsonObject, options?: WorkingMemoryUpdateOptions): Promise<WorkingMemoryRecord>; }
+. MemoryAbortError	class MemoryAbortError extends MemoryError { constructor(message?: string); }
+. MemoryConflictError	class MemoryConflictError extends MemoryError { constructor(message: string); }
+. MemoryConsent	interface MemoryConsent { readonly grantedAt?: string; readonly revokedAt?: string; readonly scope: MemoryConsentScope; readonly source: MemoryConsentSource; readonly visible: boolean; }
+. MemoryConsentInput	interface MemoryConsentInput { readonly scope?: MemoryConsentScope; readonly source?: MemoryConsentSource; readonly visible?: boolean; }
+. MemoryConsentScope	type MemoryConsentScope = "thread" | "profile" | "user"
+. MemoryConsentSource	type MemoryConsentSource = "user" | "agent" | "system"
+. MemoryContextProviderOptions	interface MemoryContextProviderOptions { readonly includeSemantic?: boolean; readonly includeWorking?: boolean; readonly messageRange?: number; readonly name?: string; readonly query?: string | ((context: { readonly messages: readonly Message[]; }) => string | undefined); readonly topK?: number; }
+. MemoryDirectoryQuery	interface MemoryDirectoryQuery { readonly asOf?: string; readonly signal?: AbortSignal; }
+. MemoryEntryInput	interface MemoryEntryInput { readonly consent?: MemoryConsentInput; readonly createdAt?: string; readonly id: string; readonly importance?: number; readonly lineage?: { readonly sourceIds: readonly string[]; readonly reason?: string; }; readonly metadata?: JsonObject; readonly reflection?: JsonObject; readonly sequence?: number; readonly text: string; }
+. MemoryError	class MemoryError extends Error { constructor(code: string, message: string); readonly code: string; }
+. MemoryExportIdentity	interface MemoryExportIdentity extends Required<MemoryScope> {}
+. MemoryExportResult	interface MemoryExportResult { readonly bytes: number; readonly entries: readonly MemoryVectorRecord[]; readonly nextCursor?: string; }
+. MemoryInvalidationEvent	interface MemoryInvalidationEvent { readonly hold: boolean; readonly ids: readonly string[]; readonly reason: MemoryInvalidationReason; }
+. MemoryInvalidationReason	type MemoryInvalidationReason = "corrected" | "revoked" | "forgotten" | "legal_hold"
+. MemoryInvalidationRecord	interface MemoryInvalidationRecord { readonly at: string; readonly hold?: boolean; readonly id: string; readonly reason: MemoryInvalidationReason; readonly supersedesId?: string; }
+. MemoryLimitError	class MemoryLimitError extends MemoryError { constructor(message: string); }
+. MemoryLimits	interface MemoryLimits { readonly embedBatchSize: number; readonly exportMs: number; readonly exportPageSize: number; readonly maxEntryTextChars: number; readonly maxExportBytes: number; readonly maxInjectedTokens: number; readonly maxPayloadBytes: number; readonly maxVectorDimensions: number; readonly maxWorkingMemoryBytes: number; readonly messageRange: number; readonly rebuildBatchSize: number; readonly rebuildMs: number; readonly topK: number; }
+. MemoryLimitsInput	interface MemoryLimitsInput { readonly embedBatchSize?: number; readonly exportMs?: number; readonly exportPageSize?: number; readonly maxEntryTextChars?: number; readonly maxExportBytes?: number; readonly maxInjectedTokens?: number; readonly maxPayloadBytes?: number; readonly maxVectorDimensions?: number; readonly maxWorkingMemoryBytes?: number; readonly messageRange?: number; readonly rebuildBatchSize?: number; readonly rebuildMs?: number; readonly topK?: number; }
+. MemoryRecallExplanation	interface MemoryRecallExplanation { readonly createdAt?: string; readonly id: string; readonly invalidated?: MemoryInvalidationRecord; readonly reason?: string; readonly resourceId: string; readonly sourceIds: readonly string[]; readonly tenantId: string; readonly threadId: string; }
+. MemoryRetentionPolicy	interface MemoryRetentionPolicy { readonly batchSize?: number; readonly maxAgeDays?: number; readonly maxEntries?: number; }
+. MemoryRetentionResult	interface MemoryRetentionResult { readonly deleted: number; readonly scanned: number; }
+. MemoryScope	interface MemoryScope { readonly resourceId: string; readonly tenantId: string; readonly threadId?: string; }
+. MemoryScopeError	class MemoryScopeError extends MemoryError { constructor(message: string); }
+. MemoryShareGrant	interface MemoryShareGrant { readonly childThreadId: string; readonly expiresAt?: string; readonly parentThreadId: string; readonly sourceIds: readonly string[]; readonly tenantId: string; }
+. MemoryTagCount	interface MemoryTagCount { readonly count: number; readonly tag: string; }
+. MemoryTopTagsQuery	interface MemoryTopTagsQuery extends MemoryDirectoryQuery { readonly limit?: number; }
+. MemoryValidationError	class MemoryValidationError extends MemoryError { constructor(message: string); }
+. MemoryVectorHit	interface MemoryVectorHit extends MemoryVectorRecord { readonly coverage?: number; readonly recency?: number; readonly retrieval?: "vector" | "lexical" | "hybrid"; readonly score: number; readonly similarity?: number; }
+. MemoryVectorListQuery	interface MemoryVectorListQuery extends Required<MemoryScope> { readonly cursor?: string; readonly limit: number; readonly order?: MemoryVectorOrder; readonly signal?: AbortSignal; }
+. MemoryVectorMetadataPage	interface MemoryVectorMetadataPage { readonly nextCursor?: string; readonly rows: readonly MemoryVectorMetadataRow[]; }
+. MemoryVectorMetadataRow	interface MemoryVectorMetadataRow { readonly createdAt: string; readonly id: string; readonly lastAccessedAt?: string; readonly metadata?: JsonObject; }
+. MemoryVectorOrder	type MemoryVectorOrder = "sequence" | "createdAt"
+. MemoryVectorPage	interface MemoryVectorPage { readonly nextCursor?: string; readonly records: readonly MemoryVectorRecord[]; }
+. MemoryVectorRecord	interface MemoryVectorRecord { readonly consent?: MemoryConsent; readonly createdAt: string; readonly embedderId?: string; readonly embedding: readonly number[]; readonly generation?: bigint | number; readonly id: string; readonly importance?: number; readonly lastAccessedAt?: string; readonly metadata?: JsonObject; readonly resourceId: string; readonly sequence: number; readonly tenantId: string; readonly text: string; readonly threadId: string; }
+. MemoryVectorStoreOptions	interface MemoryVectorStoreOptions { readonly maxEntryTextChars?: number; }
+. MemoryWorkerError	class MemoryWorkerError extends MemoryError { constructor(code: string, message: string); }
+. MemoryWorkerLimitError	class MemoryWorkerLimitError extends MemoryWorkerError { constructor(message: string); }
+. MemoryWorkerLimitOptions	interface MemoryWorkerLimitOptions { readonly maxArgumentBytes?: number; readonly maxErrorBytes?: number; readonly maxMessageBytes?: number; readonly maxResultBytes?: number; readonly maxTaskStateBytes?: number; readonly maxToolCalls?: number; readonly maxToolCallsPerTurn?: number; readonly maxTurns?: number; }
+. MemoryWorkerLoopOptions	interface MemoryWorkerLoopOptions extends MemoryWorkerLimitOptions { readonly client: ModelClient; readonly maxTurns: number; readonly prompt: string; readonly providerOptions?: ProviderRequestOptions; readonly secrets?: readonly (string | undefined)[]; readonly sessionId?: string; readonly signal?: AbortSignal; readonly system: string; readonly thinkingLevel?: string; readonly tools: readonly ToolDefinition[]; }
+. RECALL_OVERSAMPLE	const RECALL_OVERSAMPLE = 4
+. RagAccessConstraint	interface RagAccessConstraint { readonly accessVersion?: number; readonly groupIds?: readonly string[]; readonly principalId: string; readonly tenantId: string; }
+. RebuildIndexOptions	interface RebuildIndexOptions { readonly batchSize?: number; readonly cursor?: string; readonly maxMs?: number; readonly signal?: AbortSignal; }
+. RebuildIndexResult	interface RebuildIndexResult { readonly nextCursor?: string; readonly rebuilt: number; }
+. RecallOptions	interface RecallOptions { readonly explain?: boolean; readonly messageRange?: number; readonly minSimilarity?: number; readonly requireConsent?: boolean; readonly scoring?: RecallScoringOptions; readonly shareFromParentThreadId?: string; readonly signal?: AbortSignal; readonly topK?: number; }
+. RecallResult	interface RecallResult { readonly adjacent: readonly MemoryVectorRecord[]; readonly explanations?: readonly MemoryRecallExplanation[]; readonly hits: readonly MemoryVectorHit[]; }
+. RecallScoringOptions	interface RecallScoringOptions { readonly halfLifeMs?: number; readonly importanceWeight?: number; readonly recencyBasis?: "created" | "accessed"; readonly recencyWeight?: number; }
+. RememberInput	interface RememberInput { readonly entries: readonly MemoryEntryInput[]; }
+. RememberOptions	interface RememberOptions { readonly signal?: AbortSignal; readonly wait?: boolean; }
+. RememberResult	interface RememberResult { readonly accepted: number; readonly done: Promise<void>; readonly pending: boolean; }
+. RepointContext	interface RepointContext { readonly from: string; readonly ids: readonly string[]; readonly movedChunks: number; readonly scope: Required<MemoryScope>; readonly signal?: AbortSignal; readonly to: string; }
+. RepointHandler	interface RepointHandler { readonly kind: string; repoint(context: RepointContext): number | Promise<number>; }
+. RepointSourceOptions	interface RepointSourceOptions { readonly authorization?: RagAccessConstraint; readonly cursor?: string; readonly from: string; readonly handlers?: readonly RepointHandler[]; readonly maxRecords?: number; readonly pageSize?: number; readonly scope: MemoryScope; readonly signal?: AbortSignal; readonly to: string; readonly vectorStore: RepointStore; }
+. RepointSourceResult	interface RepointSourceResult { readonly batched: boolean; readonly cursor?: string; readonly from: string; readonly layers: Readonly<Record<string, number>>; readonly movedChunks: number; readonly rewrittenEdges: number; readonly to: string; }
+. RepointStore	interface RepointStore extends VectorStore { getByThread?(scope: Required<MemoryScope>, options?: { readonly signal?: AbortSignal; }): Promise<readonly MemoryVectorRecord[]>; transaction?<T>(operation: (store: VectorStore) => Promise<T>, options?: { readonly signal?: AbortSignal; }): Promise<T>; }
+. ResolvedMemoryWorkerLimits	interface ResolvedMemoryWorkerLimits { readonly maxArgumentBytes: number; readonly maxErrorBytes: number; readonly maxMessageBytes: number; readonly maxResultBytes: number; readonly maxTaskStateBytes: number; readonly maxToolCalls: number; readonly maxToolCallsPerTurn: number; readonly maxTurns: number; }
+. ResolvedRecallScoring	interface ResolvedRecallScoring { readonly halfLifeMs: number; readonly importance: number; readonly recency: number; readonly recencyBasis: "created" | "accessed"; readonly similarity: number; }
+. RetrievalLeg	type RetrievalLeg = "vector" | "lexical"
+. ScopeCounterKey	interface ScopeCounterKey { readonly name: ScopeCounterName; readonly resourceId: string; readonly tenantId: string; }
+. ScopeCounterName	type ScopeCounterName = "sessions"
+. ScopeCounterStore	interface ScopeCounterStore { get(key: ScopeCounterKey, options?: { readonly signal?: AbortSignal; }): Promise<number>; increment(key: ScopeCounterKey, options?: { readonly signal?: AbortSignal; }): Promise<number>; }
+. SourceAccessGrant	interface SourceAccessGrant { readonly accessVersion: number; readonly groupIds?: readonly string[]; readonly principalIds?: readonly string[]; readonly sourceId: string; }
+. SourceRename	interface SourceRename { readonly from: string; readonly to: string; }
+. SourceRenameEvent	type SourceRenameEvent = { readonly from: string; readonly to: string; readonly outcome: "moved"; readonly movedChunks: number; readonly rewrittenEdges: number; readonly layers: Readonly<Record<string, number>>; } | { readonly from: string; readonly to: string; readonly outcome: "failed"; readonly error: string; }
+. StoreDenial	interface StoreDenial { readonly reason: StoreDenialReason; readonly sourceId: string; }
+. StoreDenialReason	type StoreDenialReason = "no_grant" | "version_mismatch" | "unknown"
+. VectorDeleteFilter	interface VectorDeleteFilter extends MemoryScope { readonly ids?: readonly string[]; readonly threadId?: string; }
+. VectorLexicalQuery	interface VectorLexicalQuery { readonly authorization?: RagAccessConstraint; readonly ids?: readonly string[]; readonly onDeniedSources?: (denials: readonly StoreDenial[]) => void; readonly resourceId: string; readonly signal?: AbortSignal; readonly tenantId: string; readonly text: string; readonly threadId: string; readonly topK: number; }
+. VectorListResourcesQuery	interface VectorListResourcesQuery { readonly prefix?: string; readonly signal?: AbortSignal; readonly tenantId: string; }
+. VectorQuery	interface VectorQuery extends MemoryScope { readonly authorization?: RagAccessConstraint; readonly embedding: readonly number[]; readonly ids?: readonly string[]; readonly onDeniedSources?: (denials: readonly StoreDenial[]) => void; readonly signal?: AbortSignal; readonly threadId: string; readonly topK: number; }
+. VectorScanMetadataQuery	interface VectorScanMetadataQuery { readonly cursor?: string; readonly limit: number; readonly scope: { readonly tenantId: string; readonly resourceId: string; }; readonly signal?: AbortSignal; }
+. VectorStore	interface VectorStore { checkSourceAccess?(scope: Required<MemoryScope>, sourceId: string, authorization: RagAccessConstraint, options?: { readonly signal?: AbortSignal; }): Promise<boolean>; clearInvalidation?(scope: Required<MemoryScope>, ids: readonly string[], options?: { readonly signal?: AbortSignal; }): Promise<void>; countByKind?(scope: Required<MemoryScope>, query?: MemoryDirectoryQuery): Promise<Readonly<Record<string, number>>>; countByThread?(scope: Required<MemoryScope>, options?: { readonly signal?: AbortSignal; }): Promise<number>; delete(filter: VectorDeleteFilter, options?: { readonly signal?: AbortSignal; }): Promise<number>; getByIds?(scope: Required<MemoryScope>, ids: readonly string[], options?: { readonly signal?: AbortSignal; }): Promise<readonly MemoryVectorRecord[]>; getByThread?(scope: Required<MemoryScope>): Promise<readonly MemoryVectorRecord[]>; getCurrentGeneration?(scope: MemoryScope): Promise<bigint | number | undefined>; getShareGrant?(scope: Required<MemoryScope>, childThreadId: string, options?: { readonly signal?: AbortSignal; }): Promise<MemoryShareGrant | undefined>; invalidate?(scope: Required<MemoryScope>, entries: readonly MemoryInvalidationRecord[], options?: { readonly signal?: AbortSignal; }): Promise<void>; lexicalQuery?(query: VectorLexicalQuery): Promise<readonly MemoryVectorHit[]>; listBySession?(scope: Required<MemoryScope>, session: string, options?: { readonly signal?: AbortSignal; }): Promise<readonly MemoryVectorMetadataRow[]>; listByThread?(query: MemoryVectorListQuery): Promise<MemoryVectorPage>; listInvalidated?(scope: Required<MemoryScope>, options?: { readonly signal?: AbortSignal; }): Promise<readonly MemoryInvalidationRecord[]>; listResources?(query: VectorListResourcesQuery): Promise<readonly string[]>; query(query: VectorQuery): Promise<readonly MemoryVectorHit[]>; readonly authorization?: "acl"; readonly lexicalModes?: readonly LexicalMode[]; readonly lineage?: "invalidation"; readonly scopeCounter?: ScopeCounterStore; scanMetadata?(query: VectorScanMetadataQuery): Promise<MemoryVectorMetadataPage>; setCurrentGeneration?(scope: MemoryScope, generation: bigint | number): Promise<void>; setShareGrant?(scope: Required<MemoryScope>, grant: MemoryShareGrant, options?: { readonly signal?: AbortSignal; }): Promise<void>; setSourceAccess?(scope: Required<MemoryScope>, grants: readonly SourceAccessGrant[], options?: { readonly signal?: AbortSignal; }): Promise<void>; topTags?(scope: Required<MemoryScope>, query?: MemoryTopTagsQuery): Promise<readonly MemoryTagCount[]>; upsert(records: readonly MemoryVectorRecord[], options?: { readonly signal?: AbortSignal; }): Promise<void>; }
+. WorkingMemoryKey	interface WorkingMemoryKey extends MemoryScope {}
+. WorkingMemoryProcessorOptions	interface WorkingMemoryProcessorOptions { readonly extract: (messages: readonly Message[]) => JsonObject | undefined | Promise<JsonObject | undefined>; readonly mode?: WorkingMemoryUpdateMode; }
+. WorkingMemoryRecord	interface WorkingMemoryRecord extends MemoryScope { readonly updatedAt: string; readonly value: JsonObject; readonly version: number; }
+. WorkingMemoryStore	interface WorkingMemoryStore { delete(key: WorkingMemoryKey, options?: { readonly signal?: AbortSignal; }): Promise<boolean>; get(key: WorkingMemoryKey, options?: { readonly signal?: AbortSignal; }): Promise<WorkingMemoryRecord | undefined>; set(record: WorkingMemoryRecord, options?: { readonly signal?: AbortSignal; }): Promise<void>; update(key: WorkingMemoryKey, patch: JsonObject, options?: WorkingMemoryUpdateOptions): Promise<WorkingMemoryRecord>; }
+. WorkingMemoryUpdateMode	type WorkingMemoryUpdateMode = "merge" | "replace"
+. WorkingMemoryUpdateOptions	interface WorkingMemoryUpdateOptions { readonly expectedVersion?: number; readonly mode?: WorkingMemoryUpdateMode; readonly signal?: AbortSignal; }
+. applySourceRenames	function applySourceRenames(options: ApplySourceRenamesOptions): Promise<ApplySourceRenamesResult>
+. assertAccessConstraint	function assertAccessConstraint(authorization: RagAccessConstraint): RagAccessConstraint
+. assertByteLimit	function assertByteLimit(value: unknown, maxBytes: number, label: string): void
+. assertFiniteVector	function assertFiniteVector(value: unknown, label: string, expectedLength?: number): asserts value is readonly number[]
+. assertNotAborted	function assertNotAborted(signal?: AbortSignal): void
+. assertSameScope	function assertSameScope(expected: MemoryScope, actual: MemoryScope, label: string): void
+. assertTextLimit	function assertTextLimit(text: string, maxChars: number, label: string): void
+. byteLengthOfJson	function byteLengthOfJson(value: unknown): number
+. cloneJsonObject	function cloneJsonObject(value: JsonObject): JsonObject
+. collectInvalidationIds	function collectInvalidationIds(records: readonly MemoryVectorRecord[], roots: readonly string[], options?: { readonly maxEdges?: number; }): readonly string[]
+. contentToText	function contentToText(content: readonly unknown[]): string
+. createDeletionPropagator	function createDeletionPropagator(options: DeletionPropagatorOptions): DeletionPropagator
+. createHashEmbedder	function createHashEmbedder(options?: HashEmbedderOptions): Embedder
+. createMemoryVectorStore	function createMemoryVectorStore(options?: MemoryVectorStoreOptions): SourceStore & { transaction<T>(operation: (store: SourceStore) => Promise<T>, transactionOptions?: { readonly signal?: AbortSignal; }): Promise<T>; }
+. deriveEntryImportance	function deriveEntryImportance(entry: Pick<MemoryEntryInput, "importance" | "reflection">, hook: ImportanceFromReflection | undefined, redactor?: SecretRedactor): number | undefined
+. embedBatched	function embedBatched(embedder: Embedder, texts: readonly string[], batchSize: number, options: { readonly signal?: AbortSignal; readonly maxDimensions: number; }): Promise<(readonly number[])[]>
+. estimateTokens	function estimateTokens(text: string): number
+. explainRecord	function explainRecord(record: Pick<MemoryVectorRecord, "id" | "tenantId" | "resourceId" | "threadId" | "createdAt" | "metadata">, invalidation?: MemoryInvalidationRecord): MemoryRecallExplanation
+. fuseRankings	function fuseRankings(lists: readonly { readonly hits: readonly MemoryVectorHit[]; readonly leg: RetrievalLeg; }[], { k }?: { readonly k?: number; }): readonly FusedCandidate[]
+. gateScopedMemoryContent	function gateScopedMemoryContent(text: string): void
+. indexInvalidations	function indexInvalidations(entries: readonly MemoryInvalidationRecord[]): ReadonlyMap<string, MemoryInvalidationRecord>
+. joinWorkerText	function joinWorkerText(parts: Iterable<string>, maxBytes: number, label: string): string
+. latestUserText	function latestUserText(messages: readonly { readonly role: string; readonly content: readonly unknown[]; }[]): string | undefined
+. lexicalCoverage	function lexicalCoverage(queryTerms: ReadonlySet<string>, docTerms: ReadonlySet<string>): number
+. lexicalDice	function lexicalDice(a: ReadonlySet<string>, b: ReadonlySet<string>): number
+. lexicalMatches	function lexicalMatches(queryTerms: ReadonlySet<string>, docTerms: ReadonlySet<string>): string[]
+. lexicalTerms	function lexicalTerms(text: string): Set<string>
+. listInvalidatedIds	function listInvalidatedIds(vectorStore: VectorStore, scope: MemoryScope, options?: { readonly signal?: AbortSignal; }): Promise<readonly string[]>
+. measureWorkerJson	function measureWorkerJson(value: unknown, maxBytes: number, label: string): number
+. mergeJsonObjects	function mergeJsonObjects(base: JsonObject, patch: JsonObject): JsonObject
+. normalizeScopedMemoryContent	function normalizeScopedMemoryContent(text: string): string
+. recordBlocked	function recordBlocked(record: Pick<MemoryVectorRecord, "id" | "metadata">, invalidations: ReadonlyMap<string, MemoryInvalidationRecord>): boolean
+. redactJson	function redactJson<T>(value: T, redactor?: SecretRedactor): T
+. renderTemplate	function renderTemplate(template: string, value: JsonObject): string
+. repointSource	function repointSource(options: RepointSourceOptions): Promise<RepointSourceResult>
+. requireNonEmptyString	function requireNonEmptyString(value: unknown, label: string): string
+. requireScope	function requireScope(scope: MemoryScope, requireThread?: boolean): Required<MemoryScope> | MemoryScope
+. rerankRecallHits	function rerankRecallHits(hits: readonly MemoryVectorHit[], scoring: ResolvedRecallScoring, now?: number): MemoryVectorHit[]
+. resolveMemoryLimits	function resolveMemoryLimits(input?: MemoryLimitsInput): MemoryLimits
+. resolveMemoryWorkerLimits	function resolveMemoryWorkerLimits(input?: MemoryWorkerLimitOptions): ResolvedMemoryWorkerLimits
+. resolveRecallScoring	function resolveRecallScoring(options: RecallScoringOptions | undefined): ResolvedRecallScoring | undefined
+. revokedIdsAbsent	function revokedIdsAbsent(environment: { readonly injectedIds?: readonly string[]; } | undefined, deniedIds: readonly string[]): { readonly score: number; }
+. runMemoryWorkerLoop	function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Promise<void>
+. scanScopedMemoryContent	function scanScopedMemoryContent(text: string): { readonly ok: true; } | { readonly ok: false; readonly class: "prompt-injection" | "exfil" | "invisible-unicode"; }
+. scopeKey	function scopeKey(scope: MemoryScope): string
+. selectAdjacentRecords	function selectAdjacentRecords(threadRecords: readonly MemoryVectorRecord[], hits: readonly MemoryVectorHit[], messageRange: number): MemoryVectorRecord[]
+. shareGrantAllows	function shareGrantAllows(grant: MemoryShareGrant, request: { readonly tenantId: string; readonly childThreadId: string; readonly now?: number; }): boolean
+. stampLineage	function stampLineage(metadata: MemoryVectorRecord["metadata"] | undefined, lineage: unknown | undefined): MemoryVectorRecord["metadata"] | undefined
+. stemLexical	function stemLexical(term: string): string
+. toInvalidationEvent	function toInvalidationEvent(reason: MemoryInvalidationReason, ids: readonly string[], hold: boolean): MemoryInvalidationEvent
+. tokenizeLexical	function tokenizeLexical(text: string): Set<string>
+. truncateWorkerText	function truncateWorkerText(text: string, maxBytes: number): string
+. validateAgainstJsonSchema	function validateAgainstJsonSchema(value: unknown, schema: JsonObject, path?: string): void
+. withTailContext	function withTailContext(draft: ContextDraft, blocks: readonly ContextBlock[]): ContextDraft
+./fabric CreateMarkdownMemoryStoresOptions	interface CreateMarkdownMemoryStoresOptions { readonly classifyNote?: NoteClassifier; readonly dimensions?: number; readonly index?: { readonly path?: string; }; readonly limits?: MemoryLimitsInput; readonly reviewEdit?: MarkdownNoteReviewer; readonly root: string; }
+./fabric MarkdownMemoryStores	interface MarkdownMemoryStores { close(): Promise<void>; readDerivedFile(scope: { readonly tenantId: string; readonly resourceId: string; }, name: string): Promise<{ readonly body: string; readonly edited: boolean; } | undefined>; readonly root: string; readonly vectorStore: Required<VectorStore>; readonly workingStore: WorkingMemoryStore; rebuild(options?: { readonly signal?: AbortSignal; }): Promise<MarkdownReconcileReport>; reconcile(options?: { readonly signal?: AbortSignal; }): Promise<MarkdownReconcileReport>; unreadable(): MarkdownUnreadableCounts; updateResourceFile(scope: { readonly tenantId: string; readonly resourceId: string; }, name: string, update: (current: string | undefined) => string): Promise<void>; writeDerivedFile(scope: { readonly tenantId: string; readonly resourceId: string; }, name: string, body: string, options?: { readonly replaceEdited?: boolean; }): Promise<boolean>; }
+./fabric MarkdownNoteReview	type MarkdownNoteReview = { readonly record: MemoryVectorRecord; readonly reject?: undefined; } | { readonly reject: { readonly verb: string; readonly note: string; }; readonly record?: undefined; }
+./fabric MarkdownNoteReviewer	type MarkdownNoteReviewer = (record: MemoryVectorRecord, previous: MemoryVectorRecord | undefined) => MarkdownNoteReview | undefined
+./fabric MarkdownReconcileReport	interface MarkdownReconcileReport extends MarkdownUnreadableCounts { readonly complete: boolean; readonly errors: readonly string[]; readonly indexed: number; readonly malformed: number; readonly removed: number; }
+./fabric MarkdownUnreadableCounts	interface MarkdownUnreadableCounts { readonly unreadable: number; readonly unreadableReasons: Readonly<Record<string, number>>; }
+./fabric createMarkdownMemoryStores	function createMarkdownMemoryStores(options: CreateMarkdownMemoryStoresOptions): Promise<MarkdownMemoryStores>
+./fabric noteRelPath	function noteRelPath(input: NotePathInput): string
+./postgres DEFAULT_MEMORY_SCHEMA	const DEFAULT_MEMORY_SCHEMA = "prism_memory"
+./postgres DEFAULT_VECTOR_TABLE	const DEFAULT_VECTOR_TABLE = "semantic_memory"
+./postgres PostgresMemoryStores	interface PostgresMemoryStores { close(): Promise<void>; readonly pool: Pool; readonly schema: string; readonly vectorStore: PostgresVectorStore; readonly workingStore: WorkingMemoryStore; }
+./postgres PostgresMemoryStoresOptions	interface PostgresMemoryStoresOptions { readonly connectionString?: string; readonly dimensions?: number; readonly maxEntryTextChars?: number; readonly maxWorkingMemoryBytes?: number; readonly pool?: Pool; readonly poolConfig?: Omit<PoolConfig, "connectionString" | "max">; readonly poolMax?: number; readonly schema?: string; readonly skipMigrations?: boolean; }
+./postgres PostgresVectorSourceStore	interface PostgresVectorSourceStore extends VectorStore { countByKind: NonNullable<VectorStore["countByKind"]>; countByThread: NonNullable<VectorStore["countByThread"]>; getByIds: NonNullable<VectorStore["getByIds"]>; getBySource(scope: { tenantId: string; resourceId: string; threadId: string; }, sourceId: string, options?: { readonly signal?: AbortSignal; }): Promise<readonly MemoryVectorRecord[]>; getByThread(scope: { tenantId: string; resourceId: string; threadId: string; }): Promise<readonly MemoryVectorRecord[]>; listByThread: NonNullable<VectorStore["listByThread"]>; topTags: NonNullable<VectorStore["topTags"]>; }
+./postgres PostgresVectorStore	interface PostgresVectorStore extends PostgresVectorSourceStore { transaction<T>(operation: (store: PostgresVectorSourceStore) => Promise<T>, options?: { readonly signal?: AbortSignal; }): Promise<T>; }
+./postgres PostgresVectorStoreOptions	interface PostgresVectorStoreOptions { readonly connectionString?: string; readonly dimension?: number; readonly maxEntryTextChars?: number; readonly pool?: Pool; readonly poolConfig?: Omit<PoolConfig, "connectionString" | "max">; readonly poolMax?: number; readonly schema?: string; readonly skipMigrations?: boolean; readonly table?: string; }
+./postgres buildMemoryDdl	function buildMemoryDdl(schemaInput?: string, tableInput?: string): string
+./postgres buildVectorSearchDdl	function buildVectorSearchDdl(schemaInput?: string, tableInput?: string, dimension?: number): string
+./postgres createPostgresMemoryStores	function createPostgresMemoryStores(options: PostgresMemoryStoresOptions): Promise<PostgresMemoryStores>
+./postgres createPostgresVectorStore	function createPostgresVectorStore(options: PostgresVectorStoreOptions): Promise<PostgresVectorStore & { readonly pool: Pool; readonly schema: string; close(): Promise<void>; }>
+./postgres qualifyTable	function qualifyTable(schema: string, table: string): string
+./postgres queryPostgres	function queryPostgres(pool: Queryable, sql: string, params?: unknown[]): Promise<import("pg").QueryResult<any>>
+./postgres quoteIdentifier	function quoteIdentifier(value: string): string
+./sqlite SqliteMemoryStores	interface SqliteMemoryStores { close(): void; readonly vectorStore: Required<VectorStore>; readonly workingStore: WorkingMemoryStore; }
+./sqlite SqliteMemoryStoresOptions	interface SqliteMemoryStoresOptions { readonly dimensions?: number; readonly path: string; }
+./sqlite buildSqliteMemoryDdl	function buildSqliteMemoryDdl(tableInput?: string): string
+./sqlite createSqliteMemoryStores	function createSqliteMemoryStores(options: SqliteMemoryStoresOptions): Promise<SqliteMemoryStores>

@@ -84,6 +84,30 @@ applies the rules, in this order: negative, fix-kept, keep, remove, inconclusive
 experimental tier. Plan 210 manifests and reports carry `cleanupManifestPin()`, and `assertCleanupCriteriaPin()`
 refuses drift.
 
+Plan 216 Task 2's memory-model criteria are in `memory-model-criteria.json`, frozen before any plan 217–222 code
+(219.1 included). They judge every gate of the memory-model track: M-1 (STM, S1–S4), M-2 (WM, M1–M5), M-3
+(Rehearsal, R1–R6), M-T (retrieval, T1–T8), M-4 (non-declarative, L1–L4), M-5 (Sleep, Z1–Z4), K-1 (the wiki: plan
+208's `three-tier-criteria.json`, referenced by hash with `P+O` mapped to `ltm+wiki`, never copied) and A (plan 223's
+held-out acceptance, which pins the robustness, three-tier, work-outcome and memory-model hashes). Each row is typed
+tests (`gain`, `nonInferior`, `exact`, `atMost`, …) so `memoryModelVerdict()` computes it with no hand-set value.
+A missing measurement is `missing`, never a pass, and every QA row (S3, M5, R5, R6, T7, L4, Z1) also needs
+all-required evidence coverage per ability. The file also holds:
+
+- the "before" baselines: `P` (plan 210's slimmed product hash) and `OM-before` (pinned at plan 216 Task 4's first
+  step in `docs/_evidence/memory-bench/memory-model/baselines.json`);
+- the retrieval-set construction rules and the threshold-fit rule (plan 219.1 adds the set hashes by amendment);
+- the fixture index with each fixture's owner plan;
+- R1's threshold, fixed with `power.mjs`.
+
+The frozen hash is recorded in `docs/_evidence/memory-bench/memory-model/criteria.json`; `frozenMemoryModelHash()`
+refuses a file that does not hash to it, and `assertMemoryModelPin()` refuses a manifest or evidence file that does
+not pin it. Gate records follow `docs/_evidence/memory-bench/memory-model/gates/README.md`.
+
+```sh
+timeout 60 bun scripts/memory-bench/robustness.mjs --verify-criteria memory-model-criteria.json
+timeout 600 bun scripts/memory-bench/acceptance-report.mjs --plan memory-model --partition dev --gate M-1   # reads <gate>/evidence.json or --evidence; --write saves verdicts.json
+```
+
 Plan 208 Task 2's claim-support audit is `ontology-audit.mjs`. It samples model-written, cited concept claims
 (seeded, stratified by suite and subject size, at most 200 per arm and model; human-written claims are excluded) and asks
 a plan 199 `createJudgePanel` whether the cited notes, shown verbatim and nothing else, fully support each claim:
@@ -110,7 +134,7 @@ supported-versus-not Cohen's kappa, since only `supported` counts; the four-labe
 gate O-1 record and refuses a judge that is the curator's own model or shares a family with another judge.
 
 Plan 208 Task 3 adds ontology arms to the campaign machinery. `--ontology` (on `run.mjs`; a job's `ontology: true` in
-`campaign.mjs`) installs `@arnilo/prism-memory-wiki` next to a product-ingestion fabric arm (`fabric-x`, `fabric-xc`, the
+`campaign.mjs`) installs `@arnilo/prism-wiki` next to a product-ingestion fabric arm (`fabric-x`, `fabric-xc`, the
 `-tools` arms). Ingestion is the product's: each history is archived session by session, and the fabric binds notes at
 write time. The concept pass is a background job that a session opening schedules, exactly as for a user; the bench then
 reopens the session until a pass makes no model call, writes nothing and binds nothing (`ontology-arm.mjs` `settle`),
@@ -2363,3 +2387,9 @@ Each wave takes about a working day on the Pro plan. `c1-supervise.sh <waves>` r
 **Shared ingest.** Each LongMemEval-M and BEAM-1M write side is built once per write-side configuration (`--phase write`, no model call, one question at a time) and seeded into every read-side arm. A reader waits for its producer.
 
 **Cost.** Billed usage is read from Ollama's `/api/usage`. The wire proxy reads native `prompt_eval_count`, `eval_count` and `prompt_eval_cached_count`. The decider shares the answer route's proxy, so its tokens are priced at the answer model's rate in the cost rows.
+
+**Closed after wave 1.** Gate C-1 amendment 7 (owner, 2026-11-08) closed the campaign after wave 1. The runner refuses waves 2 and 3 (`C1Closed`), the cancelled arms and their destinations are listed in `cleanup-criteria.json` `closure`, and `acceptance-report.mjs --plan 210 --partition dev` reads wave 1 only. Rows that moved to plans 216–221 are in `cleanup-criteria.json` `transferred`.
+
+**Decision record (plan 210 Task 6).** `decision-record.mjs` generates `docs/_evidence/memory-bench/210/decisions.{json,md}` from the feature ledger, the gap predictions, the cleanup criteria, `c1-report.json` and `owner-decisions.json`. Every verdict is `cleanupVerdict()`'s; the owner file supplies holds with written reasons and cannot set a verdict. `--check` fails if the committed files differ from a fresh build.
+
+**After the removals (plan 210 Task 7).** The ablation arms (`variants.mjs` source patches, `cleanup-campaign.mjs` arm ids such as `enrichment-loo`, `timeline-loo` and `supersession-keyed-only`, the mechanism probes for `scoped.policy`) describe the pre-removal product: the 14 removals deleted the code they patch. They are the frozen record of what wave 1 measured and run only against the commit recorded in `c1-manifest.json`; against the current tree an arm that patches a removed source line fails its drift assertion by design. The live code paths changed with the product: the `fabric-hybrid` arm now refuses with a named error, the `fabric.enrichment=off` and `fabric.timeline=off` variants and the `consolidate.decider=model` campaign job are gone, and `defaults.json` lost the rows for fields that no longer exist. The slimmed product, the `P` baseline plans 216-223 compare against, is recorded in `docs/_evidence/memory-bench/210/slimmed/record.json`.

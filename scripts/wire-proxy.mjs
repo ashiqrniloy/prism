@@ -49,6 +49,7 @@ export function parseArgs(argv = process.argv.slice(2)) {
     record: "",
     secretEnv: [],
     usageLog: "",
+    maxRequests: 0,
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -67,6 +68,8 @@ export function parseArgs(argv = process.argv.slice(2)) {
       }
     } else if (arg === "--usage-log" && i + 1 < argv.length) {
       options.usageLog = argv[++i];
+    } else if (arg === "--max-requests" && i + 1 < argv.length) {
+      options.maxRequests = parseInt(argv[++i], 10);
     } else if (arg === "-h" || arg === "--help") {
       printUsage();
       process.exit(0);
@@ -85,6 +88,7 @@ Options:
   --record <dir>          Directory to record exchanges (<n>.json)
   --secret-env <names>    Env vars containing secrets to scan (mandatory with --record)
   --usage-log <file>      JSONL file to append raw upstream usage per exchange
+  --max-requests <n>      Answer 429 without contacting the upstream once n requests were forwarded (0 = unlimited)
   -h, --help              Show this help message
 `);
 }
@@ -246,7 +250,43 @@ export function parseRawUpstreamUsage(responseBody, contentType = "") {
 export function normalizeUsageMetrics(rawUsage) {
   if (!rawUsage) return null;
 
-  // Anthropic format (input_tokens / cache_read_input_tokens / cache_creation_input_tokens)
+  // OpenAI Chat (`prompt_tokens` is already inclusive of cache). Checked first: some vendors (Command Code) add a
+  // top-level `cache_creation_input_tokens` that must not make the usage look like Anthropic's.
+  if ("prompt_tokens" in rawUsage) {
+    const input = Number(rawUsage.prompt_tokens) || 0;
+    const output = Number(rawUsage.completion_tokens) || 0;
+    const details = rawUsage.prompt_tokens_details;
+    const cacheRead = Number(details?.cached_tokens ?? rawUsage.prompt_cache_hit_tokens) || 0;
+    const cacheWrite =
+      Number(details?.cache_write_tokens ?? details?.cache_creation_input_tokens ?? rawUsage.cache_creation_input_tokens) || 0;
+    const total = typeof rawUsage.total_tokens === "number" ? rawUsage.total_tokens : input + output;
+    return {
+      inputTokens: input,
+      outputTokens: output,
+      cacheReadTokens: cacheRead,
+      cacheWriteTokens: cacheWrite,
+      totalTokens: total,
+    };
+  }
+
+  // OpenAI Responses (`input_tokens` is inclusive; cache counts sit under `input_tokens_details`).
+  if ("input_tokens_details" in rawUsage) {
+    const input = Number(rawUsage.input_tokens) || 0;
+    const output = Number(rawUsage.output_tokens) || 0;
+    const details = rawUsage.input_tokens_details;
+    const cacheRead = Number(details?.cached_tokens) || 0;
+    const cacheWrite = Number(details?.cache_write_tokens ?? details?.cache_creation_input_tokens) || 0;
+    const total = typeof rawUsage.total_tokens === "number" ? rawUsage.total_tokens : input + output;
+    return {
+      inputTokens: input,
+      outputTokens: output,
+      cacheReadTokens: cacheRead,
+      cacheWriteTokens: cacheWrite,
+      totalTokens: total,
+    };
+  }
+
+  // Anthropic format (input_tokens / cache_read_input_tokens / cache_creation_input_tokens; `input_tokens` is exclusive)
   if ("input_tokens" in rawUsage || "cache_read_input_tokens" in rawUsage || "cache_creation_input_tokens" in rawUsage) {
     const rawInput = Number(rawUsage.input_tokens) || 0;
     const cacheRead = Number(rawUsage.cache_read_input_tokens) || 0;
@@ -263,22 +303,6 @@ export function normalizeUsageMetrics(rawUsage) {
     };
   }
 
-  // OpenAI format (prompt_tokens is already inclusive of cache)
-  if ("prompt_tokens" in rawUsage) {
-    const input = Number(rawUsage.prompt_tokens) || 0;
-    const output = Number(rawUsage.completion_tokens) || 0;
-    const cacheRead = Number(rawUsage.prompt_tokens_details?.cached_tokens) || 0;
-    const cacheWrite = Number(rawUsage.prompt_tokens_details?.cache_creation_input_tokens) || 0;
-    const total = typeof rawUsage.total_tokens === "number" ? rawUsage.total_tokens : input + output;
-    return {
-      inputTokens: input,
-      outputTokens: output,
-      cacheReadTokens: cacheRead,
-      cacheWriteTokens: cacheWrite,
-      totalTokens: total,
-    };
-  }
-
   return null;
 }
 
@@ -286,7 +310,7 @@ export function normalizeUsageMetrics(rawUsage) {
  * Starts the wire proxy server.
  */
 export async function startWireProxy(options = {}) {
-  const { upstream, listen = "127.0.0.1:8787", record = "", secretEnv = [], usageLog = "", env = process.env } = options;
+  const { upstream, listen = "127.0.0.1:8787", record = "", secretEnv = [], usageLog = "", env = process.env, maxRequests = 0 } = options;
 
   if (!upstream) {
     console.error("[wire-proxy] Missing required --upstream <url>");
@@ -321,6 +345,10 @@ export async function startWireProxy(options = {}) {
     hostname: host,
     port,
     async fetch(req) {
+      // A cell budget: past it the request never reaches the (billed) upstream.
+      if (maxRequests > 0 && exchangeIndex >= maxRequests) {
+        return new Response("[wire-proxy] request ceiling reached", { status: 429 });
+      }
       const currentExchange = ++exchangeIndex;
       const reqUrl = new URL(req.url);
       const upstreamBase = upstream.endsWith("/") ? upstream : `${upstream}/`;
@@ -471,6 +499,8 @@ export async function startWireProxy(options = {}) {
     port: server.port,
     url: `http://${server.hostname}:${server.port}`,
     pendingExchanges,
+    /** Requests forwarded upstream so far. */
+    forwarded: () => exchangeIndex,
     async drain() {
       await Promise.allSettled(pendingExchanges);
     },

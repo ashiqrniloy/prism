@@ -38,8 +38,6 @@ export interface AgentDefinition {
   readonly systemPrompt?: SystemPromptConfig;
   readonly instructions?: string;
   readonly metadata?: Readonly<Record<string, unknown>>;
-  /** Optional escape hatch. When present, overrides declarative resolution. */
-  create?(config?: AgentConfig): Promise<Agent> | Agent;
 }
 
 /** Host registries a definition resolver used to receive. All fields are optional; the host
@@ -47,8 +45,6 @@ export interface AgentDefinition {
 export interface AgentDefinitionResolutionContext {
   readonly tools?: ToolRegistry | readonly ToolDefinition[];
   readonly skillsRegistry?: SkillRegistry;
-  /** Migration-only: omitted `tools`/`skills` activate every in-scope tool/skill. Defaults to fail-closed. */
-  readonly activateAllCapabilities?: true;
   readonly overrides?: Partial<AgentConfig>;
 }
 

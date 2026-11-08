@@ -18,7 +18,7 @@ export async function litellmOverflowSession(recording: RecordedExchange): Promi
   let calls = 0;
   const replay = replayFetch([recording, ok]);
   const provider = createLiteLLMProvider({
-    apiKey: "test-key",
+    apiKey: async () => "test-key",
     fetch: (async (url, init) => {
       calls++;
       return replay(url, init);

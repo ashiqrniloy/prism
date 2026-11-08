@@ -1,26 +1,24 @@
-DEFAULT_OPENAPI_LIMITS	export declare const DEFAULT_OPENAPI_LIMITS: ResolvedOpenApiLimits
-HARD_OPENAPI_LIMITS	export declare const HARD_OPENAPI_LIMITS: ResolvedOpenApiLimits
-OpenApiCredentialInput	export type { OpenApiCredentialInput, OpenApiCredentialResolver, OpenApiPagination, OpenApiPolicyCheck, OpenApiToolsOptions, } from "./types.js"
-OpenApiCredentialResolver	export type { OpenApiCredentialInput, OpenApiCredentialResolver, OpenApiPagination, OpenApiPolicyCheck, OpenApiToolsOptions, } from "./types.js"
-OpenApiLimits	export type { OpenApiLimits, ResolvedOpenApiLimits } from "./limits.js"
-OpenApiPagination	export type { OpenApiCredentialInput, OpenApiCredentialResolver, OpenApiPagination, OpenApiPolicyCheck, OpenApiToolsOptions, } from "./types.js"
-OpenApiPolicyCheck	export type { OpenApiCredentialInput, OpenApiCredentialResolver, OpenApiPagination, OpenApiPolicyCheck, OpenApiToolsOptions, } from "./types.js"
-OpenApiToolError	export declare class OpenApiToolError extends Error
-OpenApiToolsOptions	export type { OpenApiCredentialInput, OpenApiCredentialResolver, OpenApiPagination, OpenApiPolicyCheck, OpenApiToolsOptions, } from "./types.js"
-ResolvedOpenApiLimits	export type { OpenApiLimits, ResolvedOpenApiLimits } from "./limits.js"
-ToolsOpenapiConfig	export type { ToolsOpenapiConfig, ToolsOpenapiSpecConfig } from "./config.js"
-ToolsOpenapiSpecConfig	export type { ToolsOpenapiConfig, ToolsOpenapiSpecConfig } from "./config.js"
-compileOpenApiDocument	export declare function compileOpenApiDocument(input:
-createOpenApiTools	export declare function createOpenApiTools(options: OpenApiToolsOptions): readonly ToolDefinition[]
-default	export default
-effectsForMethod	export declare function effectsForMethod(method: string): readonly ToolCapabilityKind[]
-executeOpenApiOperation	export declare function executeOpenApiOperation(options: ExecuteOpenApiOperationOptions): Promise<ToolResult>
-firstServerUrl	export declare function firstServerUrl(document: JsonObject): string | undefined
-listOperationIds	export declare function listOperationIds(document: JsonObject): string[]
-loadSpecDocument	export declare function loadSpecDocument(spec: ToolsOpenapiSpecConfig, limits: ResolvedOpenApiLimits): Promise<JsonObject>
-packageName	export declare const packageName = "@arnilo/prism-tools-openapi"
-resolveOpenApiLimits	export declare function resolveOpenApiLimits(input?: OpenApiLimits): ResolvedOpenApiLimits
-selectOperations	export declare function selectOperations(document: JsonObject, spec: ToolsOpenapiSpecConfig): string[]
-toolsOpenapi	export declare function toolsOpenapi(config: ToolsOpenapiConfig): PackageInstance
-toolsOpenapiConfigSchema	export declare const toolsOpenapiConfigSchema: JsonSchema
-type OpenApiToolErrorCode	export { OpenApiToolError, type OpenApiToolErrorCode } from "./errors.js"
+. DEFAULT_OPENAPI_LIMITS	const DEFAULT_OPENAPI_LIMITS: ResolvedOpenApiLimits
+. HARD_OPENAPI_LIMITS	const HARD_OPENAPI_LIMITS: ResolvedOpenApiLimits
+. OpenApiCredentialInput	interface OpenApiCredentialInput { readonly method: string; readonly operationId: string; readonly path: string; }
+. OpenApiCredentialResolver	type OpenApiCredentialResolver = (input: OpenApiCredentialInput, context: ToolExecutionContext) => { readonly headers?: Readonly<Record<string, string>>; readonly query?: Readonly<Record<string, string>>; } | undefined | Promise<{ readonly headers?: Readonly<Record<string, string>>; readonly query?: Readonly<Record<string, string>>; } | undefined>
+. OpenApiLimits	interface OpenApiLimits { readonly maxBodyBytes?: number; readonly maxDocumentBytes?: number; readonly maxOperations?: number; readonly maxPages?: number; readonly maxPaginationItems?: number; readonly maxRefs?: number; readonly maxResponseBytes?: number; readonly maxRetries?: number; readonly maxSchemaDepth?: number; }
+. OpenApiPagination	interface OpenApiPagination { readonly itemsPath?: string; readonly nextPath?: string; readonly pageParam: string; readonly pageSize?: number; readonly pageSizeParam?: string; }
+. OpenApiPolicyCheck	type OpenApiPolicyCheck = (input: OpenApiCredentialInput & { readonly args: JsonObject; }, context: ToolExecutionContext) => void | Promise<void>
+. OpenApiToolError	class OpenApiToolError extends Error { constructor(code: OpenApiToolErrorCode, message: string); readonly code: OpenApiToolErrorCode; }
+. OpenApiToolErrorCode	type OpenApiToolErrorCode = "ERR_PRISM_OPENAPI_DOCUMENT_BOUNDS" | "ERR_PRISM_OPENAPI_OPERATION_UNKNOWN" | "ERR_PRISM_OPENAPI_SERVER_DRIFT" | "ERR_PRISM_OPENAPI_SCHEMA_BOUNDS" | "ERR_PRISM_OPENAPI_RESPONSE_BOUNDS" | "ERR_PRISM_OPENAPI_RETRY_EXHAUSTED"
+. OpenApiToolsOptions	interface OpenApiToolsOptions { readonly credentials?: OpenApiCredentialResolver; readonly document: string | JsonObject; readonly fetch?: typeof globalThis.fetch; readonly idempotencyKeyHeader?: boolean; readonly limits?: OpenApiLimits; readonly namePrefix?: string; readonly operations: readonly string[]; readonly pagination?: OpenApiPagination; readonly policy?: OpenApiPolicyCheck; readonly redactor?: SecretRedactor; readonly server: string; }
+. ResolvedOpenApiLimits	interface ResolvedOpenApiLimits { readonly maxBodyBytes: number; readonly maxDocumentBytes: number; readonly maxOperations: number; readonly maxPages: number; readonly maxPaginationItems: number; readonly maxRefs: number; readonly maxResponseBytes: number; readonly maxRetries: number; readonly maxSchemaDepth: number; }
+. ToolsOpenapiConfig	interface ToolsOpenapiConfig { readonly limits?: OpenApiLimits; readonly specs?: readonly ToolsOpenapiSpecConfig[]; }
+. ToolsOpenapiSpecConfig	interface ToolsOpenapiSpecConfig { readonly baseUrl?: string; readonly exclude?: readonly string[]; readonly headers?: Readonly<Record<string, string>>; readonly id: string; readonly include?: readonly string[]; readonly source: string; }
+. createOpenApiTools	function createOpenApiTools(options: OpenApiToolsOptions): readonly ToolDefinition[]
+. default	const definition: import("@arnilo/prism").PackageDefinition<ToolsOpenapiConfig>
+. effectsForMethod	function effectsForMethod(method: string): readonly ToolCapabilityKind[]
+. firstServerUrl	function firstServerUrl(document: JsonObject): string | undefined
+. listOperationIds	function listOperationIds(document: JsonObject): string[]
+. loadSpecDocument	function loadSpecDocument(spec: ToolsOpenapiSpecConfig, limits: ResolvedOpenApiLimits): Promise<JsonObject>
+. packageName	const packageName = "@arnilo/prism-tools-openapi"
+. resolveOpenApiLimits	function resolveOpenApiLimits(input?: OpenApiLimits): ResolvedOpenApiLimits
+. selectOperations	function selectOperations(document: JsonObject, spec: ToolsOpenapiSpecConfig): string[]
+. toolsOpenapi	function toolsOpenapi(config: ToolsOpenapiConfig): PackageInstance
+. toolsOpenapiConfigSchema	const toolsOpenapiConfigSchema: JsonSchema

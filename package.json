@@ -7,6 +7,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./provider-kit": "./src/provider-kit/index.ts",
+    "./net": "./src/net/index.ts",
+    "./artifacts": "./src/artifacts/index.ts",
     "./driver-kit": "./src/driver-kit/index.ts",
     "./manifest": "./src/manifest/index.ts",
     "./manifest/schema.json": "./manifest/schema.json",
@@ -40,6 +42,7 @@
     "packages/drivers/*",
     "packages/hosts/*",
     "packages/integrations/*",
+    "packages/knowledge/*",
     "packages/memory/*",
     "packages/policy/*",
     "packages/providers/*",

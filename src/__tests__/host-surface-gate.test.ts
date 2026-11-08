@@ -16,8 +16,8 @@ const REPO = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const ROOT = process.env.PRISM_HOST_GATE_ROOT ?? REPO;
 
 const KERNEL = "@arnilo/prism";
-/** Kernel subpaths a host module may import. `manifest` is the public loader a bin uses to build an agent from a manifest; `driver-kit` is the driver contract a host adapter implements (roadmap §2.8 `serveTools`). `testing`, `provider-kit`, `node/*` and `src/*` are not host surface. */
-const PUBLIC_SUBPATHS = new Set(["manifest", "driver-kit"]);
+/** Kernel subpaths a host module may import. `manifest` is the public loader a bin uses to build an agent from a manifest; `driver-kit` is the driver contract a host adapter implements (roadmap §2.8 `serveTools`); `net` (SSRF-safe fetch, loopback checks) and `artifacts` (artifact and citation records) left the root for their own subpaths in plan 215 Task 26. `testing`, `provider-kit`, `node/*` and `src/*` are not host surface. */
+const PUBLIC_SUBPATHS = new Set(["manifest", "driver-kit", "net", "artifacts"]);
 /**
  * 0.12 family subpaths retired into packages (plan 168 Tasks 6-7). A host library must
  * never reach them: the engine is `@arnilo/prism-workflows` and the timeline is `@arnilo/prism-observability`.

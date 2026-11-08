@@ -55,7 +55,8 @@ export type ProviderEvent =
   | { readonly type: "done"; readonly usage?: Usage; readonly stopReason?: ProviderStopReason }
   | { readonly type: "error"; readonly error: ErrorInfo };
 
-export type InputAssemblyLayout = "legacy" | "cache_aware";
+/** Provider-input ordering. `"cache_aware"` (stable instructions, attachments, summaries, history, tool results, then input) is the only layout. */
+export type InputAssemblyLayout = "cache_aware";
 
 /** Opaque provenance ref for the resolved prompt version that produced a run
  *  (plan 042). Identity only — never prompt content; the body is recoverable
@@ -454,6 +455,41 @@ export class AgentEventSourceError extends Error {
     super(message);
     this.name = "AgentEventSourceError";
   }
+}
+
+// Keyed by `AgentEventType` so a new event type fails the build until it is listed here.
+const KNOWN_AGENT_EVENT_TYPES: { readonly [K in AgentEvent["type"]]: true } = {
+  "run.started": true,
+  "run.completed": true,
+  "run.failed": true,
+  "run.suspended": true,
+  "turn.started": true,
+  "turn.completed": true,
+  "message.delta": true,
+  "message.completed": true,
+  "tool.started": true,
+  "tool.progress": true,
+  "tool.completed": true,
+  "decision.pending": true,
+  "decision.resolved": true,
+  "compaction.started": true,
+  "compaction.completed": true,
+  "background.started": true,
+  "background.completed": true,
+  "background.failed": true,
+  "hook.error": true,
+  "package.event": true,
+  "package.status": true,
+  "session.opened": true,
+  "session.closed": true,
+};
+
+/**
+ * True when `type` is an `AgentEvent` type this kernel version emits. A later minor may add types
+ * (docs/compatibility.md); a host that only wants the ones it was built against filters with this.
+ */
+export function isKnownAgentEventType(type: unknown): type is AgentEvent["type"] {
+  return typeof type === "string" && Object.hasOwn(KNOWN_AGENT_EVENT_TYPES, type);
 }
 
 /** A run stream ends on its outcome. A run-limit death is already `run.failed`. */

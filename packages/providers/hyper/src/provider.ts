@@ -1,4 +1,4 @@
-import type { CredentialValueSource, JsonObject, ModelProvider, Usage } from "@arnilo/prism";
+import type { JsonObject, Usage } from "@arnilo/prism";
 import {
   createRoutedProvider,
   mapOpenAIChatUsage,
@@ -7,7 +7,9 @@ import {
   providerHttpError,
   readRetryAfterMs,
   RETRYABLE_STATUSES,
+  type RoutedProvider,
   type RoutedProviderRoute,
+  type SecretSource,
 } from "@arnilo/prism/provider-kit";
 import { HYPER_DEFAULT_BASE_URL, type HyperRoute, routeForHyperModel } from "./models.js";
 import { parseHyperUsageCost } from "./telemetry.js";
@@ -16,7 +18,7 @@ export interface HyperProviderOptions {
   readonly id?: string;
   /** Defaults to official `https://hyper.charm.land/v1`. */
   readonly baseUrl?: string;
-  readonly apiKey?: CredentialValueSource;
+  readonly apiKey?: SecretSource;
   readonly fetch?: typeof fetch;
 }
 
@@ -103,7 +105,7 @@ function hyperHttpError(response: Response, bodyText: string, secrets: readonly 
   );
 }
 
-export function createHyperProvider(options: HyperProviderOptions = {}): ModelProvider {
+export function createHyperProvider(options: HyperProviderOptions = {}): RoutedProvider {
   return createRoutedProvider({
     id: options.id ?? "hyper",
     baseUrl: options.baseUrl ?? HYPER_DEFAULT_BASE_URL,

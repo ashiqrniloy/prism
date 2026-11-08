@@ -73,7 +73,7 @@ describe("@arnilo/prism-provider-opencode-go", () => {
   it("opencode_go_defaults_to_official_zen_go_v1_base_url", async () => {
     let url = "";
     const provider = createOpenCodeGoProvider({
-      apiKey: "fake-opencode-key",
+      apiKey: async () => "fake-opencode-key",
       fetch: (async (input) => {
         url = String(input);
         return ok(sse([{ choices: [{ delta: { content: "hi" }, finish_reason: "stop" }] }]));
@@ -88,7 +88,7 @@ describe("@arnilo/prism-provider-opencode-go", () => {
   it("opencode_go_requires_session_before_fetch", async () => {
     let fetches = 0;
     const provider = createOpenCodeGoProvider({
-      apiKey: "fake-key",
+      apiKey: async () => "fake-key",
       fetch: (async () => {
         fetches += 1;
         return ok(sse([]));
@@ -116,7 +116,7 @@ describe("@arnilo/prism-provider-opencode-go", () => {
   it("opencode_go_session_header_is_sanitized_cache_key", async () => {
     let capturedHeaders: Headers | undefined;
     const provider = createOpenCodeGoProvider({
-      apiKey: "fake-key",
+      apiKey: async () => "fake-key",
       fetch: (async (_input, init) => {
         capturedHeaders = new Headers(init?.headers);
         return ok(sse([{ choices: [{ delta: { content: "hi" }, finish_reason: "stop" }] }]));
@@ -157,7 +157,7 @@ describe("@arnilo/prism-provider-opencode-go", () => {
   it("opencode_go_rejects_image_without_capability", async () => {
     let fetches = 0;
     const provider = createOpenCodeGoProvider({
-      apiKey: "fake-key",
+      apiKey: async () => "fake-key",
       fetch: (async () => {
         fetches += 1;
         return ok(sse([]));
@@ -218,7 +218,7 @@ describe("@arnilo/prism-provider-opencode-go", () => {
   });
 
   it("opencode_go_unknown_route_fails_closed", async () => {
-    const provider = createOpenCodeGoProvider({ apiKey: "fake-key" });
+    const provider = createOpenCodeGoProvider({ apiKey: async () => "fake-key" });
     const badRouteModel: ModelConfig = {
       ...openaiModel,
       compat: { route: "unknown-route" as any },
@@ -245,7 +245,7 @@ describe("@arnilo/prism-provider-opencode-go", () => {
   it("opencode_go_deepseek_rejects_structured_output_before_dispatch", async () => {
     let fetches = 0;
     const provider = createOpenCodeGoProvider({
-      apiKey: "fake-key",
+      apiKey: async () => "fake-key",
       fetch: (async () => {
         fetches += 1;
         return ok(sse([]));
@@ -290,7 +290,7 @@ describe("@arnilo/prism-provider-opencode-go", () => {
 
     const controller = new AbortController();
     const mapped = await listOpenCodeGoModels({
-      apiKey: "secret-key",
+      apiKey: async () => "secret-key",
       fetch: fetchImpl,
       baseUrl: "https://custom.opencode.ai/v1",
       signal: controller.signal,
@@ -328,7 +328,7 @@ describe("@arnilo/prism-provider-opencode-go", () => {
 
     await assert.rejects(
       async () => {
-        await listOpenCodeGoModels({ apiKey: secret, fetch: fetchImpl });
+        await listOpenCodeGoModels({ apiKey: async () => secret, fetch: fetchImpl });
       },
       (error: Error) => {
         assert.equal(error.message.includes(secret), false, "error leaked token");

@@ -1,35 +1,10 @@
 export type { AgentEventSourceErrorCode, CheckpointRestoreAudit, CheckpointRestoreAuditEntry } from "./contracts-protocol.js";
-export { AgentEventSourceError, isTerminalAgentEventType } from "./contracts-protocol.js";
+export { AgentEventSourceError, isKnownAgentEventType, isTerminalAgentEventType } from "./contracts-protocol.js";
 export { ContextOverflowError } from "./agent-session/context-overflow.js";
 export type { PendingToolCall, StoredAgentRunState } from "./agent-run-state.js";
 export { AGENT_RUN_STATE_SCHEMA_VERSION, agentFingerprint, DEFAULT_MAX_AGENT_RUN_STATE_BYTES, HARD_MAX_AGENT_RUN_STATE_BYTES } from "./agent-run-state.js";
-export { EventSubscriber, SubscriberOverflowError } from "./agent-session/event-subscriber.js";
+export { SubscriberOverflowError } from "./agent-session/event-subscriber.js";
 export { createAgent } from "./agents.js";
-export type {
-  ArtifactApproval,
-  ArtifactApprovalState,
-  ArtifactBodyErrorCode,
-  ArtifactBodyPresignOptions,
-  ArtifactBodyRef,
-  ArtifactBodyStore,
-  ArtifactBodyTransferOptions,
-  ArtifactCitation,
-  ArtifactDecisionState,
-  ArtifactDeliveryToken,
-  ArtifactRecord,
-  ArtifactRevision,
-  CitationSupport,
-} from "./artifacts.js";
-export {
-  ARTIFACT_BODY_ERROR_CODES,
-  ARTIFACT_CHECKPOINT_NAMESPACE,
-  ArtifactBodyStoreError,
-  ArtifactError,
-  artifactApprovalState,
-  artifactCheckpointKey,
-  citationBindingDigest,
-  HARD_CITATION_EXCERPT_BYTES,
-} from "./artifacts.js";
 export type { DefaultCompactorOptions } from "./compaction.js";
 export { createDefaultCompactor, isCompactionEntryData } from "./compaction.js";
 export type { ConfigLayer, ConfigLoadContext, ConfigProvider } from "./config.js";
@@ -211,8 +186,7 @@ export {
 // module moved to `@arnilo/prism-governance`.
 export type { Principal } from "./contracts-core/principal.js";
 export { parseAgentFile, parseSkillFile } from "./contribution-parsing.js";
-export type { CredentialRecord, CredentialValueSource } from "./credentials/index.js";
-export { resolveCredentialValue } from "./credentials/index.js";
+export type { CredentialRecord } from "./credentials/index.js";
 export { CredentialRefNotWritableError, CredentialStoreUnavailableError } from "./credentials/index.js";
 
 export type { GuardrailRunResult, RunGuardrailListOptions } from "./guardrails.js";
@@ -342,18 +316,6 @@ export { createDefaultRetryPolicy, isTransientErrorInfo, waitForRetry } from "./
 // into the root entry graph.
 export { createPathTrustPolicy, isPathInside, isPathInsideReal } from "./node/trust.js";
 export { createProviderTurnMetadata, readProviderHttpStatus } from "./observability.js";
-export {
-  boundResponse,
-  defaultResolver,
-  isLoopbackAddress,
-  isLoopbackHostname,
-  normalizeHostname,
-  type PinnedFetchOptions,
-  pinnedFetch,
-  raceAbort,
-  requestPinned,
-  resolvePinnedAddress,
-} from "./pinned-fetch.js";
 export type { SecretRedactor } from "./redaction.js";
 export {
   createSecretRedactor,
@@ -370,13 +332,12 @@ export type { DuplicateRegistrationOptions, DuplicateRegistrationPolicy } from "
 export type { LoadBinaryResourceOptions } from "./resources.js";
 export { loadBinaryResource, loadJsonResource, loadTextResource } from "./resources.js";
 export { isFlushableRunLedger } from "./run-ledger.js";
-export type { BudgetExhaustionAttribution, RunLimitTrackerOptions } from "./run-limits.js";
+export type { BudgetExhaustionAttribution, RunLimitTracker, RunLimitTrackerOptions } from "./run-limits.js";
 export {
   createRunLimitTracker,
   DEFAULT_RUN_LIMITS,
   HARD_RUN_LIMITS,
   RunLimitError,
-  RunLimitTracker,
   resolveRunLimits,
 } from "./run-limits.js";
 export type { PermissionDecision, PermissionPolicy, PermissionRequest, TrustDecision, TrustPolicy, TrustRequest } from "./security.js";
@@ -481,8 +442,6 @@ export {
   ToolDefinitionError,
 } from "./tools.js";
 export { trimTrailingSlashes } from "./trim-trailing-slashes.js";
-export type { ModelFamilyTokens } from "./usage-estimation.js";
-export { MODEL_FAMILY_TOKENS, resolveModelFamily } from "./usage-estimation.js";
 
 export const name = "prism";
 export const version = "0.13.0";

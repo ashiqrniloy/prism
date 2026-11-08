@@ -95,7 +95,7 @@ export function evictionOrder(
 ): readonly CapacityNote[] {
   const storageBelow = (options.archive ?? DEFAULT_ARCHIVE_CONFIG).storageBelow;
   return notes
-    .filter((note) => note.text !== undefined && note.metadata.pinned !== true && note.metadata.kind !== "concept")
+    .filter((note) => note.text !== undefined && note.metadata.pinned !== true)
     .filter((note) => storageStrength(note.metadata, options.storageWeights) < storageBelow)
     .map((note) => ({ note, value: scored(note, clock, options) }))
     .sort((left, right) => left.value - right.value || compareNotes(left.note, right.note))

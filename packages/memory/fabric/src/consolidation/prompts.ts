@@ -28,8 +28,10 @@ export const MAX_EXTRACTED_EVIDENCE = 16;
 export const MAX_EXISTING_NOTES_PER_SCOPE = 12;
 const EXISTING_TEXT_CHARS = 240;
 export const EXTRACT_KEY_PATTERN = "^[a-z0-9.-]{1,64}$";
-/** The literal an extractor writes for a note about something no shown subject covers (plan 207 Task 3). */
-export const EXTRACT_SUBJECT_NEW = "new";
+/**
+ * The schema keeps its optional `subject` field so the extractor's cached tool bytes do not move (plan 216 Task 3).
+ * Nothing reads it: the ontology left memory, and LTM never binds a note to a subject.
+ */
 const MAX_EXTRACTED_SUBJECT_CHARS = 64;
 /** An absolute ISO 8601 instant; the parser re-validates with `Date.parse`. */
 export const ISO_TIMESTAMP_PATTERN = "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,3})?Z$";
@@ -101,11 +103,6 @@ export interface ConsolidationPromptInput {
   readonly existing?: readonly ConsolidationExistingNote[];
   readonly segments?: readonly ConsolidationSegment[];
   readonly maxNotes?: number;
-  /**
-   * The ontology tier's subjects per scope level, one `slug | title | alias; alias` line each. Part of the
-   * per-call prompt, never of the cached system text or the tool schema.
-   */
-  readonly subjects?: Readonly<Record<string, readonly string[]>>;
 }
 
 /** Candidate ids are positional (`c1`, `c2`, ...) so the extractor can only cite what it was shown. */
@@ -130,19 +127,8 @@ export function buildConsolidationExtractPrompt(input: ConsolidationPromptInput)
       ...(segment.outcome === undefined ? {} : { outcome: segment.outcome }),
       ...(segment.decision === undefined ? {} : { decision: segment.decision }),
     })),
-    ...(input.subjects === undefined || Object.keys(input.subjects).length === 0
-      ? {}
-      : {
-          subjects: {
-            instruction: SUBJECT_INSTRUCTION,
-            scopes: Object.fromEntries(Object.entries(input.subjects).map(([level, lines]) => [level, [...lines]])),
-          },
-        }),
   };
 }
-
-/** Said once, beside the subject list it explains. It is untrusted-data-free: the list holds slugs and names. */
-const SUBJECT_INSTRUCTION = `Known subjects of this user's or project's world, listed per scope as "slug | title | aliases". When a note is about one of them, set its subject to that slug, using the list for the note's own scope. Set subject to "${EXTRACT_SUBJECT_NEW}" when the note is about something that deserves a subject of its own and no listed one covers it. Otherwise omit subject. Never invent a slug.`;
 
 /** Stable across sessions; the parser checks id membership and the pass's note bound. */
 export function consolidationExtractSchema(input: { readonly maxNotes?: number }): JsonObject {
@@ -163,7 +149,7 @@ export function consolidationExtractSchema(input: { readonly maxNotes?: number }
     derivable: { type: "boolean" },
     contradicts: { type: "string" },
     segment: { type: "string" },
-    // Free text on purpose: the shown slugs change per call, and an enum would change the cached tool bytes.
+    // Kept for byte-stable tool bytes (plan 216 Task 3); the parser ignores it.
     subject: { type: "string", maxLength: MAX_EXTRACTED_SUBJECT_CHARS },
   };
   return {

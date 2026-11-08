@@ -42,9 +42,8 @@ describe("tool-call conformance: catalog declarations", () => {
     const capabilities = [
       { tools: true, toolCallStrictness: "strict" },
       { tools: true, toolCallStrictness: "lenient" },
-      { tools: true, toolCallStrictness: "legacy" },
       { tools: true },
     ];
-    assert.equal(capabilities[3]?.toolCallStrictness, undefined);
+    assert.equal(capabilities[2]?.toolCallStrictness, undefined);
   });
 });

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { relative } from "node:path";
-import type { JsonObject, ModelClient, ModelRef, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
+import type { JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import type { Memory, MemoryVectorRecord } from "@arnilo/prism-memory-core";
 import { HARD_TOP_K_CAP, lexicalMatches, lexicalTerms, MemoryValidationError } from "@arnilo/prism-memory-core";
 import { noteRelPath } from "@arnilo/prism-memory-core/fabric";
@@ -11,11 +11,9 @@ import { type FabricDirectoryHandle, pageFabricDirectory, renderFabricDirectory 
 import { queryExcerpt } from "./excerpt.js";
 import { createFabricFileJail, type FabricFileJail } from "./files.js";
 import { EvidenceNotFoundError, LessonRequiresEvidenceError } from "./lessons.js";
-import { type ConceptRender, citedByCurrentClaims, readConceptBody, renderConceptClaims, renderConceptRead } from "./ontology/render.js";
 import { groupRecallHits, noteTime, parseRecallKinds } from "./recall.js";
 import { selectWithScopeReserve } from "./scope/recall.js";
-import { scanScopedMemoryContent } from "./scoped/trust.js";
-import { buildStateTable, type ResolvedStateConfig } from "./state.js";
+import { scanScopedMemoryContent } from "@arnilo/prism-memory-core";
 import {
   estimateNoteTokens,
   type FabricScopeLevel,
@@ -37,8 +35,6 @@ import {
 const GATHER_BUDGET_TOKENS = 3000;
 
 export interface MemoryFabricToolDeps {
-  /** `recall.supersessionHint` (plan 210 Task 3.1); absent means `all`. */
-  readonly supersessionHint?: import("./recall.js").SupersessionHintMode;
   /** `recall.gather` (plan 210 Task 3.1): the `memory.recall` tool accepts `gather`. */
   readonly gather?: boolean;
   readonly memory: Memory;
@@ -73,16 +69,8 @@ export interface MemoryFabricToolDeps {
   readonly scopeLevel?: FabricScopeLevel;
   /** Every active scope, narrowest first, for the abstention line. Defaults to `[scopeLevel ?? "project"]`. */
   readonly scopeLevels?: readonly FabricScopeLevel[];
-  /** Opt-in StateMem wrapper: one model call per explicit `memory.recall`. */
-  readonly state?: false | ResolvedStateConfig;
   /** Opt-in P5 sufficiency gate; only a clear "not sufficient" changes the tool's abstention. */
   readonly decisions?: FabricDecisions;
-  readonly resolveModelClient?: (ref?: ModelRef) => ModelClient;
-  /**
-   * The ontology tier is on (plan 207 Task 4): `memory.recall` searches `concept` notes with the rest, renders each
-   * with its current claims and a drill-down line, and may name the kind. Without it a named `concept` is refused.
-   */
-  readonly ontology?: { readonly maxClaimsRendered: number };
 }
 
 /** Characters of a recalled note the tool shows; the densest matched window when the note is longer. */
@@ -93,14 +81,8 @@ const RECALL_PAGE_SIZE = 5;
 const RECALL_NO_MATCH_CONFIDENCE = 0.34;
 /** The grouped summary is held under this many characters (about 200 tokens including its session line). */
 const RECALL_SUMMARY_MAX_CHARS = 780;
-/** The tool default: every stored kind except `working` (already in the context prefix) and, without the ontology, `concept`. */
-const RECALL_TOOL_KINDS: readonly MemoryNoteKind[] = MEMORY_NOTE_KINDS.filter((kind) => kind !== "working" && kind !== "concept");
-const RECALL_TOOL_KINDS_WITH_ONTOLOGY: readonly MemoryNoteKind[] = MEMORY_NOTE_KINDS.filter((kind) => kind !== "working");
-/** Cited ids one recall checks for readability, in one batched read. */
-const MAX_CITE_CHECK_IDS = 256;
-/** What a memory tool answers when it is asked to write, edit, delete or search the ontology tier. */
-const CONCEPT_TOOL_REFUSAL =
-  "Concept notes belong to the ontology curator: the memory tools cannot create, edit, delete or search them directly.";
+/** The tool default: every stored kind except `working` (already in the context prefix). */
+const RECALL_TOOL_KINDS: readonly MemoryNoteKind[] = MEMORY_NOTE_KINDS.filter((kind) => kind !== "working");
 /** One `memory.read` call reads at most this many notes by id. */
 const MAX_READ_IDS = 8;
 
@@ -154,7 +136,7 @@ interface ReadNote {
   readonly status?: MemoryNoteHit["status"];
   readonly session?: string;
   readonly tRef?: string;
-  /** The ontology subject a note is bound to; on a concept, the subject it describes. */
+  /** The topic key the note was written with, if any. */
   readonly subject?: string;
   readonly ingestedAt: string;
   readonly path: string;
@@ -265,11 +247,6 @@ function renderRecallSummary(input: {
   return [summary.length > RECALL_SUMMARY_MAX_CHARS ? `${summary.slice(0, RECALL_SUMMARY_MAX_CHARS - 1)}…` : summary];
 }
 
-/** What a model gate sees of a hit: a concept shows only the claims delivered, never a stale or unverifiable one. */
-function evidenceText(hit: MemoryNoteHit, concepts: ReadonlyMap<string, { readonly lines: readonly string[] }>): string {
-  return hit.kind === "concept" ? (concepts.get(hit.id)?.lines.join("\n") ?? "") : hit.content;
-}
-
 /** The explicit abstention line: the query text searched and every active scope. */
 function noMatchingMemory(queries: readonly string[], scopes: readonly string[]): string {
   const searched = queries.length === 0 ? "(none)" : queries.map((query) => clipSummaryText(query, 80)).join(" | ");
@@ -302,16 +279,6 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
     const indexedNotesAvailable = (): boolean => deps.isIndexedNotesAvailable?.() ?? true;
     const indexedNotesUnavailable = (name: string, context: ToolExecutionContext): ToolResult =>
       fail(name, context, "indexed_notes_unavailable", "Indexed notes are disabled for this fabric; only working blocks are supported.");
-
-    /** Which of `ids` are readable in some active scope, through the same filters as `memory.read`. */
-    const readableIds = async (ids: readonly string[], signal: AbortSignal | undefined): Promise<ReadonlySet<string>> => {
-      if (ids.length === 0) return new Set();
-      const records =
-        deps.readNotes === undefined
-          ? await deps.memory.get(ids, signal === undefined ? {} : { signal })
-          : await deps.readNotes(ids, signal);
-      return new Set(records.map((record) => record.id));
-    };
 
     type FileAccess = { readonly files: FabricFileJail } | { readonly denied: ToolResult };
     const gateFiles = (name: string, context: ToolExecutionContext): FileAccess => {
@@ -460,8 +427,7 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
                 continue;
               }
               const fields = noteFields(metadata);
-              // A concept reads as its whole body with claim ids; a stale claim says so, and a person's uncited one too.
-              const content = metadata.kind === "concept" ? renderConceptRead(record.text, metadata.stale) : record.text;
+              const content = record.text;
               const source = {
                 id,
                 kind: metadata.kind,
@@ -534,7 +500,7 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
               maxItems: 8,
               description: "Project-root-relative globs; required exactly when scope is path.",
             },
-            key: { type: "string", description: "Stable subject id ([a-z0-9.-]{1,64}) for shadowing and widening." },
+            key: { type: "string", description: "Stable subject id ([a-z0-9.-]{1,64}) for shadowing." },
             rationale: { type: "string", description: "Why the decision was chosen; kind decision only." },
             supersedes: { type: "string" },
             evidence: {
@@ -561,7 +527,6 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
           const hasPath = typeof args.path === "string";
           if ([args.block, args.path, args.kind].filter((value) => value !== undefined).length !== 1)
             throw new MemoryValidationError("insert requires exactly one of block, path or kind");
-          if (args.kind === "concept") return fail(insertName, context, "concept_requires_ontology", CONCEPT_TOOL_REFUSAL);
           if (args.kind !== undefined) {
             if (args.kind !== "fact" && args.kind !== "preference" && args.kind !== "procedure" && args.kind !== "decision")
               throw new MemoryValidationError("kind must be fact, preference, procedure or decision");
@@ -578,8 +543,8 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
               return fail(
                 insertName,
                 context,
-                "agent_scope_requires_widening",
-                "Agent scope is widening-only: write the lesson in this project and let maintenance promote it when another project verifies it.",
+                "agent_scope_not_writable",
+                "Agent scope is not writable by the memory tools: write the note in this project.",
               );
             }
             if (!indexedNotesAvailable()) return indexedNotesUnavailable(insertName, context);
@@ -707,9 +672,6 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
             if (!indexedNotesAvailable()) return indexedNotesUnavailable(replaceName, context);
             noteMemory = (await deps.noteMemory?.(args.id, context.signal)) ?? deps.memory;
             const entry = await noteMemory.getEntry(args.id, options);
-            if (entry !== undefined && parseMemoryNoteMetadata(entry.metadata)?.kind === "concept") {
-              return fail(replaceName, context, "concept_requires_ontology", CONCEPT_TOOL_REFUSAL);
-            }
             if (entry !== undefined && unreadableNoteReason(entry.metadata) !== undefined)
               return fail(
                 replaceName,
@@ -790,14 +752,10 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
                   "working",
                   "episode",
                   "exchange",
-                  ...(deps.ontology === undefined ? [] : ["concept"]),
                   "all",
                 ],
               },
-              description:
-                deps.ontology === undefined
-                  ? 'Kinds to search; defaults to every kind except working. `["all"]` searches every kind.'
-                  : 'Kinds to search; defaults to every kind except working, concepts included. `["all"]` searches every kind.',
+              description: 'Kinds to search; defaults to every kind except working. `["all"]` searches every kind.',
             },
             topK: { type: "integer", minimum: 1, description: "Maximum hits per page." },
             page: {
@@ -806,13 +764,6 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
               description: "Zero-based page over the ranked window (page size topK, default 5); defaults to 0.",
             },
             asOf: { type: "string", description: "ISO timestamp used for the validity window; defaults to now." },
-            from: { type: "string", description: "ISO date/time; only notes dated on or after it. A date covers that whole UTC day." },
-            to: { type: "string", description: "ISO date/time; only notes dated on or before it. A date covers that whole UTC day." },
-            order: {
-              type: "string",
-              enum: ["relevance", "time"],
-              description: "relevance (default) keeps the ranked order; time orders resolved dates oldest first.",
-            },
             budget: { type: "integer", description: "Ceiling on the summed tokens of the rendered snippet lines; default 1200." },
             includeArchived: {
               type: "boolean",
@@ -832,13 +783,7 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
           if (!indexedNotesAvailable()) return indexedNotesUnavailable(recallName, context);
           const queries = readQueries(args);
           const parsedKinds = readKinds(args.kinds);
-          // Concept-first recall is the ontology option's surface (plan 207 Task 4); without it a named concept is
-          // refused, and `all` leaves the ontology tier out.
-          if (deps.ontology === undefined && Array.isArray(args.kinds) && args.kinds.includes("concept")) {
-            return fail(recallName, context, "concept_requires_ontology", CONCEPT_TOOL_REFUSAL);
-          }
-          const requestedKinds = deps.ontology === undefined ? parsedKinds?.filter((kind) => kind !== "concept") : parsedKinds;
-          const kinds = requestedKinds ?? (deps.ontology === undefined ? RECALL_TOOL_KINDS : RECALL_TOOL_KINDS_WITH_ONTOLOGY);
+          const kinds = parsedKinds ?? RECALL_TOOL_KINDS;
           const page = typeof args.page === "number" ? args.page : 0;
           if (!Number.isSafeInteger(page) || page < 0) throw new MemoryValidationError("page must be a non-negative safe integer");
           const gather = deps.gather === true && args.gather === true;
@@ -853,9 +798,7 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
             kinds,
             topK: HARD_TOP_K_CAP,
             ...(typeof args.asOf === "string" ? { asOf: args.asOf } : {}),
-            ...(typeof args.from === "string" ? { from: args.from } : {}),
-            ...(typeof args.to === "string" ? { to: args.to } : {}),
-            ...(args.order === "time" || (gather && args.order === undefined) ? { order: "time" as const } : {}),
+            ...(gather ? { order: "time" as const } : {}),
             ...(args.includeArchived === true ? { includeArchived: true } : {}),
             ...(context.signal === undefined ? {} : { signal: context.signal }),
             ...(deps.touchedPaths === undefined ? {} : { touchedPaths: deps.touchedPaths(context.sessionId) }),
@@ -874,50 +817,16 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
             });
           }
           const budget = typeof args.budget === "number" ? args.budget : gather ? GATHER_BUDGET_TOKENS : 1200;
-          const ranked = groupRecallHits(
-            [...fused.values()].sort((a, b) => b.score - a.score).map(({ hit }) => hit),
-            deps.supersessionHint === undefined ? {} : { supersessionHint: deps.supersessionHint },
-          ).slice(0, HARD_TOP_K_CAP);
+          const ranked = groupRecallHits([...fused.values()].sort((a, b) => b.score - a.score).map(({ hit }) => hit)).slice(
+            0,
+            HARD_TOP_K_CAP,
+          );
           const queryTerms = new Set<string>();
           for (const query of queries) for (const term of lexicalTerms(query)) queryTerms.add(term);
           const pageRanked = ranked.slice(pageStart, pageStart + pageSize);
-          // Concepts first, then drill down (plan 207 Task 4): a concept hit shows its current claims with the ids they
-          // cite. The cascade already removed a forgotten note's claims; this is the second line, one batched read that
-          // drops a claim whose citations are not all readable here. A shared team concept cites private notes that
-          // never travelled with it, so its claims stand on the share itself.
-          const conceptRenders = new Map<string, ConceptRender>();
-          const conceptHits = pageRanked.filter((hit) => hit.kind === "concept" && (hit.flags?.length ?? 0) === 0);
-          if (deps.ontology !== undefined && conceptHits.length > 0) {
-            const checked = conceptHits.filter((hit) => hit.level !== "team");
-            const wanted = new Set<string>();
-            for (const hit of checked) {
-              const doc = readConceptBody(hit.content);
-              if (doc !== undefined) for (const id of citedByCurrentClaims(doc, hit.stale)) wanted.add(id);
-            }
-            const readable = await readableIds([...wanted].slice(0, MAX_CITE_CHECK_IDS), context.signal);
-            for (const hit of conceptHits) {
-              conceptRenders.set(
-                hit.id,
-                renderConceptClaims(hit.id, {
-                  text: hit.content,
-                  stale: hit.stale,
-                  queryTerms,
-                  max: deps.ontology.maxClaimsRendered,
-                  ...(hit.level === "team" ? { evidence: false } : { readable }),
-                }),
-              );
-            }
-          }
           // Render before selecting: the budget counts what the model reads, header, path, snippet and summary included.
           const rendered = new Map(
             pageRanked.map((hit) => {
-              if (hit.kind === "concept") {
-                const flagged = hit.flags?.length ? ` [flagged: ${hit.flags.join(", ")}]` : "";
-                const lifecycle = hit.status === "archived" ? " [archived]" : "";
-                const header = `[${hit.id}] ${hit.level ?? "project"} concept ${hit.subject ?? "?"}${lifecycle}${flagged} ${recallDate(hit)}`;
-                const body = conceptRenders.get(hit.id)?.lines ?? [];
-                return [hit.id, [header, ...body].join("\n")] as const;
-              }
               const matched = lexicalMatches(
                 queryTerms,
                 lexicalTerms([hit.content, ...(hit.keywords ?? []), ...(hit.tags ?? []), hit.context ?? "", hit.path ?? ""].join("\n")),
@@ -928,8 +837,7 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
               const dates = hit.dates?.length
                 ? ` dates=${hit.dates.map((date) => `${date.resolved.slice(0, 10)}/${date.precision}`).join(",")}`
                 : "";
-              const tRef = args.order === "time" && hit.tRef ? ` tRef=${hit.tRef}` : "";
-              const line = `${hit.id} ${hit.level ?? "project"} [${hit.kind}]${lifecycle}${flagged}${superseded} path=${notePathOf(hit)} date=${hit.ingestedAt.slice(0, 10)}${tRef}${dates}${hit.session ? ` session=${hit.session}` : ""} matched=[${matched.join(", ")}] ${queryExcerpt(hit.content, queryTerms, SNIPPET_CHARS)}`;
+              const line = `${hit.id} ${hit.level ?? "project"} [${hit.kind}]${lifecycle}${flagged}${superseded} path=${notePathOf(hit)} date=${hit.ingestedAt.slice(0, 10)}${dates}${hit.session ? ` session=${hit.session}` : ""} matched=[${matched.join(", ")}] ${queryExcerpt(hit.content, queryTerms, SNIPPET_CHARS)}`;
               return [hit.id, line] as const;
             }),
           );
@@ -960,7 +868,7 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
           if (hits.length > 0 && deps.decisions?.enabled("P5")) {
             const sufficient = await deps.decisions.sufficient({
               query: queries.join(" | "),
-              evidence: hits.map((hit) => ({ id: hit.id, text: evidenceText(hit, conceptRenders) })),
+              evidence: hits.map((hit) => ({ id: hit.id, text: hit.content })),
             });
             if (sufficient === false) {
               hits = [];
@@ -978,23 +886,8 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
               hits.map((hit) => hit.id),
             );
           }
-          let stateTable: string | undefined;
-          if (deps.state !== undefined && deps.state !== false && deps.resolveModelClient !== undefined && hits.length > 0) {
-            try {
-              stateTable = await buildStateTable({
-                query: queries.join(" | "),
-                hits: hits.filter((hit) => hit.kind !== "concept"),
-                client: deps.resolveModelClient(deps.state.model),
-                ...(context.signal === undefined ? {} : { signal: context.signal }),
-              });
-            } catch {
-              // The wrapper is an aid: a failed model call leaves the normal recall output intact.
-              stateTable = undefined;
-            }
-          }
           const lines = [
             ...summaryLines,
-            ...(stateTable === undefined ? [] : ["Current state (model-generated; cite ids):", stateTable]),
             ...hits.map((hit) => rendered.get(hit.id) ?? ""),
           ];
           if (lines.length === 0) lines.push(noMatchingMemory(queries, recallScopeNames(deps)));
@@ -1020,7 +913,6 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
               page,
               total: ranked.length,
               ...(summaryLines.length === 0 ? {} : { summary: summaryLines.join("\n") }),
-              ...(stateTable === undefined ? {} : { state: stateTable }),
             },
             lines.join("\n"),
           );
@@ -1046,13 +938,6 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
             ...(args.hold === true ? { hold: true } : {}),
           };
           if (target.id !== undefined && !indexedNotesAvailable()) return indexedNotesUnavailable(forgetName, context);
-          if (target.id !== undefined) {
-            const holder = (await deps.noteMemory?.(target.id, context.signal)) ?? deps.memory;
-            const entry = await holder.getEntry(target.id, { signal: context.signal });
-            if (entry !== undefined && parseMemoryNoteMetadata(entry.metadata)?.kind === "concept") {
-              return fail(forgetName, context, "concept_requires_ontology", CONCEPT_TOOL_REFUSAL);
-            }
-          }
           if (target.block !== undefined) assertFabricBlockLabel(target.block);
           const result = await deps.forget(target, {
             ...(context.signal === undefined ? {} : { signal: context.signal }),

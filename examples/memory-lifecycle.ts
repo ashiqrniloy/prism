@@ -21,11 +21,11 @@ import {
   SCOPE_CLOCK_COUNTER,
 } from "@arnilo/prism-memory-fabric";
 
-// Memory lifecycle demo: one note's whole life, from a candidate to a wider scope.
+// Memory lifecycle demo: one note's whole life, from a candidate to verified, shadowed, archived and revived.
 //
 // What this shows:
 //   1. A user preference written in project A and recalled in project B (one `user` resource).
-//   2. A procedure verified in A and B that widens to an `agent` candidate after `maintain()`.
+//   2. A procedure verified by use in A and B, and an `agent` scope that no model tool can write.
 //   3. A project exception that shadows the preference inside A only.
 //   4. An unused episode archived by the rule, then found through archive search and revived by citing it.
 //   5. A capacity budget that folds duplicate notes and evicts the weakest survivor.
@@ -86,7 +86,7 @@ const preference = await inA.remember({
 const preferenceInB = (await inB.recall("pnpm project scripts", { topK: 3 })).hits.filter((hit) => hit.id === preference.id).length;
 await inB.recordUses("session-b1", [preference.id], { clock: 1 });
 
-// 2. The same procedure proven once in each project: two citing sessions each, so both verify.
+// 2. The same procedure proven once in each project: two citing sessions each, so both verify. Nothing widens it.
 const lesson = "Drain the canary pool before every rollback";
 const inProjectA = await inA.remember({ kind: "procedure", key: "canary.drain", content: lesson });
 const inProjectB = await inB.remember({ kind: "procedure", key: "canary.drain", content: lesson });
@@ -149,16 +149,14 @@ const archived = (await maintainer.recall("flaky deploy friday", { includeArchiv
 await maintainer.recordUses("session-revive", [EPISODE], { clock: 20 });
 const revived =
   (await statusOf(projectA, EPISODE)) === "candidate" && (await projectA.getEntry(EPISODE))?.metadata?.auditVerb === "revived";
-const widenedToAgent = (await agent.recall(lesson, { topK: 2 })).hits.length;
 
-// A model tool cannot skip replication: `agent` is widening-only, while a host write may still seed a
-// genuinely general note. The project copy is stored; nothing above the project sees it.
+// A model tool cannot write the `agent` scope. The project copy is stored; nothing above the project sees it.
 const insert = inA.tools().find((tool) => tool.name === "memory.insert")!;
 const refused = await insert.execute(
   { kind: "fact", scope: "agent", key: "deploy.region", text: "alpha region = eu-west" },
   { sessionId: "session-a3", runId: "r1", toolCallId: "c1" },
 );
-if (!String(refused.error?.message).includes("widening-only")) throw new Error("agent tool write was not refused");
+if (!String(refused.error?.message).includes("not writable")) throw new Error("agent tool write was not refused");
 const local = await insert.execute(
   { kind: "fact", scope: "project", key: "deploy.region", text: "alpha region = eu-west" },
   { sessionId: "session-a3", runId: "r1", toolCallId: "c2" },
@@ -167,7 +165,7 @@ if (local.error !== undefined || (await agent.recall("eu-west", { topK: 2 })).hi
   throw new Error("project fact escaped the project");
 
 if (preferenceInB !== 1 || (await shadowed(inB)) !== 0 || (await shadowed(inA)) !== 1) throw new Error("scope shadowing failed");
-if (verified !== 2 || report.widened !== 1 || widenedToAgent !== 1) throw new Error("widening failed");
+if (verified !== 2 || (await agent.recall(lesson, { topK: 2 })).hits.length !== 0) throw new Error("verification or agent isolation failed");
 if (report.archived !== 1 || archived !== 1 || !revived) throw new Error("archive and revival failed");
 
 // 6. A capacity budget: two same-key notes fold first, then the weakest note is evicted.
@@ -294,10 +292,10 @@ try {
 console.log(
   JSON.stringify({
     preference: { recalledInB: preferenceInB, useSessions: 1, shadowedInA: 1, shadowedInB: 0 },
-    procedure: { verifiedInProjects: verified, widenedToAgent },
+    procedure: { verifiedInProjects: verified },
     exception: { overrides: exception.overrides === preference.id ? 1 : 0 },
     archive: { archived: report.archived, archivedHits: archived, revived: revived ? 1 : 0 },
-    maintenance: { merged: report.merged, episodesMerged: report.episodesMerged, evicted: report.evicted, superseded: report.superseded },
+    maintenance: { merged: report.merged, episodesMerged: report.episodesMerged, evicted: report.evicted },
     capacity: { merged: capacity.merged, evicted: capacity.evicted, notes: 3 },
     delivery: { prefixes: 10, cues: 1, shares: 1 },
   }),

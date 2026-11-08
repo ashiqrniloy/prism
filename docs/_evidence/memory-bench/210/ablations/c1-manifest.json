@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-07T22:19:09.647Z",
+  "generatedAt": "2026-11-08T12:08:43.224Z",
   "kind": "210-c1-ablation-manifest",
   "schemaVersion": 1,
   "plan": 210,
@@ -9,7 +9,7 @@
   "status": "proposal",
   "executable": false,
   "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
-  "cleanupCriteriaHash": "eea138eb71d58408d09c331e55da419ad8caf8bdcc0a1e44536dda0cc55a7a51",
+  "cleanupCriteriaHash": "ee1a7b5840477e69fff2b43dc4a908c96de4f8e0b3ca2c441eaadc304c934c80",
   "threeTierCriteriaHash": "3d5a5c10fddda0931d00003aad8f2fccf5bdef2a829fa0b09bfac004b2bd263f",
   "workOutcomeCriteriaHash": "d30681ec13dfd1e9f01ce9fdfe8ad2caa674b97182210c12788bd0bc77717bd2",
   "gapPredictionsHash": "2c26bbb3730d7f6ab5218d611d7dff54e3647ec17b321149557d275cb67926c1",
@@ -727,6 +727,126 @@
         ]
       }
     ]
+  },
+  "closure": {
+    "decided": "2026-11-08",
+    "by": "owner (gate C-1 amendment 7)",
+    "afterWave": 1,
+    "rule": "Waves 2 and 3 of gate C-1 are cancelled and no job of theirs runs. The report reads wave 1 only and reports a cancelled arm as `cancelled` and a transferred row as `transferred`, never as a miss.",
+    "cancelledArms": {
+      "P+O": {
+        "disposition": "transferred",
+        "plan": "222 Task 3"
+      },
+      "trigger-co-read-loo": {
+        "disposition": "transferred",
+        "plan": "222 Task 3"
+      },
+      "trigger-accumulation-loo": {
+        "disposition": "transferred",
+        "plan": "222 Task 3"
+      },
+      "concept-prior-loo": {
+        "disposition": "transferred",
+        "plan": "222 Task 3"
+      },
+      "concept-pointer-loo": {
+        "disposition": "transferred",
+        "plan": "222 Task 3"
+      },
+      "f4-readtime": {
+        "disposition": "transferred",
+        "plan": "219 Task 7"
+      },
+      "OM": {
+        "disposition": "transferred",
+        "plan": "217 Task 6"
+      },
+      "om-reflector-loo": {
+        "disposition": "not-run",
+        "plan": "218-219 replace the workers"
+      },
+      "om-dropper-deterministic": {
+        "disposition": "not-run",
+        "plan": "218-219 replace the workers"
+      },
+      "oracle": {
+        "disposition": "not-run",
+        "plan": null
+      },
+      "tools-only": {
+        "disposition": "transferred",
+        "plan": "219-220"
+      },
+      "rules-add": {
+        "disposition": "transferred",
+        "plan": "219-220"
+      },
+      "W.P": {
+        "disposition": "transferred",
+        "plan": "219-220"
+      },
+      "W.P+W": {
+        "disposition": "transferred",
+        "plan": "219-220"
+      },
+      "W.steps-loo": {
+        "disposition": "transferred",
+        "plan": "219-220"
+      },
+      "W.rules-loo": {
+        "disposition": "transferred",
+        "plan": "219-220"
+      },
+      "W.lessons-loo": {
+        "disposition": "transferred",
+        "plan": "219-220"
+      },
+      "maintain": {
+        "disposition": "transferred",
+        "plan": "221"
+      },
+      "archive-exchange-exempt": {
+        "disposition": "transferred",
+        "plan": "221"
+      },
+      "gather": {
+        "disposition": "unmeasured",
+        "plan": null
+      },
+      "expansion": {
+        "disposition": "unmeasured",
+        "plan": null
+      },
+      "card-excerpt": {
+        "disposition": "unmeasured",
+        "plan": null
+      },
+      "precision-filter": {
+        "disposition": "unmeasured",
+        "plan": null
+      },
+      "strength-0.15": {
+        "disposition": "unmeasured",
+        "plan": null
+      },
+      "aggregation-loo": {
+        "disposition": "unmeasured",
+        "plan": null
+      },
+      "decisions-p3": {
+        "disposition": "unmeasured",
+        "plan": null
+      },
+      "decisions-p5": {
+        "disposition": "unmeasured",
+        "plan": null
+      },
+      "W.decisions-p4": {
+        "disposition": "unmeasured",
+        "plan": null
+      }
+    }
   },
   "predictionsCovered": [
     {
@@ -5676,5 +5796,5 @@
       "wave": 3
     }
   ],
-  "manifestHash": "13930dd8f67a7df4b35cd40a9fb17b1913b72343cccb92e8a04ed20053088bdd"
+  "manifestHash": "d5e1409401daf099ec97e7153cf718bfedfa9e5b90c3dd6f00dac72bb03f31f6"
 }

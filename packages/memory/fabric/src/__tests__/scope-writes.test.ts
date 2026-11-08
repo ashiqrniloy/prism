@@ -160,7 +160,7 @@ describe("fabric scope-aware writes (plan 188.2 Task 3)", () => {
   });
 });
 
-describe("agent scope is widening-only for model tools (plan 188.7 Task 4)", () => {
+describe("agent scope is not writable by the model tools (plan 188.7 Task 4, plan 210 Task 7)", () => {
   it("foreign_project_fact_never_enters_other_project_context_via_confirmed_leak_path", async () => {
     const project = memoryFor(PROJECT);
     const agent = memoryFor("agent");
@@ -171,7 +171,7 @@ describe("agent scope is widening-only for model tools (plan 188.7 Task 4)", () 
     const insert = fabric.tools().find((tool) => tool.name === "memory.insert")!;
     const context = { sessionId: "s1", runId: "r1", toolCallId: "c1" };
     const wider = await insert.execute({ kind: "fact", scope: "agent", key: "deploy.region", text: "alpha region = eu-west" }, context);
-    assert.match(String(wider.error?.message), /widening-only/);
+    assert.match(String(wider.error?.message), /not writable/);
     assert.equal((await agent.recall("eu-west", { topK: 5 })).hits.length, 0, "no agent note was written");
 
     const local = await insert.execute({ kind: "fact", scope: "project", key: "deploy.region", text: "alpha region = eu-west" }, context);

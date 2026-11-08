@@ -1,0 +1,214 @@
+{
+  "schema": "cache-parity/1",
+  "date": "2026-11-08",
+  "provider": "commandcode",
+  "model": "claude-haiku-5-5",
+  "route": "by model",
+  "thinking": "medium",
+  "prismCommit": "bc87e539",
+  "harnessVersions": {
+    "prism": "bc87e539",
+    "pi": "1.5.0"
+  },
+  "cell": {
+    "verdict": "behind",
+    "prism": {
+      "runs": 3,
+      "solved": 3,
+      "comparedRuns": 3,
+      "hitRate": {
+        "median": 0,
+        "spread": {
+          "min": 0,
+          "max": 0
+        }
+      },
+      "firstTurnExcludedHitRate": {
+        "median": 0,
+        "spread": {
+          "min": 0,
+          "max": 0
+        }
+      },
+      "requests": {
+        "median": 3,
+        "spread": {
+          "min": 3,
+          "max": 3
+        }
+      }
+    },
+    "pi": {
+      "runs": 3,
+      "solved": 3,
+      "comparedRuns": 3,
+      "hitRate": {
+        "median": 0.6769197676919768,
+        "spread": {
+          "min": 0.674398928294437,
+          "max": 0.6807068157230436
+        }
+      },
+      "firstTurnExcludedHitRate": {
+        "median": 0.8049279563475147,
+        "spread": {
+          "min": 0.7993481531004513,
+          "max": 0.8102678571428571
+        }
+      },
+      "requests": {
+        "median": 4,
+        "spread": {
+          "min": 4,
+          "max": 4
+        }
+      }
+    }
+  },
+  "runs": {
+    "prism": [
+      {
+        "harness": "prism",
+        "index": 0,
+        "status": "ok",
+        "metrics": {
+          "requests": 3,
+          "failedRequests": 1,
+          "promptTokens": 23045,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "hitRate": 0,
+          "firstTurnExcludedHitRate": 0,
+          "taskSolved": true
+        },
+        "forwarded": 4,
+        "ceiling": false,
+        "exitCode": 1,
+        "models": [
+          "claude-haiku-5-5"
+        ]
+      },
+      {
+        "harness": "prism",
+        "index": 1,
+        "status": "ok",
+        "metrics": {
+          "requests": 3,
+          "failedRequests": 1,
+          "promptTokens": 22772,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "hitRate": 0,
+          "firstTurnExcludedHitRate": 0,
+          "taskSolved": true
+        },
+        "forwarded": 4,
+        "ceiling": false,
+        "exitCode": 1,
+        "models": [
+          "claude-haiku-5-5"
+        ]
+      },
+      {
+        "harness": "prism",
+        "index": 2,
+        "status": "ok",
+        "metrics": {
+          "requests": 3,
+          "failedRequests": 1,
+          "promptTokens": 22651,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "hitRate": 0,
+          "firstTurnExcludedHitRate": 0,
+          "taskSolved": true
+        },
+        "forwarded": 4,
+        "ceiling": false,
+        "exitCode": 1,
+        "models": [
+          "claude-haiku-5-5"
+        ]
+      }
+    ],
+    "pi": [
+      {
+        "harness": "pi",
+        "index": 0,
+        "status": "ok",
+        "metrics": {
+          "requests": 4,
+          "failedRequests": 0,
+          "promptTokens": 13947,
+          "cacheRead": 9441,
+          "cacheWrite": 4496,
+          "hitRate": 0.6769197676919768,
+          "firstTurnExcludedHitRate": 0.8049279563475147,
+          "taskSolved": true
+        },
+        "forwarded": 4,
+        "ceiling": false,
+        "exitCode": 0,
+        "models": [
+          "claude-haiku-5-5"
+        ],
+        "piCrossCheck": "match"
+      },
+      {
+        "harness": "pi",
+        "index": 1,
+        "status": "ok",
+        "metrics": {
+          "requests": 4,
+          "failedRequests": 0,
+          "promptTokens": 14183,
+          "cacheRead": 9565,
+          "cacheWrite": 4608,
+          "hitRate": 0.674398928294437,
+          "firstTurnExcludedHitRate": 0.7993481531004513,
+          "taskSolved": true
+        },
+        "forwarded": 4,
+        "ceiling": false,
+        "exitCode": 0,
+        "models": [
+          "claude-haiku-5-5"
+        ],
+        "piCrossCheck": "match"
+      },
+      {
+        "harness": "pi",
+        "index": 2,
+        "status": "ok",
+        "metrics": {
+          "requests": 4,
+          "failedRequests": 0,
+          "promptTokens": 13865,
+          "cacheRead": 9438,
+          "cacheWrite": 4417,
+          "hitRate": 0.6807068157230436,
+          "firstTurnExcludedHitRate": 0.8102678571428571,
+          "taskSolved": true
+        },
+        "forwarded": 4,
+        "ceiling": false,
+        "exitCode": 0,
+        "models": [
+          "claude-haiku-5-5"
+        ],
+        "piCrossCheck": "match"
+      }
+    ]
+  },
+  "requests": {
+    "used": 24,
+    "ceiling": 120,
+    "perRun": 20
+  },
+  "notes": [
+    "Metrics come from the wire proxy's usage log only; Prism's own usage events are cross-checked against it per request.",
+    "The system prompt carries a per-run id (Prism: workspace AGENTS.md; pi: --append-system-prompt) so a prefix cached by an earlier run cannot score the first request.",
+    "pi reached the proxy through COMMANDCODE_API_BASE and a scratch copy of its model catalog."
+  ],
+  "attempt": 0
+}

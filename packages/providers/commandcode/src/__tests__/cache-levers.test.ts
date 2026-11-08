@@ -61,7 +61,7 @@ async function capture(wire: "chat" | "responses" | "messages", sessionId = SESS
   const bodies: JsonObject[] = [];
   const headers: Headers[] = [];
   const provider = createCommandCodeProvider({
-    apiKey: "offline-fixture-never-used",
+    apiKey: async () => "offline-fixture-never-used",
     fetch: (async (_url, init) => {
       headers.push(new Headers(init?.headers));
       bodies.push(JSON.parse(String(init?.body)));

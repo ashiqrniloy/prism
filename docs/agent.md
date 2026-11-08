@@ -298,7 +298,7 @@ fields absent.
 `createSessionIndex(store, { ownership? })` returns the same `SessionIndex` over a bare store, with no
 `Agent`, so a host can list and search sessions across agents. Ownership is enforced exactly as
 `agent.sessions` enforces it, and a store without a capability rejects with
-`UnsupportedStoreCapabilityError`. `storeConformance` runs a `session-links` leg against every store. Entry kinds are `message`, `event`, `summary`, `metadata`, `model_change`, `label`, `custom`, `compaction`, `suspended_run`, `package_state`, and `external_state` (a driver loop's archive, see [loop.md](loop.md)); a store rejects an unknown kind, and `storeConformance` runs an `external-state` leg.
+`UnsupportedStoreCapabilityError`. `storeConformance` runs a `session-links` leg against every store. Entry kinds are `message`, `event`, `summary`, `metadata`, `model_change`, `label`, `custom`, `compaction`, `suspended_run`, `package_state`, and `external_state` (a driver loop's archive, see [loop.md](loop.md)); `storeConformance` runs an `external-state` leg. A store keeps an entry of a kind it does not know and returns it unchanged (the `unknown-entry-kind` leg); the session ignores it when it rebuilds messages ([compatibility.md](compatibility.md)).
 
 ### `agent.sessions`
 

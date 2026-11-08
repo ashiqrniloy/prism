@@ -110,7 +110,7 @@
       }
     },
     {
-      "includes": ["packages/memory/wiki/src/__tests__/**"],
+      "includes": ["packages/knowledge/wiki/src/**"],
       "linter": {
         "rules": {
           "style": {
@@ -140,7 +140,7 @@
       }
     },
     {
-      "includes": ["packages/memory/rag/src/**"],
+      "includes": ["packages/knowledge/rag/src/**"],
       "linter": {
         "rules": {
           "style": {

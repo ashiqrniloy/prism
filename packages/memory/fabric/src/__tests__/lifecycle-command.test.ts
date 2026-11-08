@@ -1,6 +1,6 @@
 /**
  * Plan 188.4 Further Action 4: `memory:lifecycle` explains one note from inside a session — the
- * operator-facing surface of the archive and widening rules.
+ * operator-facing surface of the archive rules.
  */
 import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
@@ -107,7 +107,6 @@ describe("memory:lifecycle (plan 188.4 Further Action 4)", () => {
         assert.equal(view.retrieval, Math.round(Math.log(21 ** -0.4) * 10_000) / 10_000, "R is read from the scope clock");
         assert.deepEqual((view.uses as JsonObject[]).length, 1);
         assert.deepEqual(view.archive, { eligible: false, reasons: ["retrieval"] }, "a used procedure is not archivable yet");
-        assert.deepEqual(view.widen, { eligible: true, reasons: [] }, "note-level gates pass; replication decides");
         assert.match(String(listed.text), /^1 of 1 note\(s\), most retrievable first:\na1000000000a procedure key=canary\.drain/);
 
         const byId = (await agent.commands.run("memory:lifecycle", { id: "a1000000000a" }, { session })) as JsonObject;

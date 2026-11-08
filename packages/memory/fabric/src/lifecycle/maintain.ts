@@ -1,5 +1,5 @@
 /**
- * One maintenance pass (plan 188.4 Tasks 4-6): archive, capacity, widening, narrowing — in that
+ * One maintenance pass (plan 188.4 Tasks 4-5): archive, capacity — in that
  * order, once per active scope, metadata-only except for the opt-in episode merge.
  *
  * The pass is where the lifecycle's slow work happens: no turn waits for it, nothing here runs on
@@ -13,7 +13,7 @@ import {
   type VectorScanMetadataQuery,
   type VectorStore,
 } from "@arnilo/prism-memory-core";
-import type { ResolvedMemoryWorkerLimits } from "@arnilo/prism-memory-observational";
+import type { ResolvedMemoryWorkerLimits } from "@arnilo/prism-memory-core";
 import type { ResolvedLifecycleConfig } from "../config.js";
 import {
   estimateNoteTokens,
@@ -38,10 +38,8 @@ import {
 } from "./capacity.js";
 import { SCOPE_CLOCK_COUNTER } from "./clock.js";
 import type { FabricLifecycle } from "./index.js";
-import { createFabricLifecycle } from "./index.js";
 import { duplicateGroups, episodeClusters, mergedMetadata, summarizeEpisodeCluster } from "./merge.js";
 import { normalizeNoteStatus } from "./status.js";
-import { crossProjectGroups, mergedKeywords, narrowingCandidates, normalizeWidenText, siblingGroups, type WidenNote } from "./widen.js";
 
 /** `Memory.get` refuses more than 1000 ids, and scan rows span every thread of the resource. */
 const MAINTAIN_PAGE = 500;
@@ -64,12 +62,6 @@ export interface MaintenanceDeps {
   readonly notify?: (message: string) => void;
   /** The process-wide scope ordinal, used when the store has no counter. */
   readonly clock?: () => number;
-  /** Opens a project the host did not bind; see `CreateMemoryFabricOptions.openScope`. */
-  readonly openScope?: (input: {
-    readonly level: MemoryNoteScope;
-    readonly tenantId: string;
-    readonly resourceId: string;
-  }) => Memory | undefined | Promise<Memory | undefined>;
 }
 
 interface ActiveRow {
@@ -252,227 +244,6 @@ async function enforceCapacity(
   return { merged, episodesMerged, evicted, kept: live() };
 }
 
-/**
- * Every project resource the store lists, tagged with the project it came from. A resource this
- * instance has no `Memory` for is scanned for metadata only (replication evidence) unless the host's
- * `openScope` resolver hands one back: then its text is readable and its notes are rewritable.
- */
-async function projectNotes(
-  deps: MaintenanceDeps,
-  scanMetadata: (query: VectorScanMetadataQuery) => Promise<MemoryVectorMetadataPage>,
-  active: ReadonlyMap<number, readonly CapacityNote[]>,
-  signal?: AbortSignal,
-): Promise<{ readonly rows: readonly WidenNote[]; readonly opened: ReadonlyMap<string, FabricLifecycle> }> {
-  const bound = new Map<string, number>();
-  deps.memories.forEach((memory, index) => {
-    if (deps.levels[index] === "project") bound.set(memory.scope.resourceId, index);
-  });
-  const resources = [...bound.keys()];
-  const tenantId = deps.memories[0]?.scope.tenantId;
-  if (tenantId !== undefined) {
-    const listed = await deps.store?.listResources?.({ tenantId, prefix: "projects/" });
-    for (const resourceId of listed ?? []) if (!bound.has(resourceId)) resources.push(resourceId);
-  }
-  const rows: WidenNote[] = [];
-  const opened = new Map<string, FabricLifecycle>();
-  const resolver = new ProjectResolver(deps, tenantId);
-  for (const project of resources) {
-    const index = bound.get(project);
-    let notes: readonly CapacityNote[];
-    if (index !== undefined) {
-      notes = active.get(index) ?? [];
-    } else {
-      const identity = { tenantId: tenantId ?? "", resourceId: project };
-      const discovered = await scanActiveRows(scanMetadata, identity, signal);
-      const memory = await resolver.open(identity);
-      if (memory === undefined) {
-        notes = discovered.map((row) => ({ id: row.id, metadata: row.metadata, status: row.status, tokens: 0 }));
-      } else {
-        notes = await capacityNotes(memory, discovered, signal);
-        opened.set(project, resolver.lifecycle(memory));
-      }
-    }
-    for (const note of notes) if (note.metadata.scope !== "path") rows.push({ ...note, project });
-  }
-  return { rows, opened };
-}
-
-/**
- * The host's resolver, called once per unbound project (plan 188.4 Further Action 2). A throw, or a
- * memory for a different resource, is treated as "not opened": the pass keeps the resource as
- * metadata-only evidence instead of reading or rewriting the wrong notes.
- */
-class ProjectResolver {
-  private readonly cache = new Map<string, Memory | null>();
-  private readonly lifecycles = new Map<Memory, FabricLifecycle>();
-  constructor(
-    private readonly deps: MaintenanceDeps,
-    private readonly tenantId: string | undefined,
-  ) {}
-
-  lifecycle(memory: Memory): FabricLifecycle {
-    let lifecycle = this.lifecycles.get(memory);
-    if (lifecycle === undefined) {
-      lifecycle = createFabricLifecycle(memory);
-      this.lifecycles.set(memory, lifecycle);
-    }
-    return lifecycle;
-  }
-
-  async open(identity: { readonly tenantId: string; readonly resourceId: string }): Promise<Memory | undefined> {
-    const cached = this.cache.get(identity.resourceId);
-    if (cached !== undefined) return cached ?? undefined;
-    let memory: Memory | undefined;
-    try {
-      memory = await this.deps.openScope?.({ level: "project", ...identity });
-    } catch {
-      memory = undefined;
-    }
-    const usable =
-      memory !== undefined &&
-      identity.tenantId !== "" &&
-      memory.scope.tenantId === identity.tenantId &&
-      memory.scope.resourceId === identity.resourceId
-        ? memory
-        : null;
-    this.cache.set(identity.resourceId, usable);
-    return usable ?? undefined;
-  }
-}
-
-/** Temporal validity travels with a widened note; evidence lineage keeps the copies' source ids. */
-function temporalFields(metadata: WidenNote["metadata"]): {
-  readonly tRef?: string;
-  readonly validFrom?: string;
-  readonly validTo?: string;
-  readonly tags?: readonly string[];
-} {
-  return {
-    ...(metadata.tRef === undefined ? {} : { tRef: metadata.tRef }),
-    ...(metadata.validFrom === undefined ? {} : { validFrom: metadata.validFrom }),
-    ...(metadata.validTo === undefined ? {} : { validTo: metadata.validTo }),
-    ...(metadata.tags === undefined ? {} : { tags: metadata.tags }),
-  };
-}
-
-function lineageIds(notes: readonly CapacityNote[]): readonly string[] {
-  return [...new Set(notes.flatMap((note) => [note.id, ...(note.metadata.sourceEntryIds ?? [])]))];
-}
-
-/**
- * Project → agent (plan 188.4 Task 6): a lesson verified in `minProjects` projects becomes an agent
- * candidate with the project notes as evidence; the project copies keep only `widenedTo`. The new
- * note is a candidate on purpose — the agent scope has to use it before it counts for anything.
- */
-async function widenToAgent(
-  deps: MaintenanceDeps,
-  scanMetadata: (query: VectorScanMetadataQuery) => Promise<MemoryVectorMetadataPage>,
-  active: ReadonlyMap<number, readonly CapacityNote[]>,
-  signal?: AbortSignal,
-): Promise<number> {
-  const agentIndex = deps.levels.indexOf("agent");
-  if (agentIndex < 0) return 0;
-  const { rows, opened } = await projectNotes(deps, scanMetadata, active, signal);
-  const agentKeys = new Set((active.get(agentIndex) ?? []).flatMap((note) => (note.metadata.key === undefined ? [] : [note.metadata.key])));
-  const lifecycle = deps.lifecycle;
-  let widened = 0;
-  for (const group of crossProjectGroups(rows, {
-    duplicateDice: lifecycle?.merge.duplicateDice,
-    weights: lifecycle?.storageWeights,
-    minProjects: lifecycle?.widen.minProjects,
-  })) {
-    const key = group.survivor.metadata.key;
-    if (key !== undefined && agentKeys.has(key)) continue;
-    const content = group.survivor.text;
-    if (content === undefined) continue;
-    const members = [group.survivor, ...group.others];
-    const keywords = mergedKeywords(members, key);
-    const written = await deps.remember(
-      {
-        kind: group.survivor.metadata.kind as "fact" | "procedure",
-        content,
-        scope: "agent",
-        ...(key === undefined ? {} : { key }),
-        ...(keywords.length === 0 ? {} : { keywords }),
-        ...temporalFields(group.survivor.metadata),
-        sourceEntryIds: lineageIds(members),
-      },
-      { status: "candidate", generatedBy: "promotion" },
-    );
-    // Never archive a project copy unless the wider note is really at the wider scope and carries the
-    // same normalized content. A failed or rewritten write leaves every local note untouched.
-    if (written.level !== "agent" || normalizeWidenText(written.content) !== normalizeWidenText(content)) continue;
-    for (const note of members.filter((item) => item.text !== undefined && normalizeWidenText(item.text) === normalizeWidenText(content))) {
-      const index = deps.memories.findIndex((memory) => memory.scope.resourceId === note.project);
-      const lifecycle = index < 0 ? opened.get(note.project) : deps.lifecycles[index];
-      if (lifecycle === undefined) continue;
-      await lifecycle.archive(note.id, { widenedTo: written.id, auditVerb: "widened" });
-    }
-    if (key !== undefined) agentKeys.add(key);
-    widened += 1;
-  }
-  return widened;
-}
-
-/**
- * Path → project (plan 188.4 Task 6): path notes of one project that agree across sibling subtrees
- * become one project note. The globs were the whole reason the note stayed narrow.
- */
-async function widenPaths(deps: MaintenanceDeps, active: ReadonlyMap<number, readonly CapacityNote[]>): Promise<number> {
-  let widened = 0;
-  for (const [index, notes] of active) {
-    if (deps.levels[index] !== "project") continue;
-    const projectKeys = new Set(
-      notes.flatMap((note) => (note.metadata.key === undefined || note.metadata.scope === "path" ? [] : [note.metadata.key])),
-    );
-    for (const group of siblingGroups(notes, deps.lifecycle?.widen.minSiblings)) {
-      if (projectKeys.has(group.key)) continue;
-      const content = group.survivor.text;
-      if (content === undefined) continue;
-      const members = [group.survivor, ...group.others];
-      const keywords = mergedKeywords(members, group.key);
-      const written = await deps.remember(
-        {
-          kind: group.survivor.metadata.kind as "fact" | "procedure",
-          content,
-          scope: "project",
-          key: group.key,
-          ...(keywords.length === 0 ? {} : { keywords }),
-          ...temporalFields(group.survivor.metadata),
-          sourceEntryIds: lineageIds(members),
-        },
-        { status: "candidate", generatedBy: "promotion" },
-      );
-      if (written.level !== "project" || normalizeWidenText(written.content) !== normalizeWidenText(content)) continue;
-      for (const note of members) await deps.lifecycles[index]!.archive(note.id, { widenedTo: written.id, auditVerb: "widened" });
-      projectKeys.add(group.key);
-      widened += 1;
-    }
-  }
-  return widened;
-}
-
-/**
- * Narrowing (plan 188.4 Task 6): a wider note that `contradictionsToSupersede` projects contradict is
- * superseded, `validTo` set and logged. The project exceptions themselves are untouched: they are
- * the evidence, and they stay valid for their own project.
- */
-async function narrowContradicted(
-  deps: MaintenanceDeps,
-  active: ReadonlyMap<number, readonly CapacityNote[]>,
-  now: number,
-): Promise<number> {
-  let superseded = 0;
-  for (const [index, notes] of active) {
-    const level = deps.levels[index];
-    if (level !== "user" && level !== "agent") continue;
-    for (const id of narrowingCandidates(notes, deps.lifecycle?.widen.contradictionsToSupersede)) {
-      if (await deps.lifecycles[index]!.supersede(id, { now })) superseded += 1;
-    }
-  }
-  return superseded;
-}
-
 export async function runMaintenance(
   deps: MaintenanceDeps,
   options: MemoryFabricMaintainOptions = {},
@@ -498,15 +269,10 @@ export async function runMaintenance(
   let episodesMerged = 0;
   let evicted = 0;
   const overBudget: MemoryFabricScopeBudget[] = [];
-  // What each scope holds after archive and capacity: widening and narrowing read the survivors only.
-  const active = new Map<number, readonly CapacityNote[]>();
   for (const { memory, index } of targets) {
     const level: MemoryNoteScope = deps.levels[index] ?? "project";
     const clock = await scopeClock(deps, memory);
-    // A concept is never archived, merged or evicted by maintenance: the ontology curator owns it.
-    const rows = (await scanActiveRows(scanMetadata, { tenantId: memory.scope.tenantId, resourceId: memory.scope.resourceId }, signal)).filter(
-      (row) => row.metadata.kind !== "concept",
-    );
+    const rows = await scanActiveRows(scanMetadata, { tenantId: memory.scope.tenantId, resourceId: memory.scope.resourceId }, signal);
     const survivors: ActiveRow[] = [];
     for (const row of rows) {
       // Metadata only: archiving never re-embeds and never sets `validTo`.
@@ -563,7 +329,6 @@ export async function runMaintenance(
       }
       if (demoted.size > 0) exchanges = exchanges.filter((note) => !demoted.has(note.id));
     }
-    active.set(index, [...kept, ...exchanges]);
     if (overCapacity(usage, limits)) {
       overBudget.push({
         scope: memory.scope.resourceId,
@@ -578,14 +343,5 @@ export async function runMaintenance(
     }
   }
 
-  // Widening compares projects, so it needs the whole pass; a single-scope pass (the consolidation
-  // tail) archives and enforces capacity for that scope and stops there.
-  let widened = 0;
-  let superseded = 0;
-  if (options.scope === undefined) {
-    widened += await widenToAgent(deps, scanMetadata, active, signal);
-    widened += await widenPaths(deps, active);
-    superseded += await narrowContradicted(deps, active, now);
-  }
-  return { archived, merged, episodesMerged, evicted, widened, superseded, overBudget };
+  return { archived, merged, episodesMerged, evicted, overBudget };
 }

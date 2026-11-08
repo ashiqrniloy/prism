@@ -16,7 +16,7 @@ import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { parseArgs } from "node:util";
 import { calibrateJudge, cohensKappa, createJudgePanel } from "@arnilo/prism-evals";
-import { parseConceptBody } from "@arnilo/prism-memory-fabric";
+import { parseConceptBody } from "@arnilo/prism-wiki";
 import {
   CLAIM_LABELS,
   drawStratified,

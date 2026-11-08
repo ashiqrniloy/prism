@@ -44,8 +44,8 @@ export interface SessionEntry {
   readonly parentId?: string;
   readonly sessionId: string;
   readonly timestamp: string;
-  readonly kind: SessionEntryKind;
-  readonly schemaVersion?: 1;
+  readonly kind: SessionEntryKind | (string & {});
+  readonly schemaVersion?: number;
   readonly runId?: string;
   readonly message?: Message;
   readonly event?: AgentEvent;

@@ -340,7 +340,7 @@ describe("@arnilo/prism-tools-web package", () => {
     // The service wraps the same Firecrawl adapter; the moved suite covers its stubbed transport.
     // Here one injected-fetch call proves the `web.fetch` return contract is a `WebDocument`.
     const document = await createFirecrawlFetch({
-      credentials: "firecrawl-canary",
+      credentials: async () => "firecrawl-canary",
       fetch: async () => json({ success: true, data: { markdown: "# Prism", metadata: { sourceURL: "https://example.com/doc" } } }),
     }).fetch("https://example.com/doc");
     assert.equal(document.url, "https://example.com/doc");

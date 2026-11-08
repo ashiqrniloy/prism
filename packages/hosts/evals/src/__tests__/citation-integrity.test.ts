@@ -1,7 +1,7 @@
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { test } from "bun:test";
-import { type ArtifactCitation, type ArtifactRevision, citationBindingDigest, HARD_CITATION_EXCERPT_BYTES } from "@arnilo/prism";
+import { type ArtifactCitation, type ArtifactRevision, citationBindingDigest, HARD_CITATION_EXCERPT_BYTES } from "@arnilo/prism/artifacts";
 import { approvalEvidenceIntact, checkCitationIntegrity } from "../citation-integrity.js";
 
 const body = "alpha beta gamma";

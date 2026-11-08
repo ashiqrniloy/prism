@@ -1,4 +1,5 @@
-import { assertSsrfAllowedUrl, isLoopbackHostname, MediaContentError, pinnedFetch } from "@arnilo/prism";
+import { assertSsrfAllowedUrl, MediaContentError } from "@arnilo/prism";
+import { isLoopbackHostname, pinnedFetch } from "@arnilo/prism/net";
 import type { Transport } from "@modelcontextprotocol/client";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
@@ -237,16 +238,3 @@ function validateRequestUrl(url: URL, allowedOrigins: ReadonlySet<string>, allow
     }
   }
 }
-
-export {
-  boundResponse,
-  defaultResolver,
-  isLoopbackAddress,
-  normalizeHostname,
-  raceAbort,
-  requestPinned,
-  resolvePinnedAddress,
-} from "@arnilo/prism";
-// Lifted to the core pinnedFetch primitive in 0.2.1 (task 4); kept as re-exports
-// so existing importers of these MCP transport helpers keep working.
-export { isLoopbackHostname };

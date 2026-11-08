@@ -4,9 +4,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { type JsonSchema, validateJsonSchema } from "@arnilo/prism";
 import { memoryObservationalConfigSchema } from "@arnilo/prism-memory-observational";
-import { memoryFabricConfigSchema } from "../config.js";
+import { EXPERIMENTAL_CONFIG_FIELDS, memoryFabricConfigSchema } from "../config.js";
 
 type Tier = "contract" | "tuning";
+/** The README table adds `experimental`, which the kernel schema vocabulary does not have: those fields are `tuning` in the schema. */
+type DocumentedTier = Tier | "experimental";
 
 /** Every property path in the schema, in walk order, with the node that must carry the tier. */
 function fields(schema: JsonSchema, path = ""): Array<[string, JsonSchema]> {
@@ -24,15 +26,15 @@ function tierOf(node: JsonSchema): Tier | undefined {
 }
 
 /** The `### Config stability` table: ``| `field.path` | tier |``. */
-function readmeTiers(readme: string): Map<string, Tier> {
+function readmeTiers(readme: string): Map<string, DocumentedTier> {
   const start = readme.indexOf("### Config stability");
   assert.notEqual(start, -1, "the README has a Config stability section");
   const end = readme.indexOf("\n### ", start + 1);
   const section = readme.slice(start, end === -1 ? undefined : end);
-  const tiers = new Map<string, Tier>();
+  const tiers = new Map<string, DocumentedTier>();
   for (const line of section.split("\n")) {
-    const match = /^\| `([^`]+)` \| (contract|tuning) \|$/.exec(line);
-    if (match) tiers.set(match[1] as string, match[2] as Tier);
+    const match = /^\| `([^`]+)` \| (contract|tuning|experimental) \|$/.exec(line);
+    if (match) tiers.set(match[1] as string, match[2] as DocumentedTier);
   }
   return tiers;
 }
@@ -67,11 +69,51 @@ describe("config stability tiers", () => {
     });
 
     it(`stability_tiers_match_readme_table${suffix}`, () => {
-      const schemaTiers = new Map(fields(schema).map(([path, node]) => [path, tierOf(node)]));
+      const schemaTiers = new Map<string, DocumentedTier | undefined>(
+        fields(schema).map(([path, node]) => [
+          path,
+          name === "fabric" && EXPERIMENTAL_CONFIG_FIELDS.has(path) ? "experimental" : tierOf(node),
+        ]),
+      );
       const documented = readmeTiers(readme(readmePath));
       assert.deepEqual([...documented.entries()].sort(), [...schemaTiers.entries()].sort());
     });
   }
+
+  // Plan 210 Task 7: the five owner holds. A feature here has no measured benefit and no shown-harmless removal, so it
+  // is outside the API level 1 promise. The README lists each under "May change in a minor version".
+  it("experimental_tier_enforced_by_stability_test", () => {
+    const experimentalFeatures = [
+      "Multi-query recall",
+      "`unmatchedTerms` in recall results",
+      "Read-time state grouping",
+      "The memory directory",
+      "Agentic lexical navigation",
+    ];
+    const text = readme("fabric/README.md");
+    const start = text.indexOf("### May change in a minor version");
+    const section = text.slice(start, text.indexOf("\n### ", start + 1));
+    for (const feature of experimentalFeatures) assert.ok(section.includes(feature), `README lists ${feature} as experimental`);
+    // Every config field of an experimental feature is `tuning` in the schema, `experimental` in the table.
+    const tiers = new Map(fields(memoryFabricConfigSchema).map(([path, node]) => [path, tierOf(node)]));
+    const documented = readmeTiers(text);
+    assert.deepEqual([...EXPERIMENTAL_CONFIG_FIELDS].sort(), [
+      "directory",
+      "directory.maxFiles",
+      "directory.maxTokens",
+      "directory.maxTopics",
+      "directory.stopWords",
+    ]);
+    for (const field of EXPERIMENTAL_CONFIG_FIELDS) {
+      assert.equal(tiers.get(field), "tuning", `${field} is tuning in the schema`);
+      assert.equal(documented.get(field), "experimental", `${field} is experimental in the README table`);
+    }
+    // No other documented field is experimental: a hold without a config field adds none.
+    const experimental = [...documented].filter(([, tier]) => tier === "experimental").map(([path]) => path);
+    assert.deepEqual(experimental.sort(), [...EXPERIMENTAL_CONFIG_FIELDS].sort());
+    // Each held feature's own README section carries the marker.
+    assert.equal((text.match(/^> \*\*Experimental\.\*\*/gm) ?? []).length, experimentalFeatures.length);
+  });
 
   it("stability_annotation_does_not_change_validation", () => {
     const samples: unknown[] = [

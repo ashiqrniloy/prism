@@ -2,7 +2,7 @@
  * Writing accepted consolidation notes (plan 188.3 Task 4).
  *
  * One write path for tools and promotion: an accepted note becomes a candidate through the same
- * `remember` the agent uses, so write-time consolidation, the optional decider, and the
+ * `remember` the agent uses, so write-time consolidation and the
  * never-demote-a-verified-note rule all apply. This module adds only what a session pass knows that
  * a tool write does not: where the note came from, what it contradicts, and whether it replaces an
  * existing note in place.
@@ -22,7 +22,7 @@ import {
   parseMemoryNoteMetadata,
 } from "../types.js";
 import type { ExtractedNote } from "./extract.js";
-import { EXTRACT_SUBJECT_NEW, isStorableExtractedKind } from "./prompts.js";
+import { isStorableExtractedKind } from "./prompts.js";
 import type { PromotionScore, PromotionSignals } from "./score.js";
 
 /** An active note the pass recalled: enough to route a contradiction and reconsolidate in place. */
@@ -160,14 +160,6 @@ export async function writeConsolidationNotes(input: WriteConsolidationNotesInpu
       continue;
     }
 
-    // The extractor's subject was validated against the subjects shown for the note's own scope. A note the
-    // pass lands in another scope (an inactive `user` scope falls back to `project`) must not carry it there,
-    // and `new` is a request for the concept pass, not a slug.
-    const ontologyScope = (scope: MemoryNoteScope): MemoryNoteScope => (scope === "path" ? "project" : scope);
-    const subject =
-      note.subject !== undefined && note.subject !== EXTRACT_SUBJECT_NEW && ontologyScope(note.scope) === ontologyScope(level)
-        ? note.subject
-        : undefined;
     const keywords = [...new Set([...note.keywords, ...note.aliases])];
     // The exchanges behind the note are its verbatim evidence: a fact is the key, the exchange is the
     // detail. Only an exchange the note's own scope can read is linked.
@@ -205,7 +197,6 @@ export async function writeConsolidationNotes(input: WriteConsolidationNotesInpu
         content: note.text,
         scope: level,
         ...(exceptionKey === undefined ? {} : { key: exceptionKey }),
-        ...(subject === undefined ? {} : { subject }),
         ...(note.tRef === undefined ? {} : { tRef: note.tRef }),
         ...(note.appliesTo === undefined ? {} : { appliesTo: note.appliesTo }),
         ...(keywords.length === 0 ? {} : { keywords }),

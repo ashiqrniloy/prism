@@ -53,6 +53,11 @@ A package without `host-ui` is refused like any other kind. ACP, the MCP server,
 | `dismissed` | The host showed it and the person declined. Treat it as a deny. |
 | `unavailable` | No UI is attached, the surface is not implemented, or the run is non-interactive. **Fail closed.** |
 
+The kernel validates every answer before a package or its own approval path sees it: an unknown `status`, or an
+`answered` value of the wrong shape for its kind (a non-boolean `confirm`, a `terminal` answer without an integer
+`exitCode`), becomes `unavailable`. A host answers a request kind it does not implement with `unavailable`; later
+minors may add kinds ([compatibility.md](compatibility.md)).
+
 ### Secrets
 
 A `secret` request names where the value goes, not the value itself:

@@ -185,7 +185,7 @@ There is no runtime import for this page. The migrations below use these surface
 | `RunLedger` / `RunLedgerRecord` | `@arnilo/prism` | Durable run/event/tool-call/usage ledger attached via `AgentConfig.runLedger` / `RunOptions.runLedger`. |
 | `SessionAppendOptions` / `SessionAppendConflictError` / `SessionBranchHandle` | `@arnilo/prism` | Atomic append, retry dedup, durable branch handles. |
 | `AgentDefinition.tools` / `skills` | `@arnilo/prism` | Named, fail-closed capability activation (Phase 38). |
-| `activateAllCapabilities` | `@arnilo/prism` | Temporary all-tools/all-skills compatibility opt-in while migrating. |
+| `activateAllCapabilities` | — | Removed in 0.13.0 (plan 215 Task 27). List `tools` / `skills` by name. |
 
 ## Outputs / response / events
 
@@ -313,16 +313,7 @@ resolveAgentDefinition(
 );
 ```
 
-Temporary compatibility shim (use only while migrating old configs):
-
-```ts
-resolveAgentDefinition(
-  { name: "legacy", model: "openai/gpt-4o" },
-  { ...context, activateAllCapabilities: true },
-);
-```
-
-`activateAllCapabilities: true` intentionally scans/list-activates every in-scope tool/skill. New configs should list names and use strict contribution registries so a third-party package cannot silently shadow a capability name:
+List capability names explicitly (the 0.12 `activateAllCapabilities` opt-in is removed in 0.13.0) and use strict contribution registries so a third-party package cannot silently shadow a capability name:
 
 ```ts
 import { createContributionRegistries } from "@arnilo/prism";
@@ -347,7 +338,6 @@ Runtime skill activation remains explicit: `RunOptions.activeSkills` narrows per
 - **Never store provider credentials or secrets in the persistence contract.** `ProductionPersistenceStore`, `RunLedger`, `AgentEventRecord`, `ToolCallRecord`, `UsageRecord`, and `AgentDefinitionRecord` never require API keys, resolvers, or provider instances. Redact `SessionEntry` / event / tool-call / usage payloads before storage; the runtime redacts `AgentEvent`s via `redactAgentEvent` and ledger records via `redactRunLedgerRecord` before calling the adapter.
 - **JSONL is a development-only adapter.** No cross-process lock, no durable idempotency table, no tenant isolation, no retention enforcement, no migrations. Do not use it as a production multi-writer store.
 - **Avoid full-session scans in production.** Implement `readBranchPath(query)` with a recursive CTE / ancestor query and cursor-paginate `query*` from indexed columns. `list(sessionId)` + in-memory parent walk is the development fallback only.
-- **`activateAllCapabilities` widens blast radius.** It activates every in-scope tool/skill, so prefer named lists. Strict duplicate mode catches capability-name collisions early.
 - **`toolNames` enforcement is fail-closed.** A skill demanding an inactive tool throws at activation, before any provider turn — for both the old and new migration paths.
 
 ## Related APIs
@@ -356,7 +346,7 @@ Runtime skill activation remains explicit: `RunOptions.activeSkills` narrows per
 - [Evaluations](../packages/hosts/evals/README.md): optional `@arnilo/prism-evals` scorers/datasets/experiments over `AgentRunResult`.
 - [Provider kit](provider-kit.md): shared foundation for building model provider packages on `@arnilo/prism/provider-kit`.
 - [Working and semantic memory](../packages/memory/fabric/README.md): optional `@arnilo/prism-memory` working/semantic recall primitives.
-- [Retrieval-augmented generation](../packages/memory/rag/README.md): optional text/Markdown chunk, index, retrieval, and citation helpers.
+- [Retrieval-augmented generation](../packages/knowledge/rag/README.md): optional text/Markdown chunk, index, retrieval, and citation helpers.
 - [Web-standard server handler](host.md): optional authorized agent/workflow HTTP routes.
 - [Supervisor delegation](../packages/integrations/delegate/README.md) and [A2A interoperability](../packages/hosts/ag-ui/README.md): optional install only; core agent/workflow behavior is unchanged. Child factories now receive package-derived memory IDs and narrowing permission, while remote endpoints require exact HTTPS origin allow-lists.
 - [MCP client/server exposure](../packages/integrations/mcp/README.md): selected MCP tools/commands and bounded Web transport.

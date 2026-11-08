@@ -1,4 +1,4 @@
-import type { CredentialValueSource, JsonObject, JsonValue, SsrfPolicy, ToolArgumentValidator, ToolDefinition, Usage } from "@arnilo/prism";
+import type { JsonObject, JsonValue, SsrfPolicy, ToolArgumentValidator, ToolDefinition, Usage } from "@arnilo/prism";
 
 import type { DomainPolicy } from "./domains.js";
 
@@ -83,7 +83,8 @@ export interface WebLimits {
   readonly timeoutMs?: number;
 }
 export type ResolvedWebLimits = Required<WebLimits>;
-export type WebCredentialSource = CredentialValueSource;
+/** A lazily resolved key (the kit's `SecretSource` shape); the package builds it from an `env:`/`keyring:` ref. A literal string does not type-check. */
+export type WebCredentialSource = () => Promise<string | undefined>;
 export interface WebAdapterOptions {
   readonly credentials: WebCredentialSource;
   readonly allowedOrigins?: readonly string[];

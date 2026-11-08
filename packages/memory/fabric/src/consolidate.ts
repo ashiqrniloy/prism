@@ -15,7 +15,7 @@ export interface MemoryConsolidationCandidate {
 }
 
 export type MemoryConsolidationPlan =
-  | { readonly action: "insert"; readonly similar?: string }
+  | { readonly action: "insert" }
   | { readonly action: "update"; readonly id: string };
 
 /** Token comparison so punctuation, case, and spacing rewording is not a contradiction. */
@@ -34,8 +34,8 @@ export function unionStrings(left: readonly string[] | undefined, right: readonl
 }
 
 /**
- * Deterministic default consolidation: an existing same-kind note above the threshold is either
- * rewritten in place (same note) or retained with a similar link. No model, no tools.
+ * Deterministic default consolidation: an existing same-kind note above the threshold is rewritten
+ * in place when it is the same note, and otherwise both notes are kept. No model, no tools.
  */
 export function planMemoryConsolidation(input: {
   readonly kind: MemoryNoteKind;
@@ -52,7 +52,7 @@ export function planMemoryConsolidation(input: {
     return { action: "update", id: candidate.id };
   }
   if (normalizeNoteText(candidate.text) === normalizeNoteText(input.text)) return { action: "update", id: candidate.id };
-  return { action: "insert", similar: candidate.id };
+  return { action: "insert" };
 }
 
 /**

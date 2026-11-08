@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import {
   definePackage,
   type JsonObject,
@@ -7,7 +8,7 @@ import {
   type ProviderRequest,
 } from "@arnilo/prism";
 import { providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism/testing";
-import { type FabricOntologyPort, MEMORY_FABRIC_SERVICE, parseConceptBody } from "@arnilo/prism-memory-fabric";
+import { createMarkdownWikiStore, parseConceptBody } from "@arnilo/prism-wiki";
 import type { HostConfig } from "../host/config.js";
 import { createResearchWorker } from "../host/research.js";
 import { runTurn, textOf } from "./conversational-memory.js";
@@ -21,22 +22,24 @@ const FACTS = [
 export interface OntologyMemoryResult {
   /** Concepts the config-selected wiki package wrote in its pass. */
   readonly concepts: number;
-  /** The `memory.recall` output of the fourth session. */
+  /** The `wiki.search` output of the fourth session. */
   readonly recalled: string;
   /** The concept's claims after the pass, and after `memory.forget` removed one cited note. */
   readonly claims: readonly string[];
   readonly claimsAfterForget: readonly string[];
 }
 
-interface RecallHit {
+interface SearchHit {
   readonly id: string;
-  readonly kind: string;
+  readonly subject: string;
+  readonly cited: readonly string[];
 }
 
 /**
- * Three sessions leave fact notes; one `wiki:consolidate` writes a cited concept on the config-selected
- * `ontologyModel`; a fourth session's `memory.recall` returns the concept first; `memory.forget` on a cited note
- * removes its claim. The models are scripted in one inline provider (`mock/m` runs the turns, `mock/curator` the pass).
+ * Three sessions leave fact notes in memory; one `wiki:consolidate` writes a cited concept, in the wiki's own store, on
+ * the config-selected `ontologyModel`; a fourth session's `wiki.search` returns the concept with the ids its claims
+ * cite; `memory.forget` on a cited note removes its claim (the wiki reads the deletion feed). The models are scripted
+ * in one inline provider (`mock/m` runs the turns, `mock/curator` the pass).
  */
 export async function ontologyMemory(config: HostConfig): Promise<OntologyMemoryResult> {
   const script: ProviderEvent[][] = [];
@@ -67,16 +70,14 @@ export async function ontologyMemory(config: HostConfig): Promise<OntologyMemory
       yield* step;
     },
   };
-  let port: () => FabricOntologyPort | undefined = () => undefined;
   const wiring: readonly PackageInstance[] = [
     definePackage({
       name: "@prism-agent/ontology-scenario",
       version: "0.0.0",
-      description: "The scenario's scripted provider and a read of the fabric's ontology port.",
+      description: "The scenario's scripted provider.",
       requires: { api: 1 },
       setup(prism) {
         prism.providers.register(provider);
-        port = () => prism.services.consume<FabricOntologyPort>(MEMORY_FABRIC_SERVICE);
       },
     })(),
   ];
@@ -84,12 +85,11 @@ export async function ontologyMemory(config: HostConfig): Promise<OntologyMemory
     { ...config, memory: "conversational", ontology: true, ontologyModel: "mock/curator" },
     { packages: wiring },
   );
+  // The wiki's own store on disk, read as a person would; `wiki:status` first lets the wiki catch up with memory.
   const claimsOf = async (): Promise<string[]> => {
-    const ontology = port();
-    const [row] = (await ontology?.subjects("project")) ?? [];
-    if (ontology === undefined || row === undefined) return [];
-    const [concept] = await ontology.read("project", [row.conceptId]);
-    return parseConceptBody(concept?.text ?? "", { allowUncited: true }).claims.map((claim) => claim.text);
+    await agent.commands.run("wiki:status", {});
+    const [concept] = await createMarkdownWikiStore({ root: join(config.workspace, ".prism", "wiki") }).concepts("project");
+    return concept === undefined ? [] : parseConceptBody(concept.body, { allowUncited: true }).claims.map((claim) => claim.text);
   };
   try {
     for (const [index, text] of FACTS.entries()) {
@@ -110,15 +110,15 @@ export async function ontologyMemory(config: HostConfig): Promise<OntologyMemory
     const claims = await claimsOf();
 
     script.push(
-      [providerToolCall(toolCallContent("recall-1", "memory.recall", { query: "payments service retries" })), providerDone()],
+      [providerToolCall(toolCallContent("search-1", "wiki.search", { query: "payments service retries" })), providerDone()],
       (() => [providerTextDelta("Retries use exponential backoff."), providerDone()])(),
     );
     const fourth = await agent.session({ create: true });
     const events = await runTurn(fourth, "What do we know about the payments service?");
-    const recalled = events.find((event) => event.type === "tool.completed" && event.name === "memory.recall");
-    if (recalled?.type !== "tool.completed") throw new Error("the scripted memory.recall did not run");
-    const hits = (recalled.result.value as { hits?: readonly RecallHit[] } | undefined)?.hits ?? [];
-    const cited = ((hits.find((hit) => hit.kind === "concept") as { sources?: readonly string[] } | undefined)?.sources ?? [])[0];
+    const recalled = events.find((event) => event.type === "tool.completed" && event.name === "wiki.search");
+    if (recalled?.type !== "tool.completed") throw new Error("the scripted wiki.search did not run");
+    const hits = (recalled.result.value as { concepts?: readonly SearchHit[] } | undefined)?.concepts ?? [];
+    const cited = hits[0]?.cited[0];
     if (cited === undefined) throw new Error("the concept hit names no cited note");
 
     script.push(

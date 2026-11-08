@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
-import { chunkText, indexChunks, retrieveContext } from "@arnilo/prism-memory-rag";
+import { chunkText, indexChunks, retrieveContext } from "@arnilo/prism-rag";
 import { createInMemoryTelemetry } from "../instrumentation.js";
 import { createRagTelemetry } from "../rag-telemetry.js";
 

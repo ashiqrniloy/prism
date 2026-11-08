@@ -1,14 +1,16 @@
 import { randomUUID } from "node:crypto";
-import { type ArtifactBodyStore, type JsonObject } from "@arnilo/prism";
+import { type JsonObject } from "@arnilo/prism";
+import { type ArtifactBodyStore } from "@arnilo/prism/artifacts";
 import type { CheckpointStore } from "@arnilo/prism-workflows";
 import { createCheckpointWorkDraftStore, createMemoryWorkDraftStore } from "./drafts.js";
 import { WorkToolError } from "./errors.js";
 import { assertContentHash, readUploadBytes } from "./file-bytes.js";
 import { DEFAULT_GWS_OPS, googleWorkspaceUpdate } from "./google-workspace.js";
 import { createWorkHttpClient } from "./http.js";
+import { type AgentIdentity, assertIdentityActive } from "./identity.js";
 import { resolveWorkLimits } from "./limits.js";
 import type { GoogleWorkspaceAdapter, GoogleWorkspaceOp, WorkDraftStore, WorkLimits, WorkTokenProvider } from "./types.js";
-import { type AgentIdentity, assertIdentityActive } from "./identity.js";
+
 const GOOGLE_API_ORIGINS = [
   "https://docs.googleapis.com",
   "https://gmail.googleapis.com",

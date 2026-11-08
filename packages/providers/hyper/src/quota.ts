@@ -1,9 +1,9 @@
-import { type CredentialValueSource, redactSecrets, resolveCredentialValue, trimTrailingSlashes } from "@arnilo/prism";
-import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/provider-kit";
+import { redactSecrets, trimTrailingSlashes } from "@arnilo/prism";
+import { readBoundedResponseJson, readBoundedResponseText, type SecretSource } from "@arnilo/prism/provider-kit";
 import { HYPER_DEFAULT_BASE_URL } from "./models.js";
 
 export interface GetHyperCreditsOptions {
-  readonly apiKey: CredentialValueSource;
+  readonly apiKey: SecretSource;
   readonly fetch?: typeof fetch;
   /** Defaults to official `https://hyper.charm.land/v1`. */
   readonly baseUrl?: string;
@@ -26,7 +26,7 @@ export interface HyperCreditsBalance {
  */
 export async function getHyperCredits(options: GetHyperCreditsOptions): Promise<HyperCreditsBalance> {
   const baseUrl = trimTrailingSlashes(options.baseUrl ?? HYPER_DEFAULT_BASE_URL);
-  const token = await resolveCredentialValue(options.apiKey, { provider: "hyper", name: "apiKey" });
+  const token = await options.apiKey?.();
   if (!token) throw new Error("Hyper credits require an API key");
   const response = await (options.fetch ?? fetch)(`${baseUrl}/credits`, {
     method: "GET",

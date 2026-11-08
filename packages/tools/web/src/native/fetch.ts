@@ -8,15 +8,8 @@
  * opened. HTML becomes Markdown through `./convert.ts` (loaded on the first page only); text, JSON,
  * and XML pass through.
  */
-import {
-  assertSsrfAllowedUrl,
-  defaultResolver,
-  MediaContentError,
-  type MediaHostnameResolver,
-  requestPinned,
-  resolvePinnedAddress,
-  type SsrfPolicy,
-} from "@arnilo/prism";
+import { assertSsrfAllowedUrl, MediaContentError, type MediaHostnameResolver, type SsrfPolicy } from "@arnilo/prism";
+import { defaultResolver, requestPinned, resolvePinnedAddress } from "@arnilo/prism/net";
 import type { DomainPolicy } from "../domains.js";
 import { resolveWebLimits } from "../limits.js";
 import { citation } from "../normalize.js";
@@ -164,8 +157,7 @@ async function follow(
 
 /** https only (no loopback option here), no embedded credentials, and a public address. */
 function assertPublicTarget(url: URL, ssrf: SsrfPolicy | undefined): void {
-  if (url.protocol !== "https:")
-    throw new WebToolError("ERR_PRISM_WEB_REQUEST", `native fetch requires https: (got ${url.protocol})`);
+  if (url.protocol !== "https:") throw new WebToolError("ERR_PRISM_WEB_REQUEST", `native fetch requires https: (got ${url.protocol})`);
   if (url.username || url.password) throw new WebToolError("ERR_PRISM_WEB_INPUT", "url must not embed credentials");
   url.hash = "";
   try {

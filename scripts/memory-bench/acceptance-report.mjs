@@ -546,7 +546,8 @@ async function main1888() {
 }
 
 if (import.meta.main) {
-  if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "210") await main210();
+  if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "memory-model") await mainMemoryModel();
+  else if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "210") await main210();
   else if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "209") await main209();
   else if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "208") await main208();
   else if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "188.8") await main1888();
@@ -976,6 +977,55 @@ async function main210() {
           verdicts: Object.fromEntries(report.verdicts.filter((row) => row.measured).map((row) => [row.feature, row.verdict])),
           predictions: Object.fromEntries(report.predictions.map((row) => [`${row.feature}/${row.arm}`, row.outcome])),
           f4: report.f4.disposition,
+        },
+        null,
+        2,
+      ),
+    );
+  } catch (error) {
+    console.error(`${error.name}: ${error.message}`);
+    process.exitCode = 1;
+  }
+}
+
+/**
+ * Plan 216 Task 2: memory-model gate verdicts (M-1 ... M-5, M-T, A). Every verdict comes from memoryModelVerdict()
+ * over memory-model-criteria.json; the evidence file must pin the frozen hash. No evidence file means `pending`.
+ */
+export async function memoryModelReport({ gate, partition, evidencePath, write = false } = {}) {
+  const { existsSync } = await import("node:fs");
+  const { mkdir } = await import("node:fs/promises");
+  const { memoryModelGateVerdict } = await import("./robustness.mjs");
+  if (!gate) throw new Error("MemoryBenchArguments: --plan memory-model needs --gate <M-1|M-2|M-3|M-T|M-4|M-5|A>");
+  const directory = new URL(`../../docs/_evidence/memory-bench/memory-model/${gate}/`, import.meta.url);
+  const path = evidencePath ?? new URL("evidence.json", directory);
+  if (evidencePath && !existsSync(path)) throw new Error(`MemoryBenchArguments: evidence file ${evidencePath} does not exist`);
+  const evidence = existsSync(path) ? JSON.parse(await readFile(path, "utf8")) : null;
+  const verdict = memoryModelGateVerdict(gate, evidence, { partition });
+  if (write) {
+    await mkdir(directory, { recursive: true });
+    await writeFile(new URL("verdicts.json", directory), `${JSON.stringify(verdict, null, 2)}\n`);
+  }
+  return verdict;
+}
+
+async function mainMemoryModel() {
+  const flag = (name) => (process.argv.includes(name) ? process.argv[process.argv.indexOf(name) + 1] : undefined);
+  try {
+    const report = await memoryModelReport({
+      gate: flag("--gate"),
+      partition: flag("--partition"),
+      evidencePath: flag("--evidence"),
+      write: process.argv.includes("--write"),
+    });
+    console.log(
+      JSON.stringify(
+        {
+          gate: report.gate,
+          plan: report.plan,
+          partition: report.partition,
+          status: report.status,
+          rows: Object.fromEntries(report.rows.map((row) => [row.row, row.status])),
         },
         null,
         2,

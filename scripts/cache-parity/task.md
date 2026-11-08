@@ -1,0 +1,1 @@
+The tests in this repository fail: one test in `test/pricing.test.js` does not pass. Make it pass without changing any file under `test/`. Run the tests with `bun test`, and stop as soon as they are all green.

@@ -1,9 +1,10 @@
-import type { CredentialValueSource, ModelProvider, ProviderRequest } from "@arnilo/prism";
+import type { ModelProvider, ProviderRequest } from "@arnilo/prism";
 import {
   createRoutedProvider,
   OPENAI_RESPONSES_UNSUPPORTED_FIELDS,
   type RoutedProviderRoute,
   sanitizeCacheKey,
+  type SecretSource,
 } from "@arnilo/prism/provider-kit";
 import { openAICodexHttpError } from "./errors.js";
 import { OPENAI_CODEX_DEFAULT_BASE_URL, OPENAI_CODEX_ROUTE } from "./models.js";
@@ -45,7 +46,7 @@ export interface OpenAICodexProviderOptions {
   /** Defaults to {@link OPENAI_CODEX_DEFAULT_BASE_URL}. */
   readonly baseUrl?: string;
   /** The grant's access token, refreshed by the caller's source. */
-  readonly apiKey?: CredentialValueSource;
+  readonly apiKey?: SecretSource;
   /**
    * A writable `keyring:` ref holding the grant. With {@link credentialSource} the provider refreshes
    * and persists it itself, so a caller outside a package setup (a probe, a script) needs no host.

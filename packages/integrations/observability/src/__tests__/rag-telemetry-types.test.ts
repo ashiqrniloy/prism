@@ -3,7 +3,7 @@ import type {
   RagTelemetry as MemoryRagTelemetry,
   RagTelemetryAttributeValue as MemoryRagAttributeValue,
   RagTelemetrySpan as MemoryRagSpan,
-} from "@arnilo/prism-memory-rag";
+} from "@arnilo/prism-rag";
 import type { RagTelemetry, RagTelemetryAttributeValue, RagTelemetrySpan } from "../rag-telemetry.js";
 
 // Compile-time drift check in both directions: if memory-rag's seam changes, `bun run typecheck` fails here,

@@ -1,47 +1,38 @@
-AGENT_TOOL_NAMES	export declare const AGENT_TOOL_NAMES: Readonly<Record<string, string>>
-DEFAULT_CHILD_INSTRUCTIONS	export declare const DEFAULT_CHILD_INSTRUCTIONS = "Finish with a concise report for the parent: what you did, what you found, files changed, and open issues. The parent sees only this report."
-DEFAULT_CHILD_LIMITS	export declare const DEFAULT_CHILD_LIMITS:
-DEFAULT_CONTEXT_MAX_CHARS	export declare const DEFAULT_CONTEXT_MAX_CHARS = 24000
-DEFAULT_MAX_CONCURRENT	export declare const DEFAULT_MAX_CONCURRENT = 4
-DEFAULT_RESULT_MAX_CHARS	export declare const DEFAULT_RESULT_MAX_CHARS = 12000
-DELEGATE_PACKAGE	export declare const DELEGATE_PACKAGE = "@arnilo/prism-delegate"
-DELEGATE_SERVICE	export declare const DELEGATE_SERVICE = "delegate"
-DelegateError	export declare class DelegateError extends Error
-DelegateStepError	export declare class DelegateStepError extends Error
-HARD_CHILD_LIMITS	export declare const HARD_CHILD_LIMITS:
-HARD_CONTEXT_LAST_TURNS	export declare const HARD_CONTEXT_LAST_TURNS = 50
-HARD_CONTEXT_MAX_CHARS	export declare const HARD_CONTEXT_MAX_CHARS = 120000
-HARD_MAX_CONCURRENT	export declare const HARD_MAX_CONCURRENT = 32
-HARD_MAX_RESULT_MAX_CHARS	export declare const HARD_MAX_RESULT_MAX_CHARS = 64000
-HARD_RETAINED_RESULT_CHARS	export declare const HARD_RETAINED_RESULT_CHARS = 256000
-MAX_DELEGATE_ID_BYTES	export declare const MAX_DELEGATE_ID_BYTES = 256
-MAX_DELEGATE_STEP_BYTES	export declare const MAX_DELEGATE_STEP_BYTES: number
-SUMMARY_INSTRUCTION	export declare const SUMMARY_INSTRUCTION = "Summarize this conversation for a sub-agent: the goal, decisions, facts established, files touched, and open problems. Under 4,000 characters."
-buildSeededContext	export declare function buildSeededContext(input:
-createDelegateRuntime	export declare function createDelegateRuntime(prism: PackageAPI<DelegateConfig>, resolved?: Readonly<Record<string, DelegateChildConfig>>):
-createDelegateService	export declare function createDelegateService(runtime: DelegateRuntime): DelegateService
-createDelegateTools	export declare function createDelegateTools(runtime: DelegateRuntime): readonly ToolDefinition[]
-default	export default
-delegateConfigSchema	export declare const delegateConfigSchema:
-delegateStepData	export declare function delegateStepData(input: DelegateStepInput): JsonValue
-isolationProbe	export declare function isolationProbe(capture:
-mergeMessage	export declare function mergeMessage(child: string, input: string): string
-resolveAgentChildren	export declare function resolveAgentChildren(config: DelegateConfig): ResolvedAgentChildren
-resolveChildContext	export declare function resolveChildContext(config: DelegateContextConfig | undefined): ResolvedContext
-resolveChildLimits	export declare function resolveChildLimits(requested?: DelegateChildLimits): RunLimits
-resolveResultMaxChars	export declare function resolveResultMaxChars(requested: number | undefined): number
-type AgentFileNote	export { AGENT_TOOL_NAMES, type AgentFileNote, resolveAgentChildren } from "./agent-files.js"
-type ContextUsed	export { type ContextUsed, DEFAULT_CONTEXT_MAX_CHARS, HARD_CONTEXT_MAX_CHARS, HARD_CONTEXT_LAST_TURNS, resolveChildContext, SUMMARY_INSTRUCTION } from "./context.js"
-type DelegateChildConfig	export { type DelegateChildConfig, type DelegateChildLimits, type DelegateConfig, type DelegateReport, delegateConfigSchema } from "./config.js"
-type DelegateChildLimits	export { type DelegateChildConfig, type DelegateChildLimits, type DelegateConfig, type DelegateReport, delegateConfigSchema } from "./config.js"
-type DelegateConfig	export { type DelegateChildConfig, type DelegateChildLimits, type DelegateConfig, type DelegateReport, delegateConfigSchema } from "./config.js"
-type DelegateContextConfig	export { type DelegateContextConfig } from "./config.js"
-type DelegateReport	export { type DelegateChildConfig, type DelegateChildLimits, type DelegateConfig, type DelegateReport, delegateConfigSchema } from "./config.js"
-type DelegateService	export { DELEGATE_SERVICE, createDelegateService, type DelegateService } from "./service.js"
-type DelegateStepInput	export { type DelegateStepInput, DelegateStepError, type DelegateStepPhase, delegateStepData } from "./step.js"
-type DelegateStepPhase	export { type DelegateStepInput, DelegateStepError, type DelegateStepPhase, delegateStepData } from "./step.js"
-type DelegationMerge	export { type DelegationMerge, type IsolationWorkspace, type IsolatedWorktree, mergeMessage } from "./isolation.js"
-type DelegationOutcome	export { DEFAULT_CHILD_INSTRUCTIONS, DelegateError, type DelegationOutcome, type DelegationStatus } from "./runtime.js"
-type DelegationStatus	export { DEFAULT_CHILD_INSTRUCTIONS, DelegateError, type DelegationOutcome, type DelegationStatus } from "./runtime.js"
-type IsolatedWorktree	export { type DelegationMerge, type IsolationWorkspace, type IsolatedWorktree, mergeMessage } from "./isolation.js"
-type IsolationWorkspace	export { type DelegationMerge, type IsolationWorkspace, type IsolatedWorktree, mergeMessage } from "./isolation.js"
+. AGENT_TOOL_NAMES	const AGENT_TOOL_NAMES: Readonly<Record<string, string>>
+. AgentFileNote	interface AgentFileNote { readonly level: "info" | "warn"; readonly text: string; }
+. ContextUsed	interface ContextUsed { readonly mode: "lastTurns" | "summary"; readonly omittedTurns: number; readonly truncated: boolean; readonly turns: number; }
+. DEFAULT_CHILD_INSTRUCTIONS	const DEFAULT_CHILD_INSTRUCTIONS = "Finish with a concise report for the parent: what you did, what you found, files changed, and open issues. The parent sees only this report."
+. DEFAULT_CHILD_LIMITS	const DEFAULT_CHILD_LIMITS: { readonly maxTurns: 50; readonly maxToolCalls: 200; readonly maxTotalTokens: 500000; readonly maxWallTimeMs: number; }
+. DEFAULT_CONTEXT_MAX_CHARS	const DEFAULT_CONTEXT_MAX_CHARS = 24000
+. DEFAULT_RESULT_MAX_CHARS	const DEFAULT_RESULT_MAX_CHARS = 12000
+. DELEGATE_SERVICE	const DELEGATE_SERVICE = "delegate"
+. DelegateChildConfig	interface DelegateChildConfig { readonly context?: DelegateContextConfig; readonly description?: string; readonly hidden?: boolean; readonly inherit: readonly string[]; readonly instructions?: string; readonly isolation?: "none" | "worktree"; readonly limits?: DelegateChildLimits; readonly model?: ModelRef; readonly report?: DelegateReport; readonly resultMaxChars?: number; readonly skills?: "inherit" | "none" | readonly string[]; readonly tools?: { readonly only?: readonly string[]; }; }
+. DelegateChildLimits	interface DelegateChildLimits { readonly maxToolCalls?: number; readonly maxTotalTokens?: number; readonly maxTurns?: number; readonly maxWallTimeMs?: number; }
+. DelegateConfig	interface DelegateConfig { readonly agentsRoot?: string; readonly children: Readonly<Record<string, DelegateChildConfig>>; readonly defaultInherit?: readonly string[]; readonly maxConcurrent?: number; readonly maxDepth?: number; readonly ownership?: OwnershipScope; }
+. DelegateContextConfig	type DelegateContextConfig = "none" | "summary" | { readonly lastTurns: number; readonly maxChars?: number; }
+. DelegateError	class DelegateError extends Error { constructor(message: string); readonly code = "ERR_PRISM_DELEGATE"; }
+. DelegateReport	type DelegateReport = "on-complete" | "milestones" | "stream"
+. DelegateService	interface DelegateService { start(input: { readonly child: string; readonly input: string; readonly mode: "sync" | "async"; readonly session: SessionContext; readonly principal?: Principal; readonly signal?: AbortSignal; }): Promise<DelegationOutcome | { readonly delegationId: string; readonly status: "running"; readonly child: string; }>; wait(delegationId: string, session: SessionContext, signal?: AbortSignal): Promise<DelegationOutcome>; }
+. DelegateStepError	class DelegateStepError extends Error { constructor(field: string); readonly code = "ERR_PRISM_DELEGATE_STEP"; }
+. DelegateStepInput	interface DelegateStepInput { readonly origin: EventOrigin; readonly phase: DelegateStepPhase; readonly status?: string; readonly totalTokens?: number; readonly turn?: number; }
+. DelegateStepPhase	type DelegateStepPhase = "started" | "milestone" | "finished" | "error"
+. DelegationMerge	type DelegationMerge = { readonly status: "merged"; readonly commit: string; readonly files: readonly string[]; } | { readonly status: "conflict"; readonly files: readonly string[]; readonly branch: string; } | { readonly status: "refused"; readonly reason: string; readonly branch: string; } | { readonly status: "skipped"; readonly branch: string; }
+. DelegationOutcome	interface DelegationOutcome { readonly child: string; readonly context?: ContextUsed; readonly delegationId: string; readonly error?: string; readonly merge?: DelegationMerge; readonly pending?: readonly PendingDecision[]; readonly status: DelegationStatus; readonly text: string; readonly turns: number; readonly usage?: Usage; }
+. DelegationStatus	type DelegationStatus = RunResult["status"] | "cancelled" | "running"
+. HARD_CHILD_LIMITS	const HARD_CHILD_LIMITS: { readonly maxTurns: 200; readonly maxToolCalls: 1000; readonly maxTotalTokens: 2000000; readonly maxWallTimeMs: number; }
+. HARD_CONTEXT_LAST_TURNS	const HARD_CONTEXT_LAST_TURNS = 50
+. HARD_CONTEXT_MAX_CHARS	const HARD_CONTEXT_MAX_CHARS = 120000
+. HARD_MAX_RESULT_MAX_CHARS	const HARD_MAX_RESULT_MAX_CHARS = 64000
+. HARD_RETAINED_RESULT_CHARS	const HARD_RETAINED_RESULT_CHARS = 256000
+. IsolatedWorktree	interface IsolatedWorktree { dispose(options?: { force?: boolean; }): Promise<void>; readonly base: string; readonly branch: string; readonly parentBranch: string; readonly path: string; }
+. IsolationWorkspace	interface IsolationWorkspace { commit?(path: string, request: { message: string; }): Promise<{ commit: string; }>; diff?(path: string): Promise<{ changes: readonly { readonly path: string; }[]; }>; merge(path: string, request: { into: string; commit?: { message: string; }; }): Promise<IsolationMergeResult>; readonly worktree: { create(request: { sessionId: string; }): Promise<IsolatedWorktree>; }; }
+. SUMMARY_INSTRUCTION	const SUMMARY_INSTRUCTION = "Summarize this conversation for a sub-agent: the goal, decisions, facts established, files touched, and open problems. Under 4,000 characters."
+. createDelegateService	function createDelegateService(runtime: DelegateRuntime): DelegateService
+. default	const definition: import("@arnilo/prism").PackageDefinition<DelegateConfig>
+. delegateConfigSchema	const delegateConfigSchema: { readonly type: "object"; readonly properties: { readonly children: { readonly type: "object"; readonly additionalProperties: { readonly type: "object"; readonly properties: { readonly inherit: { readonly type: "array"; readonly items: { readonly type: "string"; }; }; readonly instructions: { readonly type: "string"; }; readonly model: { readonly anyOf: readonly [{ readonly type: "string"; }, { readonly type: "object"; readonly properties: { readonly provider: { readonly type: "string"; }; readonly model: { readonly type: "string"; }; }; readonly required: readonly ["provider", "model"]; }]; }; readonly tools: { readonly type: "object"; readonly properties: { readonly only: { readonly type: "array"; readonly items: { readonly type: "string"; }; }; }; readonly additionalProperties: false; }; readonly limits: { readonly type: "object"; readonly properties: { readonly maxTurns: { readonly type: "integer"; readonly minimum: 1; }; readonly maxToolCalls: { readonly type: "integer"; readonly minimum: 1; }; readonly maxTotalTokens: { readonly type: "integer"; readonly minimum: 1; }; readonly maxWallTimeMs: { readonly type: "integer"; readonly minimum: 1; }; }; readonly additionalProperties: false; }; readonly report: { readonly type: "string"; readonly enum: readonly ["on-complete", "milestones", "stream"]; }; readonly skills: { readonly anyOf: readonly [{ readonly type: "string"; readonly enum: readonly ["inherit", "none"]; }, { readonly type: "array"; readonly items: { readonly type: "string"; }; }]; }; readonly resultMaxChars: { readonly type: "integer"; readonly minimum: 1; }; readonly context: { readonly anyOf: readonly [{ readonly type: "string"; readonly enum: readonly ["none", "summary"]; }, { readonly type: "object"; readonly properties: { readonly lastTurns: { readonly type: "integer"; readonly minimum: 1; readonly maximum: 50; }; readonly maxChars: { readonly type: "integer"; readonly minimum: 1; }; }; readonly required: readonly ["lastTurns"]; readonly additionalProperties: false; }]; }; readonly hidden: { readonly type: "boolean"; }; readonly isolation: { readonly type: "string"; readonly enum: readonly ["none", "worktree"]; }; readonly description: { readonly type: "string"; readonly minLength: 1; }; }; readonly required: readonly ["inherit"]; readonly additionalProperties: false; }; }; readonly agentsRoot: { readonly type: "string"; readonly minLength: 1; }; readonly defaultInherit: { readonly type: "array"; readonly items: { readonly type: "string"; }; }; readonly ownership: { readonly type: "object"; readonly properties: { readonly tenantId: { readonly type: "string"; }; readonly accountId: { readonly type: "string"; }; readonly userId: { readonly type: "string"; }; }; readonly additionalProperties: false; }; readonly maxDepth: { readonly type: "integer"; readonly minimum: 1; readonly maximum: 1; }; readonly maxConcurrent: { readonly type: "integer"; readonly minimum: 1; readonly maximum: 32; }; }; readonly additionalProperties: false; }
+. delegateStepData	function delegateStepData(input: DelegateStepInput): JsonValue
+. mergeMessage	function mergeMessage(child: string, input: string): string
+. resolveAgentChildren	function resolveAgentChildren(config: DelegateConfig): ResolvedAgentChildren
+. resolveChildContext	function resolveChildContext(config: DelegateContextConfig | undefined): ResolvedContext
+. resolveChildLimits	function resolveChildLimits(requested?: DelegateChildLimits): RunLimits
+. resolveResultMaxChars	function resolveResultMaxChars(requested: number | undefined): number

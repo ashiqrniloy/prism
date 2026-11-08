@@ -214,7 +214,7 @@ describe("agent.inspect()", () => {
       ["@arnilo/prism-store-jsonl", "packages/stores/jsonl"],
       ["@arnilo/prism-memory-compaction", "packages/memory/compaction"],
       ["@arnilo/prism-context-files", "packages/context/files"],
-      ["@arnilo/prism-memory-rag", "packages/memory/rag"],
+      ["@arnilo/prism-rag", "packages/knowledge/rag"],
       ["@arnilo/prism-hooks-json", "packages/integrations/hooks-json"],
     ] as const;
     const definitions = [];

@@ -1,11 +1,12 @@
 import { createHash, randomUUID } from "node:crypto";
-import { type ArtifactBodyRef, type ArtifactBodyStore, type JsonObject, type OwnershipScope, type SecretRedactor } from "@arnilo/prism";
+import { type JsonObject, type OwnershipScope, type SecretRedactor } from "@arnilo/prism";
+import { type ArtifactBodyRef, type ArtifactBodyStore } from "@arnilo/prism/artifacts";
 import type { CheckpointStore } from "@arnilo/prism-workflows";
 import { WorkToolError } from "./errors.js";
 import { identityKey } from "./idempotency.js";
+import { type AgentIdentity, assertIdentityActive } from "./identity.js";
 import { resolveWorkLimits } from "./limits.js";
 import type { SyncWorkDraftStore, WorkDraft, WorkDraftApproval, WorkDraftStore, WorkLimits, WorkProvider } from "./types.js";
-import { type AgentIdentity, assertIdentityActive } from "./identity.js";
 export const WORK_DRAFT_CHECKPOINT_NAMESPACE = "prism.work.draft";
 
 /**

@@ -1,15 +1,17 @@
-LIQUID_API_KEY_ENV	export declare const LIQUID_API_KEY_ENV = "LIQUID_API_KEY"
-LIQUID_DEFAULT_API_KEY_REF	export declare const LIQUID_DEFAULT_API_KEY_REF = "env:LIQUID_API_KEY"
-LIQUID_DEFAULT_BASE_URL	export declare const LIQUID_DEFAULT_BASE_URL = "https://api.liquid.ai"
-LIQUID_DEFAULT_LOCAL_API_KEY_REF	export declare const LIQUID_DEFAULT_LOCAL_API_KEY_REF = "env:LIQUID_LOCAL_API_KEY"
-LIQUID_DEFAULT_PATH	export declare const LIQUID_DEFAULT_PATH = "/decisions/v1/systemone"
-LIQUID_LOCAL_BASE_URL	export declare const LIQUID_LOCAL_BASE_URL = "http://127.0.0.1:8080"
-createLiquidLocalProvider	export declare function createLiquidLocalProvider(options?: LiquidProviderOptions): ModelProvider
-createLiquidProvider	export declare function createLiquidProvider(options?: LiquidProviderOptions): ModelProvider
-default	export default
-defineLiquidModel	export declare function defineLiquidModel(config: LiquidModelConfig): ModelConfig
-liquid	export declare function liquid(options?: LiquidProviderPackageOptions & LiquidProviderConfig): PackageInstance
-liquidLocalModels	export declare const liquidLocalModels: readonly ModelConfig[]
-liquidModels	export declare const liquidModels: readonly ModelConfig[]
-type LiquidModelConfig	export { defineLiquidModel, LIQUID_API_KEY_ENV, LIQUID_DEFAULT_API_KEY_REF, LIQUID_DEFAULT_BASE_URL, LIQUID_DEFAULT_PATH, LIQUID_LOCAL_BASE_URL, type LiquidModelConfig, liquidLocalModels, liquidModels, } from "./models.js"
-type LiquidProviderOptions	export { createLiquidLocalProvider, createLiquidProvider, type LiquidProviderOptions } from "./provider.js"
+. LIQUID_API_KEY_ENV	const LIQUID_API_KEY_ENV = "LIQUID_API_KEY"
+. LIQUID_DEFAULT_API_KEY_REF	const LIQUID_DEFAULT_API_KEY_REF = "env:LIQUID_API_KEY"
+. LIQUID_DEFAULT_BASE_URL	const LIQUID_DEFAULT_BASE_URL = "https://api.liquid.ai"
+. LIQUID_DEFAULT_LOCAL_API_KEY_REF	const LIQUID_DEFAULT_LOCAL_API_KEY_REF = "env:LIQUID_LOCAL_API_KEY"
+. LIQUID_DEFAULT_PATH	const LIQUID_DEFAULT_PATH = "/decisions/v1/systemone"
+. LIQUID_LOCAL_BASE_URL	const LIQUID_LOCAL_BASE_URL = "http://127.0.0.1:8080"
+. LiquidModelConfig	interface LiquidModelConfig extends Omit<ModelConfig, "provider"> { readonly compat?: JsonObject; readonly provider?: "liquid" | "liquid-local"; }
+. LiquidProviderConfig	interface LiquidProviderConfig { readonly apiKey?: string; readonly baseUrl?: string; readonly hosted?: boolean; readonly localApiKey?: string; readonly localBaseUrl?: string; readonly maxRetries?: number; readonly path?: string; }
+. LiquidProviderOptions	interface LiquidProviderOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly id?: string; readonly maxRetries?: number; readonly path?: string; readonly warn?: (message: string) => void; }
+. LiquidProviderPackageOptions	interface LiquidProviderPackageOptions { readonly fetch?: typeof fetch; }
+. createLiquidLocalProvider	function createLiquidLocalProvider(options?: LiquidProviderOptions): ModelProvider
+. createLiquidProvider	function createLiquidProvider(options?: LiquidProviderOptions): ModelProvider
+. default	const definition: import("@arnilo/prism").PackageDefinition<LiquidProviderConfig>
+. defineLiquidModel	function defineLiquidModel(config: LiquidModelConfig): ModelConfig
+. liquid	function liquid(options?: LiquidProviderPackageOptions & LiquidProviderConfig): PackageInstance
+. liquidLocalModels	const liquidLocalModels: readonly ModelConfig[]
+. liquidModels	const liquidModels: readonly ModelConfig[]

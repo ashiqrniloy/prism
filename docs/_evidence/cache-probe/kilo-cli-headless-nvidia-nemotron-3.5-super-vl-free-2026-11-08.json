@@ -1,0 +1,40 @@
+{
+  "schema": "kilo-cli-reference/1",
+  "date": "2026-11-08",
+  "cli": "@kilocode/cli 7.8.18",
+  "model": "nvidia/nemotron-3.5-super-vl:free",
+  "route": "chat",
+  "exits": [
+    0,
+    0,
+    0,
+    0
+  ],
+  "requests": 11,
+  "status": "measured",
+  "reuse": 0.8580361736652551,
+  "stablePrefixTokens": 25267,
+  "turns": [
+    {
+      "turn": 1,
+      "inputTokens": 25267,
+      "cacheReadTokens": 0
+    },
+    {
+      "turn": 2,
+      "inputTokens": 25350,
+      "cacheReadTokens": 21680
+    },
+    {
+      "turn": 3,
+      "inputTokens": 25432,
+      "cacheReadTokens": 21680
+    },
+    {
+      "turn": 4,
+      "inputTokens": 25516,
+      "cacheReadTokens": 21680
+    }
+  ],
+  "medianHitRate": 0.8510661432771232
+}

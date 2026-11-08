@@ -88,7 +88,7 @@ test("historical_combined_source_variants_keep_trust_checks_and_compile", async 
   for (const { path } of provenance) {
     const transformed = transformVariantSource(path, await source(path), specs);
     assert.doesNotThrow(() => new Bun.Transpiler({ loader: "ts" }).transformSync(transformed));
-    if (path.endsWith("/context.ts"))
+    if (path.endsWith("memory/fabric/src/context.ts"))
       assert.match(transformed, /isActiveNote\(hit, \{ asOfMs \}\) && \(hit\.flags\?\.length \?\? 0\) === 0/);
     if (path.endsWith("/flush.ts")) {
       assert.doesNotMatch(transformed, /consumedObservationIds: uncovered|supersededReflectionIds: activeReflections/);

@@ -24,7 +24,6 @@
     },
     "fabric": {
       "enabled": true,
-      "retrieval": "lexical",
       "semantic": true,
       "inject": false,
       "directory": {
@@ -110,20 +109,9 @@
         },
         "merge": {
           "duplicateDice": 0.8
-        },
-        "widen": {
-          "minProjects": 2,
-          "minSiblings": 2,
-          "contradictionsToSupersede": 2
         }
       },
-      "ontology": {
-        "bindThreshold": 2,
-        "conceptPrior": 0.1,
-        "maxClaimsRendered": 8
-      },
       "recall": {
-        "supersessionHint": "all",
         "expansion": false,
         "gather": false
       },
@@ -139,7 +127,6 @@
           "CLAUDE.md"
         ]
       },
-      "state": false,
       "decisions": false
     }
   }

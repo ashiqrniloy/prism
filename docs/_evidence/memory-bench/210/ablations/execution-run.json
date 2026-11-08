@@ -1,0 +1,1817 @@
+{
+  "kind": "210-c1-ablation-run",
+  "journal": {
+    "campaignId": "campaign-96c896b2afef",
+    "status": "finished",
+    "ceiling": 1000000000000,
+    "spend": 676227027,
+    "attempts": [
+      {
+        "attemptId": "210-c1.write.base.longmemeval-m@1",
+        "jobId": "210-c1.write.base.longmemeval-m",
+        "status": "abandoned",
+        "usageComplete": false,
+        "reservedInputTokens": 1500000,
+        "confirmedInputTokens": 1500000
+      },
+      {
+        "attemptId": "210-c1.write.enrichment.longmemeval-m@1",
+        "jobId": "210-c1.write.enrichment.longmemeval-m",
+        "status": "abandoned",
+        "usageComplete": false,
+        "reservedInputTokens": 1500000,
+        "confirmedInputTokens": 1500000
+      },
+      {
+        "attemptId": "210-c1.write.timeline.longmemeval-m@1",
+        "jobId": "210-c1.write.timeline.longmemeval-m",
+        "status": "abandoned",
+        "usageComplete": false,
+        "reservedInputTokens": 1500000,
+        "confirmedInputTokens": 1500000
+      },
+      {
+        "attemptId": "210-c1.write.base.beam-1m@1",
+        "jobId": "210-c1.write.base.beam-1m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 1500000,
+        "confirmedInputTokens": 0
+      },
+      {
+        "attemptId": "210-c1.write.enrichment.beam-1m@1",
+        "jobId": "210-c1.write.enrichment.beam-1m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 1500000,
+        "confirmedInputTokens": 0
+      },
+      {
+        "attemptId": "210-c1.large.P.memoryagentbench-cr@1",
+        "jobId": "210-c1.large.P.memoryagentbench-cr",
+        "status": "abandoned",
+        "usageComplete": false,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 25500000
+      },
+      {
+        "attemptId": "210-c1.write.base.longmemeval-m@2",
+        "jobId": "210-c1.write.base.longmemeval-m",
+        "status": "abandoned",
+        "usageComplete": false,
+        "reservedInputTokens": 1500000,
+        "confirmedInputTokens": 1500000
+      },
+      {
+        "attemptId": "210-c1.write.timeline.longmemeval-m@2",
+        "jobId": "210-c1.write.timeline.longmemeval-m",
+        "status": "abandoned",
+        "usageComplete": false,
+        "reservedInputTokens": 1500000,
+        "confirmedInputTokens": 1500000
+      },
+      {
+        "attemptId": "210-c1.write.enrichment.longmemeval-m@2",
+        "jobId": "210-c1.write.enrichment.longmemeval-m",
+        "status": "abandoned",
+        "usageComplete": false,
+        "reservedInputTokens": 1500000,
+        "confirmedInputTokens": 1500000
+      },
+      {
+        "attemptId": "210-c1.large.P.beam-100k@1",
+        "jobId": "210-c1.large.P.beam-100k",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 2087969
+      },
+      {
+        "attemptId": "210-c1.large.P.locomo@1",
+        "jobId": "210-c1.large.P.locomo",
+        "status": "abandoned",
+        "usageComplete": false,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 25500000
+      },
+      {
+        "attemptId": "210-c1.large.P.beam-1m@1",
+        "jobId": "210-c1.large.P.beam-1m",
+        "status": "abandoned",
+        "usageComplete": false,
+        "reservedInputTokens": 40500000,
+        "confirmedInputTokens": 40500000
+      },
+      {
+        "attemptId": "210-c1.write.base.longmemeval-m@3",
+        "jobId": "210-c1.write.base.longmemeval-m",
+        "status": "setup-failure",
+        "usageComplete": false,
+        "reservedInputTokens": 1500000,
+        "confirmedInputTokens": 1500000
+      },
+      {
+        "attemptId": "210-c1.write.enrichment.longmemeval-m@3",
+        "jobId": "210-c1.write.enrichment.longmemeval-m",
+        "status": "setup-failure",
+        "usageComplete": false,
+        "reservedInputTokens": 1500000,
+        "confirmedInputTokens": 1500000
+      },
+      {
+        "attemptId": "210-c1.write.timeline.longmemeval-m@3",
+        "jobId": "210-c1.write.timeline.longmemeval-m",
+        "status": "setup-failure",
+        "usageComplete": false,
+        "reservedInputTokens": 1500000,
+        "confirmedInputTokens": 1500000
+      },
+      {
+        "attemptId": "210-c1.large.P.memoryagentbench-cr@2",
+        "jobId": "210-c1.large.P.memoryagentbench-cr",
+        "status": "setup-failure",
+        "usageComplete": false,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 25500000
+      },
+      {
+        "attemptId": "210-c1.large.P.locomo@2",
+        "jobId": "210-c1.large.P.locomo",
+        "status": "setup-failure",
+        "usageComplete": false,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 25500000
+      },
+      {
+        "attemptId": "210-c1.large.P.beam-1m@2",
+        "jobId": "210-c1.large.P.beam-1m",
+        "status": "setup-failure",
+        "usageComplete": false,
+        "reservedInputTokens": 40500000,
+        "confirmedInputTokens": 40500000
+      },
+      {
+        "attemptId": "210-c1.large.P.memoryagentbench-cr@3",
+        "jobId": "210-c1.large.P.memoryagentbench-cr",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 462196
+      },
+      {
+        "attemptId": "210-c1.large.P.beam-1m@3",
+        "jobId": "210-c1.large.P.beam-1m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 40500000,
+        "confirmedInputTokens": 2338595
+      },
+      {
+        "attemptId": "210-c1.large.P.locomo@3",
+        "jobId": "210-c1.large.P.locomo",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 2478053
+      },
+      {
+        "attemptId": "210-c1.large.memory-off.longmemeval-m@1",
+        "jobId": "210-c1.large.memory-off.longmemeval-m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 60500000,
+        "confirmedInputTokens": 26592
+      },
+      {
+        "attemptId": "210-c1.large.memory-off.locomo@1",
+        "jobId": "210-c1.large.memory-off.locomo",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 29685
+      },
+      {
+        "attemptId": "210-c1.large.tool-affordances-loo.locomo@1",
+        "jobId": "210-c1.large.tool-affordances-loo.locomo",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 2440954
+      },
+      {
+        "attemptId": "210-c1.large.tool-affordances-loo.beam-100k@1",
+        "jobId": "210-c1.large.tool-affordances-loo.beam-100k",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 2106405
+      },
+      {
+        "attemptId": "210-c1.large.supersession-keyed-only.locomo@1",
+        "jobId": "210-c1.large.supersession-keyed-only.locomo",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 2599930
+      },
+      {
+        "attemptId": "210-c1.large.supersession-keyed-only.beam-100k@1",
+        "jobId": "210-c1.large.supersession-keyed-only.beam-100k",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 1812660
+      },
+      {
+        "attemptId": "210-c1.large.enrichment-loo.memoryagentbench-cr@1",
+        "jobId": "210-c1.large.enrichment-loo.memoryagentbench-cr",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 528224
+      },
+      {
+        "attemptId": "210-c1.large.enrichment-loo.beam-100k@1",
+        "jobId": "210-c1.large.enrichment-loo.beam-100k",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 1913842
+      },
+      {
+        "attemptId": "210-c1.large.enrichment-loo.locomo@1",
+        "jobId": "210-c1.large.enrichment-loo.locomo",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 2176922
+      },
+      {
+        "attemptId": "210-c1.large.enrichment-loo.beam-1m@1",
+        "jobId": "210-c1.large.enrichment-loo.beam-1m",
+        "status": "abandoned",
+        "usageComplete": true,
+        "reservedInputTokens": 40500000,
+        "confirmedInputTokens": 959995
+      },
+      {
+        "attemptId": "210-c1.large.navigation-loo.memoryagentbench-cr@1",
+        "jobId": "210-c1.large.navigation-loo.memoryagentbench-cr",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 503136
+      },
+      {
+        "attemptId": "210-c1.large.navigation-loo.beam-100k@1",
+        "jobId": "210-c1.large.navigation-loo.beam-100k",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 2068653
+      },
+      {
+        "attemptId": "210-c1.large.navigation-loo.locomo@1",
+        "jobId": "210-c1.large.navigation-loo.locomo",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 2569109
+      },
+      {
+        "attemptId": "210-c1.large.navigation-loo.beam-1m@1",
+        "jobId": "210-c1.large.navigation-loo.beam-1m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 40500000,
+        "confirmedInputTokens": 2553776
+      },
+      {
+        "attemptId": "210-c1.large.timeline-loo.locomo@1",
+        "jobId": "210-c1.large.timeline-loo.locomo",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 2171593
+      },
+      {
+        "attemptId": "210-c1.large.grouping-loo.beam-100k@1",
+        "jobId": "210-c1.large.grouping-loo.beam-100k",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 1822788
+      },
+      {
+        "attemptId": "210-c1.large.directory-loo.locomo@1",
+        "jobId": "210-c1.large.directory-loo.locomo",
+        "status": "abandoned",
+        "usageComplete": false,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 25500000
+      },
+      {
+        "attemptId": "210-c1.small.P.memoryagentbench-cr@1",
+        "jobId": "210-c1.small.P.memoryagentbench-cr",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 385455
+      },
+      {
+        "attemptId": "210-c1.small.P.beam-100k@1",
+        "jobId": "210-c1.small.P.beam-100k",
+        "status": "abandoned",
+        "usageComplete": false,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 25500000
+      },
+      {
+        "attemptId": "210-c1.small.P.locomo@1",
+        "jobId": "210-c1.small.P.locomo",
+        "status": "abandoned",
+        "usageComplete": false,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 25500000
+      },
+      {
+        "attemptId": "210-c1.small.P.beam-1m@1",
+        "jobId": "210-c1.small.P.beam-1m",
+        "status": "abandoned",
+        "usageComplete": false,
+        "reservedInputTokens": 40500000,
+        "confirmedInputTokens": 40500000
+      },
+      {
+        "attemptId": "210-c1.small.memory-off.locomo@1",
+        "jobId": "210-c1.small.memory-off.locomo",
+        "status": "abandoned",
+        "usageComplete": false,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 25500000
+      },
+      {
+        "attemptId": "210-c1.small.memory-off.longmemeval-m@1",
+        "jobId": "210-c1.small.memory-off.longmemeval-m",
+        "status": "abandoned",
+        "usageComplete": false,
+        "reservedInputTokens": 60500000,
+        "confirmedInputTokens": 60500000
+      },
+      {
+        "attemptId": "210-c1.large.directory-loo.locomo@2",
+        "jobId": "210-c1.large.directory-loo.locomo",
+        "status": "abandoned",
+        "usageComplete": false,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 25500000
+      },
+      {
+        "attemptId": "210-c1.small.memory-off.locomo@2",
+        "jobId": "210-c1.small.memory-off.locomo",
+        "status": "abandoned",
+        "usageComplete": false,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 25500000
+      },
+      {
+        "attemptId": "210-c1.small.P.beam-1m@2",
+        "jobId": "210-c1.small.P.beam-1m",
+        "status": "abandoned",
+        "usageComplete": false,
+        "reservedInputTokens": 40500000,
+        "confirmedInputTokens": 40500000
+      },
+      {
+        "attemptId": "210-c1.small.P.locomo@2",
+        "jobId": "210-c1.small.P.locomo",
+        "status": "abandoned",
+        "usageComplete": false,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 25500000
+      },
+      {
+        "attemptId": "210-c1.small.P.beam-100k@2",
+        "jobId": "210-c1.small.P.beam-100k",
+        "status": "abandoned",
+        "usageComplete": false,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 25500000
+      },
+      {
+        "attemptId": "210-c1.large.enrichment-loo.beam-1m@2",
+        "jobId": "210-c1.large.enrichment-loo.beam-1m",
+        "status": "abandoned",
+        "usageComplete": false,
+        "reservedInputTokens": 40500000,
+        "confirmedInputTokens": 40500000
+      },
+      {
+        "attemptId": "210-c1.write.base.longmemeval-m@4",
+        "jobId": "210-c1.write.base.longmemeval-m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 1500000,
+        "confirmedInputTokens": 0
+      },
+      {
+        "attemptId": "210-c1.write.enrichment.longmemeval-m@4",
+        "jobId": "210-c1.write.enrichment.longmemeval-m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 1500000,
+        "confirmedInputTokens": 0
+      },
+      {
+        "attemptId": "210-c1.write.timeline.longmemeval-m@4",
+        "jobId": "210-c1.write.timeline.longmemeval-m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 1500000,
+        "confirmedInputTokens": 0
+      },
+      {
+        "attemptId": "210-c1.large.enrichment-loo.beam-1m@3",
+        "jobId": "210-c1.large.enrichment-loo.beam-1m",
+        "status": "abandoned",
+        "usageComplete": true,
+        "reservedInputTokens": 40500000,
+        "confirmedInputTokens": 955981
+      },
+      {
+        "attemptId": "210-c1.large.enrichment-loo.beam-1m@4",
+        "jobId": "210-c1.large.enrichment-loo.beam-1m",
+        "status": "abandoned",
+        "usageComplete": true,
+        "reservedInputTokens": 40500000,
+        "confirmedInputTokens": 1261084
+      },
+      {
+        "attemptId": "210-c1.large.P.longmemeval-m@1",
+        "jobId": "210-c1.large.P.longmemeval-m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 60500000,
+        "confirmedInputTokens": 2908388
+      },
+      {
+        "attemptId": "210-c1.large.supersession-keyed-only.longmemeval-m@1",
+        "jobId": "210-c1.large.supersession-keyed-only.longmemeval-m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 60500000,
+        "confirmedInputTokens": 3060445
+      },
+      {
+        "attemptId": "210-c1.large.enrichment-loo.longmemeval-m@1",
+        "jobId": "210-c1.large.enrichment-loo.longmemeval-m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 60500000,
+        "confirmedInputTokens": 2482895
+      },
+      {
+        "attemptId": "210-c1.large.navigation-loo.longmemeval-m@1",
+        "jobId": "210-c1.large.navigation-loo.longmemeval-m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 60500000,
+        "confirmedInputTokens": 2809338
+      },
+      {
+        "attemptId": "210-c1.large.timeline-loo.longmemeval-m@1",
+        "jobId": "210-c1.large.timeline-loo.longmemeval-m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 60500000,
+        "confirmedInputTokens": 2968683
+      },
+      {
+        "attemptId": "210-c1.large.grouping-loo.longmemeval-m@1",
+        "jobId": "210-c1.large.grouping-loo.longmemeval-m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 60500000,
+        "confirmedInputTokens": 2934013
+      },
+      {
+        "attemptId": "210-c1.large.directory-loo.locomo@3",
+        "jobId": "210-c1.large.directory-loo.locomo",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 2314026
+      },
+      {
+        "attemptId": "210-c1.large.enrichment-loo.beam-1m@5",
+        "jobId": "210-c1.large.enrichment-loo.beam-1m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 40500000,
+        "confirmedInputTokens": 2445556
+      },
+      {
+        "attemptId": "210-c1.large.directory-loo.longmemeval-m@1",
+        "jobId": "210-c1.large.directory-loo.longmemeval-m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 60500000,
+        "confirmedInputTokens": 2710418
+      },
+      {
+        "attemptId": "210-c1.small.P.beam-100k@3",
+        "jobId": "210-c1.small.P.beam-100k",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 1176243
+      },
+      {
+        "attemptId": "210-c1.small.P.locomo@3",
+        "jobId": "210-c1.small.P.locomo",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 706781
+      },
+      {
+        "attemptId": "210-c1.small.P.beam-1m@3",
+        "jobId": "210-c1.small.P.beam-1m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 40500000,
+        "confirmedInputTokens": 1725481
+      },
+      {
+        "attemptId": "210-c1.small.P.longmemeval-m@1",
+        "jobId": "210-c1.small.P.longmemeval-m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 60500000,
+        "confirmedInputTokens": 1989994
+      },
+      {
+        "attemptId": "210-c1.small.memory-off.locomo@3",
+        "jobId": "210-c1.small.memory-off.locomo",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 21651
+      },
+      {
+        "attemptId": "210-c1.small.memory-off.longmemeval-m@2",
+        "jobId": "210-c1.small.memory-off.longmemeval-m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 60500000,
+        "confirmedInputTokens": 23782
+      },
+      {
+        "attemptId": "210-c1.small.tool-affordances-loo.locomo@1",
+        "jobId": "210-c1.small.tool-affordances-loo.locomo",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 819320
+      },
+      {
+        "attemptId": "210-c1.small.tool-affordances-loo.beam-100k@1",
+        "jobId": "210-c1.small.tool-affordances-loo.beam-100k",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 1611407
+      },
+      {
+        "attemptId": "210-c1.small.supersession-keyed-only.locomo@1",
+        "jobId": "210-c1.small.supersession-keyed-only.locomo",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 770317
+      },
+      {
+        "attemptId": "210-c1.small.supersession-keyed-only.beam-100k@1",
+        "jobId": "210-c1.small.supersession-keyed-only.beam-100k",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 1306159
+      },
+      {
+        "attemptId": "210-c1.small.supersession-keyed-only.longmemeval-m@1",
+        "jobId": "210-c1.small.supersession-keyed-only.longmemeval-m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 60500000,
+        "confirmedInputTokens": 1731680
+      },
+      {
+        "attemptId": "210-c1.small.enrichment-loo.memoryagentbench-cr@1",
+        "jobId": "210-c1.small.enrichment-loo.memoryagentbench-cr",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 475387
+      },
+      {
+        "attemptId": "210-c1.small.enrichment-loo.beam-100k@1",
+        "jobId": "210-c1.small.enrichment-loo.beam-100k",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 1411631
+      },
+      {
+        "attemptId": "210-c1.small.enrichment-loo.locomo@1",
+        "jobId": "210-c1.small.enrichment-loo.locomo",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 674817
+      },
+      {
+        "attemptId": "210-c1.small.enrichment-loo.beam-1m@1",
+        "jobId": "210-c1.small.enrichment-loo.beam-1m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 40500000,
+        "confirmedInputTokens": 1131502
+      },
+      {
+        "attemptId": "210-c1.small.enrichment-loo.longmemeval-m@1",
+        "jobId": "210-c1.small.enrichment-loo.longmemeval-m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 60500000,
+        "confirmedInputTokens": 2347723
+      },
+      {
+        "attemptId": "210-c1.small.navigation-loo.memoryagentbench-cr@1",
+        "jobId": "210-c1.small.navigation-loo.memoryagentbench-cr",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 361597
+      },
+      {
+        "attemptId": "210-c1.small.navigation-loo.beam-100k@1",
+        "jobId": "210-c1.small.navigation-loo.beam-100k",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 1075952
+      },
+      {
+        "attemptId": "210-c1.small.navigation-loo.locomo@1",
+        "jobId": "210-c1.small.navigation-loo.locomo",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 662356
+      },
+      {
+        "attemptId": "210-c1.small.navigation-loo.beam-1m@1",
+        "jobId": "210-c1.small.navigation-loo.beam-1m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 40500000,
+        "confirmedInputTokens": 1689943
+      },
+      {
+        "attemptId": "210-c1.small.navigation-loo.longmemeval-m@1",
+        "jobId": "210-c1.small.navigation-loo.longmemeval-m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 60500000,
+        "confirmedInputTokens": 2550283
+      },
+      {
+        "attemptId": "210-c1.small.timeline-loo.longmemeval-m@1",
+        "jobId": "210-c1.small.timeline-loo.longmemeval-m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 60500000,
+        "confirmedInputTokens": 2601439
+      },
+      {
+        "attemptId": "210-c1.small.timeline-loo.locomo@1",
+        "jobId": "210-c1.small.timeline-loo.locomo",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 716137
+      },
+      {
+        "attemptId": "210-c1.small.grouping-loo.longmemeval-m@1",
+        "jobId": "210-c1.small.grouping-loo.longmemeval-m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 60500000,
+        "confirmedInputTokens": 1988907
+      },
+      {
+        "attemptId": "210-c1.small.grouping-loo.beam-100k@1",
+        "jobId": "210-c1.small.grouping-loo.beam-100k",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 1074497
+      },
+      {
+        "attemptId": "210-c1.small.directory-loo.locomo@1",
+        "jobId": "210-c1.small.directory-loo.locomo",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 25500000,
+        "confirmedInputTokens": 525598
+      },
+      {
+        "attemptId": "210-c1.small.directory-loo.longmemeval-m@1",
+        "jobId": "210-c1.small.directory-loo.longmemeval-m",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 60500000,
+        "confirmedInputTokens": 1669084
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "210-c1.write.base.beam-1m",
+      "attemptId": "210-c1.write.base.beam-1m@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 0
+    },
+    {
+      "id": "210-c1.write.enrichment.beam-1m",
+      "attemptId": "210-c1.write.enrichment.beam-1m@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 0
+    },
+    {
+      "id": "210-c1.large.P.memoryagentbench-cr",
+      "attemptId": "210-c1.large.P.memoryagentbench-cr@3",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 462196
+    },
+    {
+      "id": "210-c1.large.P.beam-100k",
+      "attemptId": "210-c1.large.P.beam-100k@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 2087969
+    },
+    {
+      "id": "210-c1.large.P.locomo",
+      "attemptId": "210-c1.large.P.locomo@3",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 2478053
+    },
+    {
+      "id": "210-c1.large.P.beam-1m",
+      "attemptId": "210-c1.large.P.beam-1m@3",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 2338595
+    },
+    {
+      "id": "210-c1.large.memory-off.locomo",
+      "attemptId": "210-c1.large.memory-off.locomo@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 29685
+    },
+    {
+      "id": "210-c1.large.memory-off.longmemeval-m",
+      "attemptId": "210-c1.large.memory-off.longmemeval-m@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 26592
+    },
+    {
+      "id": "210-c1.large.strength-0.15.longmemeval-m",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.tool-affordances-loo.locomo",
+      "attemptId": "210-c1.large.tool-affordances-loo.locomo@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 2440954
+    },
+    {
+      "id": "210-c1.large.tool-affordances-loo.beam-100k",
+      "attemptId": "210-c1.large.tool-affordances-loo.beam-100k@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 2106405
+    },
+    {
+      "id": "210-c1.large.supersession-keyed-only.locomo",
+      "attemptId": "210-c1.large.supersession-keyed-only.locomo@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 2599930
+    },
+    {
+      "id": "210-c1.large.supersession-keyed-only.beam-100k",
+      "attemptId": "210-c1.large.supersession-keyed-only.beam-100k@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 1812660
+    },
+    {
+      "id": "210-c1.large.expansion.locomo",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.gather.locomo",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.gather.beam-100k",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.enrichment-loo.memoryagentbench-cr",
+      "attemptId": "210-c1.large.enrichment-loo.memoryagentbench-cr@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 528224
+    },
+    {
+      "id": "210-c1.large.enrichment-loo.beam-100k",
+      "attemptId": "210-c1.large.enrichment-loo.beam-100k@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 1913842
+    },
+    {
+      "id": "210-c1.large.enrichment-loo.locomo",
+      "attemptId": "210-c1.large.enrichment-loo.locomo@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 2176922
+    },
+    {
+      "id": "210-c1.large.enrichment-loo.beam-1m",
+      "attemptId": "210-c1.large.enrichment-loo.beam-1m@3",
+      "answersDir": ".cache/memory-bench/210/large/enrichment-loo/beam-1m/answers",
+      "status": "transient-retry",
+      "cause": "transient",
+      "usageComplete": true,
+      "charged": 955981
+    },
+    {
+      "id": "210-c1.large.enrichment-loo.beam-1m",
+      "attemptId": "210-c1.large.enrichment-loo.beam-1m@4",
+      "answersDir": ".cache/memory-bench/210/large/enrichment-loo/beam-1m/answers",
+      "status": "transient-retry",
+      "cause": "transient",
+      "usageComplete": true,
+      "charged": 1261084
+    },
+    {
+      "id": "210-c1.write.enrichment.longmemeval-m",
+      "attemptId": "210-c1.write.enrichment.longmemeval-m@4",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 1261084
+    },
+    {
+      "id": "210-c1.write.timeline.longmemeval-m",
+      "attemptId": "210-c1.write.timeline.longmemeval-m@4",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 1261084
+    },
+    {
+      "id": "210-c1.write.base.longmemeval-m",
+      "attemptId": "210-c1.write.base.longmemeval-m@4",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 1261084
+    },
+    {
+      "id": "210-c1.write.enrichment.longmemeval-m",
+      "attemptId": "210-c1.write.enrichment.longmemeval-m@4",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 0
+    },
+    {
+      "id": "210-c1.write.timeline.longmemeval-m",
+      "attemptId": "210-c1.write.timeline.longmemeval-m@4",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 0
+    },
+    {
+      "id": "210-c1.large.navigation-loo.memoryagentbench-cr",
+      "attemptId": "210-c1.large.navigation-loo.memoryagentbench-cr@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 503136
+    },
+    {
+      "id": "210-c1.large.navigation-loo.beam-100k",
+      "attemptId": "210-c1.large.navigation-loo.beam-100k@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 2068653
+    },
+    {
+      "id": "210-c1.large.navigation-loo.locomo",
+      "attemptId": "210-c1.large.navigation-loo.locomo@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 2569109
+    },
+    {
+      "id": "210-c1.large.navigation-loo.beam-1m",
+      "attemptId": "210-c1.large.navigation-loo.beam-1m@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 2553776
+    },
+    {
+      "id": "210-c1.write.base.longmemeval-m",
+      "attemptId": "210-c1.write.base.longmemeval-m@4",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 0
+    },
+    {
+      "id": "210-c1.large.P.longmemeval-m",
+      "attemptId": "210-c1.large.P.longmemeval-m@1",
+      "answersDir": ".cache/memory-bench/210/large/P/longmemeval-m/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 60500000
+    },
+    {
+      "id": "210-c1.large.timeline-loo.locomo",
+      "attemptId": "210-c1.large.timeline-loo.locomo@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 2171593
+    },
+    {
+      "id": "210-c1.large.supersession-keyed-only.longmemeval-m",
+      "attemptId": "210-c1.large.supersession-keyed-only.longmemeval-m@1",
+      "answersDir": ".cache/memory-bench/210/large/supersession-keyed-only/longmemeval-m/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 60500000
+    },
+    {
+      "id": "210-c1.large.grouping-loo.beam-100k",
+      "attemptId": "210-c1.large.grouping-loo.beam-100k@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 1822788
+    },
+    {
+      "id": "210-c1.large.maintain.beam-100k",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.maintain.longmemeval-m",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.archive-exchange-exempt.beam-100k",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.archive-exchange-exempt.longmemeval-m",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.tools-only.locomo",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.tools-only.beam-100k",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.tools-only.longmemeval-m",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.card-excerpt.locomo",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.precision-filter.locomo",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.precision-filter.beam-100k",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.aggregation-loo.beam-100k",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.aggregation-loo.locomo",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.enrichment-loo.longmemeval-m",
+      "attemptId": "210-c1.large.enrichment-loo.longmemeval-m@1",
+      "answersDir": ".cache/memory-bench/210/large/enrichment-loo/longmemeval-m/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 40500000
+    },
+    {
+      "id": "210-c1.large.navigation-loo.longmemeval-m",
+      "attemptId": "210-c1.large.navigation-loo.longmemeval-m@1",
+      "answersDir": ".cache/memory-bench/210/large/navigation-loo/longmemeval-m/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 60500000
+    },
+    {
+      "id": "210-c1.large.rules-add.beam-100k",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.decisions-p3.beam-100k",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.decisions-p3.locomo",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.decisions-p5.beam-100k",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.decisions-p5.locomo",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.f4-readtime.beam-100k",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.large.f4-readtime.locomo",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.large.f4-readtime.longmemeval-m",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.large.oracle.beam-100k",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.large.oracle.locomo",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.large.oracle.longmemeval-m",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.small.P.memoryagentbench-cr",
+      "attemptId": "210-c1.small.P.memoryagentbench-cr@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 385455
+    },
+    {
+      "id": "210-c1.large.timeline-loo.longmemeval-m",
+      "attemptId": "210-c1.large.timeline-loo.longmemeval-m@1",
+      "answersDir": ".cache/memory-bench/210/large/timeline-loo/longmemeval-m/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 25500000
+    },
+    {
+      "id": "210-c1.large.enrichment-loo.beam-1m",
+      "attemptId": "210-c1.large.enrichment-loo.beam-1m@5",
+      "answersDir": ".cache/memory-bench/210/large/enrichment-loo/beam-1m/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 25500000
+    },
+    {
+      "id": "210-c1.large.directory-loo.locomo",
+      "attemptId": "210-c1.large.directory-loo.locomo@3",
+      "answersDir": ".cache/memory-bench/210/large/directory-loo/locomo/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 40500000
+    },
+    {
+      "id": "210-c1.small.P.beam-100k",
+      "attemptId": "210-c1.small.P.beam-100k@3",
+      "answersDir": ".cache/memory-bench/210/small/P/beam-100k/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 60500000
+    },
+    {
+      "id": "210-c1.small.P.locomo",
+      "attemptId": "210-c1.small.P.locomo@3",
+      "answersDir": ".cache/memory-bench/210/small/P/locomo/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 25500000
+    },
+    {
+      "id": "210-c1.small.memory-off.locomo",
+      "attemptId": "210-c1.small.memory-off.locomo@3",
+      "answersDir": ".cache/memory-bench/210/small/memory-off/locomo/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 60500000
+    },
+    {
+      "id": "210-c1.small.strength-0.15.longmemeval-m",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.directory-loo.longmemeval-m",
+      "attemptId": "210-c1.large.directory-loo.longmemeval-m@1",
+      "answersDir": ".cache/memory-bench/210/large/directory-loo/longmemeval-m/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 25500000
+    },
+    {
+      "id": "210-c1.small.P.beam-1m",
+      "attemptId": "210-c1.small.P.beam-1m@3",
+      "answersDir": ".cache/memory-bench/210/small/P/beam-1m/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 25500000
+    },
+    {
+      "id": "210-c1.large.grouping-loo.longmemeval-m",
+      "attemptId": "210-c1.large.grouping-loo.longmemeval-m@1",
+      "answersDir": ".cache/memory-bench/210/large/grouping-loo/longmemeval-m/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 25500000
+    },
+    {
+      "id": "210-c1.small.memory-off.longmemeval-m",
+      "attemptId": "210-c1.small.memory-off.longmemeval-m@2",
+      "answersDir": ".cache/memory-bench/210/small/memory-off/longmemeval-m/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 25500000
+    },
+    {
+      "id": "210-c1.small.P.longmemeval-m",
+      "attemptId": "210-c1.small.P.longmemeval-m@1",
+      "answersDir": ".cache/memory-bench/210/small/P/longmemeval-m/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 60500000
+    },
+    {
+      "id": "210-c1.small.expansion.locomo",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.gather.locomo",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.gather.beam-100k",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.tool-affordances-loo.locomo",
+      "attemptId": "210-c1.small.tool-affordances-loo.locomo@1",
+      "answersDir": ".cache/memory-bench/210/small/tool-affordances-loo/locomo/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 25500000
+    },
+    {
+      "id": "210-c1.small.tool-affordances-loo.beam-100k",
+      "attemptId": "210-c1.small.tool-affordances-loo.beam-100k@1",
+      "answersDir": ".cache/memory-bench/210/small/tool-affordances-loo/beam-100k/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 25500000
+    },
+    {
+      "id": "210-c1.small.enrichment-loo.memoryagentbench-cr",
+      "attemptId": "210-c1.small.enrichment-loo.memoryagentbench-cr@1",
+      "answersDir": ".cache/memory-bench/210/small/enrichment-loo/memoryagentbench-cr/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 25500000
+    },
+    {
+      "id": "210-c1.small.supersession-keyed-only.locomo",
+      "attemptId": "210-c1.small.supersession-keyed-only.locomo@1",
+      "answersDir": ".cache/memory-bench/210/small/supersession-keyed-only/locomo/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 40500000
+    },
+    {
+      "id": "210-c1.small.supersession-keyed-only.longmemeval-m",
+      "attemptId": "210-c1.small.supersession-keyed-only.longmemeval-m@1",
+      "answersDir": ".cache/memory-bench/210/small/supersession-keyed-only/longmemeval-m/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 60500000
+    },
+    {
+      "id": "210-c1.small.supersession-keyed-only.beam-100k",
+      "attemptId": "210-c1.small.supersession-keyed-only.beam-100k@1",
+      "answersDir": ".cache/memory-bench/210/small/supersession-keyed-only/beam-100k/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 25500000
+    },
+    {
+      "id": "210-c1.small.enrichment-loo.beam-100k",
+      "attemptId": "210-c1.small.enrichment-loo.beam-100k@1",
+      "answersDir": ".cache/memory-bench/210/small/enrichment-loo/beam-100k/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 25500000
+    },
+    {
+      "id": "210-c1.small.navigation-loo.memoryagentbench-cr",
+      "attemptId": "210-c1.small.navigation-loo.memoryagentbench-cr@1",
+      "answersDir": ".cache/memory-bench/210/small/navigation-loo/memoryagentbench-cr/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 25500000
+    },
+    {
+      "id": "210-c1.small.enrichment-loo.locomo",
+      "attemptId": "210-c1.small.enrichment-loo.locomo@1",
+      "answersDir": ".cache/memory-bench/210/small/enrichment-loo/locomo/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 40500000
+    },
+    {
+      "id": "210-c1.small.enrichment-loo.beam-1m",
+      "attemptId": "210-c1.small.enrichment-loo.beam-1m@1",
+      "answersDir": ".cache/memory-bench/210/small/enrichment-loo/beam-1m/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 60500000
+    },
+    {
+      "id": "210-c1.small.enrichment-loo.longmemeval-m",
+      "attemptId": "210-c1.small.enrichment-loo.longmemeval-m@1",
+      "answersDir": ".cache/memory-bench/210/small/enrichment-loo/longmemeval-m/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 60500000
+    },
+    {
+      "id": "210-c1.small.navigation-loo.locomo",
+      "attemptId": "210-c1.small.navigation-loo.locomo@1",
+      "answersDir": ".cache/memory-bench/210/small/navigation-loo/locomo/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 25500000
+    },
+    {
+      "id": "210-c1.small.navigation-loo.beam-1m",
+      "attemptId": "210-c1.small.navigation-loo.beam-1m@1",
+      "answersDir": ".cache/memory-bench/210/small/navigation-loo/beam-1m/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 60500000
+    },
+    {
+      "id": "210-c1.small.timeline-loo.longmemeval-m",
+      "attemptId": "210-c1.small.timeline-loo.longmemeval-m@1",
+      "answersDir": ".cache/memory-bench/210/small/timeline-loo/longmemeval-m/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 25500000
+    },
+    {
+      "id": "210-c1.small.maintain.beam-100k",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.maintain.longmemeval-m",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.archive-exchange-exempt.beam-100k",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.archive-exchange-exempt.longmemeval-m",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.tools-only.locomo",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.tools-only.beam-100k",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.tools-only.longmemeval-m",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.card-excerpt.locomo",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.precision-filter.locomo",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.precision-filter.beam-100k",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.aggregation-loo.beam-100k",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.aggregation-loo.locomo",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.navigation-loo.longmemeval-m",
+      "attemptId": "210-c1.small.navigation-loo.longmemeval-m@1",
+      "answersDir": ".cache/memory-bench/210/small/navigation-loo/longmemeval-m/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 25500000
+    },
+    {
+      "id": "210-c1.small.navigation-loo.beam-100k",
+      "attemptId": "210-c1.small.navigation-loo.beam-100k@1",
+      "answersDir": ".cache/memory-bench/210/small/navigation-loo/beam-100k/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 60500000
+    },
+    {
+      "id": "210-c1.small.rules-add.beam-100k",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.decisions-p3.beam-100k",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.decisions-p3.locomo",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.decisions-p5.beam-100k",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.decisions-p5.locomo",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.f4-readtime.beam-100k",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.small.f4-readtime.locomo",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.small.f4-readtime.longmemeval-m",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.small.oracle.beam-100k",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.small.oracle.locomo",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.small.oracle.longmemeval-m",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.large.P+O.memoryagentbench-cr",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.large.P+O.beam-100k",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.large.P+O.locomo",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.large.trigger-co-read-loo.memoryagentbench-cr",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.large.trigger-co-read-loo.beam-100k",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.large.trigger-co-read-loo.locomo",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.large.trigger-accumulation-loo.memoryagentbench-cr",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.large.trigger-accumulation-loo.beam-100k",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.large.trigger-accumulation-loo.locomo",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.large.concept-prior-loo.memoryagentbench-cr",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.large.concept-prior-loo.beam-100k",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.large.concept-prior-loo.locomo",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.large.concept-pointer-loo.memoryagentbench-cr",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.large.concept-pointer-loo.beam-100k",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.large.concept-pointer-loo.locomo",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.small.P+O.memoryagentbench-cr",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.small.P+O.beam-100k",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.small.P+O.locomo",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.small.trigger-co-read-loo.memoryagentbench-cr",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.small.trigger-co-read-loo.beam-100k",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.small.trigger-co-read-loo.locomo",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.small.trigger-accumulation-loo.memoryagentbench-cr",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.small.trigger-accumulation-loo.beam-100k",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.small.trigger-accumulation-loo.locomo",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.small.concept-prior-loo.memoryagentbench-cr",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.small.concept-prior-loo.beam-100k",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.small.concept-prior-loo.locomo",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.small.concept-pointer-loo.memoryagentbench-cr",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.small.concept-pointer-loo.beam-100k",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.small.concept-pointer-loo.locomo",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.large.W.P",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.W.P+W",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.W.steps-loo",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.W.rules-loo",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.W.lessons-loo",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.W.decisions-p4",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.W.P",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.W.P+W",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.W.steps-loo",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.W.rules-loo",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.W.lessons-loo",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.W.decisions-p4",
+      "status": "deferred",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.OM.beam-1m",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.large.om-reflector-loo.beam-1m",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.large.om-dropper-deterministic.beam-1m",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.small.OM.beam-1m",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.small.om-reflector-loo.beam-1m",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.small.om-dropper-deterministic.beam-1m",
+      "status": "deferred",
+      "wave": 3
+    },
+    {
+      "id": "210-c1.small.timeline-loo.locomo",
+      "attemptId": "210-c1.small.timeline-loo.locomo@1",
+      "answersDir": ".cache/memory-bench/210/small/timeline-loo/locomo/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 60500000
+    },
+    {
+      "id": "210-c1.small.grouping-loo.beam-100k",
+      "attemptId": "210-c1.small.grouping-loo.beam-100k@1",
+      "answersDir": ".cache/memory-bench/210/small/grouping-loo/beam-100k/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 60500000
+    },
+    {
+      "id": "210-c1.small.grouping-loo.longmemeval-m",
+      "attemptId": "210-c1.small.grouping-loo.longmemeval-m@1",
+      "answersDir": ".cache/memory-bench/210/small/grouping-loo/longmemeval-m/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 60500000
+    },
+    {
+      "id": "210-c1.small.directory-loo.locomo",
+      "attemptId": "210-c1.small.directory-loo.locomo@1",
+      "answersDir": ".cache/memory-bench/210/small/directory-loo/locomo/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 60500000
+    },
+    {
+      "id": "210-c1.small.directory-loo.longmemeval-m",
+      "attemptId": "210-c1.small.directory-loo.longmemeval-m@1",
+      "answersDir": ".cache/memory-bench/210/small/directory-loo/longmemeval-m/answers",
+      "status": "completed",
+      "cause": null,
+      "usageComplete": true,
+      "charged": 1669084
+    }
+  ]
+}

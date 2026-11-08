@@ -94,7 +94,7 @@ describe("@arnilo/prism-provider-hyper package", () => {
       captured = new Headers(init.headers);
       return ok(completion());
     }) as typeof fetch;
-    await providerConformance(() => createHyperProvider({ apiKey: key, fetch: fetchImpl }), {
+    await providerConformance(() => createHyperProvider({ apiKey: async () => key, fetch: fetchImpl }), {
       request,
       secrets: [key],
       headers: {
@@ -108,7 +108,7 @@ describe("@arnilo/prism-provider-hyper package", () => {
 
   it("hyper_passes_recorded_conformance", async () => {
     const key = "sk-hyper-conformance-key-should-not-surface";
-    const result = await providerConformance((fetchImpl) => createHyperProvider({ apiKey: key, fetch: fetchImpl }), {
+    const result = await providerConformance((fetchImpl) => createHyperProvider({ apiKey: async () => key, fetch: fetchImpl }), {
       recordings: new URL("./wire/", import.meta.url),
       models: hyperModels,
       secrets: [key],
@@ -268,7 +268,7 @@ describe("@arnilo/prism-provider-hyper package", () => {
       captured = new Headers(init.headers);
       return ok(anthropicSse());
     }) as typeof fetch;
-    await providerConformance(() => createHyperProvider({ apiKey: key, fetch: fetchImpl }), {
+    await providerConformance(() => createHyperProvider({ apiKey: async () => key, fetch: fetchImpl }), {
       request: { ...request, model: anthropicModel },
       secrets: [key],
       headers: {

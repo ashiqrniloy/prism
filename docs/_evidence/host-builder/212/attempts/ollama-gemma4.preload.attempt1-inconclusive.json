@@ -1,0 +1,581 @@
+{
+  "plan": "215 Task 20",
+  "round": 1,
+  "mode": "live",
+  "loading": "preload",
+  "startedAt": "2026-11-08T06:23:38.751Z",
+  "finishedAt": "2026-11-08T08:51:52.420Z",
+  "criteriaHash": "4571c4884fac0b9f55af16078f9eaf708b4f863bbd6139ccc696f53e740887c9",
+  "criteriaLockedAt": "2026-11-08T05:28:45.749Z",
+  "datasetContentHash": "sha256:ff685a2c104e04f56ce1b42080eb30fe542e22b6f15d81a21f4811ce3a608ab3",
+  "inputs": {
+    "workspaces": "sha256:01e6b6bd91ac9a3cacb7bf53dcede244af7cef486f41892139aea3c4bfdf0e5c",
+    "hidden": "sha256:b096d72e77abf7968097d14d70886604e0768a01c0b7a201d051b48c6512a47e",
+    "solutions": "sha256:810998b18afee3a8778287c312a19c9a25a50a46ec1b68f88b45c2e9ba99462b",
+    "skill": "sha256:8f3436c586b503abfc3131b31984aac7425565cc6e2fb27dbcb657bb4e170ff9",
+    "indexes": "sha256:20f8a95ecc05c6ba2ad8c2a872c7063164abe05643b5bcf9b98e8992caa87e80"
+  },
+  "runtimeRevision": "bc87e53904fb104737a8186df94c2f5e7f909c03",
+  "trials": 3,
+  "providers": [
+    {
+      "provider": "ollama-cloud",
+      "model": "gemma4:31b",
+      "arms": {
+        "none": {
+          "status": "succeeded",
+          "scorers": {
+            "typecheck_passes": {
+              "mean": 0.8095238095238094,
+              "ci95": {
+                "low": 0.5238095238095238,
+                "high": 1
+              },
+              "records": 20
+            },
+            "acceptance_tests_pass": {
+              "mean": 0.23809523809523808,
+              "ci95": {
+                "low": 0.047619047619047616,
+                "high": 0.5238095238095238
+              },
+              "records": 20
+            },
+            "public_surface_only": {
+              "mean": 0.8571428571428571,
+              "ci95": {
+                "low": 0.5714285714285714,
+                "high": 1
+              },
+              "records": 20
+            },
+            "no_retired_names": {
+              "mean": 0.8571428571428571,
+              "ci95": {
+                "low": 0.5714285714285714,
+                "high": 1
+              },
+              "records": 20
+            }
+          },
+          "failedCount": 4,
+          "scoredRuns": 20,
+          "limitedRuns": 7,
+          "toolCalls": 648,
+          "skillLoadedRuns": 0,
+          "mcpUsedRuns": 0,
+          "acceptanceByLoading": {
+            "loaded": {
+              "runs": 0,
+              "passed": 0
+            },
+            "notLoaded": {
+              "runs": 20,
+              "passed": 5
+            }
+          },
+          "inputTokens": 25474754,
+          "cacheReadTokens": 24329504,
+          "uncachedInputTokens": 1145250,
+          "outputTokens": 61604,
+          "costComplete": false,
+          "meanDurationMs": 346183.2268877144,
+          "durationMs": {
+            "p50": 80647.28646800003,
+            "p95": 255338.98931500013
+          }
+        },
+        "skill": {
+          "status": "succeeded",
+          "scorers": {
+            "typecheck_passes": {
+              "mean": 0.7857142857142857,
+              "ci95": {
+                "low": 0.5,
+                "high": 1
+              },
+              "records": 20
+            },
+            "acceptance_tests_pass": {
+              "mean": 0.5952380952380951,
+              "ci95": {
+                "low": 0.2619047619047619,
+                "high": 0.880952380952381
+              },
+              "records": 20
+            },
+            "public_surface_only": {
+              "mean": 1,
+              "ci95": {
+                "low": 1,
+                "high": 1
+              },
+              "records": 20
+            },
+            "no_retired_names": {
+              "mean": 1,
+              "ci95": {
+                "low": 1,
+                "high": 1
+              },
+              "records": 20
+            }
+          },
+          "failedCount": 4,
+          "scoredRuns": 20,
+          "limitedRuns": 4,
+          "toolCalls": 502,
+          "skillLoadedRuns": 20,
+          "mcpUsedRuns": 0,
+          "acceptanceByLoading": {
+            "loaded": {
+              "runs": 20,
+              "passed": 12
+            },
+            "notLoaded": {
+              "runs": 0,
+              "passed": 0
+            }
+          },
+          "inputTokens": 19536719,
+          "cacheReadTokens": 18318624,
+          "uncachedInputTokens": 1218095,
+          "outputTokens": 63344,
+          "costComplete": false,
+          "meanDurationMs": 736353.312648286,
+          "durationMs": {
+            "p50": 215669.04330400005,
+            "p95": 540370.3323130002
+          }
+        },
+        "skill+mcp": {
+          "status": "succeeded",
+          "scorers": {
+            "typecheck_passes": {
+              "mean": 0.7619047619047619,
+              "ci95": {
+                "low": 0.47619047619047616,
+                "high": 0.9523809523809526
+              },
+              "records": 21
+            },
+            "acceptance_tests_pass": {
+              "mean": 0.5714285714285714,
+              "ci95": {
+                "low": 0.23809523809523808,
+                "high": 0.8571428571428571
+              },
+              "records": 21
+            },
+            "public_surface_only": {
+              "mean": 0.9047619047619049,
+              "ci95": {
+                "low": 0.761904761904762,
+                "high": 1
+              },
+              "records": 21
+            },
+            "no_retired_names": {
+              "mean": 0.8571428571428571,
+              "ci95": {
+                "low": 0.5714285714285714,
+                "high": 1
+              },
+              "records": 21
+            }
+          },
+          "failedCount": 0,
+          "scoredRuns": 21,
+          "limitedRuns": 5,
+          "toolCalls": 620,
+          "skillLoadedRuns": 21,
+          "mcpUsedRuns": 21,
+          "acceptanceByLoading": {
+            "loaded": {
+              "runs": 21,
+              "passed": 12
+            },
+            "notLoaded": {
+              "runs": 0,
+              "passed": 0
+            }
+          },
+          "inputTokens": 11814670,
+          "cacheReadTokens": 11436992,
+          "uncachedInputTokens": 377678,
+          "outputTokens": 58500,
+          "costComplete": false,
+          "meanDurationMs": 161604.36581957128,
+          "durationMs": {
+            "p50": 48047.87945699878,
+            "p95": 90089.96220899932
+          }
+        }
+      },
+      "decision": {
+        "verdict": "inconclusive",
+        "roundVerdict": "inconclusive",
+        "reason": "8 unscored record(s) from provider or harness failures; rerun",
+        "comparisons": [
+          {
+            "id": "skill_vs_none",
+            "baseline": "none",
+            "candidate": "skill",
+            "scorers": {
+              "typecheck_passes": {
+                "difference": -0.023809523809523805,
+                "ci95": {
+                  "low": -0.07142857142857141,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "acceptance_tests_pass": {
+                "difference": 0.35714285714285715,
+                "ci95": {
+                  "low": 0.09523809523809525,
+                  "high": 0.6666666666666666
+                },
+                "qValue": 0.5,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "public_surface_only": {
+                "difference": 0.14285714285714285,
+                "ci95": {
+                  "low": 0,
+                  "high": 0.42857142857142855
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "no_retired_names": {
+                "difference": 0.14285714285714285,
+                "ci95": {
+                  "low": 0,
+                  "high": 0.42857142857142855
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              }
+            }
+          },
+          {
+            "id": "skill_mcp_vs_none",
+            "baseline": "none",
+            "candidate": "skill+mcp",
+            "scorers": {
+              "typecheck_passes": {
+                "difference": -0.04761904761904762,
+                "ci95": {
+                  "low": -0.1904761904761905,
+                  "high": 0.09523809523809525
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "acceptance_tests_pass": {
+                "difference": 0.33333333333333337,
+                "ci95": {
+                  "low": 0,
+                  "high": 0.6666666666666667
+                },
+                "qValue": 0.75,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "public_surface_only": {
+                "difference": 0.04761904761904761,
+                "ci95": {
+                  "low": -0.1904761904761905,
+                  "high": 0.38095238095238093
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "no_retired_names": {
+                "difference": 0,
+                "ci95": {
+                  "low": 0,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              }
+            }
+          },
+          {
+            "id": "skill_mcp_vs_skill",
+            "baseline": "skill",
+            "candidate": "skill+mcp",
+            "scorers": {
+              "typecheck_passes": {
+                "difference": -0.02380952380952382,
+                "ci95": {
+                  "low": -0.1904761904761905,
+                  "high": 0.16666666666666666
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "acceptance_tests_pass": {
+                "difference": -0.02380952380952382,
+                "ci95": {
+                  "low": -0.42857142857142855,
+                  "high": 0.2857142857142857
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "public_surface_only": {
+                "difference": -0.09523809523809525,
+                "ci95": {
+                  "low": -0.23809523809523814,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "no_retired_names": {
+                "difference": -0.14285714285714285,
+                "ci95": {
+                  "low": -0.42857142857142855,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              }
+            }
+          }
+        ],
+        "claims": [],
+        "regressions": []
+      },
+      "tasks": [
+        {
+          "id": "headless-host",
+          "arms": {
+            "none": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "0/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/headless-host.test.ts:\n35 |     const session = await agent.session();\n36 |     const result = await session.run(\"read the note and echo\");\n37 |     expect(result.status).toBe(\"completed\");\n38 |     const results = (last?.messages ?? []).flatMap((message) …",
+              "unscored": 0
+            },
+            "skill": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/headless-host.test.ts:\n29 |         { onRequest: (request: never) => void (last = request) },\n30 |       ),\n31 |     ],\n32 |   });\n33 |   try {\n34 |     expect(agent.skills.some((skill) => skill.name === \"probe\")).toBe(true);\n                              …",
+              "unscored": 0
+            },
+            "skill+mcp": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "1/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/headless-host.test.ts:\n29 |         { onRequest: (request: never) => void (last = request) },\n30 |       ),\n31 |     ],\n32 |   });\n33 |   try {\n34 |     expect(agent.skills.some((skill) => skill.name === \"probe\")).toBe(true);\n                              …",
+              "unscored": 0
+            }
+          }
+        },
+        {
+          "id": "approval-ask",
+          "arms": {
+            "none": {
+              "typecheck_passes": "2/3",
+              "acceptance_tests_pass": "1/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "src/host.ts(23,9): error TS2353: Object literal may only specify known properties, and 'beforeExecute' does not exist in type 'ToolsCodingConfig'.\nsrc/host.ts(23,31): error TS7006: Parameter 'call' implicitly has an 'any' type.\nsrc/host.ts(31,45): error TS2339: Property 'confirm' does not exist on t…",
+              "unscored": 0
+            },
+            "skill": {
+              "typecheck_passes": "1/2",
+              "acceptance_tests_pass": "1/2",
+              "public_surface_only": "2/2",
+              "no_retired_names": "2/2",
+              "firstFailure": "src/host.ts(19,7): error TS2353: Object literal may only specify known properties, and '\"tool.call\"' does not exist in type '(hooks: HookRegistrar) => void'.\nsrc/host.ts(19,21): error TS7006: Parameter 'call' implicitly has an 'any' type.",
+              "unscored": 1,
+              "firstError": "run failed: The operation timed out."
+            },
+            "skill+mcp": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "3/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "unscored": 0
+            }
+          }
+        },
+        {
+          "id": "sqlite-resume",
+          "arms": {
+            "none": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "1/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/sqlite-resume.test.ts:\n22 |   await session.run(\"first question\");\n23 |   await session.run(\"second question\");\n24 |   const before = await session.messages();\n25 |   const id = session.id;\n26 |   await first.dispose();\n27 |   expect(existsSync(dbPath)).to…",
+              "unscored": 0
+            },
+            "skill": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "3/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "unscored": 0
+            },
+            "skill+mcp": {
+              "typecheck_passes": "2/3",
+              "acceptance_tests_pass": "3/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "src/verify-sqlite.ts(41,28): error TS2339: Property 'history' does not exist on type 'Session'.\nsrc/verify-sqlite.ts(64,34): error TS2339: Property 'history' does not exist on type 'Session'.",
+              "unscored": 0
+            }
+          }
+        },
+        {
+          "id": "acp-serve",
+          "arms": {
+            "none": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/acp-serve.test.ts:\n53 | \n54 | test(\"an ACP client approves an edit through session/request_permission\", async () => {\n55 |   const { initialized, prompt, asked } = await session(\"allow_once\");\n56 |   expect(initialized.agentCapabilities?.loadSession).toBe(…",
+              "unscored": 0
+            },
+            "skill": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "2/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/acp-serve.test.ts:\n(fail) an ACP client approves an edit through session/request_permission [60004.09ms]\n  ^ this test timed out after 60000ms.\n(fail) an ACP client can refuse, and the file stays [60000.21ms]\n  ^ this test timed out after 60000ms.\n\n 0 pass…",
+              "unscored": 0
+            },
+            "skill+mcp": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "3/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "unscored": 0
+            }
+          }
+        },
+        {
+          "id": "compaction-slot",
+          "arms": {
+            "none": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "3/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "unscored": 0
+            },
+            "skill": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "3/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "unscored": 0
+            },
+            "skill+mcp": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "2/3",
+              "public_surface_only": "2/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/compaction-slot.test.ts:\n54 |   function pick(name: SlotName, assigned: unknown): { readonly owner: string; readonly impl: unknown } {\n55 |     assertSlot(name);\n56 |     const list = providers.get(name) ?? [];\n57 |     if (typeof assigned === \"string\") {\n…",
+              "unscored": 0
+            }
+          }
+        },
+        {
+          "id": "package-conformance",
+          "arms": {
+            "none": {
+              "typecheck_passes": "0/2",
+              "acceptance_tests_pass": "0/2",
+              "public_surface_only": "2/2",
+              "no_retired_names": "2/2",
+              "firstFailure": "src/no-force-push.test.ts(2,10): error TS2305: Module '\"@arnilo/prism\"' has no exported member 'verifyPackage'.\nsrc/no-force-push.ts(1,10): error TS2305: Module '\"@arnilo/prism\"' has no exported member 'PrismPackage'.\nsrc/no-force-push.ts(8,16): error TS7031: Binding element 'args' implicitly has an…",
+              "unscored": 1,
+              "firstError": "run failed: The operation timed out."
+            },
+            "skill": {
+              "typecheck_passes": "0/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "src/no-force-push.test.ts(22,13): error TS2820: Type '\"tool-call\"' is not assignable to type '\"content_delta\" | \"continuation_required\" | \"done\" | \"error\" | \"message_start\" | \"tool_call\" | \"tool_call_delta\" | \"usage\"'. Did you mean '\"tool_call\"'?\nsrc/no-force-push.test.ts(34,55): error TS2345: Argum…",
+              "unscored": 0
+            },
+            "skill+mcp": {
+              "typecheck_passes": "0/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "src/no-force-push.test.ts(35,14): error TS2322: Type 'ToolCallContent' is not assignable to type 'ProviderEvent'.\nsrc/no-force-push.test.ts(82,14): error TS2322: Type 'ToolCallContent' is not assignable to type 'ProviderEvent'.\nsrc/no-force-push.ts(12,31): error TS2339: Property 'arguments' does not…",
+              "unscored": 0
+            }
+          }
+        },
+        {
+          "id": "upgrade-0-12",
+          "arms": {
+            "none": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "0/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/upgrade-0-12.test.ts:\n 5 | \n 6 | /** A `ModelRef` that cannot name a provider and a model. The message never carries a credential value. */\n 7 | export class ModelRefError extends TypeError {\n 8 |   readonly code: ModelRefErrorCode = \"model_ref_invalid\";\n …",
+              "unscored": 0
+            },
+            "skill": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "3/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "unscored": 0
+            },
+            "skill+mcp": {
+              "typecheck_passes": "2/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "2/3",
+              "no_retired_names": "0/3",
+              "firstFailure": "src/host.ts(3,29): error TS2307: Cannot find module '@arnilo/prism-coding-tools' or its corresponding type declarations.",
+              "unscored": 0
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "verdict": "inconclusive"
+}

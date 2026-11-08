@@ -1,24 +1,17 @@
 /**
- * `@arnilo/prism-memory-fabric` — working, semantic, and scoped memory as a package (plan 158 Task 4).
+ * `@arnilo/prism-memory-fabric` — working and semantic memory as a package (plan 158 Task 4).
  *
- * The package owns the 0.12 memory fabric (typed notes, consolidation, the linker/evolution workers,
- * the scoped policy layer) and adds the package surface the roadmap §2.9 row asks for: the
- * `memory.*` tools, a `context.build` block, and per-session state.
+ * The package owns the 0.12 memory fabric (typed notes, consolidation) and adds the package surface the
+ * roadmap §2.9 row asks for: the `memory.*` tools, a `context.build` block, and per-session state.
  *
- * Cost: working memory makes no model call and no embedding call. Semantic memory makes one
- * embedding call per write and per recall through the `embeddings` service another package provides
- * (install `@arnilo/prism-memory-rag`). The opt-in workers add embedding calls on writes; they make
- * no model call. Every tool call and worker runs only for a session where the fabric is enabled.
+ * Cost: working memory and semantic memory make no model call and no embedding call; retrieval is lexical.
+ * Every tool call and worker runs only for a session where the fabric is enabled.
  *
  * ```ts
  * import memoryFabric from "@arnilo/prism-memory-fabric";
- * import memoryRag from "@arnilo/prism-memory-rag";
  * import { createAgent } from "@arnilo/prism";
  *
- * const agent = await createAgent({
- *   model: "openai/gpt-5",
- *   packages: [memoryRag({ embeddings: { model: "openai/text-embedding-3-small" } }), memoryFabric({ semantic: true })],
- * });
+ * const agent = await createAgent({ model: "openai/gpt-5", packages: [memoryFabric({ semantic: true })] });
  * ```
  */
 
@@ -41,9 +34,7 @@ import {
 } from "@arnilo/prism";
 import {
   createMemoryVectorStore,
-  type Embedder,
   type Memory,
-  MemoryValidationError,
   type MemoryVectorRecord,
   type VectorStore,
   type WorkingMemoryStore,
@@ -84,21 +75,15 @@ import { createFabricLifecycle, describeNote, type FabricLifecycle, inspectNote,
 import { createMemory } from "./memory.js";
 import { createNoteNavigator } from "./navigation.js";
 import { exportMemoryOkf, importMemoryOkf } from "./okf-bundle.js";
-import { createConceptDeletionHandler, MEMORY_FABRIC_CONCEPT_HANDLER_SERVICE } from "./ontology/handler.js";
-import { createFabricOntology, MEMORY_FABRIC_SERVICE } from "./ontology/port.js";
-import { reviewConceptEdit } from "./ontology/review.js";
+import { createMemoryLtmPort, MEMORY_LTM_SERVICE } from "./ltm.js";
 import { readPromoteState } from "./promote.js";
 import { reconcileFabricFiles } from "./reconcile.js";
 import { renderProjectFile } from "./scope/identity.js";
 import { createTouchedPathTracker, type TouchedPathTracker } from "./scope/touched-paths.js";
-import { createScopedMemoryPolicy } from "./scoped/policy.js";
 import { createMemoryFabricTools } from "./tools.js";
 import {
   type CreateMemoryFabricOptions,
-  type FabricScopeLevel,
   type MemoryFabric,
-  type MemoryFabricRecallOptions,
-  type MemoryFabricRecallResult,
   parseMemoryNoteMetadata,
   unreadableNoteReason,
 } from "./types.js";
@@ -113,14 +98,11 @@ export {
   type MemoryFabricInjectConfig,
   type MemoryFabricLifecycleConfig,
   type MemoryFabricMarkdownStoreConfig,
-  type MemoryFabricOntologyConfig,
   type MemoryFabricPostgresStoreConfig,
   type MemoryFabricPresetName,
   type MemoryFabricProjectScopeConfig,
   type MemoryFabricRulesConfig,
-  type MemoryFabricScopedConfig,
   type MemoryFabricScopesConfig,
-  type MemoryFabricStateConfig,
   type MemoryFabricTeamConfig,
   type MemoryFabricToolsConfig,
   memoryFabricConfigSchema,
@@ -130,7 +112,6 @@ export {
   type ResolvedFabricTeamOptions,
   type ResolvedLifecycleConfig,
   type ResolvedMemoryFabricConfig,
-  type ResolvedStateConfig,
   resolveLifecycleConfig,
   resolveMemoryFabricConfig,
 } from "./config.js";
@@ -142,12 +123,10 @@ export type {
   FabricDecisions,
   MemoryFabricDecisionsConfig,
   ResolvedDecisionsConfig,
-  SupersessionChoice,
 } from "./decisions.js";
-// The moved 0.12 library surface (fabric, scoped policy, memory, working memory, conformance).
+// The moved 0.12 library surface (fabric, memory, working memory, conformance).
 export * from "./exports.js";
 export { createMemory } from "./memory.js";
-export * from "./scoped/index.js";
 export { createMemoryWorkingStore, type MemoryWorkingStoreOptions } from "./working-memory.js";
 
 const FABRIC_ENABLED_KEY = "fabric.enabled";
@@ -197,19 +176,8 @@ const definition = definePackage<MemoryFabricConfig>({
     };
     const touchedPathsFor = (sessionId: string): readonly string[] => touchedTrackers.get(sessionId)?.paths() ?? [];
 
-    // The `embeddings` service is consumed lazily: the providing package (for example
-    // `@arnilo/prism-memory-rag`) may load after this one, so availability is a per-call question.
-    const embeddingsService = (): Embedder | undefined => prism.services.consume<Embedder>("embeddings");
-    // Indexed notes are always available; the retrieval mode alone decides whether an embedder is used.
+    // Indexed notes are always available; retrieval is lexical.
     const indexedNotes = (): boolean => config.semantic;
-    const embedder: Embedder | undefined =
-      config.semantic && config.retrieval === "hybrid" ? createServiceEmbedder(embeddingsService) : undefined;
-    if (config.retrieval === "hybrid" && !embeddingsService()) {
-      prism.status.note(
-        "warn",
-        "memory-fabric: retrieval hybrid needs an embeddings service (for example @arnilo/prism-memory-rag); using lexical",
-      );
-    }
 
     const sqliteFile =
       config.store !== "memory" && "sqlite" in config.store && config.tools.root
@@ -235,7 +203,6 @@ const definition = definePackage<MemoryFabricConfig>({
         tenantId: config.scopes.tenantId,
         resourceId: scope.resourceId,
         threadId: config.scopes.threadId,
-        ...(embedder === undefined ? {} : { embedder }),
         vectorStore,
         workingStore,
         ...(config.limits === undefined ? {} : { limits: config.limits }),
@@ -243,56 +210,6 @@ const definition = definePackage<MemoryFabricConfig>({
       }),
     }));
     const memory = memories[0]!.memory;
-    // The ontology tier's store-side half (plan 207 Task 2): the deletion cascade always runs when indexed notes are
-    // on, and `memory.fabric` is the port the wiki package consumes. Neither calls a model.
-    const ontology = config.semantic
-      ? createFabricOntology({
-          scopes: memories.map(({ level, memory: scoped }) => ({ level, memory: scoped })),
-          store: vectorStore,
-          bindThreshold: config.ontology.bindThreshold,
-          // Ingested sources (plan 207 Task 8) are `file` notes under tools.root, written by the ordinary write path.
-          ...(config.tools.root === undefined
-            ? {}
-            : {
-                sourceRoot: resolve(config.tools.root),
-                indexSource: async (source) => {
-                  const note = await fabric.remember(
-                    {
-                      kind: "file",
-                      scope: "project",
-                      path: source.path,
-                      content: source.text.slice(0, memory.limits.maxEntryTextChars),
-                      contentHash: source.contentHash,
-                      ...(source.keywords === undefined || source.keywords.length === 0 ? {} : { keywords: source.keywords }),
-                    },
-                    { generatedBy: "host", ...(source.signal === undefined ? {} : { signal: source.signal }) },
-                  );
-                  return { id: note.id, ...(note.subject === undefined ? {} : { subject: note.subject }) };
-                },
-              }),
-        })
-      : undefined;
-    if (ontology !== undefined) {
-      prism.services.provide(MEMORY_FABRIC_SERVICE, ontology.port);
-      prism.services.provide(MEMORY_FABRIC_CONCEPT_HANDLER_SERVICE, createConceptDeletionHandler(ontology));
-    }
-    // A project this process did not bind is opened over the same stores on demand, so a nightly
-    // `memory:maintain` can widen across every project of this tenant (plan 188.4 Further Action 2).
-    const openScope = ({ resourceId }: { readonly resourceId: string }) => {
-      const opened = createMemory({
-        tenantId: config.scopes.tenantId,
-        resourceId,
-        threadId: config.scopes.threadId,
-        ...(embedder === undefined ? {} : { embedder }),
-        vectorStore,
-        workingStore,
-        ...(config.limits === undefined ? {} : { limits: config.limits }),
-        ...(config.workingMemoryTemplate === undefined ? {} : { workingMemoryTemplate: config.workingMemoryTemplate }),
-      });
-      // A project this process did not bind still cascades: its retractions reach the same concept index logic.
-      ontology?.attach({ level: "project", memory: opened });
-      return opened;
-    };
     // The scope ordinal this process ranks against; the tick below refreshes it once per session.
     let sessionClock = 0;
     // Opt-in decision gates bind one decisions-capable client at setup. Absent keeps every incumbent.
@@ -304,16 +221,7 @@ const definition = definePackage<MemoryFabricConfig>({
       onRecall: prism.services.consume<CreateMemoryFabricOptions["onRecall"]>("memory-fabric.diagnostics"),
       memory,
       scopes: memories,
-      // Notes bind to the subject they name, and the extractor is shown the scope's subjects (plan 207 Task 3).
-      ...(ontology === undefined
-        ? {}
-        : {
-            subjects: ontology.subjects,
-            ontology: { conceptPrior: config.ontology.conceptPrior, maxClaimsRendered: config.ontology.maxClaimsRendered },
-          }),
       promote: config.promote,
-      state: config.state,
-      ...(decisions === undefined ? {} : { decisions }),
       promoteRoot: config.scopes.project?.root ?? config.tools.root ?? process.cwd(),
       exchanges: { enabled: config.exchanges.enabled },
       // The repository rules need a real root, not the cwd fallback `promoteRoot` uses for derivability.
@@ -321,18 +229,13 @@ const definition = definePackage<MemoryFabricConfig>({
         config.scopes.active.some((scope) => scope.level === "project") &&
         (config.scopes.project?.root !== undefined || config.tools.root !== undefined),
       resolveModelClient: (model) => prism.models.client(model),
-      onDeciderFailure: () => prism.status.note("warn", "memory-fabric: consolidation decision failed; preserving both notes"),
       notify: (message) => prism.status.note("warn", message),
       ...(config.consolidate === undefined ? {} : { consolidate: config.consolidate }),
-      ...(config.linker === undefined ? {} : { linker: config.linker }),
-      ...(config.evolution === undefined ? {} : { evolution: config.evolution }),
-      ...(config.passive === undefined ? {} : { passive: config.passive }),
       ...(config.workerLimits === undefined ? {} : { workerLimits: config.workerLimits }),
       scopePriors: config.scopes.priors,
       touchedPaths: touchedPathsFor,
       lifecycle: config.lifecycle,
       clock: () => sessionClock,
-      openScope,
     };
     // The team store: a checked-in `.prism/memory/` the fabric recalls as scope `team`. Its derived
     // index lives under tools.root, so the repository holds notes only (plan 188.5 Task 3).
@@ -345,8 +248,6 @@ const definition = definePackage<MemoryFabricConfig>({
           index: join(config.tools.root, ".team-index", `${teamProject.resourceId.split("--").at(-1)}.sqlite`),
         });
         prism.onDispose(() => team?.close());
-        // The team ontology is read-only here: lint and the status command read it, nothing in this process writes it.
-        ontology?.attach({ level: "team", memory: team.memory, store: team.store });
         if (team.quarantined > 0) {
           prism.status.note("warn", `memory-fabric: ${team.quarantined} team note(s) quarantined by the trust scan`);
         }
@@ -354,9 +255,21 @@ const definition = definePackage<MemoryFabricConfig>({
     } else if (config.team && config.tools.root === undefined) {
       prism.status.note("warn", "memory-fabric: team memory needs tools.root for its index; team store is off");
     }
+    // The read-only long-term-memory port a consumer outside memory (the wiki) reads through (plan 216 Task 3). It has
+    // no write member; the team scope is listed when the team store is on.
+    if (config.semantic) {
+      prism.services.provide(
+        MEMORY_LTM_SERVICE,
+        createMemoryLtmPort({
+          scopes: () => [
+            ...memories.map((binding) => ({ level: binding.level, memory: binding.memory, store: vectorStore })),
+            ...(team === undefined ? [] : [{ level: "team" as const, memory: team.memory, store: team.store }]),
+          ],
+        }),
+      );
+    }
     const fabric = createMemoryFabric({
       ...fabricOptions,
-      supersessionHint: config.recall.supersessionHint,
       queryExpansion: config.recall.expansion,
       gather: config.recall.gather,
       vectorStore,
@@ -461,9 +374,6 @@ const definition = definePackage<MemoryFabricConfig>({
             memory,
             memories,
             stopWords: config.directory.stopWords,
-            ...(ontology === undefined
-              ? {}
-              : { concepts: (level, signal) => ontology.subjects.listing(level as FabricScopeLevel, signal) }),
             ...(config.tools.root
               ? {
                   files: createFabricFileJail(
@@ -517,7 +427,6 @@ const definition = definePackage<MemoryFabricConfig>({
             storageWeights: config.lifecycle.storageWeights,
             decay: config.lifecycle.decay,
             clock: () => sessionClock,
-            ...(decisions === undefined ? {} : { decisions }),
           })
         : undefined;
 
@@ -556,22 +465,7 @@ const definition = definePackage<MemoryFabricConfig>({
       });
     }
 
-    // The scoped policy layer replaces the plain recall when configured, so its activation floor,
-    // decay, and abstention stay enforced on every `memory.recall` result.
-    const recall =
-      config.scoped === undefined
-        ? fabric.recall
-        : scopedRecall(
-            config,
-            memory,
-            fabric,
-            () => sessionClock,
-            (ignored) =>
-              prism.status.note(
-                "warn",
-                `memory-fabric: ignored lifecycle fields on ${ignored} older scoped ledger row(s); the note lifecycle is authoritative`,
-              ),
-          );
+    const recall = fabric.recall;
 
     /** `memory.read` by id looks in every active scope, narrowest first, through each scope's own read filters. */
     const readNotesAcrossScopes = async (ids: readonly string[], signal?: AbortSignal): Promise<readonly MemoryVectorRecord[]> => {
@@ -628,18 +522,14 @@ const definition = definePackage<MemoryFabricConfig>({
         : undefined;
 
     // --- tools: `when` gates visibility and callability per session (the kernel blocks hidden calls).
-    // `memory.recall` additionally needs the embeddings service, which may arrive after this package.
     const tracker = createFabricCitationTracker();
     const tools = createMemoryFabricTools({
-      supersessionHint: config.recall.supersessionHint,
       gather: config.recall.gather,
       memory,
       remember: fabric.remember,
       recall,
       forget: fabric.forget,
-      state: config.state,
       ...(decisions === undefined ? {} : { decisions }),
-      resolveModelClient: (model) => prism.models.client(model),
       isIndexedNotesAvailable: indexedNotes,
       tracker,
       readNotes: readNotesAcrossScopes,
@@ -656,7 +546,6 @@ const definition = definePackage<MemoryFabricConfig>({
         vectorStore,
         notify: (message) => prism.status.note("warn", message),
       }),
-      ...(ontology === undefined ? {} : { ontology: { maxClaimsRendered: config.ontology.maxClaimsRendered } }),
       scopeLevel: memories[0]!.level,
       scopeLevels: [...memories.map((binding) => binding.level), ...(team === undefined ? [] : (["team"] as const))],
       ...(directory ? { directory } : {}),
@@ -723,7 +612,6 @@ const definition = definePackage<MemoryFabricConfig>({
         prism.status.note("warn", `memory-fabric: reconciling rules.md failed (${error instanceof Error ? error.message : String(error)})`);
       }
     };
-    let warnedFloor = false;
     prism.hooks.on(
       "context.build",
       async (draft, context) => {
@@ -732,13 +620,6 @@ const definition = definePackage<MemoryFabricConfig>({
         // First context.build of the session ticks each active scope once; session state carries it across a restore.
         await tickScopeClock(context.session);
         await reconcileRulesOnce(context.session, context.signal);
-        if (config.inject && config.retrieval === "hybrid" && !warnedFloor) {
-          warnedFloor = true;
-          prism.status.note(
-            "info",
-            `memory-fabric: embedder ${embeddingsService()?.id ?? "unknown"} uses provisional cosine floor ${config.inject.minSimilarity ?? 0.35}; calibration pending Task 14`,
-          );
-        }
         return projection.build(draft, context);
       },
       { id: FABRIC_CONTEXT_HOOK_ID, priority: -1_100 },
@@ -857,12 +738,6 @@ const definition = definePackage<MemoryFabricConfig>({
       const state = readPromoteState(promoteState.get(session));
       const entries = await session.entries();
       if (!hasNewObservationalMaterial(entries, state.cursor)) return;
-      const lastUser = [...entries].reverse().find((entry) => entry.kind === "message" && entry.message?.role === "user");
-      const gate =
-        decisions?.enabled("P1") && lastUser?.message !== undefined
-          ? await decisions.evaluateTurn({ text: messageText(lastUser.message) })
-          : undefined;
-      if (gate?.durable === false) return;
       turnsSincePass.set(session.id, 0);
       session.background("fabric.consolidate", (signal) => consolidateNow(session, signal));
     });
@@ -878,14 +753,7 @@ const definition = definePackage<MemoryFabricConfig>({
           // A turn with no new OM material starts no task and makes no model call.
           if (hasNewObservationalMaterial(entries, state.cursor)) {
             turnsSincePass.set(session.id, 0);
-            // P1 gates the generative extractor too; a clear "not durable" skips this pass. The
-            // capture hook reuses this result for the same persisted user text.
-            const lastUser = [...entries].reverse().find((entry) => entry.kind === "message" && entry.message?.role === "user");
-            const gate =
-              decisions?.enabled("P1") && lastUser?.message !== undefined
-                ? await decisions.evaluateTurn({ text: messageText(lastUser.message) })
-                : undefined;
-            if (gate?.durable !== false) session.background("fabric.consolidate", (signal) => consolidateNow(session, signal));
+            session.background("fabric.consolidate", (signal) => consolidateNow(session, signal));
           }
         }
       }
@@ -920,8 +788,6 @@ const definition = definePackage<MemoryFabricConfig>({
           await scope.lifecycle.recordRetrievals(retrievals, { signal });
           await scope.lifecycle.recordEvidence(evidence, { signal });
         }
-        // A concept's recorded uses order the directory's subject list: keep its index row current.
-        if (ids.length) await ontology?.refresh(ids, { signal });
       });
     });
 
@@ -952,8 +818,6 @@ const definition = definePackage<MemoryFabricConfig>({
             try {
               return await stores.reindex!(options);
             } finally {
-              // A person's edit may have changed a concept's sources or subject: the index rescans on next use.
-              for (const level of ontology?.scopes() ?? []) ontology?.index(level)?.invalidate();
               projection.refresh();
             }
           }),
@@ -962,7 +826,6 @@ const definition = definePackage<MemoryFabricConfig>({
     const bundle = {
       memory,
       stores: { vectorStore, workingStore },
-      embedder,
       root: config.tools.root,
       notesDir: notesRel === undefined ? undefined : resolve(config.tools.root!, notesRel),
       refresh: () => {
@@ -980,28 +843,6 @@ export default definition;
 /** The package with config baked in, for `packages: [memoryFabric({ ... })]`. */
 export function memoryFabric(config: MemoryFabricConfig): PackageInstance {
   return definition(config);
-}
-
-/**
- * An `Embedder` that resolves another package's `embeddings` service on each call, so a provider
- * loaded after this package is still visible. Fails closed when the service never arrives.
- */
-function createServiceEmbedder(consume: () => Embedder | undefined): Embedder {
-  const required = (): Embedder => {
-    const embedder = consume();
-    if (!embedder) throw new MemoryValidationError("memory-fabric: no package provides the embeddings service");
-    return embedder;
-  };
-  return {
-    get id(): string {
-      return consume()?.id ?? "prism-fabric-pending";
-    },
-    get dimensions(): number {
-      return consume()?.dimensions ?? 0;
-    },
-    available: () => consume() !== undefined,
-    embed: (texts, options) => required().embed(texts, options),
-  };
 }
 
 /** The `memory:status` warning for rules that did not fit the always-loaded block (human rules are never dropped silently). */
@@ -1062,8 +903,6 @@ async function resolveStore(
       root: dir,
       ...(config.limits === undefined ? {} : { limits: config.limits }),
       classifyNote: (record) => unreadableNoteReason(record.metadata),
-      // A person's edit to a concept file is reviewed before it is indexed (plan 207 Task 7).
-      reviewEdit: (record, previous) => reviewConceptEdit(record, previous),
     });
     return {
       vectorStore: stores.vectorStore,
@@ -1112,30 +951,6 @@ async function resolveStore(
     }
   }
   return stores;
-}
-
-/** The scoped read policy as the `memory.recall` implementation. */
-function scopedRecall(
-  config: ResolvedMemoryFabricConfig,
-  memory: Memory,
-  fabric: MemoryFabric,
-  clock: () => number,
-  note: (ignored: number) => void,
-): (query: string, options?: MemoryFabricRecallOptions) => Promise<MemoryFabricRecallResult> {
-  const policy = createScopedMemoryPolicy({
-    memory,
-    fabric,
-    scopeRoot: config.scoped?.scopeRoot as string,
-    ...(config.scoped?.policy === undefined ? {} : { policy: config.scoped.policy }),
-    // Archive proposals use the lifecycle's own rule and the scope clock the fabric already ticks.
-    clock,
-    archive: config.lifecycle.archive,
-    onLegacyLedger: note,
-  });
-  return async (query, options) => {
-    const result = await policy.recall(query, options);
-    return { hits: result.hits, explain: result.explain };
-  };
 }
 
 /** What `memory:reindex` needs from the markdown store, structurally the store's reconcile report. */
@@ -1194,7 +1009,6 @@ function formatReasons(reasons: Readonly<Record<string, number>>): string {
 interface OkfBundleDeps {
   readonly memory: Memory;
   readonly stores: { readonly vectorStore: VectorStore; readonly workingStore: WorkingMemoryStore };
-  readonly embedder: Embedder | undefined;
   readonly root: string | undefined;
   /** The live markdown tree, which a bundle must not overlap. */
   readonly notesDir: string | undefined;
@@ -1254,7 +1068,6 @@ function createMemoryImportCommand(deps: OkfBundleDeps): PackageCommand {
         dir: target.dir,
         stores: deps.stores,
         mode: rawArgs.mode === "replace" ? "replace" : "merge",
-        ...(deps.embedder === undefined || deps.embedder.available?.() === false ? {} : { embedder: deps.embedder }),
       });
       deps.refresh();
       return {
@@ -1406,7 +1219,7 @@ function createMemoryMaintainCommand(fabric: MemoryFabric): PackageCommand {
   return {
     name: "memory:maintain",
     description:
-      "Run one lifecycle maintenance pass: archive, capacity, scope widening and narrowing. Pass scope to maintain one resource only (that pass skips widening). Reports counts.",
+      "Run one lifecycle maintenance pass: archive and capacity. Pass scope to maintain one resource only. Reports counts.",
     args,
     async run(rawArgs: JsonObject): Promise<JsonObject> {
       try {
@@ -1415,7 +1228,7 @@ function createMemoryMaintainCommand(fabric: MemoryFabric): PackageCommand {
           ok: true,
           ...report,
           overBudget: report.overBudget.map((scope) => ({ ...scope })),
-          text: `Maintained memory: archived ${report.archived}, merged ${report.merged}, ${report.episodesMerged} episode cluster(s), evicted ${report.evicted}, widened ${report.widened}, superseded ${report.superseded}${report.overBudget.length === 0 ? "" : `; ${report.overBudget.length} scope(s) still over budget`}.`,
+          text: `Maintained memory: archived ${report.archived}, merged ${report.merged}, ${report.episodesMerged} episode cluster(s), evicted ${report.evicted}${report.overBudget.length === 0 ? "" : `; ${report.overBudget.length} scope(s) still over budget`}.`,
         };
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
@@ -1482,7 +1295,7 @@ function createMemoryShareCommand(team: FabricTeam, source: Memory, ui: () => Pa
   return {
     name: "memory:share",
     description:
-      "Share one verified project note or concept into the checked-in team store (team.dir). Shows the note and the target path for approval first; the commit stays yours.",
+      "Share one verified project note into the checked-in team store (team.dir). Shows the note and the target path for approval first; the commit stays yours.",
     args,
     async run(raw: JsonObject, _context: PackageCommandContext): Promise<JsonObject> {
       const approve = async (request: { title: string; detail: string }): Promise<FabricTeamApproval> => {
@@ -1527,7 +1340,7 @@ function createMemoryLifecycleCommand(options: {
   const SCAN_PAGE = 500;
   return {
     name: "memory:lifecycle",
-    description: "Explain one note's lifecycle: storage and retrieval strength, use log, archive and widening gates.",
+    description: "Explain one note's lifecycle: storage and retrieval strength, use log and the archive gates.",
     args,
     async run(raw: JsonObject, _context: PackageCommandContext): Promise<JsonObject> {
       const scanMetadata = options.store?.scanMetadata;

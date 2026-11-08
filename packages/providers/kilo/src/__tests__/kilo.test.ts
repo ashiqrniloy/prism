@@ -40,7 +40,7 @@ async function capture(req: ProviderRequest, options: Parameters<typeof createKi
   let body: JsonObject = {};
   const provider = createKiloProvider({
     ...options,
-    apiKey: secret,
+    apiKey: async () => secret,
     fetch: (async (_url, init) => {
       headers = new Headers(init?.headers);
       body = JSON.parse(String(init?.body));
@@ -60,7 +60,7 @@ function errorEvent(events: readonly ProviderEvent[]) {
 
 async function classify(status: number, bodyText: string) {
   const provider = createKiloProvider({
-    apiKey: secret,
+    apiKey: async () => secret,
     fetch: (async () => new Response(bodyText, { status, headers: { "content-type": "application/json" } })) as typeof fetch,
   });
   return errorEvent(await collectProviderEvents(provider, request()));
@@ -201,7 +201,7 @@ describe("Kilo routes", () => {
     const models = { chat: chatModel, responses: responsesModel, messages: messagesModel };
     for (const [route, sse] of frames) {
       const provider = createKiloProvider({
-        apiKey: secret,
+        apiKey: async () => secret,
         fetch: (async () => new Response(sse, { headers: { "content-type": "text/event-stream" } })) as typeof fetch,
       });
       const events = await collectProviderEvents(provider, request(models[route]));

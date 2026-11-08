@@ -99,7 +99,7 @@ const hAssistant: Message = { role: "assistant", content: [{ type: "text", text:
 const pendingResult: ToolResult = { toolCallId: "c1", name: "echo", content: [{ type: "text", text: "tool out" }] };
 const briefSkill: Skill = { name: "brief", description: "Be brief", instructions: "Full body" };
 
-type InputLayoutName = "cache_aware" | "legacy";
+type InputLayoutName = "cache_aware";
 
 const _contextSlotAssembly = (
   _blocks?: readonly ContextBlock[],
@@ -154,35 +154,19 @@ describe("invalidation inventory (plan 088 Task 1)", () => {
     assert.equal(textsOf(pending.after).at(-1), "Ask B");
   });
 
-  it("layout parity: the hoisted summary moves from 1 (cache_aware) to 3 (legacy) once context and a skill lead", async () => {
+  it("cache_aware hoists the summary right after the leading system prompt, ahead of context and a skill", async () => {
     const cacheAware = await assembleTwice(
       summaryWithContextAssembly("Summary one", "cache_aware"),
       summaryWithContextAssembly("Summary two", "cache_aware"),
     );
-    const legacy = await assembleTwice(
-      summaryWithContextAssembly("Summary one", "legacy"),
-      summaryWithContextAssembly("Summary two", "legacy"),
-    );
 
     assert.equal(cacheAware.boundary.messageIndex, 1, "cache_aware hoists the summary right after the leading system prompt");
-    assert.equal(legacy.boundary.messageIndex, 2, "legacy puts the skill and the system prompt ahead of the summary");
-    assert.notEqual(cacheAware.boundary.messageIndex, legacy.boundary.messageIndex, "the layout switch alone moves the boundary");
     assert.deepEqual(textsOf(cacheAware.before).slice(0, 3), [
       "System instruction:\nBase rules.",
       "Summary:\nSummary one",
       "Skills are task-specific instructions. When a task matches a skill below, call load_skill with its name before starting.\n- brief: Be brief",
     ]);
-    assert.deepEqual(textsOf(legacy.before).slice(0, 3), [
-      "Skills are task-specific instructions. When a task matches a skill below, call load_skill with its name before starting.\n- brief: Be brief",
-      "System instruction:\nBase rules.",
-      "Summary:\nSummary one",
-    ]);
-    assert.deepEqual(
-      textsOf(legacy.after).slice(0, 2),
-      textsOf(legacy.before).slice(0, 2),
-      "everything before the summary is byte-identical",
-    );
-    assert.ok(cacheAware.continuity < 1 && legacy.continuity < 1);
+    assert.ok(cacheAware.continuity < 1);
   });
 
   it("compaction summaries: a replaced summary resets at the summary position, growth does not", async () => {

@@ -1,23 +1,25 @@
-HYPER_CHAT_ROUTE	export declare const HYPER_CHAT_ROUTE: RoutedProviderRoute<"openai-chat">
-HYPER_DEFAULT_API_KEY_REF	export declare const HYPER_DEFAULT_API_KEY_REF = "env:HYPER_API_KEY"
-HYPER_DEFAULT_BASE_URL	export declare const HYPER_DEFAULT_BASE_URL = "https://hyper.charm.land/v1"
-HYPER_MESSAGES_ROUTE	export declare const HYPER_MESSAGES_ROUTE: RoutedProviderRoute<"anthropic-messages">
-costFromHyperPricing	export declare function costFromHyperPricing(pricing: HyperModelEntry["pricing"]): ModelCost | undefined
-createHyperProvider	export declare function createHyperProvider(options?: HyperProviderOptions): ModelProvider
-default	export default
-defineHyperModel	export declare function defineHyperModel(config: HyperModelConfig): ModelConfig
-getHyperCredits	export declare function getHyperCredits(options: GetHyperCreditsOptions): Promise<HyperCreditsBalance>
-hyper	export declare function hyper(options?: HyperProviderPackageOptions & HyperProviderConfig): PackageInstance
-hyperModels	export declare const hyperModels: readonly ModelConfig[]
-listHyperModels	export declare function listHyperModels(options?: ListHyperModelsOptions): Promise<ModelConfig[]>
-mapHyperModel	export declare function mapHyperModel(entry: HyperModelEntry, options?:
-parseHyperUsageCost	export declare function parseHyperUsageCost(usage: unknown): HyperUsageCost | undefined
-routeForHyperModel	export declare function routeForHyperModel(modelId: string): HyperRoute
-type GetHyperCreditsOptions	export { type GetHyperCreditsOptions, getHyperCredits, type HyperCreditsBalance } from "./quota.js"
-type HyperCreditsBalance	export { type GetHyperCreditsOptions, getHyperCredits, type HyperCreditsBalance } from "./quota.js"
-type HyperModelConfig	export { costFromHyperPricing, defineHyperModel, HYPER_DEFAULT_BASE_URL, type HyperModelConfig, type HyperModelEntry, type HyperRoute, hyperModels, listHyperModels, mapHyperModel, routeForHyperModel, } from "./models.js"
-type HyperModelEntry	export { costFromHyperPricing, defineHyperModel, HYPER_DEFAULT_BASE_URL, type HyperModelConfig, type HyperModelEntry, type HyperRoute, hyperModels, listHyperModels, mapHyperModel, routeForHyperModel, } from "./models.js"
-type HyperProviderOptions	export { createHyperProvider, type HyperProviderOptions, HYPER_CHAT_ROUTE, HYPER_MESSAGES_ROUTE, withHyperCost, } from "./provider.js"
-type HyperRoute	export { costFromHyperPricing, defineHyperModel, HYPER_DEFAULT_BASE_URL, type HyperModelConfig, type HyperModelEntry, type HyperRoute, hyperModels, listHyperModels, mapHyperModel, routeForHyperModel, } from "./models.js"
-type HyperUsageCost	export { type HyperUsageCost, parseHyperUsageCost } from "./telemetry.js"
-withHyperCost	export declare function withHyperCost(raw: unknown): Usage | undefined
+. GetHyperCreditsOptions	interface GetHyperCreditsOptions { readonly apiKey: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly headers?: Readonly<Record<string, string>>; readonly signal?: AbortSignal; }
+. HYPER_CHAT_ROUTE	const HYPER_CHAT_ROUTE: RoutedProviderRoute<"openai-chat">
+. HYPER_DEFAULT_API_KEY_REF	const HYPER_DEFAULT_API_KEY_REF = "env:HYPER_API_KEY"
+. HYPER_DEFAULT_BASE_URL	const HYPER_DEFAULT_BASE_URL = "https://hyper.charm.land/v1"
+. HYPER_MESSAGES_ROUTE	const HYPER_MESSAGES_ROUTE: RoutedProviderRoute<"anthropic-messages">
+. HyperCreditsBalance	interface HyperCreditsBalance { readonly balance: number; }
+. HyperModelConfig	interface HyperModelConfig extends Omit<ModelConfig, "provider" | "compat"> { readonly compat?: JsonObject & { readonly route?: HyperRoute; readonly preserveThinking?: boolean; readonly reasoning_effort?: string; readonly effortLevels?: readonly string[]; readonly thinking?: boolean | JsonObject; }; readonly provider?: "hyper"; }
+. HyperModelEntry	interface HyperModelEntry { readonly capabilities?: { readonly vision?: boolean; }; readonly context_window?: number; readonly created?: number; readonly display_name?: string; readonly id: string; readonly max_output_tokens?: number; readonly object?: string; readonly owned_by?: string; readonly pricing?: { readonly input?: number; readonly output?: number; readonly cache_create?: number; readonly cache_hit?: number; }; readonly reasoning?: { readonly effort_levels?: readonly { readonly value?: string; readonly display?: string; }[]; readonly default_effort_level?: string; }; }
+. HyperProviderConfig	interface HyperProviderConfig { readonly apiKey?: string; readonly baseUrl?: string; readonly models?: readonly ModelConfig[]; }
+. HyperProviderOptions	interface HyperProviderOptions { readonly apiKey?: SecretSource; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly id?: string; }
+. HyperProviderPackageOptions	interface HyperProviderPackageOptions { readonly fetch?: typeof fetch; readonly id?: string; }
+. HyperRoute	type HyperRoute = "openai" | "anthropic"
+. HyperUsageCost	interface HyperUsageCost { readonly hypercredits?: number; readonly remainingHypercredits?: number; readonly usd?: number; }
+. costFromHyperPricing	function costFromHyperPricing(pricing: HyperModelEntry["pricing"]): ModelCost | undefined
+. createHyperProvider	function createHyperProvider(options?: HyperProviderOptions): RoutedProvider
+. default	const definition: import("@arnilo/prism").PackageDefinition<HyperProviderConfig>
+. defineHyperModel	function defineHyperModel(config: HyperModelConfig): ModelConfig
+. getHyperCredits	function getHyperCredits(options: GetHyperCreditsOptions): Promise<HyperCreditsBalance>
+. hyper	function hyper(options?: HyperProviderPackageOptions & HyperProviderConfig): PackageInstance
+. hyperModels	const hyperModels: readonly ModelConfig[]
+. listHyperModels	function listHyperModels(options?: ListHyperModelsOptions): Promise<ModelConfig[]>
+. mapHyperModel	function mapHyperModel(entry: HyperModelEntry, options?: { readonly provider?: string; }): ModelConfig
+. parseHyperUsageCost	function parseHyperUsageCost(usage: unknown): HyperUsageCost | undefined
+. routeForHyperModel	function routeForHyperModel(modelId: string): HyperRoute
+. withHyperCost	function withHyperCost(raw: unknown): Usage | undefined

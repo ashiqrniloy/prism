@@ -66,31 +66,18 @@ describe("lifecycle inspection (plan 188.4 Further Action 4)", () => {
     assert.deepEqual(stale.archive.reasons, []);
   });
 
-  it("names_the_widening_gate_that_refuses", () => {
-    const reasonsFor = (fields: Partial<Omit<MemoryNoteMetadata, "v">>, status: "verified" | "candidate" = "verified") =>
-      inspectNote({ id: "ffffffffffff", metadata: note(fields), status, clock: 1 }).widen;
-    assert.deepEqual(reasonsFor({}), { eligible: true, reasons: [] });
-    assert.deepEqual(reasonsFor({}, "candidate").reasons, ["unverified"]);
-    assert.deepEqual(reasonsFor({ kind: "preference" }).reasons, ["kind"]);
-    assert.deepEqual(reasonsFor({ kind: "procedure" }), { eligible: true, reasons: [] });
-    assert.deepEqual(reasonsFor({ harmful: 1 }).reasons, ["harmful"]);
-    assert.deepEqual(reasonsFor({ contradictedIn: ["alpha--11111111"] }).reasons, ["contradicted"]);
-    assert.deepEqual(reasonsFor({ pinned: true }).reasons, ["pinned"]);
-    assert.deepEqual(reasonsFor({ kind: "episode", harmful: 1, pinned: true }).reasons, ["kind", "harmful", "pinned"]);
-  });
-
   it("describes_a_note_in_one_line", () => {
     const line = describeNote(
       inspectNote({ id: "111111111111", metadata: note({ key: "canary.drain", created: 0 }), status: "verified", clock: 200 }),
     );
-    assert.equal(line, "111111111111 fact key=canary.drain verified S=0 R=-2.1213 uses=0/0 archive=yes widen=note-eligible");
+    assert.equal(line, "111111111111 fact key=canary.drain verified S=0 R=-2.1213 uses=0/0 archive=yes");
     const hidden = inspectNote({
       id: "222222222222",
-      metadata: note({ kind: "episode", widenedTo: "333333333333", created: 0 }),
+      metadata: note({ kind: "episode", mergedInto: "333333333333", created: 0 }),
       status: "verified",
       clock: 200,
     });
     // An episode decays faster than a fact (d 0.8 vs 0.4), so R is lower and the note is archivable.
-    assert.match(describeNote(hidden), /R=-4\.2426 uses=0\/0 archive=yes widen=no\(kind\) widenedTo=333333333333$/);
+    assert.match(describeNote(hidden), /R=-4\.2426 uses=0\/0 archive=yes mergedInto=333333333333$/);
   });
 });

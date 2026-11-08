@@ -1,4 +1,4 @@
-import { type ArtifactCitation } from "@arnilo/prism";
+import { type ArtifactCitation } from "@arnilo/prism/artifacts";
 import { type CitationLiveSource, checkCitationIntegrity } from "./citation-integrity.js";
 import { defineScorer } from "./scorer.js";
 import type { Scorer } from "./types.js";
