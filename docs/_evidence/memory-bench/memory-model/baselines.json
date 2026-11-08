@@ -10,9 +10,12 @@
   "omBefore": {
     "arm": "OM-before",
     "config": "om",
-    "revision": null,
-    "productHash": null,
-    "productPaths": ["packages/memory/observational/src"],
-    "pinWhen": "the first step of plan 216 Task 4, before any file moves: commit the tree, record `git rev-parse HEAD` as revision and sourceFingerprint(productPaths) as productHash; plan 217 Task 6 runs the arm with PRISM_MEMORY_BENCH_SOURCE=<revision>"
+    "revision": "37ee1a24f14c2e0e4a29a39fa1c71b3a83d52510",
+    "productHash": "e6a323c9ea6e1301409c56eca4cf68e5479117437313df68c0ba54c5bdf3a4dc",
+    "productPaths": [
+      "packages/memory/observational/src"
+    ],
+    "pinWhen": "the first step of plan 216 Task 4, before any file moves: commit the tree, record `git rev-parse HEAD` as revision and sourceFingerprint(productPaths) as productHash; plan 217 Task 6 runs the arm with PRISM_MEMORY_BENCH_SOURCE=<revision>",
+    "pinnedAt": "2026-11-08"
   }
 }
