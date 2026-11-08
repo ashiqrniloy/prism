@@ -18,6 +18,8 @@ export interface ApiMatch {
   readonly name: string;
   readonly kind: ApiExport["kind"];
   readonly signature: string;
+  /** Interface and class members, so a field name is read here and never guessed. */
+  readonly members?: readonly string[];
   readonly summary?: string;
   readonly docs: readonly string[];
   readonly examples: readonly string[];
@@ -47,6 +49,7 @@ function flatten(index: ApiIndex, packageName: string | undefined): ApiMatch[] {
           name: item.name,
           kind: item.kind,
           signature: item.signature.length > MAX_SIGNATURE ? `${item.signature.slice(0, MAX_SIGNATURE)} …` : item.signature,
+          ...(item.members !== undefined ? { members: item.members } : {}),
           ...(item.summary !== undefined ? { summary: item.summary } : {}),
           docs: item.docs ?? [],
           examples: item.examples ?? [],

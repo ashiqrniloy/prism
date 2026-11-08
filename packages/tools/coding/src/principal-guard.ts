@@ -12,7 +12,9 @@
  */
 import type { JsonObject, ToolDefinition, ToolEffectDeclaration, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 
+/** A tool with a durable effect ran on an agent that has no host principal; pass `principal` to `createAgent`. */
 export const ERR_PRISM_CODING_PRINCIPAL_REQUIRED = "ERR_PRISM_CODING_PRINCIPAL_REQUIRED" as const;
+/** The call's principal id differs from the `principal.id` the package config pins. */
 export const ERR_PRISM_CODING_PRINCIPAL_MISMATCH = "ERR_PRISM_CODING_PRINCIPAL_MISMATCH" as const;
 
 /** Whether one call's declared effect is durable. A classifier that throws fails closed. */

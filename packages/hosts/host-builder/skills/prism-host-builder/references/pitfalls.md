@@ -11,6 +11,7 @@ In the tables below the **Code** column holds only codes that exist in `errors.j
 | --- | --- | --- |
 | `model_required` | `createAgent` got no `model` and the loop needs one. There is no default provider. | Pass `model: "provider/model"` or a `ModelSpec`, and list the provider package. A model-less loop is the only exception. |
 | `ERR_PRISM_SLOT_CONFLICT` | Two packages provide one slot (usually `compaction`) and `slots` does not choose. | Add `slots: { compaction: "<package name>" }` to the `createAgent` config. This is the SDK's resolution, not a workaround. |
+| `ERR_PRISM_CODING_PRINCIPAL_REQUIRED` | A tool with a durable effect (`shell`, `write`, `edit`, git commit) ran on an agent with no `principal`. | Pass `principal: { kind, id }` to `createAgent`. Do not add the tool to an allow list to get past it. |
 | `ERR_PRISM_UNKNOWN_SLOT_OWNER` | A `slots` assignment names a package that did not provide that slot. | Check the exact package name and that the package is listed and provides the slot. |
 | `manifest_slot_owner` | A manifest `slots` owner is not a listed, enabled entry. | Enable or add the entry, or change the owner. |
 | `missing_service` | A package needs a service no loaded package provides (for example `work.sandbox` for `work_exec`). | List the package that provides it, or provide it from the host. Do not stub the service to silence the error. |

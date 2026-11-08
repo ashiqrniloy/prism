@@ -33,6 +33,28 @@ describe("prism_api", () => {
     assert.ok(match?.examples.every((path) => path.startsWith("examples/")));
   });
 
+  it("prism_api_members: an interface lists its fields, so a hook payload field is read and never guessed", async () => {
+    const { api } = await indexes();
+    const payload = lookupApi(api, { symbol: "ToolCallHookPayload" }).matches[0];
+    const members = payload?.members ?? [];
+    assert.ok(
+      members.some((member) => /^readonly args: /.test(member)),
+      members.join("\n"),
+    );
+    assert.equal(
+      members.some((member) => /\barguments\b/.test(member)),
+      false,
+    );
+    const registrar = lookupApi(api, { symbol: "HookRegistrar" }).matches[0];
+    assert.ok((registrar?.members ?? []).some((member) => member.startsWith("on<")));
+    assert.equal(
+      (registrar?.members ?? []).some((member) => member.startsWith("register")),
+      false,
+    );
+    // A function carries a signature and no members.
+    assert.equal(lookupApi(api, { symbol: "createAgent" }).matches[0]?.members, undefined);
+  });
+
   it("prism_api_exact_and_query: a symbol is case-sensitive and a miss lists the nearest names", async () => {
     const { api } = await indexes();
     const result = lookupApi(api, { symbol: "createagent" });

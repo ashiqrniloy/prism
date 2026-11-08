@@ -1,0 +1,4966 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 2,
+  "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
+  "usageSource": "wire-proxy",
+  "phase": "all",
+  "labelInjections": "off",
+  "concurrency": 2,
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 8192
+  },
+  "freeOnly": false,
+  "writeGeneration": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "generatedAt": "2026-11-08T05:14:46.059Z",
+  "suite": "locomo",
+  "subset": "dev",
+  "ability": null,
+  "seed": null,
+  "config": "none",
+  "ingestion": "none",
+  "embeddings": null,
+  "provider": "ollama-cloud",
+  "model": "beam",
+  "judge": "ollama-cloud/gpt-oss:120b",
+  "judgePanel": [
+    "ollama-cloud/gpt-oss:120b",
+    "ollama-cloud/gemma4:31b"
+  ],
+  "judgeCalibration": null,
+  "repeats": 1,
+  "judgeProtocol": "plain-text-v1",
+  "dataset": {
+    "file": "locomo.json",
+    "bytes": 2805274,
+    "sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+    "license": "CC BY-NC 4.0 (noncommercial)",
+    "url": "https://raw.githubusercontent.com/snap-research/locomo/3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376/data/locomo10.json",
+    "licenseUrl": "https://github.com/snap-research/locomo/blob/3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376/LICENSE.txt"
+  },
+  "maxInputTokens": 25000000,
+  "ablations": [],
+  "sourceVariants": [],
+  "sourceRevision": "d8329fea96d907f78b9eca578cd9b7fdced500ca",
+  "protocol": {
+    "answerAttempts": 3,
+    "answerBackoffMs": [
+      2000,
+      10000
+    ],
+    "judgeAttempts": 8,
+    "judgeBackoffMs": [
+      1000,
+      2000
+    ],
+    "maxTurns": 8,
+    "finalTurnAnswer": "final-turn-answer-v4"
+  },
+  "memoryConfig": {
+    "observational": null,
+    "fabric": null
+  },
+  "inputTokens": 29685,
+  "cacheReadTokens": 16112,
+  "cacheWriteTokens": 0,
+  "outputTokens": 14625,
+  "calls": {
+    "observer": 0,
+    "reflector": 0,
+    "dropper": 0,
+    "embedding": 0,
+    "decider": 0,
+    "consolidate": 0,
+    "judge": 120,
+    "judgeAttempts": 120,
+    "gatewayRetries": 0,
+    "judgeCacheHits": 0,
+    "judgeCacheMisses": 120,
+    "concurrencyHalvings": 0,
+    "overloads": 0
+  },
+  "workerErrors": [],
+  "workerUsage": {
+    "observer": {
+      "calls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0
+    },
+    "reflector": {
+      "calls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0
+    },
+    "dropper": {
+      "calls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0
+    }
+  },
+  "turns": 60,
+  "injectedContextTokens": 0,
+  "injections": [],
+  "attemptId": "210-c1.large.memory-off.locomo@1",
+  "measurementVersion": "product-phases-delivery-v3",
+  "analysisVersion": "202-paired-cluster-v1",
+  "judgeTemplateVersion": "e3883a2aa5910f76c3f6b377f1758fd4a57ca6dda1449cd86291abd0eea5f306",
+  "gradedTemplateVersion": "f7ff5f9c24afd87f0a5e00bd168103019f6e7140d64031f3e5bec264043c24cb",
+  "protocolHash": "baadf2b27e2391abc4fd026088ee6fa1adb5ff7f5fcc986c870ac58225f44f14",
+  "resumedResults": 0,
+  "results": [
+    {
+      "id": "conv-41:21",
+      "ability": "multi-hop",
+      "cluster": "locomo-conv-41",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 12.3,
+        "answer": 2708.5,
+        "evaluation": 15792.2
+      },
+      "answerKey": "6ef5f4176e74ef28b8ed6f7374a473edcd3d158d095bedc60414f503aff2434c",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_11-r2",
+              "surfaced": false
+            },
+            {
+              "id": "session_12-r8",
+              "surfaced": false
+            }
+          ],
+          "needed": 2,
+          "neverSurfaced": 2,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-48:81",
+      "ability": "temporal",
+      "cluster": "locomo-conv-48",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 9.5,
+        "answer": 2703.9,
+        "evaluation": 6404.8
+      },
+      "answerKey": "b44fecbeb5cfcaee1af45fa6cf789196bb3aa920cf4769e26c4e9fe1d5a1f719",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_29-r16",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-48:36",
+      "ability": "open-domain",
+      "cluster": "locomo-conv-48",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 3,
+        "answer": 4073.1,
+        "evaluation": 16341.5
+      },
+      "answerKey": "8c21c8cab315feece7976a9af712faea22115dafc6abb71079582fae60ad9247",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_8-r0",
+              "surfaced": false
+            },
+            {
+              "id": "session_13-r2",
+              "surfaced": false
+            },
+            {
+              "id": "session_21-r2",
+              "surfaced": false
+            },
+            {
+              "id": "session_21-r3",
+              "surfaced": false
+            },
+            {
+              "id": "session_22-r2",
+              "surfaced": false
+            },
+            {
+              "id": "session_22-r6",
+              "surfaced": false
+            },
+            {
+              "id": "session_24-r0",
+              "surfaced": false
+            },
+            {
+              "id": "session_24-r6",
+              "surfaced": false
+            },
+            {
+              "id": "session_25-r2",
+              "surfaced": false
+            },
+            {
+              "id": "session_26-r2",
+              "surfaced": false
+            }
+          ],
+          "needed": 10,
+          "neverSurfaced": 10,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 10,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 10,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0.25,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-26:82",
+      "ability": "single-hop",
+      "cluster": "locomo-conv-26",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 2,
+        "answer": 6481.9,
+        "evaluation": 13998
+      },
+      "answerKey": "94b7099ef70a62a0298024c37a14e8406c7025c0252d97d758ceae737991a93f",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_2-r1",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 13,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-41:163",
+      "ability": "adversarial",
+      "cluster": "locomo-conv-41",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.9,
+        "answer": 6164.5,
+        "evaluation": 8314.1
+      },
+      "answerKey": "bb8d20424dc464472ead32339fb96ef7f5e56472f8abf7d16d8790b486c134f1",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_12-r1",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "yes",
+        "ollama-cloud/gemma4:31b": "yes"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-44:24",
+      "ability": "multi-hop",
+      "cluster": "locomo-conv-44",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 2.4,
+        "answer": 4197.7,
+        "evaluation": 8999.6
+      },
+      "answerKey": "81324faf138fe49498f8180d8492705f36ea0e17092acabcca7a82f5e4aca5d7",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_2-r7",
+              "surfaced": false
+            },
+            {
+              "id": "session_13-r5",
+              "surfaced": false
+            }
+          ],
+          "needed": 2,
+          "neverSurfaced": 2,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 6,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-44:30",
+      "ability": "temporal",
+      "cluster": "locomo-conv-44",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 2,
+        "answer": 3984.2,
+        "evaluation": 14033.7
+      },
+      "answerKey": "89fb77a56a5fc3fdbf30619ee4b383b10b7c48247664156cff99a1b422d77fd3",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_20-r0",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-26:50",
+      "ability": "open-domain",
+      "cluster": "locomo-conv-26",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.4,
+        "answer": 5266,
+        "evaluation": 10637.4
+      },
+      "answerKey": "943902a387a3e8f137ff799525fb5373f500d816aee8df63acda5774bd2b63eb",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_12-r0",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-26:103",
+      "ability": "single-hop",
+      "cluster": "locomo-conv-26",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 4.2,
+        "answer": 4487.5,
+        "evaluation": 10632.1
+      },
+      "answerKey": "3eab171f9ceb6ffe51af5036b3142f8beeaacc8cf6a212890341f035ce8cf812",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_6-r4",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-43:183",
+      "ability": "adversarial",
+      "cluster": "locomo-conv-43",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 3.4,
+        "answer": 5750.1,
+        "evaluation": 11887.4
+      },
+      "answerKey": "3605e68ee34355954fde48050d0a1c7393766544d86200d1c9b56279828443ba",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_3-r2",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "yes",
+        "ollama-cloud/gemma4:31b": "yes"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-49:21",
+      "ability": "multi-hop",
+      "cluster": "locomo-conv-49",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.8,
+        "answer": 4694.9,
+        "evaluation": 11450.8
+      },
+      "answerKey": "413ac23d6e6b4d3f87894b6125ea5762595bf8aef17c872d1b9376469502538d",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_5-r0",
+              "surfaced": false
+            },
+            {
+              "id": "session_5-r1",
+              "surfaced": false
+            },
+            {
+              "id": "session_23-r1",
+              "surfaced": false
+            }
+          ],
+          "needed": 3,
+          "neverSurfaced": 3,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 3,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 3,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-42:29",
+      "ability": "temporal",
+      "cluster": "locomo-conv-42",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 3.9,
+        "answer": 4526.4,
+        "evaluation": 11507.1
+      },
+      "answerKey": "1b772e0935b7189351b868b68ae8b53ff972b2ce5b3ec7f24b3aabc978562616",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_16-r5",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-48:23",
+      "ability": "open-domain",
+      "cluster": "locomo-conv-48",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 2.7,
+        "answer": 5951,
+        "evaluation": 11074
+      },
+      "answerKey": "6d699c268f3936f25a8bce614c7ca3ff5df7f8fec1360e56cb5c6133ace3e156",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_2-r14",
+              "surfaced": false
+            },
+            {
+              "id": "session_3-r5",
+              "surfaced": false
+            }
+          ],
+          "needed": 2,
+          "neverSurfaced": 2,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-49:111",
+      "ability": "single-hop",
+      "cluster": "locomo-conv-49",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.8,
+        "answer": 5169.4,
+        "evaluation": 11229.9
+      },
+      "answerKey": "3183c58f8b56b557a06883a892710979a61007ab130cebc4dd2b7f6c8633efdf",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_9-r3",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-43:212",
+      "ability": "adversarial",
+      "cluster": "locomo-conv-43",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 4.3,
+        "answer": 3638.9,
+        "evaluation": 12045.2
+      },
+      "answerKey": "32a9d41ffd0b9a654b915faaaac61b0eab27051bc40dc5577c43bc46ac6632d1",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_15-r3",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "yes",
+        "ollama-cloud/gemma4:31b": "yes"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-44:32",
+      "ability": "multi-hop",
+      "cluster": "locomo-conv-44",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 2.2,
+        "answer": 3328.7,
+        "evaluation": 11231.2
+      },
+      "answerKey": "4af8780b612f4fcfa186a836f511a1f650ab48e8f9c188b3338a41247d31e85d",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_3-r13",
+              "surfaced": false
+            },
+            {
+              "id": "session_15-r0",
+              "surfaced": false
+            },
+            {
+              "id": "session_23-r10",
+              "surfaced": false
+            }
+          ],
+          "needed": 3,
+          "neverSurfaced": 3,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 3,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 3,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-44:1",
+      "ability": "temporal",
+      "cluster": "locomo-conv-44",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.9,
+        "answer": 5060.9,
+        "evaluation": 11473.1
+      },
+      "answerKey": "23ed9ed665b3c26196e06c2de59fccfe0108312105d4acb96c369f7f4eaa3ca3",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_1-r0",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-43:5",
+      "ability": "open-domain",
+      "cluster": "locomo-conv-43",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.6,
+        "answer": 6592.8,
+        "evaluation": 9754
+      },
+      "answerKey": "143791b2e2057945175b9fbca7c0b6c8aa9aec67182810958a38c737c49394a9",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_2-r4",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-49:121",
+      "ability": "single-hop",
+      "cluster": "locomo-conv-49",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.4,
+        "answer": 3487.5,
+        "evaluation": 9572.5
+      },
+      "answerKey": "54e84042ecf26633ac2252459890d4bafdb65437f73d316e5ef2e16461ee1ece",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_13-r6",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-44:154",
+      "ability": "adversarial",
+      "cluster": "locomo-conv-44",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 2.3,
+        "answer": 3754,
+        "evaluation": 12133.3
+      },
+      "answerKey": "7f3a93343ef06418392f0863a0305460794ae1676d8ddc09b70e052e60b9e591",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_24-r3",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "yes",
+        "ollama-cloud/gemma4:31b": "yes"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-49:78",
+      "ability": "multi-hop",
+      "cluster": "locomo-conv-49",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 2.1,
+        "answer": 3674.8,
+        "evaluation": 14912.4
+      },
+      "answerKey": "7f6ac341c0f89583d4ce6935dde19c10300980a5b3d56ad04833548eda6483fb",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_21-r1",
+              "surfaced": false
+            },
+            {
+              "id": "session_22-r2",
+              "surfaced": false
+            },
+            {
+              "id": "session_23-r0",
+              "surfaced": false
+            },
+            {
+              "id": "session_23-r2",
+              "surfaced": false
+            }
+          ],
+          "needed": 4,
+          "neverSurfaced": 4,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 4,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 4,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-49:52",
+      "ability": "temporal",
+      "cluster": "locomo-conv-49",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.5,
+        "answer": 5235.5,
+        "evaluation": 10953.7
+      },
+      "answerKey": "ebb768afe384236f595c867861dc46b747c2344344d7cf952a60fd3a74ca4b28",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_10-r5",
+              "surfaced": false
+            },
+            {
+              "id": "session_10-r6",
+              "surfaced": false
+            }
+          ],
+          "needed": 2,
+          "neverSurfaced": 2,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 29,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-43:8",
+      "ability": "open-domain",
+      "cluster": "locomo-conv-43",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.9,
+        "answer": 5814.5,
+        "evaluation": 8888.1
+      },
+      "answerKey": "98943b262f8e59a001f31136f00a2d3938f846a4696f7aa611e808da2d502d9d",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_3-r7",
+              "surfaced": false
+            },
+            {
+              "id": "session_25-r0",
+              "surfaced": false
+            }
+          ],
+          "needed": 2,
+          "neverSurfaced": 2,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 3,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-47:128",
+      "ability": "single-hop",
+      "cluster": "locomo-conv-47",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 2,
+        "answer": 5272.5,
+        "evaluation": 7893
+      },
+      "answerKey": "13aa6947c0ea12c695ffdc09d96de922dec50c7cd77e7fdcaadb9d533f234e80",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_24-r4",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-49:164",
+      "ability": "adversarial",
+      "cluster": "locomo-conv-49",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.6,
+        "answer": 3306.3,
+        "evaluation": 10944.9
+      },
+      "answerKey": "6561636025cdd9eb103f8fb695ea242e4ec1a2b214140d481674b22f756fbe01",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_5-r4",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "yes",
+        "ollama-cloud/gemma4:31b": "yes"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-26:38",
+      "ability": "multi-hop",
+      "cluster": "locomo-conv-26",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.2,
+        "answer": 3135.7,
+        "evaluation": 13159.2
+      },
+      "answerKey": "73370596dfb0f7b3c52019473ba15fbcf603f85f0bb614c684f2f38d7269c8e2",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_1-r8",
+              "surfaced": false
+            },
+            {
+              "id": "session_3-r6",
+              "surfaced": false
+            },
+            {
+              "id": "session_6-r1",
+              "surfaced": false
+            },
+            {
+              "id": "session_8-r1",
+              "surfaced": false
+            },
+            {
+              "id": "session_8-r2",
+              "surfaced": false
+            },
+            {
+              "id": "session_9-r0",
+              "surfaced": false
+            }
+          ],
+          "needed": 6,
+          "neverSurfaced": 6,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 6,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 6,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-42:32",
+      "ability": "temporal",
+      "cluster": "locomo-conv-42",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.5,
+        "answer": 3402.4,
+        "evaluation": 12859.5
+      },
+      "answerKey": "0f88cc417b54a0f7d8d948c5df154d0af7978b376186b67d70aa19fd0dbeda2f",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_17-r2",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-26:81",
+      "ability": "open-domain",
+      "cluster": "locomo-conv-26",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.2,
+        "answer": 4194,
+        "evaluation": 12931
+      },
+      "answerKey": "f0e1ba3d07dbfb4842bcf8197414a154a741d2e3eebaa80fe278d7653ae948a2",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_19-r0",
+              "surfaced": false
+            },
+            {
+              "id": "session_19-r1",
+              "surfaced": false
+            }
+          ],
+          "needed": 2,
+          "neverSurfaced": 2,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0.5,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-47:131",
+      "ability": "single-hop",
+      "cluster": "locomo-conv-47",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.9,
+        "answer": 5886.3,
+        "evaluation": 10016.3
+      },
+      "answerKey": "7f86b696dfd402fa67996dbd5104dc635574ebfa4b4e7f61a8c59b528677766f",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_24-r7",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 3,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-49:185",
+      "ability": "adversarial",
+      "cluster": "locomo-conv-49",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.6,
+        "answer": 3478.9,
+        "evaluation": 11882.2
+      },
+      "answerKey": "65efb2ada8704686b86da9b06ec7055c337d6960d262b04c39eead41cb901fdd",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_19-r3",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "yes",
+        "ollama-cloud/gemma4:31b": "yes"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-42:34",
+      "ability": "multi-hop",
+      "cluster": "locomo-conv-42",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.7,
+        "answer": 5029.7,
+        "evaluation": 11140.7
+      },
+      "answerKey": "a48b5d11815a44730822ad2439f5e852d2526bc5ff5f651dcc94d46ef659620e",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_3-r8",
+              "surfaced": false
+            },
+            {
+              "id": "session_19-r7",
+              "surfaced": false
+            },
+            {
+              "id": "session_19-r8",
+              "surfaced": false
+            }
+          ],
+          "needed": 3,
+          "neverSurfaced": 3,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 3,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 3,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-42:21",
+      "ability": "temporal",
+      "cluster": "locomo-conv-42",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 2.7,
+        "answer": 3408.7,
+        "evaluation": 12506.3
+      },
+      "answerKey": "a1038cbcef149d73ac9253b01845d29fba521c0b98d6b9bc5bc5dde811d8d86f",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_12-r1",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 4,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-48:11",
+      "ability": "open-domain",
+      "cluster": "locomo-conv-48",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 2,
+        "answer": 4162.4,
+        "evaluation": 12334
+      },
+      "answerKey": "58b7d7270ec04c21a29df069b569835a960ce8fc4d47eef2e2a1ac863c87b857",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_2-r2",
+              "surfaced": false
+            },
+            {
+              "id": "session_19-r5",
+              "surfaced": false
+            },
+            {
+              "id": "session_23-r2",
+              "surfaced": false
+            },
+            {
+              "id": "session_28-r5",
+              "surfaced": false
+            }
+          ],
+          "needed": 4,
+          "neverSurfaced": 4,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 18,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 4,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-43:123",
+      "ability": "single-hop",
+      "cluster": "locomo-conv-43",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.8,
+        "answer": 2143.5,
+        "evaluation": 13216.7
+      },
+      "answerKey": "d38df5b03a1a9b1080ff2fddeeb021cfe556cc25181ad86861d5612a3ee0ec6d",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_15-r1",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 30,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-43:234",
+      "ability": "adversarial",
+      "cluster": "locomo-conv-43",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.7,
+        "answer": 2475.8,
+        "evaluation": 13565.4
+      },
+      "answerKey": "6a3e91f283282707898d4f1c4968c661d5259f12b3839cd6f2e59aee10fc33d1",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_27-r2",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "yes",
+        "ollama-cloud/gemma4:31b": "yes"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-43:4",
+      "ability": "multi-hop",
+      "cluster": "locomo-conv-43",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 2.4,
+        "answer": 1713,
+        "evaluation": 14255.4
+      },
+      "answerKey": "21169a1c0c939db676383b08fad8a7881149c355f5145844b0169678a522b4e2",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_1-r7",
+              "surfaced": false
+            },
+            {
+              "id": "session_2-r3",
+              "surfaced": false
+            },
+            {
+              "id": "session_6-r4",
+              "surfaced": false
+            },
+            {
+              "id": "session_11-r13",
+              "surfaced": false
+            },
+            {
+              "id": "session_20-r10",
+              "surfaced": false
+            },
+            {
+              "id": "session_22-r6",
+              "surfaced": false
+            },
+            {
+              "id": "session_26-r18",
+              "surfaced": false
+            }
+          ],
+          "needed": 7,
+          "neverSurfaced": 7,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 7,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 7,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-41:4",
+      "ability": "temporal",
+      "cluster": "locomo-conv-41",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.6,
+        "answer": 2908.4,
+        "evaluation": 11345.8
+      },
+      "answerKey": "59c742283885785e6f324bc2ccaa13995c6e42151be30e35725b2661bbe745aa",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_3-r0",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-26:14",
+      "ability": "open-domain",
+      "cluster": "locomo-conv-26",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.1,
+        "answer": 3819.3,
+        "evaluation": 13029.1
+      },
+      "answerKey": "2895367951b270e8b31a1e6fafed0c82cbddfca62c88ce7347e713fb570981d8",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_3-r2",
+              "surfaced": false
+            },
+            {
+              "id": "session_4-r7",
+              "surfaced": false
+            }
+          ],
+          "needed": 2,
+          "neverSurfaced": 2,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0.4,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-42:185",
+      "ability": "single-hop",
+      "cluster": "locomo-conv-42",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.4,
+        "answer": 3739.8,
+        "evaluation": 12606.1
+      },
+      "answerKey": "c9450e499c9d030cef0ff2281d28091375a93a10d9401a59f4d08b91b27ffc4a",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_27-r11",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-50:180",
+      "ability": "adversarial",
+      "cluster": "locomo-conv-50",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.7,
+        "answer": 3304.8,
+        "evaluation": 11871.2
+      },
+      "answerKey": "7a14987e90dc7f297427565002e70868043c08493fcc92c459079c9910ee337e",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_19-r3",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "yes",
+        "ollama-cloud/gemma4:31b": "yes"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-43:48",
+      "ability": "multi-hop",
+      "cluster": "locomo-conv-43",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 2,
+        "answer": 3062.8,
+        "evaluation": 13393.1
+      },
+      "answerKey": "b8bfda8230d5fbf69821b9e1c815d9f45909683cdac204a89a013ffdf1507079",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_18-r0",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-26:57",
+      "ability": "temporal",
+      "cluster": "locomo-conv-26",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.6,
+        "answer": 4185.1,
+        "evaluation": 13003.5
+      },
+      "answerKey": "26f1188142a79f83e6b04ccb4997d7f8605c1e9227da5ee324bbc934862eae90",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_14-r0",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-44:44",
+      "ability": "open-domain",
+      "cluster": "locomo-conv-44",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 3.2,
+        "answer": 2779.9,
+        "evaluation": 12080.1
+      },
+      "answerKey": "7d2aadf6e002b5cbf3c0d1d69b60c591d8028be9af09bf468db560b0d1b7659a",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_5-r4",
+              "surfaced": false
+            },
+            {
+              "id": "session_11-r4",
+              "surfaced": false
+            }
+          ],
+          "needed": 2,
+          "neverSurfaced": 2,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-42:175",
+      "ability": "single-hop",
+      "cluster": "locomo-conv-42",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 2.1,
+        "answer": 2781.1,
+        "evaluation": 12063.7
+      },
+      "answerKey": "f595edcfda6157533439749dd2cdab8ad9ec26f60d114be0b2b7f4b777d72fb0",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_24-r3",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-41:175",
+      "ability": "adversarial",
+      "cluster": "locomo-conv-41",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 3.8,
+        "answer": 2313.3,
+        "evaluation": 15670.7
+      },
+      "answerKey": "306feb3569ab9e55d76189a554634c5a22a96c4d75314ce2c761749dff708bf0",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_19-r4",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "yes",
+        "ollama-cloud/gemma4:31b": "yes"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-43:43",
+      "ability": "multi-hop",
+      "cluster": "locomo-conv-43",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 2.4,
+        "answer": 2436.1,
+        "evaluation": 13093.1
+      },
+      "answerKey": "4dd15c72bdf358b249b34dd6f2e2b9e1cd727a2160fda84a73837397a718d2b2",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_12-r9",
+              "surfaced": false
+            },
+            {
+              "id": "session_16-r5",
+              "surfaced": false
+            }
+          ],
+          "needed": 2,
+          "neverSurfaced": 2,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-41:16",
+      "ability": "temporal",
+      "cluster": "locomo-conv-41",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 2.1,
+        "answer": 1003.7,
+        "evaluation": 12990.1
+      },
+      "answerKey": "5ea111e36275c24e97c24ddb0d5ed8917cec90d31a883227fb4828f6c16d91d7",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_9-r1",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-47:44",
+      "ability": "open-domain",
+      "cluster": "locomo-conv-47",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.5,
+        "answer": 2197.2,
+        "evaluation": 14502
+      },
+      "answerKey": "ec9248c8c2510d9345eee8c7fb34868a2a2c1c262a22c247d40e5817a7684ecd",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_21-r5",
+              "surfaced": false
+            },
+            {
+              "id": "session_21-r6",
+              "surfaced": false
+            }
+          ],
+          "needed": 2,
+          "neverSurfaced": 2,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-48:159",
+      "ability": "single-hop",
+      "cluster": "locomo-conv-48",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.8,
+        "answer": 2128.1,
+        "evaluation": 17843.7
+      },
+      "answerKey": "1cdc5f369fda912bb526806a406d5b693fc21f2cc955790d4a2975bc1756e594",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_21-r3",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-43:214",
+      "ability": "adversarial",
+      "cluster": "locomo-conv-43",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.6,
+        "answer": 8333.1,
+        "evaluation": 8510.8
+      },
+      "answerKey": "4ca1de0170501d0a25b0c44efef07ba69208f282b4305f72fe287a3f20b2fac6",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_15-r14",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "yes",
+        "ollama-cloud/gemma4:31b": "yes"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-47:9",
+      "ability": "multi-hop",
+      "cluster": "locomo-conv-47",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.5,
+        "answer": 1959.6,
+        "evaluation": 9710.8
+      },
+      "answerKey": "7bf57f3ffc01d97387ffbb9fcd3301678ff0d07836bda8e37ca769efbcd5b4bf",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_1-r7",
+              "surfaced": false
+            },
+            {
+              "id": "session_5-r0",
+              "surfaced": false
+            }
+          ],
+          "needed": 2,
+          "neverSurfaced": 2,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-50:65",
+      "ability": "temporal",
+      "cluster": "locomo-conv-50",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 2.3,
+        "answer": 1774.9,
+        "evaluation": 12738.5
+      },
+      "answerKey": "2154b06cde2769ef77290dd20e0587a2d791677cb997f41df22c8c9c92b56ca1",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_27-r2",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-50:21",
+      "ability": "open-domain",
+      "cluster": "locomo-conv-50",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.6,
+        "answer": 2444.4,
+        "evaluation": 15716.2
+      },
+      "answerKey": "94f95e964e1451109464b5a19aea8388a6c60c08d6b2c4f1455c5ff24b19e366",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_12-r5",
+              "surfaced": false
+            },
+            {
+              "id": "session_27-r0",
+              "surfaced": false
+            }
+          ],
+          "needed": 2,
+          "neverSurfaced": 2,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 2,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 2,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-47:98",
+      "ability": "single-hop",
+      "cluster": "locomo-conv-47",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.4,
+        "answer": 2616.5,
+        "evaluation": 13255.8
+      },
+      "answerKey": "86592dea88e4db641b86a29be3cbf365f55a0ceeebc0f103f642573e821b78b3",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_14-r11",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-48:227",
+      "ability": "adversarial",
+      "cluster": "locomo-conv-48",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 2.8,
+        "answer": 1626,
+        "evaluation": 12152.2
+      },
+      "answerKey": "13575e0bd9646ee9086f65867a5cdc744901502698b5620e9795eefe75b5dc4f",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_23-r0",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "yes",
+        "ollama-cloud/gemma4:31b": "yes"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    },
+    {
+      "id": "conv-42:42",
+      "ability": "multi-hop",
+      "cluster": "locomo-conv-42",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.4,
+        "answer": 5007.2,
+        "evaluation": 11066.4
+      },
+      "answerKey": "ba2e8e394d2abf1bef85ec7f0c09a7bbea793240bc9179c82dcc770dd500e2b0",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_3-r8",
+              "surfaced": false
+            },
+            {
+              "id": "session_10-r0",
+              "surfaced": false
+            },
+            {
+              "id": "session_22-r3",
+              "surfaced": false
+            }
+          ],
+          "needed": 3,
+          "neverSurfaced": 3,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 3,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 3,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-48:55",
+      "ability": "temporal",
+      "cluster": "locomo-conv-48",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 2.7,
+        "answer": 3523.4,
+        "evaluation": 12506.2
+      },
+      "answerKey": "4851963aa7a11b7dedfd487be30e193f110503a5d7133c05b6204e05390a647c",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_2-r11",
+              "surfaced": false
+            },
+            {
+              "id": "session_2-r13",
+              "surfaced": false
+            },
+            {
+              "id": "session_16-r2",
+              "surfaced": false
+            }
+          ],
+          "needed": 3,
+          "neverSurfaced": 3,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 7,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 3,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-42:0",
+      "ability": "open-domain",
+      "cluster": "locomo-conv-42",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.9,
+        "answer": 2124.9,
+        "evaluation": 14347.4
+      },
+      "answerKey": "cee0010d2475ec05f28caad803eace62e3af9a2b688cf0bcb6f5bd09b7310b57",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_1-r3",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-50:91",
+      "ability": "single-hop",
+      "cluster": "locomo-conv-50",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 2.2,
+        "answer": 3458.3,
+        "evaluation": 12529.3
+      },
+      "answerKey": "cf932237a456d5591042b3867c0f0077beec4830d699442ba182f705f16f3c07",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_12-r3",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 4,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": false,
+      "f1": 0,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "no",
+        "ollama-cloud/gemma4:31b": "no"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "unknown_gap"
+    },
+    {
+      "id": "conv-43:224",
+      "ability": "adversarial",
+      "cluster": "locomo-conv-43",
+      "outcome": "scored",
+      "answerOutcome": "completed",
+      "phaseTiming": {
+        "ingestion": 1.7,
+        "answer": 3147.7,
+        "evaluation": 12763.5
+      },
+      "answerKey": "d9613b09d43e70788dd9d0ee30e31dbd532baf36e515212de6ee6eeb04a1ebc3",
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "explicitRecallCalls": 0,
+      "automaticRecallCalls": 0,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [],
+      "storage": {
+        "fabric": "none",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "sourceMessageTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "evidenceCounts": {
+        "toolSurfacing": {
+          "rounds": [
+            {
+              "id": "session_21-r5",
+              "surfaced": false
+            }
+          ],
+          "needed": 1,
+          "neverSurfaced": 1,
+          "candidateGap": true
+        },
+        "granularity": "round-presence",
+        "candidateObservation": "not-observed",
+        "labelSource": "message_annotations",
+        "unknownSourceReferences": 0,
+        "goldRounds": 1,
+        "candidateGold": null,
+        "selectedGold": 0,
+        "fineRounds": 1,
+        "fineSelected": 0
+      },
+      "ingest": null,
+      "correct": true,
+      "f1": 1,
+      "judgeVerdicts": {
+        "ollama-cloud/gpt-oss:120b": "yes",
+        "ollama-cloud/gemma4:31b": "yes"
+      },
+      "attributionProvenance": "message_annotations",
+      "stage": "correct"
+    }
+  ],
+  "status": "completed",
+  "limitations": [
+    "Block-level injection accounting until item metadata lands in Tasks 4, 9, 11 and 12.",
+    "Injection token allocations are character estimates, not billing usage.",
+    "OpenCode Go and Hyper judges differ from the papers; scores are not directly comparable."
+  ],
+  "ratesAsOf": "2026-10-29",
+  "ratesStatus": "provider-catalog",
+  "inputCap": 1047552,
+  "selectedQuestionIds": [
+    "conv-41:21",
+    "conv-44:24",
+    "conv-49:21",
+    "conv-44:32",
+    "conv-49:78",
+    "conv-26:38",
+    "conv-42:34",
+    "conv-43:4",
+    "conv-43:48",
+    "conv-43:43",
+    "conv-47:9",
+    "conv-42:42",
+    "conv-48:81",
+    "conv-44:30",
+    "conv-42:29",
+    "conv-44:1",
+    "conv-49:52",
+    "conv-42:32",
+    "conv-42:21",
+    "conv-41:4",
+    "conv-26:57",
+    "conv-41:16",
+    "conv-50:65",
+    "conv-48:55",
+    "conv-48:36",
+    "conv-26:50",
+    "conv-48:23",
+    "conv-43:5",
+    "conv-43:8",
+    "conv-26:81",
+    "conv-48:11",
+    "conv-26:14",
+    "conv-44:44",
+    "conv-47:44",
+    "conv-50:21",
+    "conv-42:0",
+    "conv-26:82",
+    "conv-26:103",
+    "conv-49:111",
+    "conv-49:121",
+    "conv-47:128",
+    "conv-47:131",
+    "conv-43:123",
+    "conv-42:185",
+    "conv-42:175",
+    "conv-48:159",
+    "conv-47:98",
+    "conv-50:91",
+    "conv-41:163",
+    "conv-43:183",
+    "conv-43:212",
+    "conv-44:154",
+    "conv-49:164",
+    "conv-49:185",
+    "conv-43:234",
+    "conv-50:180",
+    "conv-41:175",
+    "conv-43:214",
+    "conv-48:227",
+    "conv-43:224"
+  ],
+  "runPathFingerprint": "36a24eb5f32e7609b4002fec9a431c4bf45252dd82e3d50b5d40609c69fb18ca",
+  "measurementPolicy": {
+    "version": "product-phases-v1",
+    "judgeCallsPerHour": 450,
+    "injectionAnnotation": false,
+    "retriesAndBackoffIncluded": true,
+    "queueWaitIncluded": false,
+    "seedSnapshot": false
+  },
+  "roleUsage": {
+    "product": {
+      "inputTokens": 7260,
+      "cacheReadTokens": 3584,
+      "cacheWriteTokens": 0,
+      "outputTokens": 10847,
+      "exchanges": 60,
+      "complete": true,
+      "measured": 0.004856,
+      "cold": 0.00525,
+      "warm": 0.004856,
+      "inputWarm": 0.000515,
+      "inputCold": 0.000912
+    },
+    "product-extract": {
+      "inputTokens": 0,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 0,
+      "exchanges": 0,
+      "complete": true,
+      "measured": 0,
+      "cold": 0,
+      "warm": 0,
+      "inputWarm": 0,
+      "inputCold": 0
+    },
+    "evaluation": {
+      "inputTokens": 22425,
+      "cacheReadTokens": 12528,
+      "cacheWriteTokens": 0,
+      "outputTokens": 3778,
+      "exchanges": 120,
+      "complete": true,
+      "measured": 0.004017,
+      "cold": 0.005509,
+      "warm": 0.004017,
+      "inputWarm": 0.00178,
+      "inputCold": 0.003262
+    },
+    "unknown": {
+      "inputTokens": 0,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "outputTokens": 0,
+      "exchanges": 0,
+      "complete": true,
+      "measured": 0,
+      "cold": 0,
+      "warm": 0,
+      "inputWarm": 0,
+      "inputCold": 0
+    },
+    "total": {
+      "inputTokens": 29685,
+      "cacheReadTokens": 16112,
+      "cacheWriteTokens": 0,
+      "outputTokens": 14625,
+      "exchanges": 180,
+      "measured": 0.008873
+    }
+  },
+  "usageComplete": true,
+  "usageMissingExchanges": 0,
+  "wireExchanges": 180,
+  "sourceMessageTokens": 0,
+  "timing": {
+    "wallMs": 497541.1,
+    "concurrency": {
+      "initial": 2,
+      "active": 2,
+      "floor": 1
+    },
+    "questions": {
+      "n": 60,
+      "wallMs": {
+        "p50": 16038.1,
+        "p95": 18593.2,
+        "mean": 15945.3
+      }
+    },
+    "phases": {
+      "ingestion": {
+        "n": 60,
+        "wallMs": {
+          "p50": 1.9,
+          "p95": 4.2,
+          "mean": 2.4
+        }
+      },
+      "restore": {
+        "n": 0,
+        "wallMs": {
+          "p50": null,
+          "p95": null,
+          "mean": null
+        }
+      },
+      "answer": {
+        "n": 60,
+        "wallMs": {
+          "p50": 3487.5,
+          "p95": 6164.5,
+          "mean": 3783.9
+        }
+      },
+      "evaluation": {
+        "n": 60,
+        "wallMs": {
+          "p50": 12133.3,
+          "p95": 15716.2,
+          "mean": 12146
+        }
+      }
+    },
+    "policy": {
+      "answer": "after ingestion, before grading, annotation, final background settlement and disposal",
+      "queueWaitIncluded": false,
+      "retriesAndBackoffIncluded": true
+    },
+    "roles": {
+      "judge": {
+        "calls": 120,
+        "firstByteMs": {
+          "p50": 2150.5,
+          "p95": 4355.3,
+          "mean": 2375.6
+        },
+        "totalMs": {
+          "p50": 2150.5,
+          "p95": 4355.3,
+          "mean": 2375.6
+        }
+      },
+      "solver": {
+        "calls": 60,
+        "firstByteMs": {
+          "p50": 1976.4,
+          "p95": 4759.4,
+          "mean": 2206.2
+        },
+        "totalMs": {
+          "p50": 3484,
+          "p95": 6160.7,
+          "mean": 3754.8
+        }
+      }
+    },
+    "calls": 180
+  },
+  "metricVersion": 2,
+  "abilities": {
+    "multi-hop": {
+      "n": 12,
+      "correct": 0,
+      "scored": 12,
+      "f1": 0,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "multi-hop",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "temporal": {
+      "n": 12,
+      "correct": 0,
+      "scored": 12,
+      "f1": 0,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "temporal",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "open-domain": {
+      "n": 12,
+      "correct": 0,
+      "scored": 12,
+      "f1": 0.09583333333333333,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "open-domain",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "single-hop": {
+      "n": 12,
+      "correct": 0,
+      "scored": 12,
+      "f1": 0,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "single-hop",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "adversarial": {
+      "n": 12,
+      "correct": 12,
+      "scored": 12,
+      "f1": 1,
+      "recallAtK": null,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "adversarial",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    }
+  },
+  "abilityGroups": {
+    "multi-hop": {
+      "n": 12,
+      "correct": 0,
+      "scored": 12,
+      "f1": 0,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "multi-hop",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "temporal": {
+      "n": 12,
+      "correct": 0,
+      "scored": 12,
+      "f1": 0,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "temporal",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "open-domain": {
+      "n": 12,
+      "correct": 0,
+      "scored": 12,
+      "f1": 0.09583333333333333,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "open-domain",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "single-hop": {
+      "n": 12,
+      "correct": 0,
+      "scored": 12,
+      "f1": 0,
+      "recallAtK": null,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "single-hop",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "adversarial": {
+      "n": 12,
+      "correct": 12,
+      "scored": 12,
+      "f1": 1,
+      "recallAtK": null,
+      "accuracy": 1,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "gradedMean": null,
+      "gradedDisagreementRate": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "adversarial",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    }
+  },
+  "metricDefinitions": {
+    "multi-hop": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "temporal": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "open-domain": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "single-hop": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "adversarial": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    }
+  },
+  "runLimitRate": 0,
+  "errorRate": 0,
+  "cacheReadRatio": 0.5427657065858178,
+  "cacheWriteRatio": 0,
+  "cost": {
+    "currency": "USD",
+    "unit": "per_million_tokens",
+    "rates": null,
+    "pricingStatus": "priced",
+    "measured": 0.008873,
+    "cachedPrefixSimulation": null,
+    "simulationAssumption": "product warm: full input is a cached prefix; other arms use reported cache tokens; cold reprices input uncached",
+    "ratesAsOf": "2026-10-29",
+    "ratesStatus": "provider-catalog",
+    "scope": "campaign: product plus evaluation plus unknown historical usage",
+    "product": {
+      "inputTokens": 7260,
+      "cacheReadTokens": 3584,
+      "cacheWriteTokens": 0,
+      "outputTokens": 10847,
+      "exchanges": 60,
+      "complete": true,
+      "measured": 0.004856,
+      "cold": 0.00525,
+      "warm": 0.004856,
+      "inputWarm": 0.000515,
+      "inputCold": 0.000912
+    },
+    "evaluation": {
+      "inputTokens": 22425,
+      "cacheReadTokens": 12528,
+      "cacheWriteTokens": 0,
+      "outputTokens": 3778,
+      "exchanges": 120,
+      "complete": true,
+      "measured": 0.004017,
+      "cold": 0.005509,
+      "warm": 0.004017,
+      "inputWarm": 0.00178,
+      "inputCold": 0.003262
+    }
+  },
+  "judgeAgreement": {
+    "n": 60,
+    "judges": {
+      "ollama-cloud/gpt-oss:120b": {
+        "scored": 60,
+        "agreementWithPanel": 1
+      },
+      "ollama-cloud/gemma4:31b": {
+        "scored": 60,
+        "agreementWithPanel": 1
+      }
+    },
+    "pairs": [
+      {
+        "a": "ollama-cloud/gpt-oss:120b",
+        "b": "ollama-cloud/gemma4:31b",
+        "n": 60,
+        "agreement": 1,
+        "kappa": 1
+      }
+    ],
+    "fleissKappa": null
+  },
+  "injectionPrecision": null,
+  "injectionPrecisionReason": "not-labelled",
+  "toolCalls": 0,
+  "toolCallsPerQuestion": 0,
+  "recallCalls": 0,
+  "retrievedSnippetTokens": 0,
+  "answerSessionHitAtK": null,
+  "evidenceRoundCoverage": null,
+  "evidenceAllRequired": null,
+  "fineEvidenceRecall": null,
+  "fineEvidencePrecision": null,
+  "legacyRetrievalRecallAtK": null,
+  "retrievalRecallAtK": null,
+  "stages": {
+    "unknown_gap": 48,
+    "correct": 12
+  }
+}

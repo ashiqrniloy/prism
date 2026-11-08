@@ -18,6 +18,8 @@ export interface ApiExport {
   readonly name: string;
   readonly kind: "function" | "class" | "const" | "let" | "var" | "enum" | "interface" | "type" | "namespace" | "reexport";
   readonly signature: string;
+  /** For an interface or class: its members, one declaration per string, comments removed. */
+  readonly members?: readonly string[];
   readonly summary?: string;
   /** Project-relative paths into the installed tarballs (`node_modules/@arnilo/<pkg>/...`) that mention the name in backticks. */
   readonly docs?: readonly string[];

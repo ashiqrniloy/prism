@@ -50,6 +50,9 @@ if (!report.ok) {
 
 ## 4. Run the host's own tests
 
+The typecheck proves types, not behavior. Drive the host with scripted mock turns that call its tools and read the
+tool results: a missing principal, a gate that never fires or a package that never loads shows up there, not in `tsc`.
+
 Answer approvals with `createScriptedHostUi` instead of a person; a test that answers `yes` to everything proves
 nothing, so also test a `no`. Use the mock provider's scripted turns to drive a tool call and assert the result.
 Look at `examples/approval.ts` and `examples/tools.ts`.

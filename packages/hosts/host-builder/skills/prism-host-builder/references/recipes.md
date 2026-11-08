@@ -12,6 +12,15 @@ keep the rest.
 Copy `examples/sdk-basics.ts`, then `examples/minimal-host-app.ts` for streaming events.
 Page: `node_modules/@arnilo/prism/docs/agent.md`.
 
+## Give an agent coding tools in a project
+
+Copy `examples/coding-approval.ts` and drop the approval parts you do not need. List `toolsCoding({ root })` for
+`read`, `write`, `edit`, `glob`, `grep` and `shell`, and `contextFiles({ root })` so `AGENTS.md` and project skills under
+`root` reach the agent. Pass `principal: { kind: "user", id }` and `ownership` to `createAgent`: `shell` and the other
+durable tools refuse to run without a principal. Add approval before you give the agent to anyone else
+(`references/security.md`).
+Pages: `node_modules/@arnilo/prism-tools-coding/README.md`, `node_modules/@arnilo/prism-context-files/README.md`.
+
 ## Add a tool the host owns
 
 Copy `examples/tools.ts` for the registry and `examples/custom-tools-skills-context.ts` for a tool, a skill and a
@@ -21,7 +30,11 @@ Page: `node_modules/@arnilo/prism/docs/tools.md`.
 ## Write a package
 
 Copy `examples/define-package.ts`. Declare `requires: { api: 1 }`, the capabilities you use, and a config schema
-with `x-prism-secret` for any secret field. Test it with `packageConformance` (`references/verification.md`).
+with `x-prism-secret` for any secret field. Register hooks with `prism.hooks.on(name, handler)`. A handler receives one
+payload: read its fields in `data/api.json` under `members` (a `tool.call` payload is `ToolCallHookPayload`: the tool
+`name`, its `args` object and its `effects`). Test the package with `packageConformance(pkg)` from
+`@arnilo/prism/testing`, then test its behavior through an agent with scripted mock turns (`references/verification.md`).
+`assertToolDispatchConforms` is for a tool, not a package.
 Page: `node_modules/@arnilo/prism/docs/packages.md`.
 
 ## Ship a skill with a package
@@ -94,7 +107,8 @@ Pages: `node_modules/@arnilo/prism/docs/drivers.md`, `node_modules/@arnilo/prism
 
 ## Compact long history
 
-Copy `examples/compaction.ts`. If you also list observational memory, assign the `compaction` owner
+Copy `examples/compaction.ts`. If any other package you list also provides `compaction` (observational memory, or a
+package the project already has), assign the owner in `slots` and check `agent.inspect().slots`
 (`references/choosing.md`).
 Page: `node_modules/@arnilo/prism-memory-compaction/README.md`.
 

@@ -97,7 +97,7 @@ export function createHostBuilderMcpServer(options: HostBuilderMcpOptions): McpS
     {
       title: "Prism API lookup",
       description:
-        "Look up a public Prism name. Pass `symbol` for an exact export name (case-sensitive), or `query` for words matched against names, signatures and summaries; `package` limits either to one package (for example @arnilo/prism-approval). Returns signature, package, import specifier, docs pages and examples. An unknown name returns the nearest names.",
+        "Look up a public Prism name. Pass `symbol` for an exact export name (case-sensitive), or `query` for words matched against names, signatures and summaries; `package` limits either to one package (for example @arnilo/prism-approval). Returns signature, package, import specifier, docs pages and examples, and for an interface or class its `members` (field and method declarations): read a field name there, never guess it. An unknown name returns the nearest names.",
       inputSchema: z.object({
         symbol: z.string().max(200).optional(),
         query: z.string().max(200).optional(),

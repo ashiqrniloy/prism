@@ -29,6 +29,11 @@ Left column is the retired name. Everything in it is gone.
 | Retired | Use instead |
 | --- | --- |
 | `createAgentSession`, `createExtensionKernel` | `await agent.session()` and a package listed in `packages` |
+| `extensions: [...]` | `packages: [...]`; installed is listed is active |
+| `provider: "x"`, `model: "y"` (two fields) | `model: { provider: "x", model: "y" }` plus the provider package in `packages` |
+| `tools: { use: ["coding"] }` | `packages: [toolsCoding({ root })]`; a package instance, not a name |
+| `identity: { profile }` | `principal: { kind, id }`, with `ownership` for the scope the host serves. Tools with durable effects fail closed without a principal |
+| `store: "memory"` | the store slot default; list a store package for anything durable |
 | `activateKernel` | list the package; installed is listed is active |
 | `defineAgent` | `createAgent` |
 | `@arnilo/prism-agent-sdk` | `@arnilo/prism` plus the native packages |
@@ -51,7 +56,7 @@ Left column is the retired name. Everything in it is gone.
 | `createSecureAgent` | `createAgent` with `@arnilo/prism-governance` and `@arnilo/prism-approval` listed |
 | `wiki_search`, `wiki_read_page`, `wiki_record_insight` | `memory.recall`, `memory.read`, `memory.insert` |
 
-Plain words that are still valid config names (`loop`, `context`, `permission`, `identity`, `middleware` when used as a
+Plain words that are still valid config names (`loop`, `context`, `permission`, `middleware` when used as a
 hook concept) are not listed: judge them by whether `api.json` or the docs define them in 0.13. `middleware` and
 `guardrails` as config fields moved to the matching hooks (`model.request`, `tool.call`, `tool.result`) and to
 `@arnilo/prism-guardrail-packs`.

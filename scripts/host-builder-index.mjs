@@ -36,6 +36,9 @@ const EXCLUDED_EXAMPLE_DIRS = new Set(["fixtures", "example-workspace", "instruc
 const MAX_DOCS_PER_NAME = 6;
 const MAX_EXAMPLES_PER_NAME = 5;
 const SAMPLE_MESSAGE_CAP = 160;
+/** Member lists keep a type's shape (field names, optionality, types) so an agent need not guess `args` vs `arguments`. */
+const MAX_MEMBERS_PER_TYPE = 60;
+const MEMBER_CAP = 180;
 
 // Key-shaped, not key-named: the examples hold readable demo sentinels such as `sk-live-never-persist-this`
 // on purpose, which a real provider key (a long unbroken random run) never resembles.
@@ -276,6 +279,79 @@ function exportTarget(value) {
   return undefined;
 }
 
+// ---------------------------------------------------------------------------------------------------------
+// Members of interfaces and classes.
+//
+// The release gate's signature stops at the opening brace, which is right for compat baselines and useless for a
+// builder: `export interface ToolCallHookPayload` does not say the field is `args`. The members come from the same
+// emitted declarations, comments stripped, one string per member.
+
+function stripComments(text) {
+  return text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+}
+
+/** The text between the braces that start at `open`, or undefined when they never balance. */
+function braceBody(text, open) {
+  let depth = 0;
+  for (let index = open; index < text.length; index += 1) {
+    const char = text[index];
+    if (char === "{") depth += 1;
+    else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) return text.slice(open + 1, index);
+    }
+  }
+  return undefined;
+}
+
+/** Splits a body at top-level `;` (and a top-level newline after `}`), ignoring `;` inside (), [], {}, <>. */
+function splitMembers(body) {
+  const members = [];
+  let depth = 0;
+  let angle = 0;
+  let current = "";
+  for (let index = 0; index < body.length; index += 1) {
+    const char = body[index];
+    if (char === "{" || char === "(" || char === "[") depth += 1;
+    else if (char === "}" || char === ")" || char === "]") depth -= 1;
+    else if (char === "<") angle += 1;
+    else if (char === ">" && body[index - 1] !== "=") angle = Math.max(0, angle - 1);
+    if (char === ";" && depth === 0 && angle === 0) {
+      members.push(current);
+      current = "";
+    } else current += char;
+  }
+  members.push(current);
+  return members;
+}
+
+function memberLines(body) {
+  const lines = [];
+  for (const raw of splitMembers(body)) {
+    const member = raw.replace(/\s+/g, " ").trim();
+    if (member === "" || /^(?:private|protected)\b/.test(member) || member.startsWith("#")) continue;
+    lines.push(member.length > MEMBER_CAP ? `${member.slice(0, MEMBER_CAP)} …` : member);
+  }
+  return lines;
+}
+
+/** name -> member lines, for every exported interface and class declared in the package's emitted declarations. */
+function collectMembers(distDir) {
+  const found = new Map();
+  for (const file of walk(distDir, (name) => name.endsWith(".d.ts"))) {
+    const text = stripComments(readFileSync(file, "utf8"));
+    for (const match of text.matchAll(/^export (?:declare )?(?:abstract )?(?:interface|class) ([A-Za-z_$][\w$]*)\b[^{;]*\{/gm)) {
+      const name = match[1];
+      if (found.has(name)) continue;
+      const body = braceBody(text, match.index + match[0].length - 1);
+      if (body === undefined) continue;
+      const lines = memberLines(body);
+      if (lines.length > 0) found.set(name, lines);
+    }
+  }
+  return found;
+}
+
 function buildApi(root, packages, docs, examples) {
   // specifier -> name -> examples that import it
   const importers = new Map();
@@ -298,6 +374,7 @@ function buildApi(root, packages, docs, examples) {
       if (emitted.error) throw new HostBuilderIndexError(emitted.error);
       if (!emitted.distDir) continue;
       const entries = [];
+      const memberIndex = collectMembers(emitted.distDir);
       for (const [subpath, value] of Object.entries(pkg.manifest.exports ?? {})) {
         const target = exportTarget(value);
         if (!target?.endsWith(".ts")) continue;
@@ -310,10 +387,12 @@ function buildApi(root, packages, docs, examples) {
         for (const [name, info] of extractEntrySurface(declaration)) {
           const importedBy = [...new Set([...(byName?.get(name) ?? [])])].sort().slice(0, MAX_EXAMPLES_PER_NAME);
           const mentions = docsMentioning(docs, name, pkg.manifest.name);
+          const members = info.kind === "interface" || info.kind === "class" ? memberIndex.get(name) : undefined;
           exports.push({
             name,
             kind: info.kind,
             signature: info.signature,
+            ...(members ? { members: members.slice(0, MAX_MEMBERS_PER_TYPE) } : {}),
             ...(info.summary ? { summary: info.summary } : {}),
             ...(mentions.length ? { docs: mentions } : {}),
             ...(importedBy.length ? { examples: importedBy } : {}),

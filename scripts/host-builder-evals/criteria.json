@@ -187,5 +187,27 @@
   "loadings": {
     "natural": "The builder is told nothing about the skill; the skill arms list it in the catalog and the builder loads it or not. Reported (how often it loaded the skill and used the MCP tools, and acceptance split by loading).",
     "preload": "`--preload`: in the skill and skill+mcp arms the builder is told to load the skill first (builder.preloadInstruction). It isolates what the skill's text is worth from whether the model finds it. The none arm is unchanged. Claims about the skill's value are published from this run; the natural run reports whether a model finds the skill on its own (same split as plan 215 Task 11, protocol v3)."
-  }
+  },
+  "kitRevisions": [
+    {
+      "id": "kit-v1",
+      "status": "measured",
+      "evidence": "docs/_evidence/host-builder/212/kit-v1/",
+      "note": "The skill and indexes as first published in the plan. gemma4:31b, beam and gpt-oss:120b were run on it (natural, and preload for gemma4). No claim passed."
+    },
+    {
+      "id": "kit-v2",
+      "status": "current",
+      "reason": "Transcripts and the indexes showed facts the builder needs and the kit lacked or got wrong, found by comparing each failing task with what the kit says (not by tuning to a hidden test). Measured again from scratch; the claim rules, fixtures, hidden tests, scorers, models and trials are unchanged.",
+      "changes": [
+        "data/api.json: interfaces and classes carry `members`, so a field name (a hook payload's `args`, the hook registrar's `on`) is read and not guessed; prism_api returns them",
+        "SKILL.md: a 'Mistakes the compiler cannot catch' section (a host that runs tools needs a principal; deleting a retired field is not an upgrade; types are not behavior; slot owners; no scratch files) and recipes.md is read before building",
+        "references/upgrading.md: no longer calls `identity` a valid config name; adds the extensions, provider/model, tools.use, identity and store rows",
+        "references/recipes.md: a coding-tools recipe, hook payload fields and the package conformance helper, any package that provides `compaction`",
+        "references/pitfalls.md, verification.md: ERR_PRISM_CODING_PRINCIPAL_REQUIRED; drive the host with scripted turns after the typecheck",
+        "docs/migrate-to-0.13.md: the identity row names the principal requirement"
+      ],
+      "rule": "No further kit change is made because of kit-v2 results. A significant regression against `none` is handled by the existing round-2 rule only."
+    }
+  ]
 }

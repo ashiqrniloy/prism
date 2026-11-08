@@ -28,7 +28,7 @@ This document is the host checklist for upgrading from Prism 0.12.1 to 0.13.0.
 | `memory: { compaction: "llm" }` | `packages: [compactionLlm()]` |
 | `web: { backend: "brave" }` | `packages: [toolsWeb({ backend: "brave" })]` |
 | `extensions: [...]`, `activateKernel()` | `packages: [...]` — installed is listed is active |
-| `identity: { profile: "local-operator" }` | `principal: { kind, id }` — opaque to the kernel; enforcement lives in the packages that need it |
+| `identity: { profile: "local-operator" }` | `principal: { kind, id }` — opaque to the kernel; enforcement lives in the packages that need it. Tools with durable effects (`shell`, `write`, `edit`) in `@arnilo/prism-tools-coding` fail closed with `ERR_PRISM_CODING_PRINCIPAL_REQUIRED` unless the agent has one |
 | `stopHooks: [...]` | a package's `run.end` hook, or `AgentConfig.hooks` |
 | `store: "memory"` | the store slot default; list a store package for anything durable |
 
