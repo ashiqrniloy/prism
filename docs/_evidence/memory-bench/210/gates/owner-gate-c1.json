@@ -9,7 +9,7 @@
   "approvedBy": "owner",
   "text": "Budget/models: \"Try Crouton alpha free on both Command Code and Opencode go. also glyph cluster free on command code. iceman contributor free on opencode go\". Roles: \"Crouton+Iceman answer, Glyph+Kilo judge (Recommended)\". LongMemEval-M: \"Full cohort, shared ingest (Recommended)\". Labels: \"Assistant labels (Recommended)\". Interruptions: \"since these are all free models. interruptions are expected. Make sure those are handled, retried and have no other impact other than wall time\" (owner answers to the gate C-1 questions, 2026-11-07).",
   "manifest": "docs/_evidence/memory-bench/210/ablations/c1-manifest.json",
-  "manifestHash": "10896739ac545dbb4a90c03cc9847f55f945bebfa9cd42e7e2065c210006b382",
+  "manifestHash": "13930dd8f67a7df4b35cd40a9fb17b1913b72343cccb92e8a04ed20053088bdd",
   "cleanupCriteriaHash": "eea138eb71d58408d09c331e55da419ad8caf8bdcc0a1e44536dda0cc55a7a51",
   "criteriaHash": "dd1add49cd1d4f023c8ecf027145ac69d10d764137db87cb015166bd80e80ea7",
   "plan202Task5": {
@@ -19,7 +19,7 @@
   "productHash": "b47f8b8ea26d2b5023e89ca82a72d835a4ffcf3c85fa74e316d54e82c0304fd0",
   "scope": {
     "partition": "dev",
-    "jobs": 153,
+    "jobs": 163,
     "answers": {
       "large": "ollama-cloud/beam",
       "small": "ollama-cloud/nemotron-3-nano:30b"
@@ -33,7 +33,7 @@
       "small": "ollama-cloud/gpt-oss:20b"
     },
     "curator": "agent-own (wiki model unset: each answer model curates its own concepts)",
-    "decider": "ollama-cloud/clef:27b (phase B: P3-P5 arms after the ollama-cloud decisions endpoint lands; amendment 5)",
+    "decider": "ollama-cloud/clef:27b",
     "calibration": {
       "labels": "assistant, blind, before any panel verdict on the set is read (development evidence; Task 9 repeats O3 with a person)",
       "claims": 60,
@@ -41,10 +41,26 @@
     },
     "longmemevalM": "full 50-question development cohort, write side built once per write-side configuration and seeded",
     "reservedForTask8": "the combined non-inferiority check runs under this gate on the same Ollama Cloud routes, as its own manifest",
-    "unmeasurable": {
-      "decisions.P3": "pending phase B: decider ollama-cloud/clef:27b needs the ollama-cloud package's decisions endpoint",
-      "decisions.P4": "pending phase B: decider ollama-cloud/clef:27b needs the ollama-cloud package's decisions endpoint",
-      "decisions.P5": "pending phase B: decider ollama-cloud/clef:27b needs the ollama-cloud package's decisions endpoint"
+    "unmeasurable": {},
+    "waves": {
+      "1": {
+        "jobs": 61,
+        "questions": 2600,
+        "workJobs": 0,
+        "writeSides": 5
+      },
+      "2": {
+        "jobs": 54,
+        "questions": 2080,
+        "workJobs": 12,
+        "writeSides": 0
+      },
+      "3": {
+        "jobs": 48,
+        "questions": 2040,
+        "workJobs": 0,
+        "writeSides": 0
+      }
     }
   },
   "billing": {
@@ -71,7 +87,7 @@
       "beam-1m": 40000000,
       "default": 25000000,
       "work-outcome": 12000000,
-      "om": 30000000
+      "om": 100000000
     },
     "wallTimeCapHours": {
       "longmemeval-m": 96,
@@ -117,8 +133,22 @@
       "date": "2026-11-08",
       "by": "owner",
       "text": "\"You can use paid models for these. From ollama cloud, you can use beam, gpt-oss 20b and 120b, nemotron-3-nano, gemma4:31b, and lastly clef as the decision model. go ahead and finish the rest of the tasks. These are paid model so you do not need to throttle as hard. But there is a 5 hour rate limit which needs to be considered\" (owner, 2026-11-08).",
-      "effect": "Every route moves to Ollama Cloud (Pro: $60 included a month, 3 concurrent requests; prices from ollama.com/pricing, 2026-11-08, in rates.json). Roles (assistant's mapping): beam answers large, nemotron-3-nano:30b answers small, gpt-oss:120b + gemma4:31b judge (neither answers), gpt-oss:20b simulates the work-outcome user, clef:27b is the P3-P5 decider (phase B). Models with named thinking levels run at medium effort for every arm (beam defaults to max, which would spend the output bound). Billing becomes paid-allowance: before each job the campaign reads /api/balance; a closed session or weekly window (the owner's 5-hour window) is waited out until resets_at, and an allowance under the $1.50 reserve halts the campaign, resumable next period. OM jobs (about 5.7M input tokens a BEAM-1M question in the smoke) are capped at 30M input tokens each and run last, so the allowance reaches every other arm first. Free-route pacing is off (the jobs are no longer free-only). Arms, suites, partition, criteria and pairing are unchanged. Manifest hash re-bound. Bounded-wire accounting (a whole context window charged per request, for free routes that omit usage) is off: Ollama Cloud reports usage on every reply (native prompt_eval_count / eval_count, read by the wire proxy), and a 1M-window charge would end a beam job after about 23 requests (smoke 2026-11-08).",
+      "effect": "Every route moves to Ollama Cloud (Pro: $60 included a month, 3 concurrent requests; prices from ollama.com/pricing, 2026-11-08, in rates.json). Roles (assistant's mapping): beam answers large, nemotron-3-nano:30b answers small, gpt-oss:120b + gemma4:31b judge (neither answers), gpt-oss:20b simulates the work-outcome user, clef:27b is the P3-P5 decider (phase B). Models with named thinking levels run at medium effort for every arm (beam defaults to max, which would spend the output bound). Billing becomes paid-allowance: before each job the campaign reads /api/balance; a closed session or weekly window (the owner's 5-hour window) is waited out until resets_at, and an allowance under the $1.50 reserve halts the campaign, resumable next period. OM jobs (about 5.7M input tokens a BEAM-1M question in the smoke) are capped at 100M input tokens each and run last, so the allowance reaches every other arm first. Free-route pacing is off (the jobs are no longer free-only). Arms, suites, partition, criteria and pairing are unchanged. Manifest hash re-bound. Bounded-wire accounting (a whole context window charged per request, for free routes that omit usage) is off: Ollama Cloud reports usage on every reply (native prompt_eval_count / eval_count, read by the wire proxy), and a 1M-window charge would end a beam job after about 23 requests (smoke 2026-11-08). Smoke (2026-11-08, 2 questions a job, all five job kinds): Ollama Cloud's /api/usage showed 11.5M of 12.7M input tokens served as cached prefix ($0.42 for 680 requests, about $0.033 per million effective), so the OM cap was set at 100M; the wire proxy now records the native prompt_eval_cached_count as cache reads.",
       "previousManifestHash": "57020d6cffebf39c8e2367d7e404e561c5342c1338645382465259bdd8aee4bb"
+    },
+    {
+      "date": "2026-11-08",
+      "by": "assistant (within the owner's amendment 4: \"clef as the decision model\")",
+      "text": "Phase B folded into the launch: the P3-P5 arms return with ollama-cloud/clef:27b as the decider.",
+      "effect": "The ollama-cloud package now serves decision models over the System One wire at /v1/systemone (capabilities.decisions for /api/show `decision` models; live check: clef:27b answered noul and score questions, 239 input tokens). decisions-p3 (on the precision filter, beam-100k + locomo), decisions-p5 (on P, beam-100k + locomo) and W.decisions-p4 (work leg, on W.P) are restored for both answer models: 10 jobs, 163 in all. The decider is clef for every arm, never the answer model; its requests share the answer route's wire proxy, so their tokens are counted with the answer route (priced at the answer model's rate in the bench's cost rows; /api/usage holds the billed figure). `unmeasurable` is empty. The full campaign restarted on a fresh journal: the first launch had only begun the local write sides (no model call). Manifest hash re-bound. Restart finding (2026-11-08 03:38): three full-cohort LongMemEval-M write sides at concurrency 4 filled RAM and swap and systemd-oomd killed the terminal's whole scope, campaign included. Write sides now ingest one question at a time, and the campaign runs under scripts/memory-bench/c1-supervise.sh in its own systemd scope (MemoryMax 40G), which resumes it from the journal after any kill. Arms, models, routes and caps unchanged.",
+      "previousManifestHash": "3a694ff76e3d93eac46ce7f188d26dcc89ef83b417cac568b9eb8776e38ec05a"
+    },
+    {
+      "date": "2026-11-08",
+      "by": "owner",
+      "text": "\"I would like to go with option 3. do the planning and ready the run. But do not start the run till I explicitly instruct you\" (owner, 2026-11-08, choosing the wave plan over Ollama Max or a scope cut, after \"I do not want to do a test that would take 2 days of wall time\").",
+      "effect": "The campaign runs in three waves of about a working day each on the Pro plan (about 5-6 scored questions a minute at 3 concurrent requests): wave 1 = write sides, the plan 202 Task 5 rows (P, enrichment-loo, navigation-loo on all five suites, both models) and memory-off, tool-affordances-loo, supersession-keyed-only, grouping-loo, directory-loo, timeline-loo; wave 2 = the other recall and delivery arms, decisions P3/P5 and the work-outcome leg; wave 3 = the ontology arms with the panel calibration, the F4 diagnostic leg and OM. No arm, suite, question, model or criterion is dropped; every arm's base is in its own or an earlier wave (checked by assertC1Jobs). Each wave starts only on the owner's explicit instruction: `c1-supervise.sh <waves>` requires the wave list, and a job outside it is reported `deferred` and left in the journal. The journal fingerprint does not include the wave, so the progress made before the stop (3 completed jobs, answer and judge checkpoints) carries into wave 1. Default parallel arms 6. Manifest hash re-bound.",
+      "previousManifestHash": "20837b3403ba51ac200e8ca596e014147d40318413a1b4c44d5de4fb3c1c0dcb"
     }
   ]
 }

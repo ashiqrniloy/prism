@@ -540,6 +540,7 @@ export function applyRound(decision, round) {
 export function installRateLimitedFetch({
   minIntervalMs = {},
   maxRetries = 10,
+  maxServerRetries = 3,
   maxWaitMs = 90_000,
   base = globalThis.fetch,
   sleep = (ms) => new Promise((done) => setTimeout(done, ms)),
@@ -556,6 +557,7 @@ export function installRateLimitedFetch({
   globalThis.fetch = async (input, init) => {
     const host = new URL(typeof input === "string" ? input : (input.url ?? String(input))).hostname;
     const interval = minIntervalMs[host] ?? 0;
+    let serverRetries = 0;
     for (let attempt = 0; ; attempt += 1) {
       if (interval > 0) {
         const slot = Math.max(Date.now(), nextSlot.get(host) ?? 0);
@@ -563,6 +565,15 @@ export function installRateLimitedFetch({
         if (slot > Date.now()) await sleep(slot - Date.now());
       }
       const response = await base(input, init);
+      // A transient server error before any stream starts is retried with backoff, so one flaky response does not end a
+      // builder run that has spent minutes. An error inside an open stream cannot be retried and stays a failed run.
+      if ([500, 502, 503, 504].includes(response.status) && serverRetries < maxServerRetries) {
+        serverRetries += 1;
+        await response.body?.cancel().catch(() => undefined);
+        await sleep(2000 * 2 ** (serverRetries - 1));
+        attempt -= 1;
+        continue;
+      }
       if (response.status !== 429 || attempt >= maxRetries) return response;
       const wait = waitFor(response);
       if (wait > maxWaitMs) return response;

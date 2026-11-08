@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-07T21:16:27.661Z",
+  "generatedAt": "2026-11-07T22:19:09.647Z",
   "kind": "210-c1-ablation-manifest",
   "schemaVersion": 1,
   "plan": 210,
@@ -127,7 +127,7 @@
       "beam-1m": 40000000,
       "default": 25000000,
       "work-outcome": 12000000,
-      "om": 30000000
+      "om": 100000000
     },
     "wallTimeCapHours": {
       "longmemeval-m": 96,
@@ -474,6 +474,46 @@
         ]
       },
       {
+        "id": "decisions-p3",
+        "config": "fabric-x-tools",
+        "ablate": [
+          "fabric.inject.minScore=0.35"
+        ],
+        "suites": [
+          "beam-100k",
+          "locomo"
+        ],
+        "base": "precision-filter",
+        "mode": "add",
+        "features": [
+          "decisions.P3"
+        ],
+        "decisions": {
+          "points": [
+            "P3"
+          ]
+        }
+      },
+      {
+        "id": "decisions-p5",
+        "config": "fabric-x-tools",
+        "ablate": [],
+        "suites": [
+          "beam-100k",
+          "locomo"
+        ],
+        "base": "P",
+        "mode": "add",
+        "features": [
+          "decisions.P5"
+        ],
+        "decisions": {
+          "points": [
+            "P5"
+          ]
+        }
+      },
+      {
         "id": "f4-readtime",
         "config": "fabric-x-tools",
         "ablate": [
@@ -671,6 +711,20 @@
         "features": [
           "lessons"
         ]
+      },
+      {
+        "id": "W.decisions-p4",
+        "arm": "P",
+        "decisions": {
+          "points": [
+            "P4"
+          ]
+        },
+        "base": "W.P",
+        "mode": "add",
+        "features": [
+          "decisions.P4"
+        ]
       }
     ]
   },
@@ -813,21 +867,21 @@
       "feature": "decisions.P3",
       "prediction": "decisions-p3",
       "arms": [
-        "unmeasurable:decisions.P3"
+        "decisions-p3"
       ]
     },
     {
       "feature": "decisions.P4",
       "prediction": "decisions-p4",
       "arms": [
-        "unmeasurable:decisions.P4"
+        "W.decisions-p4"
       ]
     },
     {
       "feature": "decisions.P5",
       "prediction": "decisions-p5",
       "arms": [
-        "unmeasurable:decisions.P5"
+        "decisions-p5"
       ]
     },
     {
@@ -894,11 +948,7 @@
       ]
     }
   ],
-  "unmeasurable": {
-    "decisions.P3": "pending phase B: decider ollama-cloud/clef:27b needs the ollama-cloud package's decisions endpoint",
-    "decisions.P4": "pending phase B: decider ollama-cloud/clef:27b needs the ollama-cloud package's decisions endpoint",
-    "decisions.P5": "pending phase B: decider ollama-cloud/clef:27b needs the ollama-cloud package's decisions endpoint"
-  },
+  "unmeasurable": {},
   "results": [],
   "jobs": [
     {
@@ -916,8 +966,9 @@
       "maxInputTokens": 1000000,
       "interleaveAbilities": true,
       "wallTimeCapHours": 48,
-      "concurrency": 4,
-      "snapshotKey": "210-longmemeval-m-d04acf149fb596ebe9b7d110"
+      "concurrency": 1,
+      "snapshotKey": "210-longmemeval-m-d04acf149fb596ebe9b7d110",
+      "wave": 1
     },
     {
       "id": "210-c1.write.enrichment.longmemeval-m",
@@ -934,11 +985,12 @@
       "maxInputTokens": 1000000,
       "interleaveAbilities": true,
       "wallTimeCapHours": 48,
-      "concurrency": 4,
+      "concurrency": 1,
       "ablate": [
         "fabric.enrichment=off"
       ],
-      "snapshotKey": "210-longmemeval-m-4ebbe25016a401bfa9b44f39"
+      "snapshotKey": "210-longmemeval-m-4ebbe25016a401bfa9b44f39",
+      "wave": 1
     },
     {
       "id": "210-c1.write.timeline.longmemeval-m",
@@ -955,11 +1007,12 @@
       "maxInputTokens": 1000000,
       "interleaveAbilities": true,
       "wallTimeCapHours": 48,
-      "concurrency": 4,
+      "concurrency": 1,
       "ablate": [
         "fabric.timeline=off"
       ],
-      "snapshotKey": "210-longmemeval-m-fe5d0da65adf3839c2898b08"
+      "snapshotKey": "210-longmemeval-m-fe5d0da65adf3839c2898b08",
+      "wave": 1
     },
     {
       "id": "210-c1.write.base.beam-1m",
@@ -976,8 +1029,9 @@
       "maxInputTokens": 1000000,
       "interleaveAbilities": true,
       "wallTimeCapHours": 48,
-      "concurrency": 4,
-      "snapshotKey": "210-beam-1m-6b8af212c1bbef4d35fdff8c"
+      "concurrency": 1,
+      "snapshotKey": "210-beam-1m-6b8af212c1bbef4d35fdff8c",
+      "wave": 1
     },
     {
       "id": "210-c1.write.enrichment.beam-1m",
@@ -994,11 +1048,12 @@
       "maxInputTokens": 1000000,
       "interleaveAbilities": true,
       "wallTimeCapHours": 48,
-      "concurrency": 4,
+      "concurrency": 1,
       "ablate": [
         "fabric.enrichment=off"
       ],
-      "snapshotKey": "210-beam-1m-739f5191cdd9dd620f0ce1b0"
+      "snapshotKey": "210-beam-1m-739f5191cdd9dd620f0ce1b0",
+      "wave": 1
     },
     {
       "id": "210-c1.large.P.memoryagentbench-cr",
@@ -1023,7 +1078,8 @@
       "interleaveAbilities": true,
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/210/large/P/memoryagentbench-cr/answers",
-      "judgeCacheDir": ".cache/memory-bench/210/large/P/memoryagentbench-cr/judge"
+      "judgeCacheDir": ".cache/memory-bench/210/large/P/memoryagentbench-cr/judge",
+      "wave": 1
     },
     {
       "id": "210-c1.large.P.beam-100k",
@@ -1048,7 +1104,8 @@
       "interleaveAbilities": true,
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/210/large/P/beam-100k/answers",
-      "judgeCacheDir": ".cache/memory-bench/210/large/P/beam-100k/judge"
+      "judgeCacheDir": ".cache/memory-bench/210/large/P/beam-100k/judge",
+      "wave": 1
     },
     {
       "id": "210-c1.large.P.locomo",
@@ -1073,7 +1130,8 @@
       "interleaveAbilities": true,
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/210/large/P/locomo/answers",
-      "judgeCacheDir": ".cache/memory-bench/210/large/P/locomo/judge"
+      "judgeCacheDir": ".cache/memory-bench/210/large/P/locomo/judge",
+      "wave": 1
     },
     {
       "id": "210-c1.large.P.beam-1m",
@@ -1099,7 +1157,8 @@
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/210/large/P/beam-1m/answers",
       "judgeCacheDir": ".cache/memory-bench/210/large/P/beam-1m/judge",
-      "writeSide": "210-c1.write.base.beam-1m"
+      "writeSide": "210-c1.write.base.beam-1m",
+      "wave": 1
     },
     {
       "id": "210-c1.large.P.longmemeval-m",
@@ -1125,7 +1184,8 @@
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/210/large/P/longmemeval-m/answers",
       "judgeCacheDir": ".cache/memory-bench/210/large/P/longmemeval-m/judge",
-      "writeSide": "210-c1.write.base.longmemeval-m"
+      "writeSide": "210-c1.write.base.longmemeval-m",
+      "wave": 1
     },
     {
       "id": "210-c1.large.memory-off.locomo",
@@ -1150,7 +1210,8 @@
       "interleaveAbilities": true,
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/210/large/memory-off/locomo/answers",
-      "judgeCacheDir": ".cache/memory-bench/210/large/memory-off/locomo/judge"
+      "judgeCacheDir": ".cache/memory-bench/210/large/memory-off/locomo/judge",
+      "wave": 1
     },
     {
       "id": "210-c1.large.memory-off.longmemeval-m",
@@ -1175,7 +1236,8 @@
       "interleaveAbilities": true,
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/210/large/memory-off/longmemeval-m/answers",
-      "judgeCacheDir": ".cache/memory-bench/210/large/memory-off/longmemeval-m/judge"
+      "judgeCacheDir": ".cache/memory-bench/210/large/memory-off/longmemeval-m/judge",
+      "wave": 1
     },
     {
       "id": "210-c1.large.strength-0.15.longmemeval-m",
@@ -1204,7 +1266,8 @@
       "ablate": [
         "fabric.lifecycle.recall.retrieval=0.15"
       ],
-      "writeSide": "210-c1.write.base.longmemeval-m"
+      "writeSide": "210-c1.write.base.longmemeval-m",
+      "wave": 2
     },
     {
       "id": "210-c1.large.tool-affordances-loo.locomo",
@@ -1233,7 +1296,8 @@
       "ablate": [
         "fabric.multiQuery=off",
         "fabric.unmatchedTerms=off"
-      ]
+      ],
+      "wave": 1
     },
     {
       "id": "210-c1.large.tool-affordances-loo.beam-100k",
@@ -1262,7 +1326,8 @@
       "ablate": [
         "fabric.multiQuery=off",
         "fabric.unmatchedTerms=off"
-      ]
+      ],
+      "wave": 1
     },
     {
       "id": "210-c1.large.supersession-keyed-only.locomo",
@@ -1290,7 +1355,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/large/supersession-keyed-only/locomo/judge",
       "ablate": [
         "fabric.recall.supersessionHint=keyed-only"
-      ]
+      ],
+      "wave": 1
     },
     {
       "id": "210-c1.large.supersession-keyed-only.beam-100k",
@@ -1318,7 +1384,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/large/supersession-keyed-only/beam-100k/judge",
       "ablate": [
         "fabric.recall.supersessionHint=keyed-only"
-      ]
+      ],
+      "wave": 1
     },
     {
       "id": "210-c1.large.supersession-keyed-only.longmemeval-m",
@@ -1347,7 +1414,8 @@
       "ablate": [
         "fabric.recall.supersessionHint=keyed-only"
       ],
-      "writeSide": "210-c1.write.base.longmemeval-m"
+      "writeSide": "210-c1.write.base.longmemeval-m",
+      "wave": 1
     },
     {
       "id": "210-c1.large.expansion.locomo",
@@ -1375,7 +1443,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/large/expansion/locomo/judge",
       "ablate": [
         "fabric.recall.expansion=true"
-      ]
+      ],
+      "wave": 2
     },
     {
       "id": "210-c1.large.gather.locomo",
@@ -1403,7 +1472,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/large/gather/locomo/judge",
       "ablate": [
         "fabric.recall.gather=true"
-      ]
+      ],
+      "wave": 2
     },
     {
       "id": "210-c1.large.gather.beam-100k",
@@ -1431,7 +1501,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/large/gather/beam-100k/judge",
       "ablate": [
         "fabric.recall.gather=true"
-      ]
+      ],
+      "wave": 2
     },
     {
       "id": "210-c1.large.enrichment-loo.memoryagentbench-cr",
@@ -1459,7 +1530,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/large/enrichment-loo/memoryagentbench-cr/judge",
       "ablate": [
         "fabric.enrichment=off"
-      ]
+      ],
+      "wave": 1
     },
     {
       "id": "210-c1.large.enrichment-loo.beam-100k",
@@ -1487,7 +1559,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/large/enrichment-loo/beam-100k/judge",
       "ablate": [
         "fabric.enrichment=off"
-      ]
+      ],
+      "wave": 1
     },
     {
       "id": "210-c1.large.enrichment-loo.locomo",
@@ -1515,7 +1588,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/large/enrichment-loo/locomo/judge",
       "ablate": [
         "fabric.enrichment=off"
-      ]
+      ],
+      "wave": 1
     },
     {
       "id": "210-c1.large.enrichment-loo.beam-1m",
@@ -1544,7 +1618,8 @@
       "ablate": [
         "fabric.enrichment=off"
       ],
-      "writeSide": "210-c1.write.enrichment.beam-1m"
+      "writeSide": "210-c1.write.enrichment.beam-1m",
+      "wave": 1
     },
     {
       "id": "210-c1.large.enrichment-loo.longmemeval-m",
@@ -1573,7 +1648,8 @@
       "ablate": [
         "fabric.enrichment=off"
       ],
-      "writeSide": "210-c1.write.enrichment.longmemeval-m"
+      "writeSide": "210-c1.write.enrichment.longmemeval-m",
+      "wave": 1
     },
     {
       "id": "210-c1.large.navigation-loo.memoryagentbench-cr",
@@ -1601,7 +1677,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/large/navigation-loo/memoryagentbench-cr/judge",
       "ablate": [
         "fabric.navigation=off"
-      ]
+      ],
+      "wave": 1
     },
     {
       "id": "210-c1.large.navigation-loo.beam-100k",
@@ -1629,7 +1706,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/large/navigation-loo/beam-100k/judge",
       "ablate": [
         "fabric.navigation=off"
-      ]
+      ],
+      "wave": 1
     },
     {
       "id": "210-c1.large.navigation-loo.locomo",
@@ -1657,7 +1735,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/large/navigation-loo/locomo/judge",
       "ablate": [
         "fabric.navigation=off"
-      ]
+      ],
+      "wave": 1
     },
     {
       "id": "210-c1.large.navigation-loo.beam-1m",
@@ -1686,7 +1765,8 @@
       "ablate": [
         "fabric.navigation=off"
       ],
-      "writeSide": "210-c1.write.base.beam-1m"
+      "writeSide": "210-c1.write.base.beam-1m",
+      "wave": 1
     },
     {
       "id": "210-c1.large.navigation-loo.longmemeval-m",
@@ -1715,7 +1795,8 @@
       "ablate": [
         "fabric.navigation=off"
       ],
-      "writeSide": "210-c1.write.base.longmemeval-m"
+      "writeSide": "210-c1.write.base.longmemeval-m",
+      "wave": 1
     },
     {
       "id": "210-c1.large.timeline-loo.longmemeval-m",
@@ -1744,7 +1825,8 @@
       "ablate": [
         "fabric.timeline=off"
       ],
-      "writeSide": "210-c1.write.timeline.longmemeval-m"
+      "writeSide": "210-c1.write.timeline.longmemeval-m",
+      "wave": 1
     },
     {
       "id": "210-c1.large.timeline-loo.locomo",
@@ -1772,7 +1854,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/large/timeline-loo/locomo/judge",
       "ablate": [
         "fabric.timeline=off"
-      ]
+      ],
+      "wave": 1
     },
     {
       "id": "210-c1.large.grouping-loo.longmemeval-m",
@@ -1802,7 +1885,8 @@
         "fabric.recall.supersessionHint=keyed-only",
         "fabric.grouping=off"
       ],
-      "writeSide": "210-c1.write.base.longmemeval-m"
+      "writeSide": "210-c1.write.base.longmemeval-m",
+      "wave": 1
     },
     {
       "id": "210-c1.large.grouping-loo.beam-100k",
@@ -1831,7 +1915,8 @@
       "ablate": [
         "fabric.recall.supersessionHint=keyed-only",
         "fabric.grouping=off"
-      ]
+      ],
+      "wave": 1
     },
     {
       "id": "210-c1.large.maintain.beam-100k",
@@ -1857,7 +1942,8 @@
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/210/large/maintain/beam-100k/answers",
       "judgeCacheDir": ".cache/memory-bench/210/large/maintain/beam-100k/judge",
-      "maintainBeforeAnswer": true
+      "maintainBeforeAnswer": true,
+      "wave": 2
     },
     {
       "id": "210-c1.large.maintain.longmemeval-m",
@@ -1884,7 +1970,8 @@
       "answersDir": ".cache/memory-bench/210/large/maintain/longmemeval-m/answers",
       "judgeCacheDir": ".cache/memory-bench/210/large/maintain/longmemeval-m/judge",
       "maintainBeforeAnswer": true,
-      "writeSide": "210-c1.write.base.longmemeval-m"
+      "writeSide": "210-c1.write.base.longmemeval-m",
+      "wave": 2
     },
     {
       "id": "210-c1.large.archive-exchange-exempt.beam-100k",
@@ -1913,7 +2000,8 @@
       "maintainBeforeAnswer": true,
       "ablate": [
         "lifecycle.exchangeExempt=on"
-      ]
+      ],
+      "wave": 2
     },
     {
       "id": "210-c1.large.archive-exchange-exempt.longmemeval-m",
@@ -1943,7 +2031,8 @@
       "ablate": [
         "lifecycle.exchangeExempt=on"
       ],
-      "writeSide": "210-c1.write.base.longmemeval-m"
+      "writeSide": "210-c1.write.base.longmemeval-m",
+      "wave": 2
     },
     {
       "id": "210-c1.large.tools-only.locomo",
@@ -1971,7 +2060,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/large/tools-only/locomo/judge",
       "ablate": [
         "fabric.inject=off"
-      ]
+      ],
+      "wave": 2
     },
     {
       "id": "210-c1.large.tools-only.beam-100k",
@@ -1999,7 +2089,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/large/tools-only/beam-100k/judge",
       "ablate": [
         "fabric.inject=off"
-      ]
+      ],
+      "wave": 2
     },
     {
       "id": "210-c1.large.tools-only.longmemeval-m",
@@ -2028,7 +2119,8 @@
       "ablate": [
         "fabric.inject=off"
       ],
-      "writeSide": "210-c1.write.base.longmemeval-m"
+      "writeSide": "210-c1.write.base.longmemeval-m",
+      "wave": 2
     },
     {
       "id": "210-c1.large.card-excerpt.locomo",
@@ -2056,7 +2148,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/large/card-excerpt/locomo/judge",
       "ablate": [
         "fabric.inject.cardExcerpt=query"
-      ]
+      ],
+      "wave": 2
     },
     {
       "id": "210-c1.large.precision-filter.locomo",
@@ -2084,7 +2177,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/large/precision-filter/locomo/judge",
       "ablate": [
         "fabric.inject.minScore=0.35"
-      ]
+      ],
+      "wave": 2
     },
     {
       "id": "210-c1.large.precision-filter.beam-100k",
@@ -2112,7 +2206,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/large/precision-filter/beam-100k/judge",
       "ablate": [
         "fabric.inject.minScore=0.35"
-      ]
+      ],
+      "wave": 2
     },
     {
       "id": "210-c1.large.aggregation-loo.beam-100k",
@@ -2140,7 +2235,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/large/aggregation-loo/beam-100k/judge",
       "ablate": [
         "fabric.aggregation=off"
-      ]
+      ],
+      "wave": 2
     },
     {
       "id": "210-c1.large.aggregation-loo.locomo",
@@ -2168,7 +2264,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/large/aggregation-loo/locomo/judge",
       "ablate": [
         "fabric.aggregation=off"
-      ]
+      ],
+      "wave": 2
     },
     {
       "id": "210-c1.large.directory-loo.locomo",
@@ -2196,7 +2293,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/large/directory-loo/locomo/judge",
       "ablate": [
         "fabric.directory=off"
-      ]
+      ],
+      "wave": 1
     },
     {
       "id": "210-c1.large.directory-loo.longmemeval-m",
@@ -2225,7 +2323,8 @@
       "ablate": [
         "fabric.directory=off"
       ],
-      "writeSide": "210-c1.write.base.longmemeval-m"
+      "writeSide": "210-c1.write.base.longmemeval-m",
+      "wave": 1
     },
     {
       "id": "210-c1.large.rules-add.beam-100k",
@@ -2253,7 +2352,130 @@
       "judgeCacheDir": ".cache/memory-bench/210/large/rules-add/beam-100k/judge",
       "ablate": [
         "fabric.rules=on"
-      ]
+      ],
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.decisions-p3.beam-100k",
+      "kind": "robustness",
+      "family": "210-c1.large.decisions-p3",
+      "role": "decisions-p3",
+      "arm": "decisions-p3",
+      "model_key": "large",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "config": "fabric-x-tools",
+      "provider": "ollama-cloud",
+      "model": "beam",
+      "judges": "ollama-cloud/gpt-oss:120b,ollama-cloud/gemma4:31b",
+      "judgeText": true,
+      "labelInjections": "off",
+      "maxInputTokens": 25000000,
+      "maxOutputTokens": 8192,
+      "concurrency": 2,
+      "wallTimeCapHours": 24,
+      "finalTurnAnswer": true,
+      "interleaveAbilities": true,
+      "strictQuestions": true,
+      "answersDir": ".cache/memory-bench/210/large/decisions-p3/beam-100k/answers",
+      "judgeCacheDir": ".cache/memory-bench/210/large/decisions-p3/beam-100k/judge",
+      "ablate": [
+        "fabric.inject.minScore=0.35",
+        "fabric.decisions={\"model\":\"ollama-cloud/clef:27b\",\"points\":[\"P3\"]}"
+      ],
+      "decider": "ollama-cloud/clef:27b",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.decisions-p3.locomo",
+      "kind": "robustness",
+      "family": "210-c1.large.decisions-p3",
+      "role": "decisions-p3",
+      "arm": "decisions-p3",
+      "model_key": "large",
+      "suite": "locomo",
+      "subset": "dev",
+      "config": "fabric-x-tools",
+      "provider": "ollama-cloud",
+      "model": "beam",
+      "judges": "ollama-cloud/gpt-oss:120b,ollama-cloud/gemma4:31b",
+      "judgeText": true,
+      "labelInjections": "off",
+      "maxInputTokens": 25000000,
+      "maxOutputTokens": 8192,
+      "concurrency": 2,
+      "wallTimeCapHours": 24,
+      "finalTurnAnswer": true,
+      "interleaveAbilities": true,
+      "strictQuestions": true,
+      "answersDir": ".cache/memory-bench/210/large/decisions-p3/locomo/answers",
+      "judgeCacheDir": ".cache/memory-bench/210/large/decisions-p3/locomo/judge",
+      "ablate": [
+        "fabric.inject.minScore=0.35",
+        "fabric.decisions={\"model\":\"ollama-cloud/clef:27b\",\"points\":[\"P3\"]}"
+      ],
+      "decider": "ollama-cloud/clef:27b",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.decisions-p5.beam-100k",
+      "kind": "robustness",
+      "family": "210-c1.large.decisions-p5",
+      "role": "decisions-p5",
+      "arm": "decisions-p5",
+      "model_key": "large",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "config": "fabric-x-tools",
+      "provider": "ollama-cloud",
+      "model": "beam",
+      "judges": "ollama-cloud/gpt-oss:120b,ollama-cloud/gemma4:31b",
+      "judgeText": true,
+      "labelInjections": "off",
+      "maxInputTokens": 25000000,
+      "maxOutputTokens": 8192,
+      "concurrency": 2,
+      "wallTimeCapHours": 24,
+      "finalTurnAnswer": true,
+      "interleaveAbilities": true,
+      "strictQuestions": true,
+      "answersDir": ".cache/memory-bench/210/large/decisions-p5/beam-100k/answers",
+      "judgeCacheDir": ".cache/memory-bench/210/large/decisions-p5/beam-100k/judge",
+      "ablate": [
+        "fabric.decisions={\"model\":\"ollama-cloud/clef:27b\",\"points\":[\"P5\"]}"
+      ],
+      "decider": "ollama-cloud/clef:27b",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.decisions-p5.locomo",
+      "kind": "robustness",
+      "family": "210-c1.large.decisions-p5",
+      "role": "decisions-p5",
+      "arm": "decisions-p5",
+      "model_key": "large",
+      "suite": "locomo",
+      "subset": "dev",
+      "config": "fabric-x-tools",
+      "provider": "ollama-cloud",
+      "model": "beam",
+      "judges": "ollama-cloud/gpt-oss:120b,ollama-cloud/gemma4:31b",
+      "judgeText": true,
+      "labelInjections": "off",
+      "maxInputTokens": 25000000,
+      "maxOutputTokens": 8192,
+      "concurrency": 2,
+      "wallTimeCapHours": 24,
+      "finalTurnAnswer": true,
+      "interleaveAbilities": true,
+      "strictQuestions": true,
+      "answersDir": ".cache/memory-bench/210/large/decisions-p5/locomo/answers",
+      "judgeCacheDir": ".cache/memory-bench/210/large/decisions-p5/locomo/judge",
+      "ablate": [
+        "fabric.decisions={\"model\":\"ollama-cloud/clef:27b\",\"points\":[\"P5\"]}"
+      ],
+      "decider": "ollama-cloud/clef:27b",
+      "wave": 2
     },
     {
       "id": "210-c1.large.f4-readtime.beam-100k",
@@ -2284,7 +2506,8 @@
         "fabric.recall.expansion=true",
         "fabric.inject.cardExcerpt=query",
         "fabric.recall.supersessionHint=keyed-only"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.large.f4-readtime.locomo",
@@ -2315,7 +2538,8 @@
         "fabric.recall.expansion=true",
         "fabric.inject.cardExcerpt=query",
         "fabric.recall.supersessionHint=keyed-only"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.large.f4-readtime.longmemeval-m",
@@ -2347,7 +2571,8 @@
         "fabric.inject.cardExcerpt=query",
         "fabric.recall.supersessionHint=keyed-only"
       ],
-      "writeSide": "210-c1.write.base.longmemeval-m"
+      "writeSide": "210-c1.write.base.longmemeval-m",
+      "wave": 3
     },
     {
       "id": "210-c1.large.oracle.beam-100k",
@@ -2372,7 +2597,8 @@
       "interleaveAbilities": true,
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/210/large/oracle/beam-100k/answers",
-      "judgeCacheDir": ".cache/memory-bench/210/large/oracle/beam-100k/judge"
+      "judgeCacheDir": ".cache/memory-bench/210/large/oracle/beam-100k/judge",
+      "wave": 3
     },
     {
       "id": "210-c1.large.oracle.locomo",
@@ -2397,7 +2623,8 @@
       "interleaveAbilities": true,
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/210/large/oracle/locomo/answers",
-      "judgeCacheDir": ".cache/memory-bench/210/large/oracle/locomo/judge"
+      "judgeCacheDir": ".cache/memory-bench/210/large/oracle/locomo/judge",
+      "wave": 3
     },
     {
       "id": "210-c1.large.oracle.longmemeval-m",
@@ -2422,7 +2649,8 @@
       "interleaveAbilities": true,
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/210/large/oracle/longmemeval-m/answers",
-      "judgeCacheDir": ".cache/memory-bench/210/large/oracle/longmemeval-m/judge"
+      "judgeCacheDir": ".cache/memory-bench/210/large/oracle/longmemeval-m/judge",
+      "wave": 3
     },
     {
       "id": "210-c1.small.P.memoryagentbench-cr",
@@ -2447,7 +2675,8 @@
       "interleaveAbilities": true,
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/210/small/P/memoryagentbench-cr/answers",
-      "judgeCacheDir": ".cache/memory-bench/210/small/P/memoryagentbench-cr/judge"
+      "judgeCacheDir": ".cache/memory-bench/210/small/P/memoryagentbench-cr/judge",
+      "wave": 1
     },
     {
       "id": "210-c1.small.P.beam-100k",
@@ -2472,7 +2701,8 @@
       "interleaveAbilities": true,
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/210/small/P/beam-100k/answers",
-      "judgeCacheDir": ".cache/memory-bench/210/small/P/beam-100k/judge"
+      "judgeCacheDir": ".cache/memory-bench/210/small/P/beam-100k/judge",
+      "wave": 1
     },
     {
       "id": "210-c1.small.P.locomo",
@@ -2497,7 +2727,8 @@
       "interleaveAbilities": true,
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/210/small/P/locomo/answers",
-      "judgeCacheDir": ".cache/memory-bench/210/small/P/locomo/judge"
+      "judgeCacheDir": ".cache/memory-bench/210/small/P/locomo/judge",
+      "wave": 1
     },
     {
       "id": "210-c1.small.P.beam-1m",
@@ -2523,7 +2754,8 @@
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/210/small/P/beam-1m/answers",
       "judgeCacheDir": ".cache/memory-bench/210/small/P/beam-1m/judge",
-      "writeSide": "210-c1.write.base.beam-1m"
+      "writeSide": "210-c1.write.base.beam-1m",
+      "wave": 1
     },
     {
       "id": "210-c1.small.P.longmemeval-m",
@@ -2549,7 +2781,8 @@
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/210/small/P/longmemeval-m/answers",
       "judgeCacheDir": ".cache/memory-bench/210/small/P/longmemeval-m/judge",
-      "writeSide": "210-c1.write.base.longmemeval-m"
+      "writeSide": "210-c1.write.base.longmemeval-m",
+      "wave": 1
     },
     {
       "id": "210-c1.small.memory-off.locomo",
@@ -2574,7 +2807,8 @@
       "interleaveAbilities": true,
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/210/small/memory-off/locomo/answers",
-      "judgeCacheDir": ".cache/memory-bench/210/small/memory-off/locomo/judge"
+      "judgeCacheDir": ".cache/memory-bench/210/small/memory-off/locomo/judge",
+      "wave": 1
     },
     {
       "id": "210-c1.small.memory-off.longmemeval-m",
@@ -2599,7 +2833,8 @@
       "interleaveAbilities": true,
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/210/small/memory-off/longmemeval-m/answers",
-      "judgeCacheDir": ".cache/memory-bench/210/small/memory-off/longmemeval-m/judge"
+      "judgeCacheDir": ".cache/memory-bench/210/small/memory-off/longmemeval-m/judge",
+      "wave": 1
     },
     {
       "id": "210-c1.small.strength-0.15.longmemeval-m",
@@ -2628,7 +2863,8 @@
       "ablate": [
         "fabric.lifecycle.recall.retrieval=0.15"
       ],
-      "writeSide": "210-c1.write.base.longmemeval-m"
+      "writeSide": "210-c1.write.base.longmemeval-m",
+      "wave": 2
     },
     {
       "id": "210-c1.small.tool-affordances-loo.locomo",
@@ -2657,7 +2893,8 @@
       "ablate": [
         "fabric.multiQuery=off",
         "fabric.unmatchedTerms=off"
-      ]
+      ],
+      "wave": 1
     },
     {
       "id": "210-c1.small.tool-affordances-loo.beam-100k",
@@ -2686,7 +2923,8 @@
       "ablate": [
         "fabric.multiQuery=off",
         "fabric.unmatchedTerms=off"
-      ]
+      ],
+      "wave": 1
     },
     {
       "id": "210-c1.small.supersession-keyed-only.locomo",
@@ -2714,7 +2952,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/small/supersession-keyed-only/locomo/judge",
       "ablate": [
         "fabric.recall.supersessionHint=keyed-only"
-      ]
+      ],
+      "wave": 1
     },
     {
       "id": "210-c1.small.supersession-keyed-only.beam-100k",
@@ -2742,7 +2981,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/small/supersession-keyed-only/beam-100k/judge",
       "ablate": [
         "fabric.recall.supersessionHint=keyed-only"
-      ]
+      ],
+      "wave": 1
     },
     {
       "id": "210-c1.small.supersession-keyed-only.longmemeval-m",
@@ -2771,7 +3011,8 @@
       "ablate": [
         "fabric.recall.supersessionHint=keyed-only"
       ],
-      "writeSide": "210-c1.write.base.longmemeval-m"
+      "writeSide": "210-c1.write.base.longmemeval-m",
+      "wave": 1
     },
     {
       "id": "210-c1.small.expansion.locomo",
@@ -2799,7 +3040,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/small/expansion/locomo/judge",
       "ablate": [
         "fabric.recall.expansion=true"
-      ]
+      ],
+      "wave": 2
     },
     {
       "id": "210-c1.small.gather.locomo",
@@ -2827,7 +3069,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/small/gather/locomo/judge",
       "ablate": [
         "fabric.recall.gather=true"
-      ]
+      ],
+      "wave": 2
     },
     {
       "id": "210-c1.small.gather.beam-100k",
@@ -2855,7 +3098,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/small/gather/beam-100k/judge",
       "ablate": [
         "fabric.recall.gather=true"
-      ]
+      ],
+      "wave": 2
     },
     {
       "id": "210-c1.small.enrichment-loo.memoryagentbench-cr",
@@ -2883,7 +3127,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/small/enrichment-loo/memoryagentbench-cr/judge",
       "ablate": [
         "fabric.enrichment=off"
-      ]
+      ],
+      "wave": 1
     },
     {
       "id": "210-c1.small.enrichment-loo.beam-100k",
@@ -2911,7 +3156,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/small/enrichment-loo/beam-100k/judge",
       "ablate": [
         "fabric.enrichment=off"
-      ]
+      ],
+      "wave": 1
     },
     {
       "id": "210-c1.small.enrichment-loo.locomo",
@@ -2939,7 +3185,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/small/enrichment-loo/locomo/judge",
       "ablate": [
         "fabric.enrichment=off"
-      ]
+      ],
+      "wave": 1
     },
     {
       "id": "210-c1.small.enrichment-loo.beam-1m",
@@ -2968,7 +3215,8 @@
       "ablate": [
         "fabric.enrichment=off"
       ],
-      "writeSide": "210-c1.write.enrichment.beam-1m"
+      "writeSide": "210-c1.write.enrichment.beam-1m",
+      "wave": 1
     },
     {
       "id": "210-c1.small.enrichment-loo.longmemeval-m",
@@ -2997,7 +3245,8 @@
       "ablate": [
         "fabric.enrichment=off"
       ],
-      "writeSide": "210-c1.write.enrichment.longmemeval-m"
+      "writeSide": "210-c1.write.enrichment.longmemeval-m",
+      "wave": 1
     },
     {
       "id": "210-c1.small.navigation-loo.memoryagentbench-cr",
@@ -3025,7 +3274,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/small/navigation-loo/memoryagentbench-cr/judge",
       "ablate": [
         "fabric.navigation=off"
-      ]
+      ],
+      "wave": 1
     },
     {
       "id": "210-c1.small.navigation-loo.beam-100k",
@@ -3053,7 +3303,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/small/navigation-loo/beam-100k/judge",
       "ablate": [
         "fabric.navigation=off"
-      ]
+      ],
+      "wave": 1
     },
     {
       "id": "210-c1.small.navigation-loo.locomo",
@@ -3081,7 +3332,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/small/navigation-loo/locomo/judge",
       "ablate": [
         "fabric.navigation=off"
-      ]
+      ],
+      "wave": 1
     },
     {
       "id": "210-c1.small.navigation-loo.beam-1m",
@@ -3110,7 +3362,8 @@
       "ablate": [
         "fabric.navigation=off"
       ],
-      "writeSide": "210-c1.write.base.beam-1m"
+      "writeSide": "210-c1.write.base.beam-1m",
+      "wave": 1
     },
     {
       "id": "210-c1.small.navigation-loo.longmemeval-m",
@@ -3139,7 +3392,8 @@
       "ablate": [
         "fabric.navigation=off"
       ],
-      "writeSide": "210-c1.write.base.longmemeval-m"
+      "writeSide": "210-c1.write.base.longmemeval-m",
+      "wave": 1
     },
     {
       "id": "210-c1.small.timeline-loo.longmemeval-m",
@@ -3168,7 +3422,8 @@
       "ablate": [
         "fabric.timeline=off"
       ],
-      "writeSide": "210-c1.write.timeline.longmemeval-m"
+      "writeSide": "210-c1.write.timeline.longmemeval-m",
+      "wave": 1
     },
     {
       "id": "210-c1.small.timeline-loo.locomo",
@@ -3196,7 +3451,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/small/timeline-loo/locomo/judge",
       "ablate": [
         "fabric.timeline=off"
-      ]
+      ],
+      "wave": 1
     },
     {
       "id": "210-c1.small.grouping-loo.longmemeval-m",
@@ -3226,7 +3482,8 @@
         "fabric.recall.supersessionHint=keyed-only",
         "fabric.grouping=off"
       ],
-      "writeSide": "210-c1.write.base.longmemeval-m"
+      "writeSide": "210-c1.write.base.longmemeval-m",
+      "wave": 1
     },
     {
       "id": "210-c1.small.grouping-loo.beam-100k",
@@ -3255,7 +3512,8 @@
       "ablate": [
         "fabric.recall.supersessionHint=keyed-only",
         "fabric.grouping=off"
-      ]
+      ],
+      "wave": 1
     },
     {
       "id": "210-c1.small.maintain.beam-100k",
@@ -3281,7 +3539,8 @@
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/210/small/maintain/beam-100k/answers",
       "judgeCacheDir": ".cache/memory-bench/210/small/maintain/beam-100k/judge",
-      "maintainBeforeAnswer": true
+      "maintainBeforeAnswer": true,
+      "wave": 2
     },
     {
       "id": "210-c1.small.maintain.longmemeval-m",
@@ -3308,7 +3567,8 @@
       "answersDir": ".cache/memory-bench/210/small/maintain/longmemeval-m/answers",
       "judgeCacheDir": ".cache/memory-bench/210/small/maintain/longmemeval-m/judge",
       "maintainBeforeAnswer": true,
-      "writeSide": "210-c1.write.base.longmemeval-m"
+      "writeSide": "210-c1.write.base.longmemeval-m",
+      "wave": 2
     },
     {
       "id": "210-c1.small.archive-exchange-exempt.beam-100k",
@@ -3337,7 +3597,8 @@
       "maintainBeforeAnswer": true,
       "ablate": [
         "lifecycle.exchangeExempt=on"
-      ]
+      ],
+      "wave": 2
     },
     {
       "id": "210-c1.small.archive-exchange-exempt.longmemeval-m",
@@ -3367,7 +3628,8 @@
       "ablate": [
         "lifecycle.exchangeExempt=on"
       ],
-      "writeSide": "210-c1.write.base.longmemeval-m"
+      "writeSide": "210-c1.write.base.longmemeval-m",
+      "wave": 2
     },
     {
       "id": "210-c1.small.tools-only.locomo",
@@ -3395,7 +3657,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/small/tools-only/locomo/judge",
       "ablate": [
         "fabric.inject=off"
-      ]
+      ],
+      "wave": 2
     },
     {
       "id": "210-c1.small.tools-only.beam-100k",
@@ -3423,7 +3686,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/small/tools-only/beam-100k/judge",
       "ablate": [
         "fabric.inject=off"
-      ]
+      ],
+      "wave": 2
     },
     {
       "id": "210-c1.small.tools-only.longmemeval-m",
@@ -3452,7 +3716,8 @@
       "ablate": [
         "fabric.inject=off"
       ],
-      "writeSide": "210-c1.write.base.longmemeval-m"
+      "writeSide": "210-c1.write.base.longmemeval-m",
+      "wave": 2
     },
     {
       "id": "210-c1.small.card-excerpt.locomo",
@@ -3480,7 +3745,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/small/card-excerpt/locomo/judge",
       "ablate": [
         "fabric.inject.cardExcerpt=query"
-      ]
+      ],
+      "wave": 2
     },
     {
       "id": "210-c1.small.precision-filter.locomo",
@@ -3508,7 +3774,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/small/precision-filter/locomo/judge",
       "ablate": [
         "fabric.inject.minScore=0.35"
-      ]
+      ],
+      "wave": 2
     },
     {
       "id": "210-c1.small.precision-filter.beam-100k",
@@ -3536,7 +3803,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/small/precision-filter/beam-100k/judge",
       "ablate": [
         "fabric.inject.minScore=0.35"
-      ]
+      ],
+      "wave": 2
     },
     {
       "id": "210-c1.small.aggregation-loo.beam-100k",
@@ -3564,7 +3832,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/small/aggregation-loo/beam-100k/judge",
       "ablate": [
         "fabric.aggregation=off"
-      ]
+      ],
+      "wave": 2
     },
     {
       "id": "210-c1.small.aggregation-loo.locomo",
@@ -3592,7 +3861,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/small/aggregation-loo/locomo/judge",
       "ablate": [
         "fabric.aggregation=off"
-      ]
+      ],
+      "wave": 2
     },
     {
       "id": "210-c1.small.directory-loo.locomo",
@@ -3620,7 +3890,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/small/directory-loo/locomo/judge",
       "ablate": [
         "fabric.directory=off"
-      ]
+      ],
+      "wave": 1
     },
     {
       "id": "210-c1.small.directory-loo.longmemeval-m",
@@ -3649,7 +3920,8 @@
       "ablate": [
         "fabric.directory=off"
       ],
-      "writeSide": "210-c1.write.base.longmemeval-m"
+      "writeSide": "210-c1.write.base.longmemeval-m",
+      "wave": 1
     },
     {
       "id": "210-c1.small.rules-add.beam-100k",
@@ -3677,7 +3949,130 @@
       "judgeCacheDir": ".cache/memory-bench/210/small/rules-add/beam-100k/judge",
       "ablate": [
         "fabric.rules=on"
-      ]
+      ],
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.decisions-p3.beam-100k",
+      "kind": "robustness",
+      "family": "210-c1.small.decisions-p3",
+      "role": "decisions-p3",
+      "arm": "decisions-p3",
+      "model_key": "small",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "config": "fabric-x-tools",
+      "provider": "ollama-cloud",
+      "model": "nemotron-3-nano:30b",
+      "judges": "ollama-cloud/gpt-oss:120b,ollama-cloud/gemma4:31b",
+      "judgeText": true,
+      "labelInjections": "off",
+      "maxInputTokens": 25000000,
+      "maxOutputTokens": 8192,
+      "concurrency": 2,
+      "wallTimeCapHours": 24,
+      "finalTurnAnswer": true,
+      "interleaveAbilities": true,
+      "strictQuestions": true,
+      "answersDir": ".cache/memory-bench/210/small/decisions-p3/beam-100k/answers",
+      "judgeCacheDir": ".cache/memory-bench/210/small/decisions-p3/beam-100k/judge",
+      "ablate": [
+        "fabric.inject.minScore=0.35",
+        "fabric.decisions={\"model\":\"ollama-cloud/clef:27b\",\"points\":[\"P3\"]}"
+      ],
+      "decider": "ollama-cloud/clef:27b",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.decisions-p3.locomo",
+      "kind": "robustness",
+      "family": "210-c1.small.decisions-p3",
+      "role": "decisions-p3",
+      "arm": "decisions-p3",
+      "model_key": "small",
+      "suite": "locomo",
+      "subset": "dev",
+      "config": "fabric-x-tools",
+      "provider": "ollama-cloud",
+      "model": "nemotron-3-nano:30b",
+      "judges": "ollama-cloud/gpt-oss:120b,ollama-cloud/gemma4:31b",
+      "judgeText": true,
+      "labelInjections": "off",
+      "maxInputTokens": 25000000,
+      "maxOutputTokens": 8192,
+      "concurrency": 2,
+      "wallTimeCapHours": 24,
+      "finalTurnAnswer": true,
+      "interleaveAbilities": true,
+      "strictQuestions": true,
+      "answersDir": ".cache/memory-bench/210/small/decisions-p3/locomo/answers",
+      "judgeCacheDir": ".cache/memory-bench/210/small/decisions-p3/locomo/judge",
+      "ablate": [
+        "fabric.inject.minScore=0.35",
+        "fabric.decisions={\"model\":\"ollama-cloud/clef:27b\",\"points\":[\"P3\"]}"
+      ],
+      "decider": "ollama-cloud/clef:27b",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.decisions-p5.beam-100k",
+      "kind": "robustness",
+      "family": "210-c1.small.decisions-p5",
+      "role": "decisions-p5",
+      "arm": "decisions-p5",
+      "model_key": "small",
+      "suite": "beam-100k",
+      "subset": "dev",
+      "config": "fabric-x-tools",
+      "provider": "ollama-cloud",
+      "model": "nemotron-3-nano:30b",
+      "judges": "ollama-cloud/gpt-oss:120b,ollama-cloud/gemma4:31b",
+      "judgeText": true,
+      "labelInjections": "off",
+      "maxInputTokens": 25000000,
+      "maxOutputTokens": 8192,
+      "concurrency": 2,
+      "wallTimeCapHours": 24,
+      "finalTurnAnswer": true,
+      "interleaveAbilities": true,
+      "strictQuestions": true,
+      "answersDir": ".cache/memory-bench/210/small/decisions-p5/beam-100k/answers",
+      "judgeCacheDir": ".cache/memory-bench/210/small/decisions-p5/beam-100k/judge",
+      "ablate": [
+        "fabric.decisions={\"model\":\"ollama-cloud/clef:27b\",\"points\":[\"P5\"]}"
+      ],
+      "decider": "ollama-cloud/clef:27b",
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.decisions-p5.locomo",
+      "kind": "robustness",
+      "family": "210-c1.small.decisions-p5",
+      "role": "decisions-p5",
+      "arm": "decisions-p5",
+      "model_key": "small",
+      "suite": "locomo",
+      "subset": "dev",
+      "config": "fabric-x-tools",
+      "provider": "ollama-cloud",
+      "model": "nemotron-3-nano:30b",
+      "judges": "ollama-cloud/gpt-oss:120b,ollama-cloud/gemma4:31b",
+      "judgeText": true,
+      "labelInjections": "off",
+      "maxInputTokens": 25000000,
+      "maxOutputTokens": 8192,
+      "concurrency": 2,
+      "wallTimeCapHours": 24,
+      "finalTurnAnswer": true,
+      "interleaveAbilities": true,
+      "strictQuestions": true,
+      "answersDir": ".cache/memory-bench/210/small/decisions-p5/locomo/answers",
+      "judgeCacheDir": ".cache/memory-bench/210/small/decisions-p5/locomo/judge",
+      "ablate": [
+        "fabric.decisions={\"model\":\"ollama-cloud/clef:27b\",\"points\":[\"P5\"]}"
+      ],
+      "decider": "ollama-cloud/clef:27b",
+      "wave": 2
     },
     {
       "id": "210-c1.small.f4-readtime.beam-100k",
@@ -3708,7 +4103,8 @@
         "fabric.recall.expansion=true",
         "fabric.inject.cardExcerpt=query",
         "fabric.recall.supersessionHint=keyed-only"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.small.f4-readtime.locomo",
@@ -3739,7 +4135,8 @@
         "fabric.recall.expansion=true",
         "fabric.inject.cardExcerpt=query",
         "fabric.recall.supersessionHint=keyed-only"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.small.f4-readtime.longmemeval-m",
@@ -3771,7 +4168,8 @@
         "fabric.inject.cardExcerpt=query",
         "fabric.recall.supersessionHint=keyed-only"
       ],
-      "writeSide": "210-c1.write.base.longmemeval-m"
+      "writeSide": "210-c1.write.base.longmemeval-m",
+      "wave": 3
     },
     {
       "id": "210-c1.small.oracle.beam-100k",
@@ -3796,7 +4194,8 @@
       "interleaveAbilities": true,
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/210/small/oracle/beam-100k/answers",
-      "judgeCacheDir": ".cache/memory-bench/210/small/oracle/beam-100k/judge"
+      "judgeCacheDir": ".cache/memory-bench/210/small/oracle/beam-100k/judge",
+      "wave": 3
     },
     {
       "id": "210-c1.small.oracle.locomo",
@@ -3821,7 +4220,8 @@
       "interleaveAbilities": true,
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/210/small/oracle/locomo/answers",
-      "judgeCacheDir": ".cache/memory-bench/210/small/oracle/locomo/judge"
+      "judgeCacheDir": ".cache/memory-bench/210/small/oracle/locomo/judge",
+      "wave": 3
     },
     {
       "id": "210-c1.small.oracle.longmemeval-m",
@@ -3846,7 +4246,8 @@
       "interleaveAbilities": true,
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/210/small/oracle/longmemeval-m/answers",
-      "judgeCacheDir": ".cache/memory-bench/210/small/oracle/longmemeval-m/judge"
+      "judgeCacheDir": ".cache/memory-bench/210/small/oracle/longmemeval-m/judge",
+      "wave": 3
     },
     {
       "id": "210-c1.large.P+O.memoryagentbench-cr",
@@ -3874,7 +4275,8 @@
       "ontologyArm": "P+O.large",
       "ontologyClaimsDir": ".cache/memory-bench/210/ontology-claims",
       "answersDir": ".cache/memory-bench/210/ontology/P+O.large/memoryagentbench-cr/answers",
-      "judgeCacheDir": ".cache/memory-bench/210/ontology/P+O.large/memoryagentbench-cr/judge"
+      "judgeCacheDir": ".cache/memory-bench/210/ontology/P+O.large/memoryagentbench-cr/judge",
+      "wave": 3
     },
     {
       "id": "210-c1.large.P+O.beam-100k",
@@ -3902,7 +4304,8 @@
       "ontologyArm": "P+O.large",
       "ontologyClaimsDir": ".cache/memory-bench/210/ontology-claims",
       "answersDir": ".cache/memory-bench/210/ontology/P+O.large/beam-100k/answers",
-      "judgeCacheDir": ".cache/memory-bench/210/ontology/P+O.large/beam-100k/judge"
+      "judgeCacheDir": ".cache/memory-bench/210/ontology/P+O.large/beam-100k/judge",
+      "wave": 3
     },
     {
       "id": "210-c1.large.P+O.locomo",
@@ -3930,7 +4333,8 @@
       "ontologyArm": "P+O.large",
       "ontologyClaimsDir": ".cache/memory-bench/210/ontology-claims",
       "answersDir": ".cache/memory-bench/210/ontology/P+O.large/locomo/answers",
-      "judgeCacheDir": ".cache/memory-bench/210/ontology/P+O.large/locomo/judge"
+      "judgeCacheDir": ".cache/memory-bench/210/ontology/P+O.large/locomo/judge",
+      "wave": 3
     },
     {
       "id": "210-c1.large.trigger-co-read-loo.memoryagentbench-cr",
@@ -3961,7 +4365,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/ontology/trigger-co-read-loo.large/memoryagentbench-cr/judge",
       "ablate": [
         "wiki.consolidate.triggers=[\"accumulation\",\"repair\"]"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.large.trigger-co-read-loo.beam-100k",
@@ -3992,7 +4397,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/ontology/trigger-co-read-loo.large/beam-100k/judge",
       "ablate": [
         "wiki.consolidate.triggers=[\"accumulation\",\"repair\"]"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.large.trigger-co-read-loo.locomo",
@@ -4023,7 +4429,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/ontology/trigger-co-read-loo.large/locomo/judge",
       "ablate": [
         "wiki.consolidate.triggers=[\"accumulation\",\"repair\"]"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.large.trigger-accumulation-loo.memoryagentbench-cr",
@@ -4054,7 +4461,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/ontology/trigger-accumulation-loo.large/memoryagentbench-cr/judge",
       "ablate": [
         "wiki.consolidate.triggers=[\"co-read\",\"repair\"]"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.large.trigger-accumulation-loo.beam-100k",
@@ -4085,7 +4493,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/ontology/trigger-accumulation-loo.large/beam-100k/judge",
       "ablate": [
         "wiki.consolidate.triggers=[\"co-read\",\"repair\"]"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.large.trigger-accumulation-loo.locomo",
@@ -4116,7 +4525,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/ontology/trigger-accumulation-loo.large/locomo/judge",
       "ablate": [
         "wiki.consolidate.triggers=[\"co-read\",\"repair\"]"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.large.concept-prior-loo.memoryagentbench-cr",
@@ -4147,7 +4557,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/ontology/concept-prior-loo.large/memoryagentbench-cr/judge",
       "ablate": [
         "fabric.ontology.conceptPrior=0"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.large.concept-prior-loo.beam-100k",
@@ -4178,7 +4589,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/ontology/concept-prior-loo.large/beam-100k/judge",
       "ablate": [
         "fabric.ontology.conceptPrior=0"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.large.concept-prior-loo.locomo",
@@ -4209,7 +4621,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/ontology/concept-prior-loo.large/locomo/judge",
       "ablate": [
         "fabric.ontology.conceptPrior=0"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.large.concept-pointer-loo.memoryagentbench-cr",
@@ -4240,7 +4653,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/ontology/concept-pointer-loo.large/memoryagentbench-cr/judge",
       "ablate": [
         "ontology.pointer=off"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.large.concept-pointer-loo.beam-100k",
@@ -4271,7 +4685,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/ontology/concept-pointer-loo.large/beam-100k/judge",
       "ablate": [
         "ontology.pointer=off"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.large.concept-pointer-loo.locomo",
@@ -4302,7 +4717,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/ontology/concept-pointer-loo.large/locomo/judge",
       "ablate": [
         "ontology.pointer=off"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.small.P+O.memoryagentbench-cr",
@@ -4330,7 +4746,8 @@
       "ontologyArm": "P+O.small",
       "ontologyClaimsDir": ".cache/memory-bench/210/ontology-claims",
       "answersDir": ".cache/memory-bench/210/ontology/P+O.small/memoryagentbench-cr/answers",
-      "judgeCacheDir": ".cache/memory-bench/210/ontology/P+O.small/memoryagentbench-cr/judge"
+      "judgeCacheDir": ".cache/memory-bench/210/ontology/P+O.small/memoryagentbench-cr/judge",
+      "wave": 3
     },
     {
       "id": "210-c1.small.P+O.beam-100k",
@@ -4358,7 +4775,8 @@
       "ontologyArm": "P+O.small",
       "ontologyClaimsDir": ".cache/memory-bench/210/ontology-claims",
       "answersDir": ".cache/memory-bench/210/ontology/P+O.small/beam-100k/answers",
-      "judgeCacheDir": ".cache/memory-bench/210/ontology/P+O.small/beam-100k/judge"
+      "judgeCacheDir": ".cache/memory-bench/210/ontology/P+O.small/beam-100k/judge",
+      "wave": 3
     },
     {
       "id": "210-c1.small.P+O.locomo",
@@ -4386,7 +4804,8 @@
       "ontologyArm": "P+O.small",
       "ontologyClaimsDir": ".cache/memory-bench/210/ontology-claims",
       "answersDir": ".cache/memory-bench/210/ontology/P+O.small/locomo/answers",
-      "judgeCacheDir": ".cache/memory-bench/210/ontology/P+O.small/locomo/judge"
+      "judgeCacheDir": ".cache/memory-bench/210/ontology/P+O.small/locomo/judge",
+      "wave": 3
     },
     {
       "id": "210-c1.small.trigger-co-read-loo.memoryagentbench-cr",
@@ -4417,7 +4836,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/ontology/trigger-co-read-loo.small/memoryagentbench-cr/judge",
       "ablate": [
         "wiki.consolidate.triggers=[\"accumulation\",\"repair\"]"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.small.trigger-co-read-loo.beam-100k",
@@ -4448,7 +4868,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/ontology/trigger-co-read-loo.small/beam-100k/judge",
       "ablate": [
         "wiki.consolidate.triggers=[\"accumulation\",\"repair\"]"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.small.trigger-co-read-loo.locomo",
@@ -4479,7 +4900,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/ontology/trigger-co-read-loo.small/locomo/judge",
       "ablate": [
         "wiki.consolidate.triggers=[\"accumulation\",\"repair\"]"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.small.trigger-accumulation-loo.memoryagentbench-cr",
@@ -4510,7 +4932,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/ontology/trigger-accumulation-loo.small/memoryagentbench-cr/judge",
       "ablate": [
         "wiki.consolidate.triggers=[\"co-read\",\"repair\"]"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.small.trigger-accumulation-loo.beam-100k",
@@ -4541,7 +4964,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/ontology/trigger-accumulation-loo.small/beam-100k/judge",
       "ablate": [
         "wiki.consolidate.triggers=[\"co-read\",\"repair\"]"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.small.trigger-accumulation-loo.locomo",
@@ -4572,7 +4996,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/ontology/trigger-accumulation-loo.small/locomo/judge",
       "ablate": [
         "wiki.consolidate.triggers=[\"co-read\",\"repair\"]"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.small.concept-prior-loo.memoryagentbench-cr",
@@ -4603,7 +5028,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/ontology/concept-prior-loo.small/memoryagentbench-cr/judge",
       "ablate": [
         "fabric.ontology.conceptPrior=0"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.small.concept-prior-loo.beam-100k",
@@ -4634,7 +5060,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/ontology/concept-prior-loo.small/beam-100k/judge",
       "ablate": [
         "fabric.ontology.conceptPrior=0"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.small.concept-prior-loo.locomo",
@@ -4665,7 +5092,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/ontology/concept-prior-loo.small/locomo/judge",
       "ablate": [
         "fabric.ontology.conceptPrior=0"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.small.concept-pointer-loo.memoryagentbench-cr",
@@ -4696,7 +5124,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/ontology/concept-pointer-loo.small/memoryagentbench-cr/judge",
       "ablate": [
         "ontology.pointer=off"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.small.concept-pointer-loo.beam-100k",
@@ -4727,7 +5156,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/ontology/concept-pointer-loo.small/beam-100k/judge",
       "ablate": [
         "ontology.pointer=off"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.small.concept-pointer-loo.locomo",
@@ -4758,7 +5188,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/ontology/concept-pointer-loo.small/locomo/judge",
       "ablate": [
         "ontology.pointer=off"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.large.W.P",
@@ -4780,7 +5211,8 @@
       "maxInputTokens": 12000000,
       "concurrency": 2,
       "judgeCalls": 400,
-      "wallTimeCapHours": 24
+      "wallTimeCapHours": 24,
+      "wave": 2
     },
     {
       "id": "210-c1.large.W.P+W",
@@ -4802,7 +5234,8 @@
       "maxInputTokens": 12000000,
       "concurrency": 2,
       "judgeCalls": 400,
-      "wallTimeCapHours": 24
+      "wallTimeCapHours": 24,
+      "wave": 2
     },
     {
       "id": "210-c1.large.W.steps-loo",
@@ -4827,7 +5260,8 @@
       "wallTimeCapHours": 24,
       "fabricOverlay": {
         "exchanges": {}
-      }
+      },
+      "wave": 2
     },
     {
       "id": "210-c1.large.W.rules-loo",
@@ -4852,7 +5286,8 @@
       "wallTimeCapHours": 24,
       "fabricOverlay": {
         "rules": false
-      }
+      },
+      "wave": 2
     },
     {
       "id": "210-c1.large.W.lessons-loo",
@@ -4879,7 +5314,40 @@
         "lessons": {
           "nudge": false
         }
-      }
+      },
+      "wave": 2
+    },
+    {
+      "id": "210-c1.large.W.decisions-p4",
+      "kind": "work-outcome",
+      "family": "210-c1.large.W.decisions-p4",
+      "role": "W.decisions-p4",
+      "arm": "P",
+      "c1Arm": "W.decisions-p4",
+      "model_key": "large",
+      "suite": "work-outcome",
+      "config": "P",
+      "subset": "dev",
+      "provider": "ollama-cloud",
+      "model": "beam",
+      "simulator": "ollama-cloud/gpt-oss:20b",
+      "simulatorPaid": true,
+      "judgesPaid": true,
+      "judges": "ollama-cloud/gpt-oss:120b,ollama-cloud/gemma4:31b",
+      "maxInputTokens": 12000000,
+      "concurrency": 2,
+      "judgeCalls": 400,
+      "wallTimeCapHours": 24,
+      "fabricOverlay": {
+        "decisions": {
+          "model": "ollama-cloud/clef:27b",
+          "points": [
+            "P4"
+          ]
+        }
+      },
+      "decider": "ollama-cloud/clef:27b",
+      "wave": 2
     },
     {
       "id": "210-c1.small.W.P",
@@ -4901,7 +5369,8 @@
       "maxInputTokens": 12000000,
       "concurrency": 2,
       "judgeCalls": 400,
-      "wallTimeCapHours": 24
+      "wallTimeCapHours": 24,
+      "wave": 2
     },
     {
       "id": "210-c1.small.W.P+W",
@@ -4923,7 +5392,8 @@
       "maxInputTokens": 12000000,
       "concurrency": 2,
       "judgeCalls": 400,
-      "wallTimeCapHours": 24
+      "wallTimeCapHours": 24,
+      "wave": 2
     },
     {
       "id": "210-c1.small.W.steps-loo",
@@ -4948,7 +5418,8 @@
       "wallTimeCapHours": 24,
       "fabricOverlay": {
         "exchanges": {}
-      }
+      },
+      "wave": 2
     },
     {
       "id": "210-c1.small.W.rules-loo",
@@ -4973,7 +5444,8 @@
       "wallTimeCapHours": 24,
       "fabricOverlay": {
         "rules": false
-      }
+      },
+      "wave": 2
     },
     {
       "id": "210-c1.small.W.lessons-loo",
@@ -5000,7 +5472,40 @@
         "lessons": {
           "nudge": false
         }
-      }
+      },
+      "wave": 2
+    },
+    {
+      "id": "210-c1.small.W.decisions-p4",
+      "kind": "work-outcome",
+      "family": "210-c1.small.W.decisions-p4",
+      "role": "W.decisions-p4",
+      "arm": "P",
+      "c1Arm": "W.decisions-p4",
+      "model_key": "small",
+      "suite": "work-outcome",
+      "config": "P",
+      "subset": "dev",
+      "provider": "ollama-cloud",
+      "model": "nemotron-3-nano:30b",
+      "simulator": "ollama-cloud/gpt-oss:20b",
+      "simulatorPaid": true,
+      "judgesPaid": true,
+      "judges": "ollama-cloud/gpt-oss:120b,ollama-cloud/gemma4:31b",
+      "maxInputTokens": 12000000,
+      "concurrency": 2,
+      "judgeCalls": 400,
+      "wallTimeCapHours": 24,
+      "fabricOverlay": {
+        "decisions": {
+          "model": "ollama-cloud/clef:27b",
+          "points": [
+            "P4"
+          ]
+        }
+      },
+      "decider": "ollama-cloud/clef:27b",
+      "wave": 2
     },
     {
       "id": "210-c1.large.OM.beam-1m",
@@ -5017,7 +5522,7 @@
       "judges": "ollama-cloud/gpt-oss:120b,ollama-cloud/gemma4:31b",
       "judgeText": true,
       "labelInjections": "off",
-      "maxInputTokens": 30000000,
+      "maxInputTokens": 100000000,
       "maxOutputTokens": 8192,
       "concurrency": 2,
       "wallTimeCapHours": 48,
@@ -5025,7 +5530,8 @@
       "interleaveAbilities": true,
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/210/large/OM/beam-1m/answers",
-      "judgeCacheDir": ".cache/memory-bench/210/large/OM/beam-1m/judge"
+      "judgeCacheDir": ".cache/memory-bench/210/large/OM/beam-1m/judge",
+      "wave": 3
     },
     {
       "id": "210-c1.large.om-reflector-loo.beam-1m",
@@ -5042,7 +5548,7 @@
       "judges": "ollama-cloud/gpt-oss:120b,ollama-cloud/gemma4:31b",
       "judgeText": true,
       "labelInjections": "off",
-      "maxInputTokens": 30000000,
+      "maxInputTokens": 100000000,
       "maxOutputTokens": 8192,
       "concurrency": 2,
       "wallTimeCapHours": 48,
@@ -5053,7 +5559,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/large/om-reflector-loo/beam-1m/judge",
       "ablate": [
         "om.reflector=off"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.large.om-dropper-deterministic.beam-1m",
@@ -5070,7 +5577,7 @@
       "judges": "ollama-cloud/gpt-oss:120b,ollama-cloud/gemma4:31b",
       "judgeText": true,
       "labelInjections": "off",
-      "maxInputTokens": 30000000,
+      "maxInputTokens": 100000000,
       "maxOutputTokens": 8192,
       "concurrency": 2,
       "wallTimeCapHours": 48,
@@ -5081,7 +5588,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/large/om-dropper-deterministic/beam-1m/judge",
       "ablate": [
         "om.dropper.policy=lowest-relevance"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.small.OM.beam-1m",
@@ -5098,7 +5606,7 @@
       "judges": "ollama-cloud/gpt-oss:120b,ollama-cloud/gemma4:31b",
       "judgeText": true,
       "labelInjections": "off",
-      "maxInputTokens": 30000000,
+      "maxInputTokens": 100000000,
       "maxOutputTokens": 8192,
       "concurrency": 2,
       "wallTimeCapHours": 48,
@@ -5106,7 +5614,8 @@
       "interleaveAbilities": true,
       "strictQuestions": true,
       "answersDir": ".cache/memory-bench/210/small/OM/beam-1m/answers",
-      "judgeCacheDir": ".cache/memory-bench/210/small/OM/beam-1m/judge"
+      "judgeCacheDir": ".cache/memory-bench/210/small/OM/beam-1m/judge",
+      "wave": 3
     },
     {
       "id": "210-c1.small.om-reflector-loo.beam-1m",
@@ -5123,7 +5632,7 @@
       "judges": "ollama-cloud/gpt-oss:120b,ollama-cloud/gemma4:31b",
       "judgeText": true,
       "labelInjections": "off",
-      "maxInputTokens": 30000000,
+      "maxInputTokens": 100000000,
       "maxOutputTokens": 8192,
       "concurrency": 2,
       "wallTimeCapHours": 48,
@@ -5134,7 +5643,8 @@
       "judgeCacheDir": ".cache/memory-bench/210/small/om-reflector-loo/beam-1m/judge",
       "ablate": [
         "om.reflector=off"
-      ]
+      ],
+      "wave": 3
     },
     {
       "id": "210-c1.small.om-dropper-deterministic.beam-1m",
@@ -5151,7 +5661,7 @@
       "judges": "ollama-cloud/gpt-oss:120b,ollama-cloud/gemma4:31b",
       "judgeText": true,
       "labelInjections": "off",
-      "maxInputTokens": 30000000,
+      "maxInputTokens": 100000000,
       "maxOutputTokens": 8192,
       "concurrency": 2,
       "wallTimeCapHours": 48,
@@ -5162,8 +5672,9 @@
       "judgeCacheDir": ".cache/memory-bench/210/small/om-dropper-deterministic/beam-1m/judge",
       "ablate": [
         "om.dropper.policy=lowest-relevance"
-      ]
+      ],
+      "wave": 3
     }
   ],
-  "manifestHash": "10896739ac545dbb4a90c03cc9847f55f945bebfa9cd42e7e2065c210006b382"
+  "manifestHash": "13930dd8f67a7df4b35cd40a9fb17b1913b72343cccb92e8a04ed20053088bdd"
 }

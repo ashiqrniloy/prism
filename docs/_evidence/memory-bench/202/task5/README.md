@@ -20,6 +20,7 @@ Offline closure decision and verification scope assessment concluding the Task 5
 3. **Plan 210 Hand-Off:** Under the owner disposition (Task 5.4.6), the full target (every applicable suite, full `longmemeval-m` and `beam-1m` cohorts, and the ability guard veto) is handed off to Plan 210:
    - **Plan 210 Task 1 (Feature Ledger):** Keyword enrichment and agentic navigation are listed as candidates with status `negative` / `miss` on screened suites and `unmeasured` on deferred suites (`deferredFrom: "202-task5.4.6"`, referencing full manifest [development-comparison-manifest.json](development-comparison-manifest.json) hash `a19a5ab7…`).
    - **Plan 210 Task 5 (Ablation / Re-measurement):** Leave-one-out arms on full cohorts (`longmemeval-m`, full `beam-1m`) scored under frozen Task 5.2 candidate-gap halving rules.
+   - **Plan 210 Task 5 rows:** the deferred `enrichment-loo` and `navigation-loo` arms (both answer models, every applicable suite, full `longmemeval-m` and `beam-1m` development cohorts) run under gate C-1 ([owner-gate-c1.json](../../210/gates/owner-gate-c1.json), manifest [c1-manifest.json](../../210/ablations/c1-manifest.json), pinned to criteria `202-task5-candidate-gap-v2`, hash `07383989…`). They are scored with the frozen rules, and the rows are reported in `plan202Task5` of [c1-report.json](../../210/ablations/c1-report.json).
    - **Plan 210 Task 9 (Held-Out Acceptance):** Frozen ability guard veto (`>= -0.03` across all strata) and full suite coverage on held-out partitions.
 
 ### Verification Scope & Quality Assurances

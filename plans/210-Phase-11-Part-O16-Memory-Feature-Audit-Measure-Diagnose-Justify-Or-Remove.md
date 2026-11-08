@@ -1117,6 +1117,51 @@ This plan is a pre-publish part of roadmap **Phase 11** (memory, Part O, sub-par
       - evidence README; conditionally the fabric README and CHANGELOG.md for Task 17, with its per-session write-call/cost contract.
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+  - Notes (in progress, 2026-11-08; the box stays open until the campaign, calibration and report finish):
+    - **Gate C-1** is `docs/_evidence/memory-bench/210/gates/owner-gate-c1.json`, bound to `ablations/c1-manifest.json` (163 jobs, development partition only). It has five amendments:
+      - Approved free-only on 2026-11-07.
+      - Amendment 3 replaced the judges after glyph-cluster's shared 1000-a-day allowance ran out.
+      - Amendment 4 (owner, 2026-11-08) moved every route to paid Ollama Cloud, on the Pro plan ($60 a month included, 3 concurrent requests):
+        - answer models: `beam` (large) and `nemotron-3-nano:30b` (small);
+        - judges: `gpt-oss:120b` and `gemma4:31b`;
+        - work-outcome simulator: `gpt-oss:20b`;
+        - P3–P5 decider: `clef:27b`.
+      - Amendment 5 brought P3–P5 back. They had been unmeasurable because no free route declared the `decisions` capability.
+      - Amendment 6 (owner, 2026-11-08: "I would like to go with option 3. do the planning and ready the run. But do not start the run till I explicitly instruct you") splits the campaign into three waves of about a working day each:
+        - wave 1: 2,600 questions — write sides, the plan 202 Task 5 rows, and the P-paired removal arms;
+        - wave 2: 2,080 questions and 12 work-outcome jobs — the other recall and delivery arms, P3/P5 and the work leg;
+        - wave 3: 2,040 questions — ontology arms with the panel calibration, the F4 leg and OM.
+        No arm, question, model or criterion is dropped. Each wave starts only on the owner's word (`c1-supervise.sh <waves>`).
+    - **Run state (2026-11-08, stopped on the owner's instruction):**
+      - 3 of 163 jobs are complete: both beam-1m write sides and `large.P.beam-100k`. Partial checkpoints carry into wave 1.
+      - About $58 of the $60 allowance is left.
+      - Wave 1 is ready and not started.
+    - **Built for this task:**
+      - `scripts/memory-bench/cleanup-campaign.mjs` holds the arms, jobs, manifest, gate, preflight, allowance guard and report. Its 10 tests include the five named above, all passing.
+      - Mode `--plan 210` in `campaign.mjs` and `acceptance-report.mjs`.
+      - Nine leave-one-out switches in `variants.mjs` and new paths in `ablations.mjs`.
+      - `run.mjs` gains `--maintain-before-answer`, `--strict-questions` and the `none` comparator.
+      - The work-outcome runner gains a fabric overlay and `--judges-paid`.
+      - The C-1 gate is accepted by `liveJudges`.
+      - Prerequisite (a), per-scope use routing in `packages/memory/fabric/src/index.ts`, with its offline check: a cited user note reaches 2 use sessions.
+      - Prerequisite (b), the exchange-exemption switch.
+    - **Interruptions only cost wall time.** A failed report re-runs from its answer and judge checkpoints and never counts against the job's attempts. A setup or capability fault, or a job that makes no progress in 6 tries, stops that job. Before each job, `/api/balance` is read: a closed session or weekly window is waited out until `resets_at` (the owner's 5-hour limit), and an allowance below $1.50 halts the campaign so it can resume next period. OM jobs run last, capped at 100M input tokens each.
+    - **Findings:**
+      - Journal saves raced and produced "unknown attempt"; saves are now serialized per path, with a test.
+      - The ollama-cloud package had no decision-model support. It now serves `decision`-capability models over System One at `/v1/systemone`, with a CHANGELOG entry, README section, `docs/decisions.md` entry and compat baseline update. `ollamaCloudBalance()` also reads the current plans' included credit.
+      - The wire proxy now reads Ollama's native NDJSON usage, including cached prefix tokens.
+      - Bounded-wire accounting (a whole context window charged per request) is off for these jobs, because Ollama reports usage on every reply.
+      - Smoke cost: about 90% of input tokens were billed as cached prefix (about $0.033 per million effective).
+      - The fabric `policy.reviewSession` reviewer test was already flaky (4 of 8 runs fail) before this task.
+    - **Offline instruments, already measured:** `210/offline/growth-*`.
+      - Archive exemption: month-1 retrieval goes from 0.5625 to 1.0.
+      - Exchange tier off (stress configuration): month-12 retrieval goes from 0.625 to 1.0. The p95 half of that prediction is not measured.
+    - **Remaining:**
+      - waves 1–3 of the campaign, each on the owner's go-ahead;
+      - panel calibration on `P+O.large` (60 claims, blind assistant labels hashed first), then the evasive-lure residual;
+      - `acceptance-report.mjs --plan 210 --partition dev`, which produces verdicts, prediction hits and misses, the plan 202 Task 5 rows and the F4 disposition;
+      - the conditional Task 17 arm, only if F4 qualifies;
+      - the evidence README and the link from 202 Task 5.
 
 - [ ] Task 6: Decision record and owner review
   - Acceptance Criteria:

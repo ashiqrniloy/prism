@@ -544,3 +544,26 @@ test("host_builder_eval_rate_limited_fetch_waits_on_a_429_and_gives_up_on_a_dail
   }
   assert.equal(fetch.name === "fetch" || typeof fetch === "function", true, "the previous fetch is restored");
 });
+
+test("host_builder_eval_fetch_retries_a_transient_server_error_a_bounded_number_of_times", async () => {
+  const waits = [];
+  const queue = [new Response("x", { status: 500 }), new Response("x", { status: 503 }), new Response("ok", { status: 200 })];
+  const restore = installRateLimitedFetch({ base: async () => queue.shift(), sleep: async (ms) => void waits.push(ms) });
+  try {
+    assert.equal((await fetch("https://example.test/v1")).status, 200);
+    assert.deepEqual(waits, [2000, 4000], "exponential backoff");
+  } finally {
+    restore();
+  }
+  let calls = 0;
+  const restoreAlways = installRateLimitedFetch({
+    base: async () => ((calls += 1), new Response("x", { status: 500 })),
+    sleep: async () => undefined,
+  });
+  try {
+    assert.equal((await fetch("https://example.test/v1")).status, 500);
+    assert.equal(calls, 4, "one call plus three retries, then the error is returned");
+  } finally {
+    restoreAlways();
+  }
+});

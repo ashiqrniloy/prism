@@ -331,6 +331,7 @@ function runSpec(mode) {
         return built;
       },
       preflight: async (manifest) => (await c1()).preflightC1(manifest),
+      deferJob: async (job) => (await c1()).c1Deferred(built, job),
       beforeJob: async (job) => (await c1()).c1BudgetGate(job),
       write: async () => {
         const { C1_EXECUTION_MANIFEST } = await c1();
@@ -1030,6 +1031,8 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
       legacyDirectory: mode === "task6" ? evidence : undefined,
     });
     abandonUnfinished(journal);
+    // Plan 210 waves: reopening a finished journal is a new wave, so it is active until this run ends.
+    if (mode === "campaign210" && journal.status === "finished") journal.status = "active";
     await saveJournal(journalPath, journal);
     // Plan 188.9 Task 4: parallel arms and the paid-write-side dependency.
     const producers = new Set(manifest.jobs.map((job) => job.writeSide).filter(Boolean));
@@ -1133,6 +1136,11 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
           charged: 0,
           chargedInPriorCampaign: true,
         });
+        return;
+      }
+      // Plan 210 waves: a job outside the active waves stays in the journal untouched and is reported deferred.
+      if (spec.deferJob && (await spec.deferJob(job))) {
+        pushResult({ id: job.id, status: "deferred", wave: job.wave });
         return;
       }
       const latest = latestAttempt(journal, job.id);

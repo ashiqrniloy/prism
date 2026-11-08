@@ -1,0 +1,581 @@
+{
+  "plan": "215 Task 20",
+  "round": 1,
+  "mode": "live",
+  "loading": "preload",
+  "startedAt": "2026-11-07T23:10:30.580Z",
+  "finishedAt": "2026-11-08T00:19:10.609Z",
+  "criteriaHash": "4eb996e7a34feed8f73fc8ecf6b5d8f5167fe3b0125086a0d05ba3a2e0a65794",
+  "criteriaLockedAt": "2026-11-07T21:01:17.547Z",
+  "datasetContentHash": "sha256:ff685a2c104e04f56ce1b42080eb30fe542e22b6f15d81a21f4811ce3a608ab3",
+  "inputs": {
+    "workspaces": "sha256:01e6b6bd91ac9a3cacb7bf53dcede244af7cef486f41892139aea3c4bfdf0e5c",
+    "hidden": "sha256:b096d72e77abf7968097d14d70886604e0768a01c0b7a201d051b48c6512a47e",
+    "solutions": "sha256:810998b18afee3a8778287c312a19c9a25a50a46ec1b68f88b45c2e9ba99462b",
+    "skill": "sha256:d6f77d7615fbca2b917cba158564b59d44fb597e9a891be1751d8803dff44a33",
+    "indexes": "sha256:986940dc89d1e1b48ea5301ec8813d775e836fcd1999429cb0900c989742783e"
+  },
+  "runtimeRevision": "ab3606f33749724d1e81867213c228edeead4b34",
+  "trials": 3,
+  "providers": [
+    {
+      "provider": "ollama-cloud",
+      "model": "gemma4:31b",
+      "arms": {
+        "none": {
+          "status": "succeeded",
+          "scorers": {
+            "typecheck_passes": {
+              "mean": 0.6666666666666666,
+              "ci95": {
+                "low": 0.42857142857142855,
+                "high": 0.9047619047619048
+              },
+              "records": 21
+            },
+            "acceptance_tests_pass": {
+              "mean": 0.42857142857142855,
+              "ci95": {
+                "low": 0.19047619047619047,
+                "high": 0.7142857142857143
+              },
+              "records": 21
+            },
+            "public_surface_only": {
+              "mean": 0.8571428571428571,
+              "ci95": {
+                "low": 0.7142857142857143,
+                "high": 0.9523809523809526
+              },
+              "records": 21
+            },
+            "no_retired_names": {
+              "mean": 0.8571428571428571,
+              "ci95": {
+                "low": 0.5714285714285714,
+                "high": 1
+              },
+              "records": 21
+            }
+          },
+          "failedCount": 0,
+          "scoredRuns": 21,
+          "limitedRuns": 8,
+          "toolCalls": 711,
+          "skillLoadedRuns": 0,
+          "mcpUsedRuns": 0,
+          "acceptanceByLoading": {
+            "loaded": {
+              "runs": 0,
+              "passed": 0
+            },
+            "notLoaded": {
+              "runs": 21,
+              "passed": 9
+            }
+          },
+          "inputTokens": 28604693,
+          "cacheReadTokens": 27410400,
+          "uncachedInputTokens": 1194293,
+          "outputTokens": 74124,
+          "costComplete": false,
+          "meanDurationMs": 226377.47557057152,
+          "durationMs": {
+            "p50": 73646.001559,
+            "p95": 110396.87635700003
+          }
+        },
+        "skill": {
+          "status": "succeeded",
+          "scorers": {
+            "typecheck_passes": {
+              "mean": 0.7142857142857143,
+              "ci95": {
+                "low": 0.4285714285714285,
+                "high": 0.9523809523809526
+              },
+              "records": 21
+            },
+            "acceptance_tests_pass": {
+              "mean": 0.5238095238095238,
+              "ci95": {
+                "low": 0.14285714285714285,
+                "high": 0.8571428571428571
+              },
+              "records": 21
+            },
+            "public_surface_only": {
+              "mean": 0.8571428571428571,
+              "ci95": {
+                "low": 0.7142857142857143,
+                "high": 0.9535714285714222
+              },
+              "records": 21
+            },
+            "no_retired_names": {
+              "mean": 0.9523809523809524,
+              "ci95": {
+                "low": 0.8571428571428571,
+                "high": 1
+              },
+              "records": 21
+            }
+          },
+          "failedCount": 0,
+          "scoredRuns": 21,
+          "limitedRuns": 5,
+          "toolCalls": 579,
+          "skillLoadedRuns": 21,
+          "mcpUsedRuns": 0,
+          "acceptanceByLoading": {
+            "loaded": {
+              "runs": 21,
+              "passed": 11
+            },
+            "notLoaded": {
+              "runs": 0,
+              "passed": 0
+            }
+          },
+          "inputTokens": 20855985,
+          "cacheReadTokens": 19864256,
+          "uncachedInputTokens": 991729,
+          "outputTokens": 59434,
+          "costComplete": false,
+          "meanDurationMs": 208688.134591857,
+          "durationMs": {
+            "p50": 61120.34494900005,
+            "p95": 112622.73062500008
+          }
+        },
+        "skill+mcp": {
+          "status": "succeeded",
+          "scorers": {
+            "typecheck_passes": {
+              "mean": 0.7619047619047619,
+              "ci95": {
+                "low": 0.47619047619047616,
+                "high": 0.9523809523809526
+              },
+              "records": 21
+            },
+            "acceptance_tests_pass": {
+              "mean": 0.42857142857142855,
+              "ci95": {
+                "low": 0.14285714285714285,
+                "high": 0.7142857142857143
+              },
+              "records": 21
+            },
+            "public_surface_only": {
+              "mean": 0.8571428571428571,
+              "ci95": {
+                "low": 0.7619047619047619,
+                "high": 0.9523809523809526
+              },
+              "records": 21
+            },
+            "no_retired_names": {
+              "mean": 0.9523809523809524,
+              "ci95": {
+                "low": 0.8571428571428571,
+                "high": 1
+              },
+              "records": 21
+            }
+          },
+          "failedCount": 0,
+          "scoredRuns": 21,
+          "limitedRuns": 2,
+          "toolCalls": 490,
+          "skillLoadedRuns": 21,
+          "mcpUsedRuns": 19,
+          "acceptanceByLoading": {
+            "loaded": {
+              "runs": 21,
+              "passed": 9
+            },
+            "notLoaded": {
+              "runs": 0,
+              "passed": 0
+            }
+          },
+          "inputTokens": 12096611,
+          "cacheReadTokens": 11503808,
+          "uncachedInputTokens": 592803,
+          "outputTokens": 53954,
+          "costComplete": false,
+          "meanDurationMs": 147403.69900914276,
+          "durationMs": {
+            "p50": 37782.496137000155,
+            "p95": 112903.20181999961
+          }
+        }
+      },
+      "decision": {
+        "verdict": "no-claims",
+        "roundVerdict": "no-claims",
+        "reason": "no significant improvement; nothing to claim",
+        "comparisons": [
+          {
+            "id": "skill_vs_none",
+            "baseline": "none",
+            "candidate": "skill",
+            "scorers": {
+              "typecheck_passes": {
+                "difference": 0.04761904761904762,
+                "ci95": {
+                  "low": -0.2857142857142857,
+                  "high": 0.33333333333333337
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "acceptance_tests_pass": {
+                "difference": 0.09523809523809525,
+                "ci95": {
+                  "low": -0.09523809523809523,
+                  "high": 0.33333333333333337
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "public_surface_only": {
+                "difference": 0,
+                "ci95": {
+                  "low": -0.1904761904761905,
+                  "high": 0.1904761904761905
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "no_retired_names": {
+                "difference": 0.09523809523809523,
+                "ci95": {
+                  "low": 0,
+                  "high": 0.2857142857142857
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              }
+            }
+          },
+          {
+            "id": "skill_mcp_vs_none",
+            "baseline": "none",
+            "candidate": "skill+mcp",
+            "scorers": {
+              "typecheck_passes": {
+                "difference": 0.09523809523809525,
+                "ci95": {
+                  "low": -0.19047619047619047,
+                  "high": 0.380952380952381
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "acceptance_tests_pass": {
+                "difference": 7.93016446160826e-18,
+                "ci95": {
+                  "low": -0.2857142857142857,
+                  "high": 0.28571428571428575
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "public_surface_only": {
+                "difference": 0,
+                "ci95": {
+                  "low": -0.1904761904761905,
+                  "high": 0.1904761904761905
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "no_retired_names": {
+                "difference": 0.09523809523809523,
+                "ci95": {
+                  "low": 0,
+                  "high": 0.2857142857142857
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              }
+            }
+          },
+          {
+            "id": "skill_mcp_vs_skill",
+            "baseline": "skill",
+            "candidate": "skill+mcp",
+            "scorers": {
+              "typecheck_passes": {
+                "difference": 0.047619047619047616,
+                "ci95": {
+                  "low": -0.09523809523809525,
+                  "high": 0.1904761904761905
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "acceptance_tests_pass": {
+                "difference": -0.09523809523809525,
+                "ci95": {
+                  "low": -0.2857142857142857,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "public_surface_only": {
+                "difference": 0,
+                "ci95": {
+                  "low": -0.14285714285714285,
+                  "high": 0.14285714285714285
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "no_retired_names": {
+                "difference": 0,
+                "ci95": {
+                  "low": 0,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              }
+            }
+          }
+        ],
+        "claims": [],
+        "regressions": []
+      },
+      "tasks": [
+        {
+          "id": "headless-host",
+          "arms": {
+            "none": {
+              "typecheck_passes": "1/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "2/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "src/host.ts(37,17): error TS18048: 'c.declaration' is possibly 'undefined'.\nsrc/host.ts(45,7): error TS2322: Type '(Skill | undefined)[]' is not assignable to type 'readonly Skill[]'.",
+              "unscored": 0
+            },
+            "skill": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/headless-host.test.ts:\n29 |         { onRequest: (request: never) => void (last = request) },\n30 |       ),\n31 |     ],\n32 |   });\n33 |   try {\n34 |     expect(agent.skills.some((skill) => skill.name === \"probe\")).toBe(true);\n                              …",
+              "unscored": 0
+            },
+            "skill+mcp": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "2/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/headless-host.test.ts:\n36 |     const result = await session.run(\"read the note and echo\");\n37 |     expect(result.status).toBe(\"completed\");\n38 |     const results = (last?.messages ?? []).flatMap((message) => message.content).filter((block) => block.type…",
+              "unscored": 0
+            }
+          }
+        },
+        {
+          "id": "approval-ask",
+          "arms": {
+            "none": {
+              "typecheck_passes": "2/3",
+              "acceptance_tests_pass": "2/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "src/host.ts(23,43): error TS2339: Property 'ask' does not exist on type 'HostUi'.",
+              "unscored": 0
+            },
+            "skill": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "2/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/approval-ask.test.ts:\n298 |   const kernel = parseVersion(options.kernelVersion);\n299 |   const versions = new Map(ordered.map((entry) => [entry.name, parseVersion(entry.version)]));\n300 |   for (const entry of ordered) {\n301 |     const requires = entry.d…",
+              "unscored": 0
+            },
+            "skill+mcp": {
+              "typecheck_passes": "2/3",
+              "acceptance_tests_pass": "2/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "src/host.ts(18,32): error TS1127: Invalid character.\nsrc/host.ts(18,58): error TS1002: Unterminated string literal.\nsrc/host.ts(19,7): error TS1005: ',' expected.\nsrc/host.ts(19,15): error TS1005: ',' expected.\nsrc/host.ts(19,25): error TS1127: Invalid character.\nsrc/host.ts(19,90): error TS1002: Un…",
+              "unscored": 0
+            }
+          }
+        },
+        {
+          "id": "sqlite-resume",
+          "arms": {
+            "none": {
+              "typecheck_passes": "1/3",
+              "acceptance_tests_pass": "2/3",
+              "public_surface_only": "2/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "src/test-sessions.ts(7,5): error TS2322: Type 'string' is not assignable to type 'ModelSpec'.\nsrc/test-sessions.ts(14,5): error TS2353: Object literal may only specify known properties, and 'input' does not exist in type 'Message | readonly Message[]'.\nsrc/test-sessions.ts(17,27): error TS2339: Prop…",
+              "unscored": 0
+            },
+            "skill": {
+              "typecheck_passes": "2/3",
+              "acceptance_tests_pass": "3/3",
+              "public_surface_only": "2/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "src/persistence.test.ts(11,41): error TS2353: Object literal may only specify known properties, and 'text' does not exist in type 'ProviderEvent'.\nsrc/persistence.test.ts(11,71): error TS2551: Property 'model' does not exist on type 'ModelProvider'. Did you mean 'models'?",
+              "unscored": 0
+            },
+            "skill+mcp": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "3/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "unscored": 0
+            }
+          }
+        },
+        {
+          "id": "acp-serve",
+          "arms": {
+            "none": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "1/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/acp-serve.test.ts:\n\n# Unhandled error between tests\n-------------------------------\nerror: Cannot find module '../src/acp.ts' from '/tmp/hbe-acp-serve-NXvxI0/__acceptance__/acp-serve.test.ts'\n-------------------------------\n\n\n 0 pass\n 1 fail\n 1 error\nRan 1…",
+              "unscored": 0
+            },
+            "skill": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "3/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "unscored": 0
+            },
+            "skill+mcp": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "3/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "unscored": 0
+            }
+          }
+        },
+        {
+          "id": "compaction-slot",
+          "arms": {
+            "none": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "3/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "unscored": 0
+            },
+            "skill": {
+              "typecheck_passes": "1/3",
+              "acceptance_tests_pass": "3/3",
+              "public_surface_only": "2/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "src/verify.ts(6,5): error TS2322: Type 'string' is not assignable to type 'ModelSpec'.\nsrc/verify.ts(8,7): error TS2322: Type 'ModelProvider' is not assignable to type 'PackageInput'.\nsrc/verify.ts(9,9): error TS2322: Type '[ProviderEvent, ProviderEvent]' is not assignable to type 'ProviderEvent'.",
+              "unscored": 0
+            },
+            "skill+mcp": {
+              "typecheck_passes": "2/3",
+              "acceptance_tests_pass": "1/3",
+              "public_surface_only": "2/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "src/verify-host.ts(5,22): error TS2345: Argument of type 'string' is not assignable to parameter of type 'readonly ProviderEvent[]'.\nsrc/verify-host.ts(8,5): error TS2322: Type 'string' is not assignable to type 'ModelSpec'.",
+              "unscored": 0
+            }
+          }
+        },
+        {
+          "id": "package-conformance",
+          "arms": {
+            "none": {
+              "typecheck_passes": "1/3",
+              "acceptance_tests_pass": "1/3",
+              "public_surface_only": "2/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "src/no-force-push.test.ts(22,7): error TS2322: Type '{ name: string; parameters: { type: string; properties: { command: { type: string; }; }; required: string[]; }; execute: (args: any) => Promise<{ result: string; }>; }' is not assignable to type 'ToolDefinition'.\nsrc/no-force-push.test.ts(25,36): …",
+              "unscored": 0
+            },
+            "skill": {
+              "typecheck_passes": "0/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "src/no-force-push.ts(8,17): error TS2339: Property 'register' does not exist on type 'HookRegistrar'.\nsrc/no-force-push.ts(8,40): error TS7006: Parameter 'call' implicitly has an 'any' type.",
+              "unscored": 0
+            },
+            "skill+mcp": {
+              "typecheck_passes": "0/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "src/no-force-push.test.ts(18,7): error TS2353: Object literal may only specify known properties, and 'providers' does not exist in type 'AgentConfig'.\nsrc/no-force-push.test.ts(45,9): error TS2353: Object literal may only specify known properties, and 'providers' does not exist in type 'AgentConfig'…",
+              "unscored": 0
+            }
+          }
+        },
+        {
+          "id": "upgrade-0-12",
+          "arms": {
+            "none": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "0/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/upgrade-0-12.test.ts:\n 5 | \n 6 | /** A `ModelRef` that cannot name a provider and a model. The message never carries a credential value. */\n 7 | export class ModelRefError extends TypeError {\n 8 |   readonly code: ModelRefErrorCode = \"model_ref_invalid\";\n …",
+              "unscored": 0
+            },
+            "skill": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "2/3",
+              "no_retired_names": "2/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/upgrade-0-12.test.ts:\n33 |     expect(result.status).toBe(\"completed\");\n34 |     const text = JSON.stringify(\n35 |       (last?.messages ?? []).flatMap((message) => message.content).filter((block) => block.type === \"tool_result\"),\n36 |     );\n37 |     expe…",
+              "unscored": 0
+            },
+            "skill+mcp": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "2/3",
+              "no_retired_names": "2/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/upgrade-0-12.test.ts:\n254 |   // 1. Resolve inputs.\n255 |   const normalized = options.inputs.map((input) => normalizePackageInput(input));\n256 |   const seen = new Set<string>();\n257 |   for (const item of normalized) {\n258 |     const name = item.definit…",
+              "unscored": 0
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "verdict": "no-claims"
+}

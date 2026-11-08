@@ -1,0 +1,585 @@
+{
+  "plan": "215 Task 20",
+  "round": 1,
+  "mode": "live",
+  "loading": "natural",
+  "startedAt": "2026-11-07T21:49:36.980Z",
+  "finishedAt": "2026-11-08T00:08:20.711Z",
+  "criteriaHash": "4eb996e7a34feed8f73fc8ecf6b5d8f5167fe3b0125086a0d05ba3a2e0a65794",
+  "criteriaLockedAt": "2026-11-07T21:01:17.547Z",
+  "datasetContentHash": "sha256:ff685a2c104e04f56ce1b42080eb30fe542e22b6f15d81a21f4811ce3a608ab3",
+  "inputs": {
+    "workspaces": "sha256:01e6b6bd91ac9a3cacb7bf53dcede244af7cef486f41892139aea3c4bfdf0e5c",
+    "hidden": "sha256:b096d72e77abf7968097d14d70886604e0768a01c0b7a201d051b48c6512a47e",
+    "solutions": "sha256:810998b18afee3a8778287c312a19c9a25a50a46ec1b68f88b45c2e9ba99462b",
+    "skill": "sha256:d6f77d7615fbca2b917cba158564b59d44fb597e9a891be1751d8803dff44a33",
+    "indexes": "sha256:986940dc89d1e1b48ea5301ec8813d775e836fcd1999429cb0900c989742783e"
+  },
+  "runtimeRevision": "ab3606f33749724d1e81867213c228edeead4b34",
+  "trials": 3,
+  "providers": [
+    {
+      "provider": "ollama-cloud",
+      "model": "beam",
+      "arms": {
+        "none": {
+          "status": "succeeded",
+          "scorers": {
+            "typecheck_passes": {
+              "mean": 0.8571428571428571,
+              "ci95": {
+                "low": 0.5714285714285714,
+                "high": 1
+              },
+              "records": 21
+            },
+            "acceptance_tests_pass": {
+              "mean": 0,
+              "ci95": {
+                "low": 0,
+                "high": 0
+              },
+              "records": 21
+            },
+            "public_surface_only": {
+              "mean": 0.8571428571428571,
+              "ci95": {
+                "low": 0.5714285714285714,
+                "high": 1
+              },
+              "records": 21
+            },
+            "no_retired_names": {
+              "mean": 0.8571428571428571,
+              "ci95": {
+                "low": 0.5714285714285714,
+                "high": 1
+              },
+              "records": 21
+            }
+          },
+          "failedCount": 0,
+          "scoredRuns": 21,
+          "limitedRuns": 1,
+          "toolCalls": 426,
+          "skillLoadedRuns": 0,
+          "mcpUsedRuns": 0,
+          "acceptanceByLoading": {
+            "loaded": {
+              "runs": 0,
+              "passed": 0
+            },
+            "notLoaded": {
+              "runs": 21,
+              "passed": 0
+            }
+          },
+          "inputTokens": 8196753,
+          "cacheReadTokens": 7028736,
+          "uncachedInputTokens": 1168017,
+          "outputTokens": 39927,
+          "costComplete": false,
+          "meanDurationMs": 502939.4684259998,
+          "durationMs": {
+            "p50": 61752.28171399981,
+            "p95": 845368.732572
+          }
+        },
+        "skill": {
+          "status": "succeeded",
+          "scorers": {
+            "typecheck_passes": {
+              "mean": 0.8571428571428571,
+              "ci95": {
+                "low": 0.5714285714285714,
+                "high": 1
+              },
+              "records": 21
+            },
+            "acceptance_tests_pass": {
+              "mean": 0,
+              "ci95": {
+                "low": 0,
+                "high": 0
+              },
+              "records": 21
+            },
+            "public_surface_only": {
+              "mean": 0.8571428571428571,
+              "ci95": {
+                "low": 0.5714285714285714,
+                "high": 1
+              },
+              "records": 21
+            },
+            "no_retired_names": {
+              "mean": 0.8571428571428571,
+              "ci95": {
+                "low": 0.5714285714285714,
+                "high": 1
+              },
+              "records": 21
+            }
+          },
+          "failedCount": 0,
+          "scoredRuns": 21,
+          "limitedRuns": 0,
+          "toolCalls": 417,
+          "skillLoadedRuns": 17,
+          "mcpUsedRuns": 0,
+          "acceptanceByLoading": {
+            "loaded": {
+              "runs": 17,
+              "passed": 0
+            },
+            "notLoaded": {
+              "runs": 4,
+              "passed": 0
+            }
+          },
+          "inputTokens": 8255464,
+          "cacheReadTokens": 7127488,
+          "uncachedInputTokens": 1127976,
+          "outputTokens": 50253,
+          "costComplete": false,
+          "meanDurationMs": 170314.89151928542,
+          "durationMs": {
+            "p50": 46219.45321399998,
+            "p95": 129909.88323199982
+          }
+        },
+        "skill+mcp": {
+          "status": "succeeded",
+          "scorers": {
+            "typecheck_passes": {
+              "mean": 0.8571428571428571,
+              "ci95": {
+                "low": 0.5714285714285714,
+                "high": 1
+              },
+              "records": 21
+            },
+            "acceptance_tests_pass": {
+              "mean": 0.047619047619047616,
+              "ci95": {
+                "low": 0,
+                "high": 0.14285714285714285
+              },
+              "records": 21
+            },
+            "public_surface_only": {
+              "mean": 0.8571428571428571,
+              "ci95": {
+                "low": 0.5714285714285714,
+                "high": 1
+              },
+              "records": 21
+            },
+            "no_retired_names": {
+              "mean": 0.8571428571428571,
+              "ci95": {
+                "low": 0.5714285714285714,
+                "high": 1
+              },
+              "records": 21
+            }
+          },
+          "failedCount": 0,
+          "scoredRuns": 21,
+          "limitedRuns": 3,
+          "toolCalls": 466,
+          "skillLoadedRuns": 14,
+          "mcpUsedRuns": 14,
+          "acceptanceByLoading": {
+            "loaded": {
+              "runs": 14,
+              "passed": 1
+            },
+            "notLoaded": {
+              "runs": 7,
+              "passed": 0
+            }
+          },
+          "inputTokens": 9045246,
+          "cacheReadTokens": 7870336,
+          "uncachedInputTokens": 1174910,
+          "outputTokens": 66998,
+          "costComplete": false,
+          "meanDurationMs": 510290.5636587144,
+          "durationMs": {
+            "p50": 45792.116950999945,
+            "p95": 900082.0684140008
+          }
+        }
+      },
+      "decision": {
+        "verdict": "no-claims",
+        "roundVerdict": "no-claims",
+        "reason": "no significant improvement; nothing to claim",
+        "comparisons": [
+          {
+            "id": "skill_vs_none",
+            "baseline": "none",
+            "candidate": "skill",
+            "scorers": {
+              "typecheck_passes": {
+                "difference": 0,
+                "ci95": {
+                  "low": 0,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "acceptance_tests_pass": {
+                "difference": 0,
+                "ci95": {
+                  "low": 0,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "public_surface_only": {
+                "difference": 0,
+                "ci95": {
+                  "low": 0,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "no_retired_names": {
+                "difference": 0,
+                "ci95": {
+                  "low": 0,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              }
+            }
+          },
+          {
+            "id": "skill_mcp_vs_none",
+            "baseline": "none",
+            "candidate": "skill+mcp",
+            "scorers": {
+              "typecheck_passes": {
+                "difference": 0,
+                "ci95": {
+                  "low": 0,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "acceptance_tests_pass": {
+                "difference": 0.047619047619047616,
+                "ci95": {
+                  "low": 0,
+                  "high": 0.14285714285714285
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "public_surface_only": {
+                "difference": 0,
+                "ci95": {
+                  "low": 0,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "no_retired_names": {
+                "difference": 0,
+                "ci95": {
+                  "low": 0,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              }
+            }
+          },
+          {
+            "id": "skill_mcp_vs_skill",
+            "baseline": "skill",
+            "candidate": "skill+mcp",
+            "scorers": {
+              "typecheck_passes": {
+                "difference": 0,
+                "ci95": {
+                  "low": 0,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "acceptance_tests_pass": {
+                "difference": 0.047619047619047616,
+                "ci95": {
+                  "low": 0,
+                  "high": 0.14285714285714285
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "public_surface_only": {
+                "difference": 0,
+                "ci95": {
+                  "low": 0,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              },
+              "no_retired_names": {
+                "difference": 0,
+                "ci95": {
+                  "low": 0,
+                  "high": 0
+                },
+                "qValue": 1,
+                "significant": false,
+                "improved": false,
+                "regressed": false
+              }
+            }
+          }
+        ],
+        "claims": [],
+        "regressions": []
+      },
+      "tasks": [
+        {
+          "id": "headless-host",
+          "arms": {
+            "none": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/headless-host.test.ts:\n\n# Unhandled error between tests\n-------------------------------\nerror: Cannot find module '../src/host.ts' from '/tmp/hbe-headless-host-GUoYYH/__acceptance__/headless-host.test.ts'\n-------------------------------\n\n\n 0 pass\n 1 fail\n …",
+              "unscored": 0
+            },
+            "skill": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/headless-host.test.ts:\n\n# Unhandled error between tests\n-------------------------------\nerror: Cannot find module '../src/host.ts' from '/tmp/hbe-headless-host-CB1gb1/__acceptance__/headless-host.test.ts'\n-------------------------------\n\n\n 0 pass\n 1 fail\n …",
+              "unscored": 0
+            },
+            "skill+mcp": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/headless-host.test.ts:\n\n# Unhandled error between tests\n-------------------------------\nerror: Cannot find module '../src/host.ts' from '/tmp/hbe-headless-host-EmjV0z/__acceptance__/headless-host.test.ts'\n-------------------------------\n\n\n 0 pass\n 1 fail\n …",
+              "unscored": 0
+            }
+          }
+        },
+        {
+          "id": "approval-ask",
+          "arms": {
+            "none": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/approval-ask.test.ts:\n40 | test(\"an approved edit runs and asks exactly once\", async () => {\n41 |   const gate = createScriptedHostUi({ confirm: true, select: \"once\" });\n42 |   const result = await run([[\"edit\", EDIT]], gate.ui);\n43 |   expect(result.statu…",
+              "unscored": 0
+            },
+            "skill": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/approval-ask.test.ts:\n40 | test(\"an approved edit runs and asks exactly once\", async () => {\n41 |   const gate = createScriptedHostUi({ confirm: true, select: \"once\" });\n42 |   const result = await run([[\"edit\", EDIT]], gate.ui);\n43 |   expect(result.statu…",
+              "unscored": 0
+            },
+            "skill+mcp": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "1/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/approval-ask.test.ts:\n40 | test(\"an approved edit runs and asks exactly once\", async () => {\n41 |   const gate = createScriptedHostUi({ confirm: true, select: \"once\" });\n42 |   const result = await run([[\"edit\", EDIT]], gate.ui);\n43 |   expect(result.statu…",
+              "unscored": 0
+            }
+          }
+        },
+        {
+          "id": "sqlite-resume",
+          "arms": {
+            "none": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/sqlite-resume.test.ts:\n22 |   await session.run(\"first question\");\n23 |   await session.run(\"second question\");\n24 |   const before = await session.messages();\n25 |   const id = session.id;\n26 |   await first.dispose();\n27 |   expect(existsSync(dbPath)).to…",
+              "unscored": 0
+            },
+            "skill": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/sqlite-resume.test.ts:\n22 |   await session.run(\"first question\");\n23 |   await session.run(\"second question\");\n24 |   const before = await session.messages();\n25 |   const id = session.id;\n26 |   await first.dispose();\n27 |   expect(existsSync(dbPath)).to…",
+              "unscored": 0
+            },
+            "skill+mcp": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/sqlite-resume.test.ts:\n22 |   await session.run(\"first question\");\n23 |   await session.run(\"second question\");\n24 |   const before = await session.messages();\n25 |   const id = session.id;\n26 |   await first.dispose();\n27 |   expect(existsSync(dbPath)).to…",
+              "unscored": 0
+            }
+          }
+        },
+        {
+          "id": "acp-serve",
+          "arms": {
+            "none": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/acp-serve.test.ts:\n\n# Unhandled error between tests\n-------------------------------\nerror: Cannot find module '../src/acp.ts' from '/tmp/hbe-acp-serve-RDaQKw/__acceptance__/acp-serve.test.ts'\n-------------------------------\n\n\n 0 pass\n 1 fail\n 1 error\nRan 1…",
+              "unscored": 0
+            },
+            "skill": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/acp-serve.test.ts:\n\n# Unhandled error between tests\n-------------------------------\nerror: Cannot find module '../src/acp.ts' from '/tmp/hbe-acp-serve-HDCCEs/__acceptance__/acp-serve.test.ts'\n-------------------------------\n\n\n 0 pass\n 1 fail\n 1 error\nRan 1…",
+              "unscored": 0
+            },
+            "skill+mcp": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/acp-serve.test.ts:\n\n# Unhandled error between tests\n-------------------------------\nerror: Cannot find module '../src/acp.ts' from '/tmp/hbe-acp-serve-S95WSv/__acceptance__/acp-serve.test.ts'\n-------------------------------\n\n\n 0 pass\n 1 fail\n 1 error\nRan 1…",
+              "unscored": 0
+            }
+          }
+        },
+        {
+          "id": "compaction-slot",
+          "arms": {
+            "none": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/compaction-slot.test.ts:\n4 | \n5 | test(\"memory-compaction owns the compaction slot and the local package still loads\", async () => {\n6 |   const agent = await createHost({ model: { provider: \"mock\", model: \"demo\" }, providers: [mockProvider()] });\n7 |   tr…",
+              "unscored": 0
+            },
+            "skill": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/compaction-slot.test.ts:\n4 | \n5 | test(\"memory-compaction owns the compaction slot and the local package still loads\", async () => {\n6 |   const agent = await createHost({ model: { provider: \"mock\", model: \"demo\" }, providers: [mockProvider()] });\n7 |   tr…",
+              "unscored": 0
+            },
+            "skill+mcp": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "bun test v1.4.4 (38afee6c8)\n\n__acceptance__/compaction-slot.test.ts:\n4 | \n5 | test(\"memory-compaction owns the compaction slot and the local package still loads\", async () => {\n6 |   const agent = await createHost({ model: { provider: \"mock\", model: \"demo\" }, providers: [mockProvider()] });\n7 |   tr…",
+              "unscored": 0
+            }
+          }
+        },
+        {
+          "id": "package-conformance",
+          "arms": {
+            "none": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "missing required file(s): src/no-force-push.ts, src/no-force-push.test.ts",
+              "unscored": 0
+            },
+            "skill": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "missing required file(s): src/no-force-push.ts, src/no-force-push.test.ts",
+              "unscored": 0
+            },
+            "skill+mcp": {
+              "typecheck_passes": "3/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "3/3",
+              "no_retired_names": "3/3",
+              "firstFailure": "missing required file(s): src/no-force-push.ts, src/no-force-push.test.ts",
+              "unscored": 0
+            }
+          }
+        },
+        {
+          "id": "upgrade-0-12",
+          "arms": {
+            "none": {
+              "typecheck_passes": "0/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "0/3",
+              "no_retired_names": "0/3",
+              "firstFailure": "src/host.ts(3,29): error TS2307: Cannot find module '@arnilo/prism-coding-tools' or its corresponding type declarations.",
+              "unscored": 0
+            },
+            "skill": {
+              "typecheck_passes": "0/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "0/3",
+              "no_retired_names": "0/3",
+              "firstFailure": "src/host.ts(3,29): error TS2307: Cannot find module '@arnilo/prism-coding-tools' or its corresponding type declarations.",
+              "unscored": 0
+            },
+            "skill+mcp": {
+              "typecheck_passes": "0/3",
+              "acceptance_tests_pass": "0/3",
+              "public_surface_only": "0/3",
+              "no_retired_names": "0/3",
+              "firstFailure": "src/host.ts(3,29): error TS2307: Cannot find module '@arnilo/prism-coding-tools' or its corresponding type declarations.",
+              "unscored": 0
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "verdict": "no-claims"
+}

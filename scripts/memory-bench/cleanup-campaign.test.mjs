@@ -14,6 +14,7 @@ import {
   C1_ROBUSTNESS_ARMS,
   c1BudgetDecision,
   c1BudgetGate,
+  c1Deferred,
   c1FeatureEvidence,
   c1Jobs,
   c1PairEffect,
@@ -21,6 +22,7 @@ import {
   f4LegRow,
   orientEffect,
   pairOnIdenticalItems,
+  parseC1Waves,
   scorePrediction,
 } from "./cleanup-campaign.mjs";
 import { cleanupVerdict } from "./robustness.mjs";
@@ -73,6 +75,15 @@ describe("plan 210 Task 5 (gate C-1)", () => {
       job.id === "210-c1.large.P.locomo" ? { ...job, judges: "ollama-cloud/beam,ollama-cloud/gemma4:31b" } : job,
     );
     expect(() => assertC1Jobs(self)).toThrow(/C1Judges/);
+    // P3-P5 (amendment 5): clef:27b decides, never the answer model; each decision arm pairs with its base.
+    const deciders = jobs.filter((job) => /decisions-p[345]/.test(job.id));
+    expect(deciders.length).toBe(10);
+    expect(deciders.every((job) => job.decider === "ollama-cloud/clef:27b")).toBe(true);
+    for (const job of deciders.filter((item) => item.kind === "robustness"))
+      expect(job.ablate.some((spec) => spec.startsWith("fabric.decisions=") && spec.includes("clef:27b"))).toBe(true);
+    expect(
+      deciders.filter((job) => job.kind === "work-outcome").every((job) => job.fabricOverlay.decisions.model === "ollama-cloud/clef:27b"),
+    ).toBe(true);
     // Robustness and ontology jobs never score an errored question.
     expect(jobs.filter((job) => job.kind === "robustness" || job.kind === "ontology").every((job) => job.strictQuestions)).toBe(true);
   });
@@ -287,5 +298,26 @@ describe("plan 210 Task 5 (gate C-1)", () => {
     expect(gate).toBeNull();
     expect(slept.length).toBe(1);
     expect((await c1BudgetGate({ id: "j" }, { sleep: async () => {}, balance: async () => spent })).status).toBe("budget-exhausted");
+  });
+
+  test("c1_waves_partition_every_job_and_never_run_an_arm_before_its_base", () => {
+    const jobs = c1Jobs(hashes);
+    expect(jobs.every((job) => [1, 2, 3].includes(job.wave))).toBe(true);
+    // Write sides and the plan 202 Task 5 rows are wave 1.
+    expect(jobs.filter((job) => job.kind === "write-side").every((job) => job.wave === 1)).toBe(true);
+    for (const arm of ["P", "enrichment-loo", "navigation-loo"])
+      expect(jobs.filter((job) => job.arm === arm && job.kind === "robustness").every((job) => job.wave === 1)).toBe(true);
+    expect(jobs.filter((job) => job.kind === "ontology").every((job) => job.wave === 3)).toBe(true);
+    // A job whose base is in a later wave is refused.
+    const early = jobs.map((job) => (job.id === "210-c1.large.decisions-p3.locomo" ? { ...job, wave: 1 } : job));
+    expect(() => assertC1Jobs(early)).toThrow(/C1Waves/);
+    // Only the named waves start; the rest are deferred, and the env value is validated.
+    expect(parseC1Waves(undefined)).toBeNull();
+    expect(parseC1Waves("2,1")).toEqual([1, 2]);
+    expect(() => parseC1Waves("4")).toThrow(/C1Waves/);
+    const manifest = { activeWaves: [1] };
+    expect(c1Deferred(manifest, { wave: 1 })).toBe(false);
+    expect(c1Deferred(manifest, { wave: 2 })).toBe(true);
+    expect(c1Deferred({}, { wave: 3 })).toBe(false);
   });
 });

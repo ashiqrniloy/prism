@@ -124,6 +124,18 @@ const decisionPackage = (name: string, options: Omit<SystemOneDecisionProviderOp
   })();
 ```
 
+### Ollama Cloud
+
+The shipped `@arnilo/prism-provider-ollama-cloud` package serves Ollama's decision models (`/api/show` capability `decision`, e.g. `clef:27b`) at `/v1/systemone` with the same key as its chat models; no extra package is needed.
+
+```ts
+// packages: [ollamaCloud({ apiKey: "env:OLLAMA_API_KEY" })]
+const clef = prism.models.decisions("ollama-cloud/clef:27b");
+```
+
+- Caveat: input is limited to the model's 65,536-token window; longer states are rejected, not truncated.
+- Price: per input token on ollama.com/pricing (no output tokens).
+
 ### OpenRouter
 
 One key reaches many decision models; the model id carries the vendor prefix.
@@ -252,7 +264,7 @@ const laya = decisionPackage("@acme/laya-decisions", {
 - The vocabulary is the System One one (`noul`, `choice`, `score`) because every endpoint known today speaks it. A vendor with a different dialect maps at its own codec.
 - The kernel caps a request at 64 questions; a raw wire call may accept more.
 - `assertDecisionRequest(request, model)` is public so adapters enforce the same bounds.
-- System One adapters (`createSystemOneDecisionProvider`, shared by `typesafe`, `laya`, and `liquid`) implement `decisions()` over the same client as `generate()`, so retry, abort, credential resolution, and redaction are identical. The endpoint `path` is configurable (default `/v1/systemone`, e.g. Foundry's `/providers/microsoft/v1/systemone`); a path without a leading `/` fails at construction. A 401/422 from the wire becomes `DecisionsError("invalid_request")` with the credential redacted.
+- System One adapters (`createSystemOneDecisionProvider`, shared by `typesafe`, `laya`, `liquid`, and `ollama-cloud`'s decision models) implement `decisions()` over the same client as `generate()`, so retry, abort, credential resolution, and redaction are identical. The endpoint `path` is configurable (default `/v1/systemone`, e.g. Foundry's `/providers/microsoft/v1/systemone`); a path without a leading `/` fails at construction. A 401/422 from the wire becomes `DecisionsError("invalid_request")` with the credential redacted.
 
 ## Security and performance notes
 

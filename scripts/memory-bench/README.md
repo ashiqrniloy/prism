@@ -2325,3 +2325,41 @@ A score is only readable beside its ceiling and beside the smallest difference i
 
 - `bun scripts/memory-bench/ceiling.mjs --recall recall.json --oracle oracle.json [--output ceiling.json]` reads the run reports of two arms on the same model, partition, judges and rules (`--config fabric-x-tools` and `--config oracle`) and writes a counts-only report: totals, per ability, the wrong recall answers by retrieval stage (never a candidate, candidate not shown, shown to the model), judge ties, and the paired recall/oracle table. No question, reference or answer text enters it.
 - `bun scripts/memory-bench/power.mjs --n 60 --discordance 0.1` prints the smallest difference in accuracy, in points, that a paired design of `n` question pairs can show with 80% power at the 95% level, given the share of pairs the two arms answer differently (about 11 points for 60 pairs at 10%; 16 for 40 pairs at 15%; 21 for 20 pairs at 15%).
+
+## Ablation campaign (plan 210 Task 5, gate C-1)
+
+`cleanup-campaign.mjs` defines the arms, jobs, manifest, gate check, preflight, allowance guard and report. `campaign.mjs --plan 210` runs them through the shared journal and lock.
+
+```sh
+timeout 120 bun scripts/memory-bench/campaign.mjs --plan 210 --manifest --partition dev   # writes ablations/c1-manifest.json
+setsid nohup scripts/memory-bench/c1-supervise.sh 1 >> .cache/memory-bench/210-supervise.log 2>&1 &   # wave 1 (then 2, 3)
+timeout 600 bun scripts/memory-bench/acceptance-report.mjs --plan 210 --partition dev       # c1-report.json
+```
+
+**Gate and routes.** The gate (`docs/_evidence/memory-bench/210/gates/owner-gate-c1.json`) binds the manifest hash, so a changed manifest is refused until it is re-bound. Amendment 4 moved every route to Ollama Cloud: `beam` and `nemotron-3-nano:30b` answer, `gpt-oss:120b` and `gemma4:31b` judge, `gpt-oss:20b` simulates the work-outcome user, and `clef:27b` decides P3–P5. Models with named thinking levels run at medium effort (`PRISM_MEMORY_BENCH_OLLAMA_EFFORT`).
+
+**Waves** (amendment 6). Every job carries `wave` (1, 2 or 3; `C1_WAVES`):
+
+| Wave | Contents | Load |
+| --- | --- | --- |
+| 1 | write sides, the plan 202 Task 5 rows (P, enrichment-loo and navigation-loo on all five suites), memory-off, tool affordances, supersession hint, grouping, directory, timeline | 2,600 questions |
+| 2 | the other recall and delivery arms, P3 and P5, the work-outcome leg | 2,080 questions and 12 work-outcome jobs |
+| 3 | ontology arms (then the panel calibration on `P+O.large`), the F4 diagnostic leg, OM | 2,040 questions |
+
+Each wave takes about a working day on the Pro plan. `c1-supervise.sh <waves>` requires the wave list and sets `PRISM_MEMORY_BENCH_210_WAVES`. A job outside the active waves is reported `deferred` and stays in the shared journal. Every arm's base is in its own wave or an earlier one (`assertC1Jobs`). The report can run after any wave; unrun arms read `incomplete`.
+
+**Selected runs.**
+
+- `PRISM_MEMORY_BENCH_210_JOBS=<id substrings>` runs a subset of the approved jobs.
+- `PRISM_MEMORY_BENCH_210_SMOKE=1` caps every job at 2 questions (one persona for work-outcome jobs). Each runs in its own journal, so the real run neither reuses nor overwrites them.
+
+**Interruptions** cost only wall time:
+
+- A failed report re-runs from the job's answer and judge checkpoints, and the attempt does not count against the job's attempts.
+- A setup or capability fault, or six identical failures with no new scored question, stops the job.
+- Before each job, the guard reads `/api/balance`. It waits out a closed session or weekly window until `resets_at`, and halts the campaign once included plus purchased credit falls under $1.50; the campaign resumes from its journal next period.
+- `c1-supervise.sh` runs the campaign in its own systemd scope (`MemoryMax`, default 40G). After any external kill it restarts the campaign from the journal, and it stops once the journal reads `finished`, `budget-exhausted` or `token-ceiling`.
+
+**Shared ingest.** Each LongMemEval-M and BEAM-1M write side is built once per write-side configuration (`--phase write`, no model call, one question at a time) and seeded into every read-side arm. A reader waits for its producer.
+
+**Cost.** Billed usage is read from Ollama's `/api/usage`. The wire proxy reads native `prompt_eval_count`, `eval_count` and `prompt_eval_cached_count`. The decider shares the answer route's proxy, so its tokens are priced at the answer model's rate in the cost rows.

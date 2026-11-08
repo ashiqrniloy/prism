@@ -91,7 +91,7 @@ export const C1_BUDGET = Object.freeze({ reserveUsd: 1.5, windowFloorPercent: 2,
  * allowance and run last; a capped job reports the questions it finished, and its pair is scored on identical items.
  */
 export const C1_CAPS = Object.freeze({
-  maxInputTokens: { "longmemeval-m": 60_000_000, "beam-1m": 40_000_000, default: 25_000_000, "work-outcome": 12_000_000, om: 30_000_000 },
+  maxInputTokens: { "longmemeval-m": 60_000_000, "beam-1m": 40_000_000, default: 25_000_000, "work-outcome": 12_000_000, om: 100_000_000 },
   wallTimeCapHours: { "longmemeval-m": 96, "beam-1m": 48, default: 24, "work-outcome": 24, write: 48, om: 48 },
   concurrency: 2,
   judgeCalls: 400,
@@ -104,19 +104,14 @@ export const C1_CAPS = Object.freeze({
 export const C1_CEILING = 1_000_000_000_000;
 
 const ALL = C1_SUITES;
+const DECISIONS = (points) => ({ points });
 
 /**
- * Candidates gate C-1 cannot measure yet, with the reason (recorded in the manifest and the report; Task 6 lists them).
- * P3-P5 need a decider that declares the kernel's `decisions` capability. Amendment 4 names Ollama Cloud's clef:27b
- * (System One at `/v1/systemone`); the ollama-cloud package gains that endpoint while phase A runs, and the P3-P5 arms
- * join in phase B (amendment 5) with `C1_DECIDER`.
+ * Candidates gate C-1 cannot measure, with the reason (recorded in the manifest and the report; Task 6 lists them).
+ * Amendment 5 (2026-11-08): none. P3-P5 run with Ollama Cloud's clef:27b as the decider (`C1_DECIDER`), served by the
+ * ollama-cloud package's System One endpoint.
  */
-const PENDING_DECIDER = `pending phase B: decider ${C1_DECIDER} needs the ollama-cloud package's decisions endpoint`;
-export const C1_UNMEASURABLE = Object.freeze({
-  "decisions.P3": PENDING_DECIDER,
-  "decisions.P4": PENDING_DECIDER,
-  "decisions.P5": PENDING_DECIDER,
-});
+export const C1_UNMEASURABLE = Object.freeze({});
 
 /**
  * The robustness arms. `mode` orients the effect: `loo` removes a feature the base has (feature effect = base - arm),
@@ -253,6 +248,24 @@ export const C1_ROBUSTNESS_ARMS = Object.freeze([
     features: ["delivery.directory"],
   },
   { id: "rules-add", ablate: ["fabric.rules=on"], suites: ["beam-100k"], base: "P", mode: "add", features: ["delivery.standing-rules"] },
+  {
+    id: "decisions-p3",
+    ablate: ["fabric.inject.minScore=0.35"],
+    decisions: DECISIONS(["P3"]),
+    suites: ["beam-100k", "locomo"],
+    base: "precision-filter",
+    mode: "add",
+    features: ["decisions.P3"],
+  },
+  {
+    id: "decisions-p5",
+    ablate: [],
+    decisions: DECISIONS(["P5"]),
+    suites: ["beam-100k", "locomo"],
+    base: "P",
+    mode: "add",
+    features: ["decisions.P5"],
+  },
   // The pre-registered F4 diagnostic leg (cleanup-criteria preRegistered.f4DiagnosticLeg): best read-time and oracle.
   {
     id: "f4-readtime",
@@ -324,6 +337,7 @@ export const C1_WORK_ARMS = Object.freeze([
     features: ["delivery.standing-rules"],
   },
   { id: "W.lessons-loo", arm: "P+W", overlay: { lessons: { nudge: false } }, base: "W.P+W", mode: "loo", features: ["lessons"] },
+  { id: "W.decisions-p4", arm: "P", decisions: DECISIONS(["P4"]), base: "W.P", mode: "add", features: ["decisions.P4"] },
 ]);
 
 /** Refuse anything but the development partition, in a manifest, a job or a profile argument. */
@@ -351,8 +365,8 @@ export function c1SnapshotKey({ suite, config, writeVariants, productHash, inges
   return `210-${safe(suite)}-${stableHash({ suite, partition: C1_PARTITION, config, writeVariants, productHash, ingestHash }).slice(0, 24)}`;
 }
 
-function decisionsAblate(arm, route) {
-  return arm.decisions ? [`fabric.decisions=${JSON.stringify({ model: refOf(route), points: arm.decisions.points })}`] : [];
+function decisionsAblate(arm) {
+  return arm.decisions ? [`fabric.decisions=${JSON.stringify({ model: C1_DECIDER, points: arm.decisions.points })}`] : [];
 }
 
 /** One robustness job (`run.mjs`). Ids: `210-c1.<model>.<arm>.<suite>`. */
@@ -387,8 +401,9 @@ export function c1RobustnessJob(model, arm, suite, { producers = new Map() } = {
     judgeCacheDir: `${C1_CACHE}/${model.key}/${safe(arm.id)}/${suite}/judge`,
     ...(arm.maintain ? { maintainBeforeAnswer: true } : {}),
   };
-  const ablate = [...(arm.ablate ?? []), ...decisionsAblate(arm, route)];
+  const ablate = [...(arm.ablate ?? []), ...decisionsAblate(arm)];
   if (ablate.length) job.ablate = ablate;
+  if (arm.decisions) job.decider = C1_DECIDER;
   // A shared-ingest suite seeds from its write side unless the arm builds no fabric store (comparators, OM).
   if (C1_SHARED_INGEST_SUITES.includes(suite) && config === "fabric-x-tools") {
     const producer = producers.get(`${suite}|${writeVariantsOf(arm).join(",")}`);
@@ -419,7 +434,8 @@ export function c1ProducerJob(suite, writeVariants, { productHash, ingestHash })
     // The readers' question order: a capped producer (smoke) must snapshot the same questions its readers answer.
     interleaveAbilities: true,
     wallTimeCapHours: C1_CAPS.wallTimeCapHours.write,
-    concurrency: 4,
+    // One question at a time: three full-cohort LongMemEval-M write sides at 4 each filled RAM and swap (systemd-oomd, 2026-11-08).
+    concurrency: 1,
     ...(writeVariants.length ? { ablate: [...writeVariants] } : {}),
     snapshotKey: c1SnapshotKey({ suite, config: "fabric-x-tools", writeVariants, productHash, ingestHash }),
   };
@@ -466,7 +482,7 @@ export function c1WorkJob(model, arm) {
   const route = routeFor(model, "work-outcome");
   const overlay = {
     ...(arm.overlay ?? {}),
-    ...(arm.decisions ? { decisions: { model: refOf(route), points: arm.decisions.points } } : {}),
+    ...(arm.decisions ? { decisions: { model: C1_DECIDER, points: arm.decisions.points } } : {}),
   };
   return {
     id: `210-c1.${model.key}.${arm.id}`,
@@ -490,7 +506,69 @@ export function c1WorkJob(model, arm) {
     judgeCalls: C1_CAPS.judgeCalls,
     wallTimeCapHours: C1_CAPS.wallTimeCapHours["work-outcome"],
     ...(Object.keys(overlay).length ? { fabricOverlay: overlay } : {}),
+    ...(arm.decisions ? { decider: C1_DECIDER } : {}),
   };
+}
+
+/**
+ * Amendment 6 (owner, 2026-11-08: "I would like to go with option 3"): the campaign runs in three waves, each about a
+ * working day on the Pro plan's 3 concurrent requests, so the deciding rows land first and each later wave is a fresh
+ * owner go-ahead. Every arm's base is in its own wave or an earlier one; write sides are wave 1.
+ * - Wave 1: the plan 202 Task 5 rows (P, enrichment-loo, navigation-loo on every suite) and the removal-deciding nulls
+ *   and losses that pair with P (memory-off, tool affordances, supersession hint, state grouping, directory, timeline).
+ * - Wave 2: the remaining recall and delivery arms, P3/P5 and the work-outcome leg.
+ * - Wave 3: the ontology arms (and the panel calibration on P+O.large), the F4 diagnostic leg and OM.
+ */
+export const C1_WAVES = Object.freeze({
+  P: 1,
+  "enrichment-loo": 1,
+  "navigation-loo": 1,
+  "memory-off": 1,
+  "tool-affordances-loo": 1,
+  "supersession-keyed-only": 1,
+  "grouping-loo": 1,
+  "directory-loo": 1,
+  "timeline-loo": 1,
+  "strength-0.15": 2,
+  expansion: 2,
+  gather: 2,
+  maintain: 2,
+  "archive-exchange-exempt": 2,
+  "tools-only": 2,
+  "card-excerpt": 2,
+  "precision-filter": 2,
+  "aggregation-loo": 2,
+  "rules-add": 2,
+  "decisions-p3": 2,
+  "decisions-p5": 2,
+  "f4-readtime": 3,
+  oracle: 3,
+  OM: 3,
+  "om-reflector-loo": 3,
+  "om-dropper-deterministic": 3,
+});
+export const C1_WORK_WAVE = 2;
+export const C1_ONTOLOGY_WAVE = 3;
+
+/** The wave of one job: write sides 1, work-outcome 2, ontology 3, robustness by its arm. */
+export function c1WaveOf(job) {
+  if (job.kind === "write-side") return 1;
+  if (job.kind === "work-outcome") return C1_WORK_WAVE;
+  if (job.kind === "ontology") return C1_ONTOLOGY_WAVE;
+  const wave = C1_WAVES[job.arm];
+  if (!wave) throw new Error(`C1Waves: arm ${job.arm} has no wave`);
+  return wave;
+}
+
+/** `PRISM_MEMORY_BENCH_210_WAVES` ("1", "1,2", ...): the waves a run may start; anything else is deferred. */
+export function parseC1Waves(value) {
+  if (value === undefined || value === null || value === "") return null;
+  const waves = String(value)
+    .split(",")
+    .map((item) => Number(item.trim()));
+  if (!waves.length || waves.some((wave) => ![1, 2, 3].includes(wave)))
+    throw new Error(`C1Waves: PRISM_MEMORY_BENCH_210_WAVES must list waves 1-3, got "${value}"`);
+  return [...new Set(waves)].sort();
 }
 
 /** Every job of the campaign, producers first. Pure given the product and ingest hashes. */
@@ -513,7 +591,8 @@ export function c1Jobs({ productHash, ingestHash }) {
   // OM jobs run last: they are the costliest per question, so the allowance reaches every other arm first.
   const om = robustness.filter((job) => job.config === "om");
   const rest = robustness.filter((job) => job.config !== "om");
-  return assertC1Jobs([...producers.values(), ...rest, ...ontology, ...work, ...om]);
+  const jobs = [...producers.values(), ...rest, ...ontology, ...work, ...om].map((job) => ({ ...job, wave: c1WaveOf(job) }));
+  return assertC1Jobs(jobs);
 }
 
 /** Development only, gate C-1 routes only, every arm paired with an existing base on the same suite and model. */
@@ -549,6 +628,7 @@ export function assertC1Jobs(jobs) {
     const base = jobs.find((item) => item.id === baseId);
     if (base.subset !== job.subset || base.provider !== job.provider || base.model !== job.model)
       throw new Error(`C1Pairing: ${job.id} and its base differ in partition or route`);
+    if (job.wave !== undefined && base.wave > job.wave) throw new Error(`C1Waves: ${job.id} runs before its base ${baseId}`);
   }
   return jobs;
 }
@@ -698,9 +778,9 @@ export const C1_PREDICTION_ARMS = Object.freeze({
   "aggregation-loo": "aggregation-loo",
   "directory-loo": "directory-loo",
   "rules-loo": ["W.rules-loo", "rules-add"],
-  "decisions-p3": "unmeasurable:decisions.P3",
-  "decisions-p4": "unmeasurable:decisions.P4",
-  "decisions-p5": "unmeasurable:decisions.P5",
+  "decisions-p3": "decisions-p3",
+  "decisions-p4": "W.decisions-p4",
+  "decisions-p5": "decisions-p5",
   "lessons-loo": "W.lessons-loo",
   "trigger-co-read-loo": "trigger-co-read-loo",
   "trigger-accumulation-loo": "trigger-accumulation-loo",
@@ -750,6 +830,7 @@ export async function buildExecutableC1Manifest({
   root = ".",
   only = process.env.PRISM_MEMORY_BENCH_210_JOBS,
   smoke = process.env.PRISM_MEMORY_BENCH_210_SMOKE === "1",
+  waves = parseC1Waves(process.env.PRISM_MEMORY_BENCH_210_WAVES),
 } = {}) {
   const manifest = await buildC1Manifest({ root });
   const gate = assertC1Gate(await readC1Gate({ root }), manifest);
@@ -773,10 +854,17 @@ export async function buildExecutableC1Manifest({
           executionManifestPath: `${C1_EVIDENCE}/execution-manifest-${smoke ? "smoke" : "worker"}-${tag}.json`,
         }
       : {}),
+    // The job list (and so the journal) is the whole campaign; jobs outside the active waves are deferred at run time.
+    ...(waves ? { activeWaves: waves } : {}),
     status: "approved",
     executable: true,
     gate: { path: C1_GATE, manifestHash: gate.manifestHash, approvedAt: gate.approvedAt },
   };
+}
+
+/** A job the run must not start: outside the manifest's active waves. */
+export function c1Deferred(manifest, job) {
+  return Array.isArray(manifest.activeWaves) && !manifest.activeWaves.includes(job.wave);
 }
 
 /** Every route the jobs call is in Ollama Cloud's live catalog, and the allowance is open; nothing runs otherwise. */
@@ -1058,9 +1146,14 @@ export const C1_PREDICTION_RULES = Object.freeze({
   },
   "directory-loo": { kind: "null", points: 2, suites: ["locomo", "longmemeval-m"] },
   "rules-loo": { kind: "gain", points: 2.5, suites: ["beam-100k"], note: "add-one on conversational; W2 part scored from the work leg" },
-  "decisions-p3": { notScored: "unmeasurable under gate C-1 (no decisions-capable free route)" },
-  "decisions-p4": { notScored: "unmeasurable under gate C-1 (no decisions-capable free route)" },
-  "decisions-p5": { notScored: "unmeasurable under gate C-1 (no decisions-capable free route)" },
+  "decisions-p3": {
+    kind: "gain",
+    points: 1,
+    suites: ["beam-100k", "locomo"],
+    note: "accuracy part; the irrelevant-share part is read from injections",
+  },
+  "decisions-p4": { notScored: "injected tokens and W6 (work leg)" },
+  "decisions-p5": { kind: "gain", points: 2.5, suites: ["beam-100k"], note: "abstention +1 of 4 on 40 questions; scored on the suite" },
   "w-steps-loo": { notScored: "W1 (work leg)" },
   "lessons-loo": { notScored: "W1 (work leg)" },
   "trigger-co-read-loo": { kind: "non-inferior", points: 5, suites: C1_ONTOLOGY_SUITES, note: "with the trigger removed" },
