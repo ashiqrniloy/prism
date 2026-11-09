@@ -992,11 +992,17 @@ async function main210() {
  * Plan 216 Task 2: memory-model gate verdicts (M-1 ... M-5, M-T, A). Every verdict comes from memoryModelVerdict()
  * over memory-model-criteria.json; the evidence file must pin the frozen hash. No evidence file means `pending`.
  */
-export async function memoryModelReport({ gate, partition, evidencePath, write = false } = {}) {
+export async function memoryModelReport({ gate, partition, evidencePath, write = false, build = false } = {}) {
   const { existsSync } = await import("node:fs");
   const { mkdir } = await import("node:fs/promises");
   const { memoryModelGateVerdict } = await import("./robustness.mjs");
   if (!gate) throw new Error("MemoryBenchArguments: --plan memory-model needs --gate <M-1|M-2|M-3|M-T|M-4|M-5|A>");
+  // Plan 217 Task 6: `--build` computes gate M-1's evidence from its run reports (stm-gate.mjs), never by hand.
+  if (build) {
+    if (gate !== "M-1") throw new Error(`MemoryBenchArguments: --build is gate M-1's (plan 217); gate ${gate} has no builder yet`);
+    if (evidencePath) throw new Error("MemoryBenchArguments: --build writes M-1/evidence.json; it takes no --evidence");
+    await (await import("./stm-gate.mjs")).writeM1Evidence();
+  }
   const directory = new URL(`../../docs/_evidence/memory-bench/memory-model/${gate}/`, import.meta.url);
   const path = evidencePath ?? new URL("evidence.json", directory);
   if (evidencePath && !existsSync(path)) throw new Error(`MemoryBenchArguments: evidence file ${evidencePath} does not exist`);
@@ -1017,6 +1023,7 @@ async function mainMemoryModel() {
       partition: flag("--partition"),
       evidencePath: flag("--evidence"),
       write: process.argv.includes("--write"),
+      build: process.argv.includes("--build"),
     });
     console.log(
       JSON.stringify(

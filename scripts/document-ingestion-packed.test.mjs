@@ -1,9 +1,10 @@
 // Packed host journey: work tarball composition + memory ingest. No memory→work import.
+
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { test } from "bun:test";
 import { pathToFileURL } from "node:url";
 
 const ROOT = join(import.meta.dirname, "..");
@@ -11,15 +12,16 @@ const ROOT = join(import.meta.dirname, "..");
 test("packed extraction wires wiki and rag; unrelated imports do not need anydoc", async () => {
   const dir = mkdtempSync(join(ROOT, "node_modules", ".prism-132-pack-"));
   try {
-    // release-host registry toolchain — runner images ship Node; contributors never invoke npm
-    const tgz = execFileSync("npm", ["pack", "-w", "@arnilo/prism-tools-work", "--pack-destination", dir], {
-      cwd: ROOT,
+    // Bun-only release toolchain (plan 124/175): `bun pm pack` packs one workspace, and no
+    // step shells out to npm any more.
+    const tgz = execFileSync("bun", ["pm", "pack", "--quiet", "--destination", dir], {
+      cwd: join(ROOT, "packages/tools/work"),
       encoding: "utf8",
     })
       .trim()
       .split("\n")
       .at(-1);
-    execFileSync("tar", ["-xzf", join(dir, tgz), "-C", dir], { stdio: "pipe" });
+    execFileSync("tar", ["-xzf", tgz, "-C", dir], { stdio: "pipe" });
     const pkg = join(dir, "package");
     assert.equal(existsSync(join(pkg, "docling", "ocr.py")), true);
     const extractionJs = readFileSync(join(pkg, "src/document-extraction/index.ts"), "utf8");

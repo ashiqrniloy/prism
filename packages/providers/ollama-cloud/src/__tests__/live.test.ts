@@ -1,4 +1,4 @@
-import { runProviderLiveScenarios } from "@arnilo/prism/testing";
+import { runProviderLiveScenarios, runSystemOneLiveScenarios } from "@arnilo/prism/testing";
 import { ollamaCloud } from "../index.js";
 
 runProviderLiveScenarios({
@@ -22,4 +22,13 @@ runProviderLiveScenarios({
   },
   secretEnv: ["OLLAMA_API_KEY"],
   title: "@arnilo/prism-provider-ollama-cloud live tests",
+});
+
+// Decision models (`/api/show` capability `decision`) answer the System One wire at `/v1/systemone`.
+await runSystemOneLiveScenarios({
+  provider: (options) => ollamaCloud({ apiKey: "env:OLLAMA_API_KEY", fetch: options?.fetch }),
+  model: process.env.PRISM_LIVE_OLLAMA_CLOUD_DECISION_MODEL ?? "clef:27b",
+  secretEnv: "OLLAMA_API_KEY",
+  decideTestName: "ollama_cloud_live_decide",
+  title: "@arnilo/prism-provider-ollama-cloud decision live tests",
 });

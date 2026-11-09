@@ -17,24 +17,23 @@ import {
   type Session,
   toolCallContent,
 } from "@arnilo/prism";
-import { MEMORY_LTM_SERVICE, type MemoryLtmPort, memoryFabric } from "@arnilo/prism-memory-fabric";
-import memoryObservational from "@arnilo/prism-memory-observational";
+import memorySystem, { MEMORY_LTM_SERVICE, type MemoryLtmPort } from "@arnilo/prism-memory-system";
 import { createMarkdownWikiStore, parseConceptBody, wiki } from "@arnilo/prism-wiki";
 
 /**
  * Memory and the wiki in one deterministic run (plan 216 Task 3; plan 207 Task 9 first wrote it as the three-tier
  * stack). Memory and knowledge are separate packages:
  *
- * - **`@arnilo/prism-memory-observational`**: watches the session and records observations.
- * - **`@arnilo/prism-memory-fabric`** (long-term memory): typed notes and verbatim exchanges, the store of record. It
- *   offers the wiki one read-only port, `memory.ltm`, and nothing else.
+ * - **`@arnilo/prism-memory-system`**: its session tiers watch the session and record observations; its long-term
+ *   memory (`ltm`) holds typed notes and verbatim exchanges, the store of record, and offers the wiki one read-only
+ *   port, `memory.ltm`, and nothing else.
  * - **`@arnilo/prism-wiki`**: concepts, claims and subject bindings in its own markdown store under `wiki.root`; a
  *   background curator consolidates evidence into one concept per subject, every claim citing the notes it rests on.
  *
  * What the run shows:
  *
  * 1. Three sessions of scripted turns. The model writes one fact note per session with `memory.insert`, and the
- *    fabric archives each exchange.
+ *    long-term memory archives each exchange.
  * 2. `wiki:consolidate` runs one concept pass. The curator creates the `payments` subject, binds the notes that
  *    belong to it and writes claims that each cite their LTM note ids. Memory gains no concept: the concept is a file
  *    in the wiki's store.
@@ -106,7 +105,7 @@ function curate(request: ProviderRequest): ProviderEvent[] {
   return [providerToolCall(toolCallContent("curate-1", "edit_concept", { edits })), providerDone({ inputTokens: 40, outputTokens: 20 })];
 }
 
-/** The observation worker: one `record_observation` call, sourced from the first entry its prompt lists. */
+/** The observation worker: one `record_event` call, sourced from the first entry its prompt lists. */
 function observe(request: ProviderRequest): ProviderEvent[] {
   const answered = request.messages.some((message) => message.role === "tool");
   const prompt = request.messages.find((message) => message.role === "user")?.content[0];
@@ -114,8 +113,9 @@ function observe(request: ProviderRequest): ProviderEvent[] {
   if (answered || !sourceId) return [providerDone()];
   return [
     providerToolCall(
-      toolCallContent("observe-1", "record_observation", {
-        content: "The user keeps stating durable facts about the payments service.",
+      toolCallContent("observe-1", "record_event", {
+        kind: "statement",
+        description: "The user keeps stating durable facts about the payments service.",
         relevance: "high",
         sourceEntryIds: [sourceId],
       }),
@@ -184,10 +184,10 @@ try {
     slots: { store: createMemorySessionStore() },
     packages: [
       providerPackage,
-      // Observation: inert until a session turns `om` on. `messageTokens: 1` makes the first turn cross the threshold.
-      memoryObservational({ observer: { model: "mock/observer", messageTokens: 1 } }),
-      // Long-term memory: the store of record. `exchanges: {}` archives every completed turn verbatim.
-      memoryFabric({ tools: { root }, exchanges: {} }),
+      // One memory system. Session memory is inert until a session turns `memory:session` on; `triggerTokens: 1` makes the
+      // first turn cross the threshold. Long-term memory (`ltm`) is the store of record; `exchanges: {}` archives every
+      // completed turn verbatim.
+      memorySystem({ stm: { model: "mock/observer", triggerTokens: 1 }, ltm: { tools: { root }, exchanges: {} } }),
       // The wiki: its own store under `root`. The concept pass runs on the curator model. `minNotes: 50` keeps the
       // automatic accumulation check quiet, so the only passes are the ones run with `wiki:consolidate`.
       wiki({ workspaceRoot: root, root: knowledgeRoot, consolidate: { model: "mock/curator", triggers: ["accumulation"], minNotes: 50 } }),
@@ -218,7 +218,7 @@ try {
   // 1. Three sessions. T0 observes the first; every session leaves a fact note and an archived exchange.
   for (const [index, fact] of FACTS.entries()) {
     const session = await agent.session({ id: `session-${index + 1}`, create: true });
-    if (index === 0) await agent.commands.run("om", {}, { session });
+    if (index === 0) await agent.commands.run("memory:session", {}, { session });
     script.push(insertFact(`insert-${index + 1}`, fact.text, fact.keywords), say("Noted."));
     await turn(session, fact.prompt);
     await session.close();
@@ -293,7 +293,7 @@ try {
   await fifth.close();
 
   const facts = (await kinds()).filter((kind) => kind === "fact").length;
-  const status = (await agent.commands.run("om:status", {}, { session: await agent.session({ id: "session-1" }) })) as {
+  const status = (await agent.commands.run("memory:session:status", {}, { session: await agent.session({ id: "session-1" }) })) as {
     observations?: { recorded: number };
   };
   console.log(

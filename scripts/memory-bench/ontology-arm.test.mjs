@@ -184,9 +184,9 @@ test("settle_timeout_is_recorded_deviation", async () => {
 test("readiness_refuses_ontology_manifest_without_criteria_or_prefix_record", async () => {
   const root = await mkdtemp(join(tmpdir(), "prism-ontology-pin-"));
   try {
-    for (const dir of ["packages/memory/fabric/src", "packages/knowledge/wiki/src", "docs/_evidence/memory-bench/207"])
+    for (const dir of ["packages/memory/system/src/ltm", "packages/knowledge/wiki/src", "docs/_evidence/memory-bench/207"])
       await mkdir(join(root, dir), { recursive: true });
-    await writeFile(join(root, "packages/memory/fabric/src/index.ts"), "export const fabric = 1;\n");
+    await writeFile(join(root, "packages/memory/system/src/ltm/index.ts"), "export const fabric = 1;\n");
     await writeFile(join(root, "packages/knowledge/wiki/src/index.ts"), "export const wiki = 1;\n");
     const probeFor = async (extra = {}) => {
       const { sourceFingerprint, PREFIX_PRODUCT_PATHS } = await import("./acceptance.mjs");

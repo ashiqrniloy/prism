@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { createAgent, type JsonObject, type ModelClient } from "@arnilo/prism";
 import { providerDone, providerToolCall, toolCallContent } from "@arnilo/prism/testing";
 import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
-import { createMemory, createMemoryFabric, createMemoryLtmPort, memoryFabric } from "@arnilo/prism-memory-fabric";
+import memorySystem, { createMemory, createLongTermMemory, createMemoryLtmPort } from "@arnilo/prism-memory-system";
 import { resolveMemoryWorkerLimits } from "@arnilo/prism-memory-core";
 import { createWikiLease, runWikiPass, type WikiPassConfig } from "../consolidate/pass.js";
 import { EDIT_TOOL_NAME } from "../consolidate/schema.js";
@@ -49,7 +49,7 @@ function setup(root: string | undefined) {
   const ltm = createMemoryLtmPort({ scopes: () => [{ level: "project", memory, store: vectorStore }] });
   const store = root === undefined ? createMemoryWikiStore() : createMarkdownWikiStore({ root });
   const port = createWikiOntology({ store, ltm: () => ltm });
-  const fabric = createMemoryFabric({ memory, vectorStore, consolidate: false });
+  const fabric = createLongTermMemory({ memory, vectorStore, consolidate: false });
   const options = { workspaceRoot: root ?? tempRoot(), port: () => port };
   return { memory, fabric, port, store, vectorStore, options };
 }
@@ -87,7 +87,7 @@ describe("source ingest into the ontology", () => {
     const knowledgeRoot = join(dir, "wiki");
     const agent = await createAgent({
       model: mock,
-      packages: [memoryFabric({ tools: { root: dir } }), wiki({ workspaceRoot: dir, root: knowledgeRoot })],
+      packages: [memorySystem({ ltm: { tools: { root: dir } } }), wiki({ workspaceRoot: dir, root: knowledgeRoot })],
     });
     try {
       const result = (await agent.commands.run(WIKI_INGEST_COMMAND_NAME, {

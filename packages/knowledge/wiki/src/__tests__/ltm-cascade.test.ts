@@ -10,7 +10,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHashEmbedder, createMemoryVectorStore, MemoryScopeError } from "@arnilo/prism-memory-core";
-import { createMemory, createMemoryFabric, createMemoryLtmPort, type LtmScope } from "@arnilo/prism-memory-fabric";
+import { createMemory, createLongTermMemory, createMemoryLtmPort, type LtmScope } from "@arnilo/prism-memory-system";
 import { parseConceptBody } from "../ontology/codec.js";
 import type { LtmPort } from "../ontology/ltm.js";
 import { createWikiOntology } from "../ontology/port.js";
@@ -24,7 +24,7 @@ function memorySide() {
   const memory = createMemory({ ...scope, resourceId: "r-project", embedder: createHashEmbedder({ dimensions: 8 }), vectorStore });
   const scopes: LtmScope[] = [{ level: "project", memory, store: vectorStore }];
   const ltm = createMemoryLtmPort({ scopes: () => scopes });
-  const fabric = createMemoryFabric({ memory, vectorStore, consolidate: false });
+  const fabric = createLongTermMemory({ memory, vectorStore, consolidate: false });
   const note = async (text: string) => (await fabric.remember({ kind: "fact", content: text })).id;
   return { vectorStore, memory, scopes, ltm, note };
 }
@@ -209,7 +209,7 @@ describe("deletion cascades from long-term memory into the wiki", () => {
       return {
         memory,
         ltm: createMemoryLtmPort({ scopes: () => [{ level: "project", memory, store: vectorStore }] }),
-        fabric: createMemoryFabric({ memory, vectorStore, consolidate: false }),
+        fabric: createLongTermMemory({ memory, vectorStore, consolidate: false }),
       };
     };
     const a = project("project-a");

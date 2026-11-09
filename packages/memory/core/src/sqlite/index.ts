@@ -2,7 +2,7 @@ import type { Database } from "bun:sqlite";
 import { closeSync, openSync } from "node:fs";
 import { assertAccessConstraint, assertAccessGrants, assertAuthorizationTenant, grantAllows, sourceIdFromRecord } from "../acl.js";
 import { HARD_DIRECTORY_TAGS, resolveDirectoryAsOf, resolveDirectoryLimit } from "../directory.js";
-import { MemoryConflictError, MemoryValidationError } from "../errors.js";
+import { MemoryValidationError } from "../errors.js";
 import { lexicalCoverage, lexicalKeys, lexicalTermString, lexicalTerms } from "../lexical.js";
 import { assertInvalidationBatch, assertShareGrant, HARD_LINEAGE_EDGES, recordBlocked } from "../lineage.js";
 import {
@@ -28,17 +28,13 @@ import type {
   VectorQuery,
   VectorScanMetadataQuery,
   VectorStore,
-  WorkingMemoryRecord,
-  WorkingMemoryStore,
 } from "../types.js";
 import {
-  assertByteLimit,
   assertFiniteVector,
   assertNotAborted,
   assertRecordEmbedding,
   assertTextLimit,
   cosineSimilarity,
-  mergeJsonObjects,
   requireNonEmptyString,
   requireScope,
 } from "../util.js";
@@ -52,7 +48,6 @@ export interface SqliteMemoryStoresOptions {
 }
 export interface SqliteMemoryStores {
   readonly vectorStore: Required<VectorStore>;
-  readonly workingStore: WorkingMemoryStore;
   close(): void;
 }
 
@@ -106,6 +101,19 @@ const ACTIVE_NOTE = `s.tenant_id=? AND s.resource_id=? AND s.thread_id=?
   AND (json_type(s.record,'${FABRIC}.validTo') IS NULL OR julianday(json_extract(s.record,'${FABRIC}.validTo')) > julianday(?))
   AND ${NOT_BLOCKED}`;
 
+/**
+ * Opens a local SQLite file for a memory store: created mode 0600 when absent (`:memory:` creates no file), in strict
+ * binding mode, with a 5 s busy timeout. The caller owns the schema and `close()`.
+ */
+export async function openSqliteDatabase(path: string): Promise<Database> {
+  requireNonEmptyString(path, "path");
+  if (path !== ":memory:") closeSync(openSync(path, "a", 0o600));
+  const { Database } = await import("bun:sqlite");
+  const db = new Database(path, { strict: true });
+  db.exec("PRAGMA busy_timeout = 5000");
+  return db;
+}
+
 export async function createSqliteMemoryStores(options: SqliteMemoryStoresOptions): Promise<SqliteMemoryStores> {
   requireNonEmptyString(options.path, "path");
   if (options.dimensions !== undefined && (!Number.isInteger(options.dimensions) || options.dimensions < 1))
@@ -113,11 +121,8 @@ export async function createSqliteMemoryStores(options: SqliteMemoryStoresOption
   let db: Database | undefined;
   let dimensions = options.dimensions;
   try {
-    if (options.path !== ":memory:") closeSync(openSync(options.path, "a", 0o600));
-    const { Database } = await import("bun:sqlite");
-    const openedDb = new Database(options.path, { strict: true });
+    const openedDb = await openSqliteDatabase(options.path);
     db = openedDb;
-    openedDb.exec("PRAGMA busy_timeout = 5000");
     openedDb
       .transaction(() => {
         const app = openedDb.query<{ application_id: number }, []>("PRAGMA application_id").get()?.application_id;
@@ -152,7 +157,6 @@ export async function createSqliteMemoryStores(options: SqliteMemoryStoresOption
         if (openedDb.query<{ quick_check: string }, []>("PRAGMA quick_check").get()?.quick_check !== "ok")
           throw new MemoryValidationError("Corrupt SQLite memory file");
         openedDb.query("SELECT record FROM semantic_memory LIMIT 0").all();
-        openedDb.query("SELECT record FROM working_memory LIMIT 0").all();
         openedDb.query("SELECT value FROM memory_state LIMIT 0").all();
         openedDb.query("SELECT value FROM memory_scope_counter LIMIT 0").all();
         openedDb.exec("INSERT INTO semantic_memory_fts(semantic_memory_fts, rank) VALUES ('integrity-check', 1)");
@@ -574,65 +578,9 @@ export async function createSqliteMemoryStores(options: SqliteMemoryStoresOption
       },
     },
   };
-  function getWorking(scope: MemoryScope): WorkingMemoryRecord | undefined {
-    const row = database
-      .query<{ record: string }, [string, string, string]>(
-        "SELECT record FROM working_memory WHERE tenant_id=? AND resource_id=? AND thread_id=?",
-      )
-      .get(...scopeArgs(scope, false));
-    return row ? decode<WorkingMemoryRecord>(row.record) : undefined;
-  }
-  function setWorking(record: WorkingMemoryRecord): void {
-    if (!Number.isInteger(record.version) || record.version < 1) throw new MemoryValidationError("version must be an integer >= 1");
-    assertByteLimit(record.value, 256 * 1024, "working memory");
-    const value = mergeJsonObjects({}, record.value);
-    database
-      .query(
-        "INSERT INTO working_memory VALUES (?, ?, ?, ?) ON CONFLICT(tenant_id,resource_id,thread_id) DO UPDATE SET record=excluded.record",
-      )
-      .run(...scopeArgs(record, false), encode({ ...requireScope(record), value, version: record.version, updatedAt: record.updatedAt }));
-  }
-  const workingStore: WorkingMemoryStore = {
-    async get(scope, opts = {}) {
-      assertNotAborted(opts.signal);
-      return getWorking(scope);
-    },
-    async set(record, opts = {}) {
-      assertNotAborted(opts.signal);
-      setWorking(record);
-    },
-    async update(scope, patch, opts = {}) {
-      assertNotAborted(opts.signal);
-      return database
-        .transaction(() => {
-          const prior = getWorking(scope);
-          if (opts.expectedVersion !== undefined && (prior?.version ?? 0) !== opts.expectedVersion)
-            throw new MemoryConflictError("working memory version conflict");
-          if (opts.mode !== undefined && opts.mode !== "merge" && opts.mode !== "replace")
-            throw new MemoryValidationError("Invalid working memory update mode");
-          const next = {
-            ...requireScope(scope),
-            value: mergeJsonObjects(opts.mode === "replace" ? {} : (prior?.value ?? {}), patch),
-            version: (prior?.version ?? 0) + 1,
-            updatedAt: new Date().toISOString(),
-          };
-          setWorking(next);
-          return next;
-        })
-        .immediate();
-    },
-    async delete(scope, opts = {}) {
-      assertNotAborted(opts.signal);
-      return (
-        database.query("DELETE FROM working_memory WHERE tenant_id=? AND resource_id=? AND thread_id=?").run(...scopeArgs(scope, false))
-          .changes > 0
-      );
-    },
-  };
   let closed = false;
   return {
     vectorStore,
-    workingStore,
     close() {
       if (!closed) {
         database.close();

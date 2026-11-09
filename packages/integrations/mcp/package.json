@@ -20,14 +20,14 @@
   },
   "dependencies": {
     "@arnilo/prism-governance": "^0.13.0",
-    "@modelcontextprotocol/client": "2.0.0",
+    "@modelcontextprotocol/client": "^2.3.0",
     "zod": "^4.6.2"
   },
   "peerDependencies": {
     "@arnilo/prism": ">=0.13.0 <1.0.0"
   },
   "devDependencies": {
-    "@modelcontextprotocol/server": "2.0.0"
+    "@modelcontextprotocol/server": "^2.3.0"
   },
   "engines": {
     "bun": ">=1.4.2"

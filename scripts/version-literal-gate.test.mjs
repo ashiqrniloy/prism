@@ -226,8 +226,9 @@ function parseLock(files, path, problems) {
 export function claimViolations(files, current) {
   const problems = [];
   const manifests = [...files.keys()].filter((path) => MANIFEST.test(path)).sort();
-  if (manifests.length !== 52) {
-    problems.push(`expected 52 manifests (root + 51 workspaces) to check for lockstep ${current}, got ${manifests.length}`);
+  // Plan 216 Task 5 folded the fabric into memory-system: 51 manifests (root + 50 workspaces).
+  if (manifests.length !== 51) {
+    problems.push(`expected 51 manifests (root + 50 workspaces) to check for lockstep ${current}, got ${manifests.length}`);
   }
   const parsed = new Map();
   for (const path of manifests) {
@@ -356,9 +357,9 @@ test("positive control: the experimental line is accepted for exactly the experi
   const files = claimFiles(ROOT);
   const current = currentVersion(ROOT);
   assert.ok(EXPERIMENTAL_LINES.size > 0, "the experimental list is not empty");
-  const fabric = "packages/memory/fabric/package.json";
+  const memory = "packages/memory/system/package.json";
   const tools = "packages/tools/web/package.json";
-  const manifest = JSON.parse(files.get(fabric));
+  const manifest = JSON.parse(files.get(memory));
   assert.match(manifest.version, EXPERIMENTAL_VERSION, "an experimental package carries the prerelease");
   const mutate = (path, change) => {
     const next = new Map(files);
@@ -368,7 +369,7 @@ test("positive control: the experimental line is accepted for exactly the experi
     return claimViolations(next, current);
   };
   assert.ok(
-    mutate(fabric, (m) => {
+    mutate(memory, (m) => {
       m.version = current;
     }).some((problem) => problem.includes("is not x.y.z-experimental.N")),
     "an experimental package at the plain release version is reported",

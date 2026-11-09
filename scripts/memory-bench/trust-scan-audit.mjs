@@ -1,7 +1,7 @@
 /**
  * Plan 188.11 Task 8: measure the exchange archive's gates offline. Every user/assistant exchange in
  * the pinned LongMemEval-S and LoCoMo files is passed through the trust scan and an agent
- * `SecretRedactor` exactly as `packages/memory/fabric/src/exchanges.ts` does, and a small adversarial
+ * `SecretRedactor` exactly as `packages/memory/system/src/ltm/exchanges.ts` does, and a small adversarial
  * fixture measures detection recall per refused class. No model call is made and no corpus text is
  * written: the report holds ids, counts, rates and classes only.
  */

@@ -11,7 +11,7 @@ const sources = new Set(["om", "fabric-working", "fabric-semantic", "fabric-dire
 function sourceOf(block) {
   if (sources.has(block.metadata?.source)) return block.metadata.source;
   const name = block.title ?? block.id ?? "";
-  if (name === "observational-memory") return "om";
+  if (name === "session-memory" || name === "observational-memory") return "om";
   if (/working/i.test(name)) return "fabric-working";
   if (/semantic|memory-recall/i.test(name)) return "fabric-semantic";
   if (/directory/i.test(name)) return "fabric-directory";

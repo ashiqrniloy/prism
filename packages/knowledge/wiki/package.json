@@ -31,7 +31,7 @@
     "@arnilo/prism-rag": "0.13.0-experimental.0"
   },
   "devDependencies": {
-    "@arnilo/prism-memory-fabric": "file:../../memory/fabric",
+    "@arnilo/prism-memory-system": "file:../../memory/system",
     "@arnilo/prism-tools-web": "file:../../tools/web",
     "@types/node": "^22.20.0",
     "typescript": "^7.0.2"

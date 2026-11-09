@@ -13,7 +13,7 @@ read-only `memory.ltm` service. The wiki never writes memory. The [example](../.
 beside the memory packages.
 
 **Status: opt-in and unmeasured.** Nothing in this package changes a default, and no quality claim ships from it until the
-memory track's acceptance run decides. The ontology moved here from `@arnilo/prism-memory-fabric` in plan 216 Task 3
+memory track's acceptance run decides. The ontology moved here from the fabric (now long-term memory in `@arnilo/prism-memory-system`) in plan 216 Task 3
 (owner decision 2026-11-08); `docs/migrate-to-0.13.md` ("Wiki → knowledge outside memory") maps every moved name.
 
 ## Install
@@ -27,8 +27,8 @@ prism add @arnilo/prism-wiki --version 0.13.0-experimental.0
 { "package": "@arnilo/prism-wiki", "config": { "root": "./.prism/wiki", "consolidate": { "model": "openai/gpt-5-mini" } } }
 ```
 
-It needs no other package. With [`@arnilo/prism-memory-fabric`](../../memory/fabric/README.md) installed (`semantic` on, the
-default) it also reads memory notes through `memory.ltm`; package order does not matter, because the service is resolved
+It needs no other package. With [`@arnilo/prism-memory-system`](../../memory/system/README.md) installed with `ltm`
+configured (`semantic` on, the default) it also reads memory notes through `memory.ltm`; package order does not matter, because the service is resolved
 per call. Without memory it runs on its own sources, and `wiki:status` says so.
 
 ## Configuration
@@ -133,13 +133,13 @@ Unknown fields are rejected, so a 0.12 config fails at load. The 0.12 fields are
 
 ```ts
 import { createAgent } from "@arnilo/prism";
-import memoryFabric from "@arnilo/prism-memory-fabric";
+import memorySystem from "@arnilo/prism-memory-system";
 import { wiki } from "@arnilo/prism-wiki";
 
 const agent = await createAgent({
   model: "openai/gpt-5",
   packages: [
-    memoryFabric({ preset: "coding", tools: { root: "./.prism/memory-local" } }),
+    memorySystem({ ltm: { preset: "coding", tools: { root: "./.prism/memory-local" } } }),
     wiki({ root: "./.prism/wiki", consolidate: { model: "openai/gpt-5-mini" } }),
   ],
 });
@@ -149,7 +149,7 @@ const status = await agent.commands.run("wiki:status", {});
 
 ## Related APIs
 
-- `@arnilo/prism-memory-fabric`: long-term memory; provides the read-only `memory.ltm` service the wiki reads.
+- `@arnilo/prism-memory-system`: long-term memory (`ltm`) provides the read-only `memory.ltm` service the wiki reads.
 - `@arnilo/prism-memory-core`: the worker loop and limits, and the trust scan the wiki runs.
 - `@arnilo/prism-rag`: the PDF parser and document byte cap the ingest uses.
 - `@arnilo/prism-tools-web`: provides the `web.fetch` service for `url` ingest.

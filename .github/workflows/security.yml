@@ -1,5 +1,7 @@
 name: security
 
+# Plan 215 Task 36: the one CodeQL and supply-chain body. It runs on push/PR/schedule and the
+# release pipeline calls it (`workflow_call`) instead of keeping a second copy of both jobs.
 on:
   push:
     branches: [main, master]
@@ -7,6 +9,7 @@ on:
   schedule:
     - cron: "17 4 * * 1"
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -52,6 +55,10 @@ jobs:
   supply-chain:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Narrowed explicitly: a release caller grants `security-events: write` for `codeql`, and
+    # this job does not write anything to the code-scanning API.
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

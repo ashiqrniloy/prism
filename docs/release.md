@@ -1,13 +1,13 @@
 # Release and provenance
 
-> Publishing is Bun-only: the tarballs are packed once, attested, and
-> then published unchanged. This page covers the release pipeline and how a consumer verifies a
-> published package.
+> Bun packs the tarballs once and the workflow attests them; npm publishes exactly those bytes
+> under OIDC trusted publishing, so no npm token exists. This page covers the release pipeline, the
+> owner's registry setup, and how a consumer verifies a published package.
 
 ## The pipeline
 
-A release tag runs `.github/workflows/release.yml`. After the verify, Postgres, office, CodeQL, and
-supply-chain gates pass, the `publish` job:
+A release tag runs `.github/workflows/release.yml`. After the verify, Postgres, office and security
+(CodeQL plus supply chain) gates pass, the `publish` job:
 
 1. Packs every package once with `bun scripts/release.mjs pack --destination release-artifacts`
    (`bun pm pack` per package).
@@ -15,12 +15,42 @@ supply-chain gates pass, the `publish` job:
    `security/license-policy.json`, and secret-scans the unpacked tarballs.
 3. Attests the tarballs and the SBOM with GitHub build provenance
    (`actions/attest-build-provenance`).
-4. Publishes the same tarballs with `bun publish <tarball> --access public --tag latest` (or
-   `--tag experimental` for a package on the [experimental line](#experimental-packages)), in
-   dependency order, resumably (`--resume` compares the registry manifest before skipping a version).
+4. Publishes the same tarballs with `npm publish <tarball> --access public --tag latest` (or
+   `--tag experimental` for a package on the [experimental line](#experimental-packages)) and
+   `--provenance`, in dependency order, resumably (`--resume` compares the registry manifest before
+   skipping a version).
 
-No npm binary runs in the release path. The SBOM is SPDX 2.3, built from `bun.lock` plus each
-installed package's `package.json` license.
+`npm publish` is the only step npm owns, and it holds no secret: the job runs in the `npm-publish`
+environment with `id-token: write`, and npm exchanges that OIDC token for a short-lived credential
+scoped to `release.yml`. Publishing needs npm 11.5.1 or newer on Node 22.14.0 or newer; the job
+installs Node 24.10.0, which bundles npm 11.6.2. `bun publish` is not used, because it has no OIDC
+support. The SBOM is SPDX 2.3, built from `bun.lock` plus each installed package's `package.json`
+license.
+
+### Owner setup for trusted publishing
+
+npm has no API for this, so it is set per package on npmjs.com. `bun scripts/registry-cleanup.mjs
+--trusted-publishers` prints the list and the exact settings.
+
+1. **Configure the trusted publisher** on every published `@arnilo` name: Packages → *name* →
+   Settings → Trusted publishing → GitHub Actions, with the owner, the repository, the workflow
+   filename `release.yml`, the environment `npm-publish`, and **both** allowed actions — `npm
+   publish` and `npm dist-tag` (the release sets `--tag experimental`; dist-tag calls need npm
+   11.21.0 or 12.2.0).
+2. **Disallow tokens** on the same page: Publishing access → "Require two-factor authentication and
+   disallow tokens". Trusted publishers keep working; every granular token stops.
+3. **Bootstrap a name that was never published.** Its settings page does not exist until a version
+   does, so the first publish of each name is manual: `bun run release:publish` locally with 2FA,
+   from the tarballs CI packed (check them against `SHA256SUMS`). A manual publish carries the
+   GitHub attestation from the CI run but no npm provenance statement. Configure the trusted
+   publisher right after, and from then on OIDC is the only path.
+4. **Delete the `NPM_TOKEN` secret** (repository and organization) and revoke the token on
+   npmjs.com. No workflow reads a token any more.
+5. A newly created trusted publisher must complete its first successful publish within 2 days or it
+   expires; create it when the publish is ready, not before.
+
+There is no token fallback: if the trusted publisher is missing or misconfigured, the publish fails
+with an OIDC authorization error rather than falling back to a secret.
 
 ## Experimental packages
 
@@ -29,10 +59,10 @@ A package can ship on an experimental prerelease line: the same npm name, a vers
 the stability promise of the stable packages, so a host can try the package now while its API, config
 and defaults can still change or be removed in any release. A `^0.13.0` range never
 matches a prerelease, so a host reaches the line with `@experimental` or an exact version
-(`bun add @arnilo/prism-memory-fabric@experimental`).
+(`bun add @arnilo/prism-memory-system@experimental`).
 
-The set is one list: `experimental` in `scripts/independent-packages.json`. Today it names the five
-memory packages (`@arnilo/prism-memory-{core,observational,fabric,wiki,rag}`, at
+The set is one list: `experimental` in `scripts/independent-packages.json`. Today it names the four
+memory and knowledge packages (`@arnilo/prism-memory-{core,system}`, `@arnilo/prism-wiki` and `@arnilo/prism-rag`, at
 `0.13.0-experimental.0`). Nothing else carries the version or the tag. The release tooling enforces it:
 
 - **Tag.** `publishArgs` derives `--tag` from the list. An experimental package publishes under
@@ -45,7 +75,7 @@ memory packages (`@arnilo/prism-memory-{core,observational,fabric,wiki,rag}`, at
   (`0.13.0-experimental.0`, never a caret). Their ranges into stable packages and the kernel window
   peer (`>=0.13.0 <1.0.0`) are the usual ones. `satisfiesInternalRange` lets a prerelease target satisfy
   only an exact range, so a loose pin fails the release gates and never reaches an install.
-- **Bumping.** `bun scripts/release.mjs bump --package @arnilo/prism-memory-fabric --type prerelease`
+- **Bumping.** `bun scripts/release.mjs bump --package @arnilo/prism-memory-system --type prerelease`
   turns `0.13.0-experimental.0` into `0.13.0-experimental.1`, rewrites the exact pins that name it in
   the other manifests, and regenerates `bun.lock`. An experimental package bumps with `prerelease` only.
 - **Compat gate.** Experimental packages keep their baselines in `scripts/compat-baseline/`. A removal or a
@@ -90,17 +120,27 @@ tag runs before packing.
 
 ## What the gate runs
 
-`bun run release:gate` is the whole gate, in order: the release-evidence manifest, the client-neutrality
-check, the reference host suite (`@arnilo/prism-agent`), the process-driver suite
-(`@arnilo/prism-driver-process`), the three reference adapters through
-`examples/adapters/conformance.ts` (it exits non-zero on a failed leg), the vendor-neutrality and
-kernel-constraint tests, the package-skills gate (`scripts/package-skills-conformance.mjs`, see
-"Writing a package skill" in [Packages](packages.md)), the clean-install idempotence suite
-(`scripts/install-idempotence.test.mjs`), and finally `scripts/release.mjs gate` — which checks version-range drift, the
-per-package API surface against `scripts/compat-baseline/`, the kernel size budget, and the tarball
-deny list, for every publishable workspace. The reference host suite includes the offline evaluation
-gate (`apps/prism-agent/src/__tests__/evals.test.ts`), which asserts invariant scorers, `pass^4`, and
-non-regression against `apps/prism-agent/evals/baseline.json`.
+`bun run release:gate` is the whole gate, in order. `src/__tests__/docs.test.ts`
+(`docs_release_gate_list_matches_scripts`) compares this list with the `release:gate` script, so a
+step added to one without the other fails `bun run test`.
+
+1. `scripts/release-skip-manifest.mjs` — the release-evidence manifest (`bun run release:evidence`).
+2. `scripts/host-builder-index.mjs --check` — the host-builder kit matches the live surface.
+3. `scripts/check-client-neutrality.mjs` — the client-neutrality check.
+4. `@arnilo/prism-agent` test suite — the reference host, including the offline evaluation gate
+   (`apps/prism-agent/src/__tests__/evals.test.ts`: invariant scorers, `pass^4`, and non-regression
+   against `apps/prism-agent/evals/baseline.json`).
+5. `@arnilo/prism-driver-process` test suite — the process driver.
+6. `examples/adapters/conformance.ts` — the three reference adapters (it exits non-zero on a failed leg).
+7. `src/__tests__/driver-kit-vendor-neutral.test.ts`, `src/__tests__/kernel-constraints.test.ts`,
+   `src/__tests__/host-builder-kit.test.ts` — vendor neutrality, kernel constraints and the
+   host-builder kit (`host_builder_kit_matches_surface`).
+8. `scripts/package-skills-conformance.mjs` — the package-skill gate (`package_skills_conform`,
+   see "Writing a package skill" in [Packages](packages.md)).
+9. `scripts/install-idempotence.test.mjs` — the clean-install idempotence suite.
+10. `scripts/release.mjs gate` — the offline publish gates, for every publishable workspace:
+    version-range drift, the per-package API surface against `scripts/compat-baseline/`, the tarball
+    deny list, and the kernel size budget.
 
 The durable store legs need a database, because `test:postgres` records evidence the gate then reads:
 
@@ -115,6 +155,33 @@ bun run release:gate
 Without `PRISM_TEST_POSTGRES_URL` the durable surface records `blocked` and `release:gate` stops at
 `checkReleaseEvidence` rather than passing quietly. The DSN is read from the environment only — it is
 never written to `scripts/release-evidence.json`, `scripts/postgres-evidence.json`, or a log.
+
+## CI workflows
+
+One body per gate. `.github/workflows/` holds:
+
+| workflow | triggers | what it runs |
+| --- | --- | --- |
+| `release.yml` | push to main, any tag, PR, dispatch | `verify` (the `sdk:ready` steps plus `security:threat-suites`) on every run; `postgres-integration`, `security-release` and `office-validation`, then `publish` on a tag |
+| `security.yml` | push to main, PR, weekly, dispatch, `workflow_call` | CodeQL SAST, dependency review (PRs only), audit + SPDX SBOM + license policy + secret scan |
+| `integration-postgres.yml` | push to main, dispatch, `workflow_call` | the Postgres suites and the evidence `release:gate` reads, then the migration drill |
+| `integration-office.yml` | push to main, dispatch | the packed office golden round-trips |
+| `sandbox-browser.yml` | push to main, weekly, dispatch | the protected Docker/browser/egress matrix and the unused-code sweep |
+| `canary-providers.yml` | nightly, dispatch | one provider's live suite per matrix leg (default: the gating T1 providers) |
+| `live-canaries.yml` | weekly, dispatch | the four restricted live protocol canaries |
+| `live-matrix.yml` | weekly, dispatch | strict live suites; `memory-bench` and `context-rot` are manual-only memory-track tooling |
+| `coding-journey.yml` | weekly, dispatch | the protected real coding-agent journey |
+
+`release.yml` calls `security.yml` and `integration-postgres.yml` (`uses: ./.github/workflows/…`), so
+the CodeQL, supply-chain and Postgres bodies exist once. `scripts/workflow-liveness.test.mjs` holds the
+CI-integrity checks: every workspace, script, action pin (SHA plus version comment), job permission,
+credential-safe checkout and release tag condition, and that the `verify` job runs every `sdk:ready`
+step. No workflow names a version: `v*` is a lockstep cut and `@arnilo/<name>@<version>` an
+independent-line cut.
+
+The `publish` job runs in the `npm-publish` environment; add required reviewers there to make a publish
+need an approval (the environment has no rules until the owner sets them). `.github` also holds
+`dependabot.yml`, which bumps the action pins weekly.
 
 ## Live acceptance
 
@@ -187,7 +254,7 @@ specifier built at runtime (`import(name)`), which is the one form a static scan
 The inventory and the provider adapters below are generated from the workspace manifests by `bun scripts/package-truth.mjs --emit-docs`, which reads `scripts/package-truth.json`. Do not hand-edit them.
 
 <!-- generated:package-truth:inventory begin -->
-**52 publishable manifests** — root `@arnilo/prism` plus 51 workspace packages (1 `prism-*` family packages, 39 capability packages). Generated by `bun scripts/package-truth.mjs --emit-docs` — do not hand-edit.
+**51 publishable manifests** — root `@arnilo/prism` plus 50 workspace packages (1 `prism-*` family packages, 38 capability packages). Generated by `bun scripts/package-truth.mjs --emit-docs` — do not hand-edit.
 
 | package | version | notes |
 | --- | --- | --- |
@@ -213,8 +280,7 @@ The inventory and the provider adapters below are generated from the workspace m
 | `@arnilo/prism-mcp-server` | 0.13.0 | library — host library serving Prism tools, resources, and prompts over MCP (stdio and Streamable HTTP transports) |
 | `@arnilo/prism-memory-compaction` | 0.13.0 | capability |
 | `@arnilo/prism-memory-core` | 0.13.0-experimental.0 | library — shared memory contracts, vector stores, lineage, propagation, and scoring; no slot and no capability |
-| `@arnilo/prism-memory-fabric` | 0.13.0-experimental.0 | capability — T1 of the three-tier memory, the store of record: working, semantic, and scoped notes with the memory.* tools, a context block, and per-session state |
-| `@arnilo/prism-memory-observational` | 0.13.0-experimental.0 | capability — T0 of the three-tier memory: observes the session, keeps a source-backed ledger, and compacts from it |
+| `@arnilo/prism-memory-system` | 0.13.0-experimental.0 | capability — the memory system: session tiers (STM, WM, rehearsal) that observe the session, keep a source-backed ledger, and compact from it, plus long-term memory (ltm), the store of record behind the memory.* tools |
 | `@arnilo/prism-model-router` | 0.13.0 | capability — policy around hook routing turns across candidates with budget, circuit, and rate-limit controls |
 | `@arnilo/prism-observability` | 0.13.0 | capability — OpenTelemetry spans and metrics over the agent event catalog as observe handlers; exports nothing itself |
 | `@arnilo/prism-rag` | 0.13.0-experimental.0 | capability — indexed retrieval with a rag_search tool, an opt-in context block, and the embeddings service |
@@ -256,8 +322,15 @@ The 0.13.0 publish set is the nine adapters that ship at this cut. `@arnilo/pris
 
 ## Verify a published package
 
-npm registry provenance is retired (Bun 1.4.2 has no `--provenance`). The provenance artifact is the
-GitHub build attestation on the exact published tarball:
+Two attestations cover a published version. The npm provenance statement is produced by
+`npm publish --provenance` under OIDC and is attached to the version on the registry:
+
+```bash
+npm audit signatures                                    # verifies every installed package's provenance
+npm view @arnilo/prism@0.13.0 dist.attestations --json   # what the registry holds for that version
+```
+
+The GitHub build attestation covers the exact tarball bytes the workflow packed:
 
 ```bash
 gh attestation verify arnilo-prism-0.13.0.tgz --owner <github-owner>
@@ -268,11 +341,10 @@ fails verification. The SBOM is attested the same way.
 
 ## Legacy deprecation
 
-`npm dist-tag` and `npm deprecate` have no Bun equivalent on 1.4.4 (`bun publish` accepts `--tag`; `bun pm`
-has no dist-tag command). Retiring the 0.12 family packages
-goes through the registry HTTP API instead (`scripts/registry-deprecate.mjs`), which is the same
-GET-then-PUT the npm CLI performs: read the packument, set `versions[v].deprecated`, write it back
-with `Authorization: Bearer $NPM_TOKEN`. No npm binary runs.
+`npm deprecate` is the one registry write trusted publishing cannot do: npm's OIDC covers `npm
+publish`, `npm stage publish` and `npm dist-tag` only. So `scripts/registry-deprecate.mjs` plans the
+deprecations against the anonymous registry and prints the commands; it holds no credential and
+mutates nothing.
 
 The committed list is `scripts/deprecations-0.13.json`: whole-package entries
 (`range: "*"`) for names no 0.13.0 package reuses, and range-scoped `<0.13.0` entries for names a
@@ -282,11 +354,39 @@ The committed list is `scripts/deprecations-0.13.json`: whole-package entries
 ```bash
 bun scripts/registry-deprecate.mjs --generate    # anonymous GET per name -> release-artifacts/deprecation-plan.json
 bun scripts/registry-deprecate.mjs --dry-run     # print the versions in range; mutates nothing
-NPM_TOKEN=… bun scripts/registry-deprecate.mjs --apply --confirm   # one PUT per name
+bun scripts/registry-deprecate.mjs --commands    # print the `npm deprecate` lines for the owner
 ```
 
-`--apply` fails closed with zero mutations when `NPM_TOKEN` is missing, when the plan was generated
-against a different registry state, when a reused name's `latest` dist-tag is still inside `<0.13.0`,
-or when a reused name has no `0.13.0` published yet. Applied entries are skipped, so a resume is
-safe. The `.github/workflows/npm-deprecate.yml` operator job runs the same three commands behind its
-`confirm: deprecate` input.
+The owner runs the printed lines locally with 2FA. There is no `--apply`: a token in CI is exactly
+what the trusted-publisher switch removed, and `npm deprecate`, `npm unpublish` and `npm access`
+cannot authenticate with OIDC at all.
+
+## Registry hygiene
+
+Deprecation leaves the old versions installable; the 0.13.0 scope is meant to be clean. Deletion is a
+different operation: it is irreversible (an unpublished version never comes back), the registry
+blocks a name whose every version was removed for 24 hours, and npm has no OIDC path for it. So it is
+generated as a plan, confirmed by the owner, and run under the owner's own 2FA — never in CI, never
+with a token in this repository.
+
+```bash
+bun scripts/registry-cleanup.mjs --inventory                       # anonymous reads -> docs/_evidence/registry/arnilo-scope-<date>.json
+bun scripts/registry-cleanup.mjs --plan > /tmp/arnilo-cleanup.sh  # owner reviews, then runs it signed in
+bun scripts/registry-cleanup.mjs --plan --include-unlisted        # also the fully deprecated names no 0.13 list mentions
+```
+
+The plan prints `npm unpublish <name> --force` for a name no 0.13.0 package reuses, one
+`npm unpublish <name>@<version>` per retired version for a reused name (npm 12 accepts a single
+version or `*`, not a range), and `npm deprecate` for a name the [unpublish
+policy](https://docs.npmjs.com/policies/unpublish/) excludes — one maintainer, fewer than 300
+downloads last week, and no registry package depending on it. Deletions are ordered dependents first
+from the published manifests, so an aggregator goes before the packages it depends on. The tool
+reads the registry anonymously (the scope listing `/-/org/<scope>/package`, one packument and one
+downloads point per name), never reads a credential and never spawns npm.
+
+The first run (2026-11-09) unpublished 66 of the 68 names in the scope. `@arnilo/prism` keeps its
+0.12.x line because it is the kernel, and `@arnilo/liveframe` stays because nothing retires it and no
+0.13.0 package replaces it. The reused names return at 0.13.0 after the 24-hour block. A name is
+deleted as a name, not version by version, once every published version is retired; the tool also
+reads `scripts/retired-names.json`, so a name retired before 0.13 is not mistaken for an unlisted
+keeper.

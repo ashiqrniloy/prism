@@ -21,6 +21,7 @@ import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expandWorkspaceDirs, readManifest } from "./package-truth.mjs";
+import { effectiveTestChain } from "./run-all-tests.mjs";
 
 const ROOT = join(import.meta.dirname, "..");
 const WORKFLOWS = join(ROOT, ".github", "workflows");
@@ -85,10 +86,15 @@ export function workflowReferenceProblems(text, inventory) {
  * every step is `bun`/`bun run`/`bunx`. Plan 175 Task 8 took the last npm call site (the deprecation
  * job) to the registry HTTP API, so no workflow may run npm at all.
  */
+// Plan 215 Task 38: publishing is npm's (OIDC trusted publishing has no Bun equivalent), so the one
+// sanctioned form is the version pin, `npm install -g npm@<exact>`. Every other npm form still fails.
+const NPM_VERSION_PIN = /^\s*(?:-\s*)?(?:run:\s*)?npm install -g npm@\d+\.\d+\.\d+\s*$/;
+
 export function nonBunCommandProblems(text) {
   const problems = [];
   text.split(/\r?\n/).forEach((line, index) => {
     const code = line.replace(/#.*$/, "");
+    if (NPM_VERSION_PIN.test(code)) return;
     if (/\bnpx\b/.test(code)) problems.push(`line ${index + 1}: npx is not bunx`);
     if (/\bnpm\s+run\b/.test(code)) problems.push(`line ${index + 1}: npm run is not bun run`);
     for (const match of code.matchAll(/\bnpm\s+([\w-]+)/g)) {
@@ -112,11 +118,15 @@ export function missingScriptPaths(text, rootDir = ROOT) {
 
 /** `uses:` refs that are not a full 40-hex revision (a tag can be re-pointed). */
 export function unpinnedActionUses(text) {
-  return text
-    .split(/\r?\n/)
-    .map((line, index) => ({ line: index + 1, match: /^\s*(?:-\s*)?uses:\s*(\S+?)(?:\s|$|#)/.exec(line) }))
-    .filter(({ match }) => match && !/@[0-9a-f]{40}$/.test(match[1]))
-    .map(({ line, match }) => `line ${line}: ${match[1]} is not pinned to a full commit SHA`);
+  return (
+    text
+      .split(/\r?\n/)
+      .map((line, index) => ({ line: index + 1, match: /^\s*(?:-\s*)?uses:\s*(\S+?)(?:\s|$|#)/.exec(line) }))
+      // A local reusable workflow (`./.github/workflows/x.yml`) is this repo's own tree, not
+      // an external ref, so there is no revision to pin (plan 215 Task 36).
+      .filter(({ match }) => match && !match[1].startsWith("./") && !/@[0-9a-f]{40}$/.test(match[1]))
+      .map(({ line, match }) => `line ${line}: ${match[1]} is not pinned to a full commit SHA`)
+  );
 }
 
 /** Static and dynamic `@arnilo/*` specifiers in one file's text. */
@@ -163,7 +173,7 @@ function readScripts() {
     .map((entry) => ({ file: `scripts/${entry}`, text: readFileSync(join(ROOT, "scripts", entry), "utf8") }));
 }
 
-test("every workflow workspace and script reference resolves", () => {
+test("ci_workflow_filters_name_workspaces: every workspace and script reference resolves", () => {
   const inventory = workspaceInventory();
   const workflows = readWorkflows();
   assert.ok(workflows.length >= 8, `expected the workflow set, found ${workflows.length}`);
@@ -227,7 +237,7 @@ test("a retired package or missing script in a live workflow fails (positive con
   );
 });
 
-test("every workflow action is pinned to a full commit SHA", () => {
+test("ci_actions_pinned_by_sha: every action carries a 40-hex SHA and a version comment", () => {
   // `docs/release-and-install.md` states this for all workflows; sandbox-browser.yml
   // shipped `actions/cache@v4` (a movable tag) until plan 071 Task 4. An unpinned or
   // retired action reference is the same silent-drift class as a retired package.
@@ -237,6 +247,16 @@ test("every workflow action is pinned to a full commit SHA", () => {
   }
   const pinned = workflows.flatMap(({ text }) => text.match(/^\s*(?:-\s*)?uses:/gm) ?? []);
   assert.ok(pinned.length >= 8, `expected action references to scan, found ${pinned.length}`);
+  // A bare SHA is not reviewable: the comment is what a dependabot bump or a reader compares.
+  // A local reusable workflow (`./.github/workflows/x.yml`) is not an external ref and needs none.
+  const uncommented = workflows.flatMap(({ file, text }) =>
+    text
+      .split(/\r?\n/)
+      .map((line, index) => [index + 1, line.trimEnd()])
+      .filter(([, line]) => /^-?\s*uses:\s*\S+$/.test(line) && !/^\s*(?:-\s*)?uses:\s*\.\//.test(line))
+      .map(([line]) => `${file}:${line}`),
+  );
+  assert.deepEqual(uncommented, [], "every uses: needs a `# vX.Y.Z` comment beside its SHA");
   assert.match(
     unpinnedActionUses("      - uses: actions/cache@v4").join("\n"),
     /actions\/cache@v4 is not pinned/,
@@ -247,15 +267,21 @@ test("every workflow action is pinned to a full commit SHA", () => {
 test("workflows install Bun and declare no Node leg", () => {
   const workflows = readWorkflows();
   // Plan 125 Task 1 retired the two declared Node legs (release.yml's Node 24 smoke and the
-  // `node22-compat` job) with the engines flip: `engines.bun >=1.4.2` is the only declared runtime,
-  // so no workflow sets up Node. The 0.1.x Node matrix stays as the immutable era record in
-  // scripts/phase12-freeze-manifest.json support.node, which no workflow measures any more.
+  // `node22-compat` job) with the engines flip: `engines.bun >=1.4.2` is the only declared runtime.
+  // Plan 215 Task 38 brings back exactly one: the publish job's setup-node, because OIDC trusted
+  // publishing is npm's. Anything else would be a second runtime the repo does not test.
+  const publish = jobBody(readFileSync(join(WORKFLOWS, "release.yml"), "utf8"), "publish") ?? "";
   const setupNode = workflows.filter(({ text }) => text.includes("actions/setup-node"));
   assert.deepEqual(
     setupNode.map(({ file }) => file),
-    [],
-    "no workflow may declare a Node leg after the engines flip (plan 125 Task 1)",
+    ["release.yml"],
+    "only release.yml may set up Node, for the npm publish step",
   );
+  assert.match(publish, /actions\/setup-node@/, "the Node leg lives inside the publish job");
+  for (const { text } of setupNode) {
+    const outsidePublish = text.replace(publish, "");
+    assert.doesNotMatch(outsidePublish, /actions\/setup-node@/, "no other job sets up Node");
+  }
   for (const { file, text } of workflows) {
     assert.ok(text.includes(SETUP_BUN), `${file} must set up Bun from the pinned action SHA`);
     assert.ok(text.includes('bun-version: "1.4.2"'), `${file} must pin bun-version 1.4.2`);
@@ -293,7 +319,7 @@ test("no workflow step calls npm", () => {
   assert.deepEqual(nonBunCommandProblems("          npm ci"), ["line 1: npm ci is not a Bun command"]);
 });
 
-test("every scripts/*.mjs a workflow names exists", () => {
+test("ci_workflows_reference_existing_files: every script a workflow names exists", () => {
   const problems = readWorkflows().flatMap(({ file, text }) => missingScriptPaths(text).map((p) => `${file} ${p}`));
   assert.deepEqual(problems, [], "workflows must not name a retired or renamed script");
   assert.match(missingScriptPaths("          bun scripts/not-a-real-script.mjs").join("\n"), /does not exist/);
@@ -321,4 +347,277 @@ test("non-script npm commands and root scripts are handled without false positiv
     workflowReferenceProblems("      - run: npm run build:core:typo", inventory).join("\n"),
     /the root package has no "build:core:typo" script/,
   );
+});
+
+// ---------------------------------------------------------------------------
+// Plan 215 Task 36: the CI-integrity checks. They live in this file rather than a
+// separate `scripts/ci-integrity.test.mjs`, because two of the six checks the plan
+// named (`ci_workflows_reference_existing_files`, `ci_actions_pinned_by_sha`) already
+// run here and a second file would need the same helpers and register these tests twice.
+// ---------------------------------------------------------------------------
+
+/** One workflow job's body text, by job id (`^  <id>:` under `jobs:`). Empty when absent. */
+export function jobBody(text, id) {
+  const lines = text.split(/\r?\n/);
+  const start = lines.findIndex((line) => new RegExp(`^  ${id}:\\s*$`).test(line));
+  if (start === -1) return "";
+  const end = lines.findIndex((line, index) => index > start && /^ {2}[\w-]+:\s*$|^\S/.test(line));
+  return lines.slice(start, end === -1 ? undefined : end).join("\n");
+}
+
+/** Top-level `permissions:` values of one workflow (`key: value` pairs, indented under it). */
+export function topLevelPermissions(text) {
+  const lines = text.split(/\r?\n/);
+  const start = lines.indexOf("permissions:");
+  if (start === -1) return null;
+  const values = {};
+  for (const line of lines.slice(start + 1)) {
+    if (/^\S/.test(line)) break;
+    const match = /^ {2}([\w-]+):\s*(\S+)\s*$/.exec(line);
+    if (match) values[match[1]] = match[2];
+  }
+  return values;
+}
+
+/**
+ * Jobs that declare no `permissions:` while the workflow's top-level block grants more
+ * than read — the "least privilege per job, `contents: read` by default" rule. A read-only
+ * top-level block is inherited safely, so those jobs need no block of their own.
+ */
+export function permissionProblems(text) {
+  const top = topLevelPermissions(text);
+  const readOnlyTop = top !== null && Object.values(top).every((value) => value === "read" || value === "none");
+  const problems = [];
+  if (top === null) problems.push("the workflow declares no top-level permissions block");
+  const jobsAt = text.split(/\r?\n/).indexOf("jobs:");
+  const lines = text.split(/\r?\n/);
+  const ids = lines
+    .map((line, index) => ({ index, id: /^ {2}([\w-]+):\s*$/.exec(line)?.[1] }))
+    .filter(({ index, id }) => id !== undefined && index > jobsAt && jobsAt !== -1);
+  for (const { id } of ids) {
+    const body = jobBody(text, id);
+    if (/^ {4}permissions:/m.test(body)) continue;
+    if (readOnlyTop) continue;
+    problems.push(`${id}: declares no permissions and the top-level block is not read-only`);
+  }
+  return problems;
+}
+
+/** `actions/checkout` steps that do not set `persist-credentials: false`. */
+export function checkoutCredentialProblems(text) {
+  const lines = text.split(/\r?\n/);
+  const problems = [];
+  lines.forEach((line, index) => {
+    const match = /^(\s*)-\s*uses:\s*actions\/checkout@/.exec(line);
+    if (!match) return;
+    const indent = match[1].length;
+    const step = [line];
+    for (const next of lines.slice(index + 1)) {
+      const nextIndent = next.match(/^\s*/)[0].length;
+      if (next.trim() !== "" && nextIndent <= indent) break;
+      step.push(next);
+    }
+    if (!step.join("\n").includes("persist-credentials: false")) {
+      problems.push(`line ${index + 1}: actions/checkout leaves credentials in .git/config`);
+    }
+  });
+  return problems;
+}
+
+/**
+ * Release conditions that compare the ref against a version literal, or a tag list that
+ * names versions. Both stopped at `v0.12.1` while v0.13.0 was cut, so `v0.13.0` skipped
+ * `codeql-release` and `publish` (plan 215 Task 1 (b)). One pattern, never a list.
+ */
+export function releaseTagLiteralProblems(text) {
+  const problems = [];
+  text.split(/\r?\n/).forEach((line, index) => {
+    const code = line.replace(/#.*$/, "");
+    if (/refs\/tags\/v\d/.test(code)) problems.push(`line ${index + 1}: a condition names one tag: ${code.trim()}`);
+    if (/\bv\d+\.\d+\.\d+\b/.test(code)) problems.push(`line ${index + 1}: a version literal in a release condition: ${code.trim()}`);
+  });
+  return problems;
+}
+
+/**
+ * Evaluate a publish/security guard, which may only be `startsWith(github.ref, '<prefix>')`
+ * clauses joined by `||`. Anything else throws: the pattern form is the contract, so an
+ * enumerated version list can never come back unnoticed.
+ */
+export function evaluateRefCondition(expression, ref) {
+  for (const clause of expression.split("||")) {
+    const match = /^startsWith\(\s*github\.ref\s*,\s*'([^']+)'\s*\)$/.exec(clause.trim());
+    if (!match) throw new Error(`unsupported release condition: ${clause.trim()}`);
+    if (ref.startsWith(match[1])) return true;
+  }
+  return false;
+}
+
+test("ci_jobs_declare_permissions: every job declares permissions or inherits a read-only block", () => {
+  const problems = readWorkflows().flatMap(({ file, text }) => permissionProblems(text).map((p) => `${file}: ${p}`));
+  assert.deepEqual(problems, [], "every job needs least privilege (plan 215 Task 36, Security)");
+  // Non-vacuity: the scan sees the job set, and a write-granting top-level block fails a job
+  // that declares nothing.
+  const jobs = readWorkflows().flatMap(({ text }) => text.match(/^ {2}[\w-]+:\s*$/gm) ?? []);
+  assert.ok(jobs.length >= 15, `expected jobs to scan, found ${jobs.length}`);
+  assert.match(
+    permissionProblems("permissions:\n  contents: write\n\njobs:\n  x:\n    runs-on: ubuntu-latest\n").join("\n"),
+    /x: declares no permissions/,
+  );
+  assert.deepEqual(permissionProblems("permissions:\n  contents: read\n\njobs:\n  x:\n    runs-on: ubuntu-latest\n"), []);
+  assert.deepEqual(
+    permissionProblems(
+      "permissions:\n  contents: read\n\njobs:\n  x:\n    runs-on: ubuntu-latest\n  y:\n    permissions:\n      contents: read\n    runs-on: ubuntu-latest\n",
+    ),
+    [],
+  );
+});
+
+test("ci_checkout_does_not_persist_credentials", () => {
+  const problems = readWorkflows().flatMap(({ file, text }) => checkoutCredentialProblems(text).map((p) => `${file} ${p}`));
+  assert.deepEqual(problems, [], "a checkout must not leave the token in .git/config");
+  const checkouts = readWorkflows().flatMap(({ text }) => text.match(/actions\/checkout@/g) ?? []);
+  assert.ok(checkouts.length >= 8, `expected checkout steps to scan, found ${checkouts.length}`);
+  assert.match(
+    checkoutCredentialProblems(
+      "      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          fetch-depth: 0\n",
+    ).join("\n"),
+    /leaves credentials in \.git\/config/,
+  );
+});
+
+test("release_publish_path_for_v0_13_0: every tag publishes, and no condition names a version", () => {
+  const text = readFileSync(join(WORKFLOWS, "release.yml"), "utf8");
+  assert.deepEqual(releaseTagLiteralProblems(text), [], "release.yml must gate on a pattern, not a version list");
+  // The trigger has to admit the ref before any job can select it.
+  assert.match(text, /tags: \["v\*", "@arnilo\/\*@\*"\]/, "the tag trigger must be the two patterns");
+  for (const ref of ["refs/tags/v0.13.0", "refs/tags/v0.14.2", "refs/tags/@arnilo/prism-wiki@0.13.0-experimental.1"]) {
+    for (const id of ["publish", "security-release"]) {
+      const guard = /^ {4}if: (.+)$/m.exec(jobBody(text, id));
+      assert.ok(guard, `${id} must keep a tag guard`);
+      assert.equal(evaluateRefCondition(guard[1], ref), true, `${id} must run for ${ref}`);
+    }
+  }
+  for (const ref of ["refs/heads/main", "refs/pull/7/merge"]) {
+    for (const id of ["publish", "security-release"]) {
+      const guard = /^ {4}if: (.+)$/m.exec(jobBody(text, id));
+      assert.equal(evaluateRefCondition(guard[1], ref), false, `${id} must not run for ${ref}`);
+    }
+  }
+  // The publish step's shell takes the lockstep branch for `v*` and the independent branch
+  // otherwise — the same rule, in one place.
+  const step = jobBody(text, "publish").split("publish in dependency order")[1];
+  assert.match(step, /GITHUB_REF_NAME#v/, "the publish step must branch on the v prefix");
+  assert.doesNotMatch(step, /v0\.\d/, "the publish step must not enumerate versions");
+  // Fail closed: an enumerated condition is rejected, not silently mis-evaluated.
+  assert.throws(() => evaluateRefCondition("github.ref == 'refs/tags/v0.12.1'", "refs/tags/v0.12.1"), /unsupported release condition/);
+});
+
+test("release_gate_runs_plan_gates: the gates this plan adds stay in bun run test or release:gate", () => {
+  const chain = effectiveTestChain();
+  const root = readManifest(join(ROOT, "package.json"));
+  const releaseGate = root.scripts["release:gate"];
+  // The root-suites stage runs `bun test <…> src`, so every `src/__tests__` file is in it.
+  assert.ok(chain.includes("bun test") && chain.includes(" src"), "the root-suites stage must run src");
+  const gates = [
+    ["stable_packages_never_depend_on_experimental", "src/__tests__/experimental-boundary.test.ts"],
+    ["experimental_packages_carry_notice", "src/__tests__/docs.test.ts"],
+    ["prefix stability conformance", "src/__tests__/prefix-stability-conformance.test.ts"],
+    ["host_builder_kit_matches_surface", "src/__tests__/host-builder-kit.test.ts"],
+    ["package_skills_conform", "scripts/package-skills-conformance.mjs"],
+    ["no_retired_name_in_live_tree", "scripts/retired-names.test.mjs"],
+  ];
+  for (const [gate, file] of gates) {
+    assert.ok(existsSync(join(ROOT, file)), `${gate} must keep its home at ${file}`);
+    const reached = file.startsWith("src/__tests__/") || chain.includes(file) || releaseGate.includes(file);
+    assert.ok(reached, `${gate} (${file}) must run in bun run test or release:gate`);
+  }
+  // A file in neither place fails: the check is not vacuous.
+  assert.ok(!(chain.includes("scripts/not-a-gate.test.mjs") || releaseGate.includes("scripts/not-a-gate.test.mjs")));
+});
+
+test("canary_provider_matrix_names_shipped_providers", () => {
+  const text = readFileSync(join(WORKFLOWS, "canary-providers.yml"), "utf8");
+  const fallback = /fromJSON\(vars\.PRISM_CANARY_PROVIDERS \|\| '(\[[^']*\])'\)/.exec(text);
+  assert.ok(fallback, "the matrix must keep a JSON array fallback");
+  const providers = JSON.parse(fallback[1]);
+  assert.ok(providers.length > 0, "the fallback must name at least one provider");
+  for (const provider of providers) {
+    assert.ok(
+      existsSync(join(ROOT, "packages", "providers", provider, "src", "__tests__", "live.test.ts")),
+      `canary fallback names ${provider}, which has no live suite (retired provider?)`,
+    );
+  }
+});
+
+test("workflows_reference_no_npm_token: no workflow carries an npm credential", () => {
+  const problems = readWorkflows().flatMap(({ file, text }) => {
+    const lines = text.split(/\r?\n/);
+    return lines.flatMap((line, index) => {
+      const code = line.replace(/#.*$/, "");
+      if (!/NPM_TOKEN|NODE_AUTH_TOKEN|_authToken|npm_token/.test(code)) return [];
+      return [`${file}:${index + 1} ${code.trim()}`];
+    });
+  });
+  assert.deepEqual(problems, [], "trusted publishing means no workflow reads an npm token (plan 215 Task 38)");
+  // Non-vacuity: the scan reports the shapes it is guarding, including an `.npmrc` auth line.
+  const shapes = ["env:\n  NODE_AUTH_TOKEN: secrets.NPM_TOKEN", "printf '//registry.npmjs.org/:_authToken=%s\\n' \"$TOKEN\""];
+  assert.deepEqual(
+    shapes.filter((shape) => !/NPM_TOKEN|NODE_AUTH_TOKEN|_authToken/.test(shape)),
+    [],
+    "positive control: a token env line and an .npmrc auth line are both detected",
+  );
+});
+
+test("publish_job_requires_environment_and_id_token", () => {
+  const workflow = readFileSync(join(WORKFLOWS, "release.yml"), "utf8");
+  const publish = jobBody(workflow, "publish");
+  assert.ok(publish, "release.yml must keep a publish job");
+  assert.match(publish, /environment:\s*npm-publish/, "the publish job runs in the protected environment");
+  assert.match(publish, /id-token:\s*write/, "OIDC needs the id-token scope");
+  assert.match(publish, /attestations:\s*write/, "the build attestation stays");
+  assert.match(publish, /if:\s*startsWith\(github\.ref, 'refs\/tags\/'\)/, "only a tag publishes");
+  assert.doesNotMatch(publish, /NODE_AUTH_TOKEN|secrets\.NPM_TOKEN|_authToken/, "no token reaches the publish job");
+  assert.doesNotMatch(publish, /printf .*npmrc/, "the .npmrc auth step is gone");
+});
+
+test("publish_job_meets_trusted_publishing_minimums", () => {
+  const workflow = readFileSync(join(WORKFLOWS, "release.yml"), "utf8");
+  const publish = jobBody(workflow, "publish");
+  const nodeVersion = /node-version:\s*"?(\d+)\.(\d+)\.(\d+)"?/.exec(publish);
+  assert.ok(nodeVersion, "the publish job pins a Node version");
+  const [major, minor] = [Number(nodeVersion[1]), Number(nodeVersion[2])];
+  assert.ok(major > 22 || (major === 22 && minor >= 14), `Node ${nodeVersion[0]} is below the 22.14.0 floor`);
+  assert.match(publish, /actions\/setup-node@[0-9a-f]{40} # v\d+\.\d+\.\d+/, "setup-node is pinned by SHA with its version");
+  // npm comes from the Node release (24.x bundles npm >= 11.6), so no global install is needed and
+  // no npm command line sits in the workflow. The floor is stated where the pipeline is documented.
+  assert.doesNotMatch(publish, /npm install|npm i\b/, "the publish job installs no npm of its own");
+  assert.match(
+    readFileSync(join(ROOT, "docs", "release.md"), "utf8"),
+    /npm 11\.5\.1|11\.5\.1/,
+    "docs/release.md must state the npm floor trusted publishing needs",
+  );
+});
+
+test("ci_verify_runs_sdk_ready_steps: pull-request CI runs every sdk:ready step", () => {
+  // `sdk:ready` is the release profile (docs/release.md). PR CI must not drift from it: a
+  // missing step is a gate that only fails at the tag. The one documented extra is the
+  // threat-suite set, which release:gate does not run.
+  const VERIFY_ONLY = new Set(["security:threat-suites"]);
+  const root = readManifest(join(ROOT, "package.json"));
+  const sdkReady = root.scripts["sdk:ready"].split("&&").map((step) => /\bbun run ([\w:.-]+)/.exec(step)?.[1]);
+  assert.ok(sdkReady.length >= 5, `expected the sdk:ready steps, found ${sdkReady.length}`);
+  const verify = jobBody(readFileSync(join(WORKFLOWS, "release.yml"), "utf8"), "verify");
+  // A phase line may carry leading `ENV=value` assignments (release:gate's profile markers).
+  const phases = [...verify.matchAll(/^\s+(?:[\w-]+=\S*\s+)*phase .+ bun run ([\w:.-]+)$/gm)].map((match) => match[1]);
+  assert.ok(phases.length >= 5, `expected the verify phases, found ${phases.length}`);
+  for (const step of sdkReady) {
+    assert.ok(phases.includes(step), `the verify job must run sdk:ready's "${step}"`);
+  }
+  for (const phase of phases) {
+    assert.ok(
+      sdkReady.includes(phase) || VERIFY_ONLY.has(phase),
+      `"${phase}" runs in CI but not in sdk:ready — record it in docs/release.md`,
+    );
+  }
 });

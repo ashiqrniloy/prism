@@ -27,9 +27,8 @@ const packages: Array<{ dir: string; name: string; isCore?: boolean; isSubpaths?
   { dir: "packages/hosts/acp", name: "@arnilo/prism-acp" },
   { dir: "packages/memory/core", name: "@arnilo/prism-memory-core" },
   { dir: "packages/memory/compaction", name: "@arnilo/prism-memory-compaction" },
-  { dir: "packages/memory/observational", name: "@arnilo/prism-memory-observational" },
+  { dir: "packages/memory/system", name: "@arnilo/prism-memory-system" },
   { dir: "packages/knowledge/rag", name: "@arnilo/prism-rag" },
-  { dir: "packages/memory/fabric", name: "@arnilo/prism-memory-fabric" },
   { dir: "packages/knowledge/wiki", name: "@arnilo/prism-wiki" },
   { dir: "packages/tools/browser", name: "@arnilo/prism-tools-browser" },
   { dir: "packages/hosts/ag-ui", name: "@arnilo/prism-ag-ui" },
@@ -188,9 +187,8 @@ before(() => {
     "@arnilo/prism-acp",
     "@arnilo/prism-ag-ui/renderer",
     "@arnilo/prism-rag",
-    "@arnilo/prism-memory-fabric",
     "@arnilo/prism-memory-compaction",
-    "@arnilo/prism-memory-observational",
+    "@arnilo/prism-memory-system",
     "@arnilo/prism-wiki",
     "@arnilo/prism-tools-browser",
     "@arnilo/prism-tools-web",
@@ -362,7 +360,7 @@ import { createHyperProvider } from "@arnilo/prism-provider-hyper";
 import { appendEvaluationFeedback, defineScorer, scoreRun } from "@arnilo/prism-evals";
 import { createMemoryEvaluationStore } from "@arnilo/prism-store-codecs";
 import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
-import { createMemory } from "@arnilo/prism-memory-fabric";
+import { createMemory } from "@arnilo/prism-memory-system";
 import { chunkMarkdown, indexChunks, retrieveContext } from "@arnilo/prism-rag";
 import {
   createMemoryWorkflowCheckpoints, createWorkflowCheckpoints,
@@ -391,9 +389,7 @@ assert.ok(streamed.includes("message.delta"));
 
 const embedder = createHashEmbedder({ dimensions: 16 });
 const memory = createMemory({ tenantId: "packed", resourceId: "user", threadId: "thread", embedder });
-await memory.updateWorking({ preference: "short" });
 await memory.remember({ entries: [{ id: "memory-1", text: "prefers short answers", sequence: 1 }] }, { wait: true });
-assert.equal((await memory.getWorking()).value.preference, "short");
 assert.equal((await memory.recall("short", { topK: 1 })).hits.length, 1);
 const vectors = createMemoryVectorStore();
 const ragScope = { tenantId: "packed", resourceId: "docs", corpusId: "guide" };

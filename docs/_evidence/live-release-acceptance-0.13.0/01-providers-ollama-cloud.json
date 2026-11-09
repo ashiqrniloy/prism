@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-11-08T17:56:47.666Z",
+  "envFile": "/home/arn/.config/prism/live.env",
+  "strict": true,
+  "dryRun": false,
+  "filter": "providers/ollama-cloud",
+  "totals": {
+    "ran": 1,
+    "skipped": 0,
+    "failed": 0,
+    "planned": 0
+  },
+  "coverage": {
+    "ok": true,
+    "total": 86,
+    "covered": 82,
+    "pending": 4,
+    "mode": "baseline"
+  },
+  "results": [
+    {
+      "id": "providers/ollama-cloud",
+      "package": "@arnilo/prism-provider-ollama-cloud",
+      "status": "ran",
+      "reason": null,
+      "exitCode": 0,
+      "durationMs": 52269,
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts src/__tests__/live-agent.test.ts",
+      "cwd": "packages/providers/ollama-cloud",
+      "models": [
+        {
+          "env": "PRISM_LIVE_OLLAMA_CLOUD_MODEL",
+          "value": "gemma4:31b",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_OLLAMA_CLOUD_THINKING_MODEL",
+          "value": "gpt-oss:20b",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_OLLAMA_CLOUD_DECISION_MODEL",
+          "value": "clef:27b",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    }
+  ]
+}

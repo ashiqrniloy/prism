@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-11-08T20:17:15.618Z",
+  "envFile": "/home/arn/.config/prism/live.env",
+  "strict": true,
+  "dryRun": false,
+  "filter": "providers/commandcode",
+  "totals": {
+    "ran": 1,
+    "skipped": 0,
+    "failed": 0,
+    "planned": 0
+  },
+  "coverage": {
+    "ok": true,
+    "total": 86,
+    "covered": 82,
+    "pending": 4,
+    "mode": "baseline"
+  },
+  "results": [
+    {
+      "id": "providers/commandcode",
+      "package": "@arnilo/prism-provider-commandcode",
+      "status": "ran",
+      "reason": null,
+      "exitCode": 0,
+      "durationMs": 30376,
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts src/__tests__/live-agent.test.ts",
+      "cwd": "packages/providers/commandcode",
+      "models": [
+        {
+          "env": "PRISM_LIVE_COMMANDCODE_CHAT_MODEL",
+          "value": "minimax/minimax-m3.1-flash",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_COMMANDCODE_RESPONSES_MODEL",
+          "value": "gpt-5.6-luna",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_COMMANDCODE_MESSAGES_MODEL",
+          "value": "claude-haiku-5-5",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_COMMANDCODE_NON_ZDR_MODEL",
+          "value": "stealth/glyph-cluster:free",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    }
+  ]
+}

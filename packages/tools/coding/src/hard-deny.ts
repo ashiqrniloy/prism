@@ -7,10 +7,10 @@
  * read-effect tools, `targets.roots` also carries each skill directory; mutating tools never do.
  */
 import { realpath } from "node:fs/promises";
-import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { isAbsolute, relative, resolve } from "node:path";
 import type { ToolCallDecision, ToolCallHookPayload } from "@arnilo/prism";
-import { isNodeErrorCode } from "./security/path-containment.js";
 import { type CommandRule, evaluateCommandRules } from "./security/command-rules.js";
+import { realpathNearest } from "./security/path-containment.js";
 import { CODING_TOOL_NAMES, type CodingTargetsFn } from "./targets.js";
 
 /** Tools that change state; denied when `readOnly` is set. */
@@ -25,20 +25,6 @@ export interface HardDenyOptions {
 function isPathInside(root: string, target: string): boolean {
   const rel = relative(root, target);
   return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
-}
-
-/** Resolve `target` through symlinks; on ENOENT resolve its parent so a create is still checked. */
-async function realTarget(target: string): Promise<string | undefined> {
-  try {
-    return await realpath(target);
-  } catch (error) {
-    if (!isNodeErrorCode(error, "ENOENT")) return undefined;
-    try {
-      return join(await realpath(dirname(target)), basename(target));
-    } catch {
-      return undefined;
-    }
-  }
 }
 
 /**
@@ -62,7 +48,7 @@ function createContainmentChecker(roots: readonly string[]): (target: string) =>
   return async (target: string) => {
     const resolved = await loadRoots();
     if (resolved.length === 0) return false;
-    const to = await realTarget(target);
+    const to = await realpathNearest(target);
     return to !== undefined && resolved.some((root) => isPathInside(root, to));
   };
 }

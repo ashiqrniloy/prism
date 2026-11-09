@@ -120,7 +120,7 @@
       }
     },
     {
-      "includes": ["packages/memory/fabric/src/**"],
+      "includes": ["packages/memory/system/src/ltm/**"],
       "linter": {
         "rules": {
           "style": {
@@ -240,7 +240,7 @@
       }
     },
     {
-      "includes": ["packages/memory/observational/src/**"],
+      "includes": ["packages/memory/system/src/session/**"],
       "linter": {
         "rules": {
           "style": {

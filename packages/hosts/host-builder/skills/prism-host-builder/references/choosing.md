@@ -45,19 +45,19 @@ provide one slot with no assignment fail the load (`ERR_PRISM_SLOT_CONFLICT`). A
 `slots`, as `node_modules/@arnilo/prism/docs/slots.md` shows.
 
 - Need summarised history: `@arnilo/prism-memory-compaction` (stable). Example: `examples/compaction.ts`.
-- Need observational memory too: `@arnilo/prism-memory-observational` also claims `compaction`. List both and
-  assign the owner you want. Example: `examples/observational-memory.ts`.
+- Need observational memory too: `@arnilo/prism-memory-system` also claims `compaction`. List both and
+  assign the owner you want. Example: `examples/session-memory.ts`.
 - Need a different loop (workflow, external agent): `slots.loop`, or a package that claims it
   (`@arnilo/prism-workflows`, `@arnilo/prism-driver-process`). Example: `examples/custom-loop.ts`.
 
 ## The experimental memory line
 
-`@arnilo/prism-memory-core`, `-fabric`, `-observational`, `-wiki` and `-rag` ship as `0.13.0-experimental.N` on the npm
+`@arnilo/prism-memory-core` and `-system`, `@arnilo/prism-wiki` and `@arnilo/prism-rag` ship as `0.13.0-experimental.N` on the npm
 dist-tag `experimental`. They sit outside the compatibility promise: API, config and defaults may change in any release.
 A `^0.13.0` range never matches a prerelease, so opt in by tag and keep the host able to run without them:
 
 ```bash
-bun add @arnilo/prism-memory-fabric@experimental
+bun add @arnilo/prism-memory-system@experimental
 ```
 
 Say in your report that the host depends on an experimental package. Use `@arnilo/prism-memory-compaction` unless

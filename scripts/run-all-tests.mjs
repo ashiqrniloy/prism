@@ -30,6 +30,7 @@ const ROOT = join(import.meta.dirname, "..");
 export const GATE_FILES = [
   "scripts/release-gate.test.mjs",
   "scripts/registry-deprecate.test.mjs",
+  "scripts/registry-cleanup.test.mjs",
   "scripts/tooling-gate.test.mjs",
   "scripts/postgres-evidence.test.mjs",
   "scripts/run-all-tests.test.mjs",
@@ -60,6 +61,8 @@ export const GATE_FILES = [
   "scripts/provider-tool-result-wire.test.mjs",
   "scripts/provider-discovery-gate.test.mjs",
   "scripts/retired-providers.test.mjs",
+  // Plan 215 Task 35: the standing retired-name sweep.
+  "scripts/retired-names.test.mjs",
   "scripts/phase26-index-benchmark.test.mjs",
   "scripts/obscura-host-conformance.test.mjs",
   "scripts/phase54-package-map.test.mjs",
@@ -71,6 +74,7 @@ export const GATE_FILES = [
   "scripts/packaging-current.test.mjs",
   "scripts/import-hygiene.test.mjs",
   "scripts/live-matrix.test.mjs",
+  "scripts/live-preflight.test.mjs",
   "scripts/cache-parity/run.test.mjs",
   "scripts/cache-parity/live.test.mjs",
   "scripts/memory-bench/run.test.mjs",
@@ -85,6 +89,11 @@ export const GATE_FILES = [
   "scripts/workflow-liveness.test.mjs",
   "scripts/blocked-gate.test.mjs",
   "scripts/branch-coverage.test.mjs",
+  // Plan 215 Task 36: three live tests nothing reached. `document-ingestion-packed` also
+  // shelled out to `npm pack`, which plan 124/175 retired — it now uses `bun pm pack`.
+  "scripts/document-ingestion-packed.test.mjs",
+  "scripts/provider-login.test.mjs",
+  "scripts/wire-proxy.test.mjs",
   "scripts/phase126-sqlite-mapping.test.mjs",
   "scripts/__tests__/decision-bench-metrics.test.mjs",
 ];

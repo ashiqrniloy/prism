@@ -12,15 +12,6 @@ export function buildMemoryDdl(schemaInput = DEFAULT_MEMORY_SCHEMA, tableInput =
   return `
 CREATE SCHEMA IF NOT EXISTS ${q};
 CREATE EXTENSION IF NOT EXISTS vector;
-CREATE TABLE IF NOT EXISTS ${q}.working_memory (
-  tenant_id TEXT NOT NULL,
-  resource_id TEXT NOT NULL,
-  thread_id TEXT NOT NULL DEFAULT '',
-  value JSONB NOT NULL,
-  version INTEGER NOT NULL CHECK (version >= 1),
-  updated_at TIMESTAMPTZ NOT NULL,
-  PRIMARY KEY (tenant_id, resource_id, thread_id)
-);
 CREATE TABLE IF NOT EXISTS ${t} (
   tenant_id TEXT NOT NULL,
   resource_id TEXT NOT NULL,

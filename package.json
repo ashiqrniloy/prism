@@ -57,6 +57,7 @@
     "typecheck": "bun run build && bun run --workspaces --if-present typecheck && tsc -p examples --noEmit",
     "sweep:unused": "bun scripts/sweep-unused.mjs --json",
     "test:live": "bun scripts/live-matrix.mjs",
+    "test:live:preflight": "bun scripts/live-preflight.mjs",
     "test": "bun scripts/run-all-tests.mjs",
     "test:coverage": "bun scripts/with-build-lock.mjs bun test --coverage --timeout=0 --path-ignore-patterns=packages/** src > node_modules/.prism-core-coverage.out 2>&1; core_exit=$?; cat node_modules/.prism-core-coverage.out; PRISM_COVERAGE_CORE_OUTPUT=node_modules/.prism-core-coverage.out PRISM_COVERAGE_CORE_EXIT=$core_exit bun scripts/with-build-lock.mjs bun scripts/coverage-summary.mjs && bun test --timeout=0 scripts/phase23-coverage.test.mjs && bun test --timeout=0 scripts/phase23-skip-manifest.test.mjs; stage_exit=$?; rm -f node_modules/.prism-core-coverage.out; if [ $core_exit -ne 0 ]; then echo \"core coverage run failed (exit $core_exit)\" >&2; exit $core_exit; fi; exit $stage_exit",
     "coverage:summary": "bun scripts/with-build-lock.mjs bun scripts/coverage-summary.mjs",

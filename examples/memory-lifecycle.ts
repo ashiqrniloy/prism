@@ -11,15 +11,13 @@ import {
   toolCallContent,
 } from "@arnilo/prism/testing";
 import { createMemoryVectorStore, type Memory, type VectorStore } from "@arnilo/prism-memory-core";
-import {
+import memorySystem, {
   createMemory,
-  createMemoryFabric,
-  createMemoryWorkingStore,
+  createLongTermMemory,
   encodeMemoryNoteMetadata,
-  memoryFabric,
   resolveLifecycleConfig,
   SCOPE_CLOCK_COUNTER,
-} from "@arnilo/prism-memory-fabric";
+} from "@arnilo/prism-memory-system";
 
 // Memory lifecycle demo: one note's whole life, from a candidate to verified, shadowed, archived and revived.
 //
@@ -44,9 +42,9 @@ const USER = "user";
 const AGENT = "agent";
 const EPISODE = "eeeeeeee0001";
 
-const stores = { vectorStore: createMemoryVectorStore(), workingStore: createMemoryWorkingStore() };
+const stores = { vectorStore: createMemoryVectorStore() };
 const memoryFor = (resourceId: string) =>
-  createMemory({ tenantId: TENANT, resourceId, threadId: "default", vectorStore: stores.vectorStore, workingStore: stores.workingStore });
+  createMemory({ tenantId: TENANT, resourceId, threadId: "default", vectorStore: stores.vectorStore });
 const projectA = memoryFor(PROJECT_A);
 const projectB = memoryFor(PROJECT_B);
 const user = memoryFor(USER);
@@ -54,7 +52,7 @@ const agent = memoryFor(AGENT);
 
 /** A project's own fabric: it writes its project scope and reads the wider ones above it. */
 const projectFabric = (memory: Memory) =>
-  createMemoryFabric({
+  createLongTermMemory({
     memory,
     scopes: [
       { level: "project", memory },
@@ -127,7 +125,7 @@ await projectA.remember(
 // Twenty sessions later: the episode is below both strengths and past its grace, everything cited is not.
 for (const resourceId of [PROJECT_A, PROJECT_B, USER, AGENT]) await sessions(stores.vectorStore, resourceId, 20);
 
-const maintainer = createMemoryFabric({
+const maintainer = createLongTermMemory({
   memory: projectA,
   scopes: [
     { level: "project", memory: projectA },
@@ -169,15 +167,14 @@ if (verified !== 2 || (await agent.recall(lesson, { topK: 2 })).hits.length !== 
 if (report.archived !== 1 || archived !== 1 || !revived) throw new Error("archive and revival failed");
 
 // 6. A capacity budget: two same-key notes fold first, then the weakest note is evicted.
-const budgetStores = { vectorStore: createMemoryVectorStore(), workingStore: createMemoryWorkingStore() };
+const budgetStores = { vectorStore: createMemoryVectorStore() };
 const cramped = createMemory({
   tenantId: TENANT,
   resourceId: "projects/gamma--33333333",
   threadId: "default",
   vectorStore: budgetStores.vectorStore,
-  workingStore: budgetStores.workingStore,
 });
-const budget = createMemoryFabric({
+const budget = createLongTermMemory({
   memory: cramped,
   vectorStore: budgetStores.vectorStore,
   lifecycle: resolveLifecycleConfig({ capacity: { project: { notes: 3 } } }),
@@ -242,12 +239,12 @@ const deliveryAgent = await createAgent({
     mockProvider(memoryScript, { onRequest: (request) => requests.push(request) }),
     // `rules.scopes: ["user"]` keeps the project path note out of the standing rules, so the same note
     // reaches the model through the cue tail instead.
-    memoryFabric({
+    memorySystem({ ltm: {
       tools: { root: deliveryRoot },
       scopes: { project: { root: deliveryProject } },
       team: { dir: ".prism/memory" },
       rules: { scopes: ["user"] },
-    }),
+    } }),
   ],
 });
 const deliverySession = await deliveryAgent.session({ id: "delivery-demo", create: true });
@@ -295,7 +292,7 @@ console.log(
     procedure: { verifiedInProjects: verified },
     exception: { overrides: exception.overrides === preference.id ? 1 : 0 },
     archive: { archived: report.archived, archivedHits: archived, revived: revived ? 1 : 0 },
-    maintenance: { merged: report.merged, episodesMerged: report.episodesMerged, evicted: report.evicted },
+    maintenance: { merged: report.merged, evicted: report.evicted },
     capacity: { merged: capacity.merged, evicted: capacity.evicted, notes: 3 },
     delivery: { prefixes: 10, cues: 1, shares: 1 },
   }),

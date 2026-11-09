@@ -1,10 +1,15 @@
 #!/usr/bin/env node
 // Plan 060 migration rollback/restore drill (release evidence, not prose).
-// Postgres: apply → seed via the real store → downgrade one version (009's
-// additive column + history row) → verify the 008-shape store still works and
+// Postgres: apply → seed via the real store → downgrade one version (the newest
+// step's tables + its history row) → verify the older-shape store still works and
 // seeded data survived → re-apply → verify idempotency + data → tamper a
 // checksum row and prove the runner fails closed. SQLite: same flow
 // in-process on a temp file. Imports the store packages by name (no build step).
+//
+// The drill targets the NEWEST migration and fails closed when that is not the
+// step it knows how to invert: it read `010_session_links` (and a hard-coded count
+// of 9) while the store shipped 011, so it failed every scheduled run (plan 215
+// Task 36). Retarget it here when a migration lands.
 //
 // Safety: refuses any URL whose host is not localhost/127.0.0.1/::1 — CI and
 // throwaway local databases only. `--self-test` checks that refusal without
@@ -22,9 +27,13 @@ import { pathToFileURL } from "node:url";
 const invokedDirectly = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 // Lazy deps: assigned only when run as a CLI (repo hygiene tests import this
 // file to inspect its imports — no side effects, no database access).
-let pgMigrations, createPostgresPersistence, createSqlitePersistence, Pool, Database;
+let pgMigrations, createPostgresPersistence, createSqlitePersistence, Pool, Database, expectedStepCount, createPersistenceMigrationContract;
 if (invokedDirectly) {
   const postgres = await import("@arnilo/prism-store-postgres");
+  // The step count comes from the store's own contract: hard-coded, it read 9 while the store
+  // shipped 11 migrations, so this drill failed every scheduled run (plan 215 Task 36).
+  ({ createPersistenceMigrationContract } = await import("@arnilo/prism-store-codecs"));
+  expectedStepCount = createPersistenceMigrationContract().steps.length;
   pgMigrations = postgres;
   ({ createPostgresPersistence } = postgres);
   ({ createSqlitePersistence } = await import("@arnilo/prism-store-sqlite"));
@@ -32,9 +41,9 @@ if (invokedDirectly) {
   Database = (await import("bun:sqlite")).Database;
 }
 
-const LAST_STEP = "010_session_links";
-const LINK_INDEXES = ["parent", "agent", "workflow", "delegation", "actor"].map((name) => `prism_sessions_link_${name}_idx`);
-const LINK_COLUMNS = ["agent_id", "workflow_run_id", "delegation_id", "actor_kind", "actor_agent", "actor_vendor"];
+// 011_evaluations: the two tables this drill drops to roll the schema back one version.
+const LAST_STEP = "011_evaluations";
+const LAST_STEP_TABLES = ["prism_evaluations", "prism_experiment_reports"];
 
 function parseArgs(argv) {
   const args = { selfTest: false, url: undefined };
@@ -68,6 +77,9 @@ function seedEntries(sessionId) {
 
 async function drillPostgres(url) {
   assertCiUrl(url);
+  // Fail closed on drift: a new migration must retarget this drill, not silently break it.
+  const newest = createPersistenceMigrationContract().steps.at(-1).name;
+  assert.equal(newest, LAST_STEP, `drill must invert the newest migration (${newest}), not ${LAST_STEP}`);
   const pool = new Pool({ connectionString: url, max: 2 });
   const schema = `prism_drill_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
   const steps = [];
@@ -77,7 +89,7 @@ async function drillPostgres(url) {
   };
   try {
     const applied = await pgMigrations.applyPostgresMigrations(pool, schema);
-    assert.equal(applied.length, 9, `expected 9 applied migrations, got ${applied.length}`);
+    assert.equal(applied.length, expectedStepCount, `expected ${expectedStepCount} applied migrations, got ${applied.length}`);
     mark("apply-all");
 
     const sessionId = "drill-session";
@@ -86,21 +98,20 @@ async function drillPostgres(url) {
     assert.equal((await store.list(sessionId)).length, 2, "seed must land");
     mark("seed");
 
-    // Downgrade one version: inverse of 010's additive DDL + its history row.
-    for (const index of LINK_INDEXES) await pool.query(`DROP INDEX IF EXISTS ${schema}.${index}`);
-    for (const column of LINK_COLUMNS) await pool.query(`ALTER TABLE ${schema}.prism_sessions DROP COLUMN IF EXISTS ${column}`);
+    // Downgrade one version: inverse of 011's additive DDL + its history row.
+    for (const table of LAST_STEP_TABLES) await pool.query(`DROP TABLE IF EXISTS ${schema}.${table}`);
     await pool.query(`DELETE FROM ${schema}.prism_migrations WHERE name = '${LAST_STEP}'`);
-    mark("downgrade-010");
+    mark("downgrade-last");
 
-    // Verify schema compat at the 008 shape: the store works and data survived.
-    const downgraded = await createPostgresPersistence({ pool, schema, skipMigrations: true }); // 008 shape by design
+    // Verify schema compat at the previous shape: the store works and data survived.
+    const downgraded = await createPostgresPersistence({ pool, schema, skipMigrations: true }); // previous shape by design
     await downgraded.append({ ...seedEntries("x")[0], id: "drill-post", sessionId, timestamp: "2026-01-01T00:00:02.000Z" });
     const survived = await downgraded.list(sessionId);
     assert.equal(survived.length, 3, "seeded durable data must survive the downgrade");
     mark("verify-compat");
 
     const reapplied = await pgMigrations.applyPostgresMigrations(pool, schema);
-    assert.equal(reapplied.length, 9, "re-apply must restore the contract");
+    assert.equal(reapplied.length, expectedStepCount, "re-apply must restore the contract");
     await pgMigrations.verifyMigrationIdempotency(pool, schema);
     assert.equal((await downgraded.list(sessionId)).length, 3, "re-apply must not touch data");
     mark("re-apply");
@@ -132,15 +143,14 @@ async function drillSqlite() {
     store.close();
     steps.push("apply+seed");
 
-    // Downgrade one version (inverse of 010) on the raw handle.
+    // Downgrade one version (inverse of 011) on the raw handle.
     const raw = new Database(filename);
-    for (const index of LINK_INDEXES) raw.exec(`DROP INDEX ${index}`);
-    for (const column of LINK_COLUMNS) raw.exec(`ALTER TABLE prism_sessions DROP COLUMN ${column}`);
+    for (const table of LAST_STEP_TABLES) raw.exec(`DROP TABLE IF EXISTS ${table}`);
     raw.prepare("DELETE FROM prism_migrations WHERE name = ?").run(LAST_STEP);
     raw.close();
-    steps.push("downgrade-010");
+    steps.push("downgrade-last");
 
-    const reopened = createSqlitePersistence({ filename }); // re-applies 010
+    const reopened = createSqlitePersistence({ filename }); // re-applies the newest step
     const survived = await reopened.list(sessionId);
     assert.equal(survived.length, 2, "seeded durable data must survive the downgrade/re-apply");
     await reopened.append({ ...seedEntries("x")[0], id: "drill-post", sessionId, timestamp: "2026-01-01T00:00:02.000Z" });

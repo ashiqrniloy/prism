@@ -1173,7 +1173,8 @@
       "section": "transferred",
       "verdict": "transferred",
       "plan": 216,
-      "reason": "retired by owner decision (memory model, 2026-11-08)"
+      "reason": "retired by owner decision (memory model, 2026-11-08)",
+      "disposition": "removed by plan 216 Task 7"
     },
     {
       "feature": "lifecycle.widen-narrow",
@@ -1446,7 +1447,8 @@
       "section": "transferred",
       "verdict": "transferred",
       "plan": 216,
-      "reason": "retired by owner decision (memory model, 2026-11-08)"
+      "reason": "retired by owner decision (memory model, 2026-11-08)",
+      "disposition": "removed by plan 216 Task 7"
     },
     {
       "feature": "decisions.binding",
@@ -1559,7 +1561,8 @@
       "section": "transferred",
       "verdict": "transferred",
       "plan": 216,
-      "reason": "retired by owner decision (memory model, 2026-11-08)"
+      "reason": "retired by owner decision (memory model, 2026-11-08)",
+      "disposition": "removed by plan 216 Task 7 (the episode view; the kind name stays reserved for plan 219)"
     },
     {
       "feature": "kind.fact",

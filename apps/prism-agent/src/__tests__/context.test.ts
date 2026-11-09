@@ -48,7 +48,7 @@ test("coding_worker_compacts_with_coding_profile_and_trigger", async () => {
       assert.deepEqual(compaction.trigger, { type: "threshold_tokens", tokens: 96_000 });
 
       assert.equal(
-        agent.inspect().packages.some((entry) => entry.name === "@arnilo/prism-memory-observational"),
+        agent.inspect().packages.some((entry) => entry.name === "@arnilo/prism-memory-system"),
         false,
         "the observational memory is part of the experimental memory opt-in, not the default path",
       );
@@ -79,7 +79,7 @@ test("memory_opt_in_budgets_the_observational_memory", async () => {
         { packages: packages("opencode-go") },
       );
       try {
-        const observational = packageConfig(agent, "@arnilo/prism-memory-observational");
+        const observational = packageConfig(agent, "@arnilo/prism-memory-system");
         assert.deepEqual(observational.context, { recentMessages: 8, compactAt: { ratio: 0.6, maxTokens: 96_000 } });
         assert.deepEqual(packageConfig(agent, "@arnilo/prism-memory-compaction").trigger, { type: "threshold_tokens", tokens: 96_000 });
       } finally {

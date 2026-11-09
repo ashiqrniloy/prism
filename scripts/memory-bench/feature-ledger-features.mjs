@@ -67,14 +67,14 @@ export const EV = Object.freeze({
 const e = (path, effect, extra = {}) => ({ path, effect, ...extra });
 const t = (file, name) => ({ file, name });
 
-const FT = "packages/memory/fabric/src/__tests__";
+const FT = "packages/memory/system/src/ltm/__tests__";
 const WT = "packages/knowledge/wiki/src/__tests__";
-const OT = "packages/memory/observational/src/__tests__";
+const OT = "packages/memory/system/src/session/__tests__";
 const CT = "packages/memory/core/src/__tests__";
 const ST = "scripts/memory-bench/safety/safety.test.mjs";
 
-const FABRIC = "@arnilo/prism-memory-fabric";
-const OM = "@arnilo/prism-memory-observational";
+const FABRIC = "@arnilo/prism-memory-system";
+const OM = "@arnilo/prism-memory-system";
 const WIKI = "@arnilo/prism-wiki";
 
 const free = { modelCalls: "0", writes: "0", tokens: "0" };
@@ -605,19 +605,6 @@ export const FEATURES = [
     statusBasis: "No development row.",
   },
   {
-    id: "lifecycle.episode-merge",
-    group: "lifecycle",
-    name: "Episode merge (one model call per cluster)",
-    owner: FABRIC,
-    config: ["fabric:lifecycle.merge.episodes.*"],
-    defaultText: "off (episodes unset)",
-    cost: { modelCalls: "1 per episode cluster of >= minCluster", writes: "1 merged note", tokens: "cluster in" },
-    roles: ["cost", "accuracy"],
-    evidence: [],
-    status: "unmeasured",
-    statusBasis: "Opt-in; no development arm.",
-  },
-  {
     id: "lifecycle.widen-narrow",
     group: "lifecycle",
     name: "Widening to `agent` (two projects) and narrowing by contradiction",
@@ -894,20 +881,6 @@ export const FEATURES = [
     statusBasis: "No model-run coding row.",
   },
   {
-    id: "delivery.working-memory",
-    group: "delivery",
-    name: "Working memory blocks in context",
-    owner: FABRIC,
-    config: ["fabric:workingMemoryTemplate", "fabric:limits.maxWorkingMemoryBytes"],
-    kinds: ["working"],
-    defaultText: "available whenever the fabric is on",
-    cost: { modelCalls: "0", writes: "block edits", tokens: "the block, every request" },
-    roles: ["accuracy"],
-    evidence: [],
-    status: "unmeasured",
-    statusBasis: "No benchmark arm writes working blocks.",
-  },
-  {
     id: "decisions.binding",
     group: "delivery",
     name: "Decision-model binding (`decisions`, batched calls, abstain band)",
@@ -949,14 +922,14 @@ export const FEATURES = [
   {
     id: "kind.episode",
     group: "kinds",
-    name: "`episode` view (derived from OM, no row written)",
+    name: "`episode` kind (reserved for plan 219; writing it fails with episode_kind_not_available)",
     owner: FABRIC,
     kinds: ["episode"],
     cost: free,
     roles: ["accuracy"],
     evidence: [],
     status: "unmeasured",
-    statusBasis: "No arm reads the view.",
+    statusBasis: "The episode view left with plan 216 Task 7; no arm writes the kind.",
   },
   {
     id: "kind.fact",
@@ -1271,8 +1244,8 @@ export const FEATURES = [
     group: "om",
     name: "OM observer",
     owner: OM,
-    config: ["om:enabled", "om:observer.*"],
-    defaultRef: "observational.observer",
+    config: ["om:enabled", "om:stm.*"],
+    defaultRef: "observational.stm",
     cost: {
       modelCalls: "1 pass per observer.messageTokens (10k) unscanned tokens",
       writes: "ledger records",
@@ -1297,8 +1270,8 @@ export const FEATURES = [
     group: "om",
     name: "OM reflector",
     owner: OM,
-    config: ["om:reflector.*"],
-    defaultRef: "observational.reflector",
+    config: ["om:wm.*"],
+    defaultRef: "observational.wm",
     cost: {
       modelCalls: "1 pass per reflector.observationTokens (20k)",
       writes: "reflection records",
@@ -1314,8 +1287,8 @@ export const FEATURES = [
     group: "om",
     name: 'OM dropper, policy "model"',
     owner: OM,
-    config: ["om:dropper", "om:dropper.model", "om:dropper.targetTokens", "om:dropper.policy"],
-    defaultRef: "observational.dropper",
+    config: ["om:rehearsal", "om:rehearsal.model", "om:rehearsal.targetTokens", "om:rehearsal.policy", "om:rehearsal.instruction", "om:rehearsal.thinkingLevel"],
+    defaultRef: "observational.rehearsal",
     cost: { modelCalls: "1 pass under pool pressure", writes: "drop records", tokens: "active observations in" },
     roles: ["cost"],
     evidence: [],
@@ -1327,13 +1300,26 @@ export const FEATURES = [
     group: "om",
     name: 'OM dropper, policy "lowest-relevance" (deterministic)',
     owner: OM,
-    config: ["om:dropper.policy"],
+    config: ["om:rehearsal.policy"],
     defaultText: "off (policy model)",
     cost: free,
     roles: ["cost"],
     evidence: [],
     status: "unmeasured",
     statusBasis: "No row.",
+  },
+  {
+    id: "om.sleep",
+    group: "om",
+    name: "Sleep component (no-op until plan 221)",
+    owner: OM,
+    config: ["om:sleep"],
+    defaultText: "off (plan 216 Task 6: a no-op component with no fields)",
+    cost: free,
+    roles: ["cost"],
+    evidence: [],
+    status: "unmeasured",
+    statusBasis: "No behaviour yet; plan 221 builds it.",
   },
   {
     id: "om.task-state",
@@ -1391,12 +1377,12 @@ export const FEATURES = [
     group: "om",
     name: "OM commands: om, om:model, om:status, om:view",
     owner: OM,
-    commands: ["om", "om:model", "om:status", "om:view"],
+    commands: ["memory:session", "memory:session:model", "memory:session:status", "memory:session:view"],
     defaultRef: "observational.enabled",
     cost: free,
     roles: ["compatibility", "inspectability"],
     evidence: [e(EV.mechanisms210, "Task 2 probe: works (toggle, status counts and the ledger view)")],
-    tests: [t("packages/memory/observational/src/__tests__/observational.test.ts", "om_commands_expose_session_state_for_inspection")],
+    tests: [t("packages/memory/system/src/session/__tests__/observational.test.ts", "om_commands_expose_session_state_for_inspection")],
     status: "safety-proven",
     statusBasis:
       "Inspectability proven by the named test added in plan 210 Task 2; the compatibility role is a contract, not a measured benefit.",
@@ -1557,7 +1543,7 @@ export const FEATURES = [
     roles: ["safety"],
     evidence: [e(EV.safety202, "PII behaviour documented")],
     tests: [
-      t(`${FT}/memory.test.ts`, "redacts canary secrets from working and semantic memory"),
+      t(`${FT}/memory.test.ts`, "redacts canary secrets from semantic memory"),
       t(`${FT}/exchanges.test.ts`, "a_secret_in_a_turn_never_reaches_the_exchange_archive"),
       t(ST, "pii_default_is_retained_and_host_redactor_is_applied"),
     ],
@@ -1657,7 +1643,7 @@ export const FEATURES = [
     roles: ["safety", "cost"],
     evidence: [],
     tests: [
-      t(`${FT}/tools.test.ts`, "appends to a working block, refuses past the char cap, and leaves the version untouched"),
+      t(`${FT}/memory.test.ts`, "rejects oversized entry text"),
       t(`${FT}/extractor-budget.test.ts`, "extractor_output_budget_caps_at_model_limit"),
     ],
     status: "safety-proven",
@@ -1688,7 +1674,7 @@ export const FEATURES = [
     cost: free,
     roles: ["compatibility", "inspectability"],
     evidence: [e(EV.mechanisms210, "Task 2 probe: works (the toggle hides every fabric tool; status counts notes)")],
-    tests: [t("packages/memory/fabric/src/__tests__/package.test.ts", "memory_toggle_and_status_commands_are_inspectable")],
+    tests: [t("packages/memory/system/src/ltm/__tests__/package.test.ts", "memory_toggle_and_status_commands_are_inspectable")],
     status: "safety-proven",
     statusBasis:
       "Inspectability proven by the named test added in plan 210 Task 2; the compatibility role is a contract, not a measured benefit.",

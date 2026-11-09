@@ -2,7 +2,7 @@
   "kind": "memory-model-baselines",
   "plan": 216,
   "task": 2,
-  "memoryModelCriteriaHash": "2b50880bdc7ebee4f4a2a6c7dd574b6e2acdbb0bfbd58901d37e66f9d02ef9d5",
+  "memoryModelCriteriaHash": "f99907bd939cade310204dcca5e9adefeec2ee442a2f89205a31ecc53205479e",
   "P": {
     "record": "docs/_evidence/memory-bench/210/slimmed/record.json",
     "productHash": "867f82771643fe716c4d214c0ff26250cd842d1da6ee44dac5aabfdefed8759c"

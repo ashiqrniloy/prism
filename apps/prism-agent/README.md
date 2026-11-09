@@ -21,8 +21,8 @@ Every agent is one `createAgent` call with a package list. The host code for eac
 | Agent | Source | Why it has these packages |
 | --- | --- | --- |
 | orchestrator | [`src/host/orchestrator.ts`](src/host/orchestrator.ts) | `workflows` for the graph, `delegate` for a research child, and one `definePackage` that registers the host's `build` command |
-| coding | [`src/host/coding.ts`](src/host/coding.ts) | `tools-coding` to edit the workspace, `approval` to gate writes, `context-files` and `hooks-json` for repo context, `context-engineering` for fold/accounting, and `memory-compaction`; with `memory` set, also `memory-fabric` and `memory-observational` (and `@arnilo/prism-wiki` when `ontology` is on, with or without `memory`) |
-| research | [`src/host/research.ts`](src/host/research.ts) | `tools-web`, `tools-browser`, `tools-research` (the citation ledger and `run.end` check), `memory-compaction`, and the same fold/accounting with a 20% block cap; `memory-rag` only when `embeddings` is set, and `memory-fabric` with `memory-observational` only when `memory` is set |
+| coding | [`src/host/coding.ts`](src/host/coding.ts) | `tools-coding` to edit the workspace, `approval` to gate writes, `context-files` and `hooks-json` for repo context, `context-engineering` for fold/accounting, and `memory-compaction`; with `memory` set, also `memory-fabric` and `memory-system` (and `@arnilo/prism-wiki` when `ontology` is on, with or without `memory`) |
+| research | [`src/host/research.ts`](src/host/research.ts) | `tools-web`, `tools-browser`, `tools-research` (the citation ledger and `run.end` check), `memory-compaction`, and the same fold/accounting with a 20% block cap; `memory-rag` only when `embeddings` is set, and `memory-fabric` with `memory-system` only when `memory` is set |
 | external | [`src/host/external.ts`](src/host/external.ts) | a host-owned adapter over `driver-process`, for a vendor CLI the host does not control |
 | remote | [`src/host/remote.ts`](src/host/remote.ts) | `connectAgent`, reaching a worker served from a second process |
 
@@ -48,7 +48,7 @@ const agent = await createAgent({
 });
 ```
 
-With `memory` set, `memory-compaction` and `memory-observational` both claim the `compaction` slot; the explicit `slots` assignment is the SDK's conflict resolution, not a workaround. The orchestrator registers the build graph as a host command, not a model-visible tool:
+With `memory` set, `memory-compaction` and `memory-system` both claim the `compaction` slot; the explicit `slots` assignment is the SDK's conflict resolution, not a workaround. The orchestrator registers the build graph as a host command, not a model-visible tool:
 
 ```ts
 import { createAgent, definePackage } from "@arnilo/prism";
@@ -112,12 +112,12 @@ tools as every other backend.
 
 > **Experimental in 0.13.0.** The default coding and research workers load no experimental package. Everything in
 > this section (`memory`, `ontology`, `embeddings`) installs `@arnilo/prism-memory-*`, which ships on the
-> `experimental` dist-tag (`bun add @arnilo/prism-memory-fabric@experimental`), outside the stable packages'
-> promise. `memory` loads the fabric and the observational memory together; `embeddings` loads `memory-rag` on the
+> `experimental` dist-tag (`bun add @arnilo/prism-memory-system@experimental`), outside the stable packages'
+> promise. `memory` loads the memory system with its session tiers and long-term memory (`ltm`) together; `embeddings` loads `memory-rag` on the
 > research worker, with `rag_search`. `memory-compaction` (stable) owns the `compaction` slot on the default path.
 
-`memory: "conversational"` (off by default) installs `@arnilo/prism-memory-fabric` on the research and
-coding workers with the conversational preset. The preset archives each completed exchange verbatim,
+`memory: "conversational"` (off by default) installs `@arnilo/prism-memory-system` on the research and
+coding workers with long-term memory on the conversational preset (`ltm: { preset }`). The preset archives each completed exchange verbatim,
 injects recalled exchanges for the turn's task, enables `memory.recall`/`memory.read`, and makes no
 write-path model or embedding call; retrieval is lexical. `memory.recall` and `memory.read` join the
 research worker's prompt-free allow-list; `memory.forget` and the other writes still ask.
@@ -336,6 +336,36 @@ The same leg runs in `release:gate` after the client-neutrality check, and `run-
 | secrets | a credential ref never reaches the event stream, and a literal is rejected by the package |
 
 **The gap log.** A seam the host needs and the SDK lacks is never worked around. It is either added to the SDK inside the task that found it, or recorded in the Phase 12 plan's `## Gap log` table with the disposition `fixed in <file> (<test>)` or `backlog: <title> — <reason>`. Phase 12 is not done while a row is open, and a grep over `apps/prism-agent/` must find no workaround (a type-erasing `any` cast, a reach into package internals, or reimplemented package logic). The log is currently empty: every Phase 12 scenario is expressible with what the SDK ships.
+
+## The live provider journey
+
+`src/__tests__/live-provider-journey.test.ts` is the release's tier-2 check ([Release acceptance on live providers](../../docs/live-testing.md#release-acceptance-on-live-providers)). It runs ten scenarios against a real provider: the stream contract, the tool loop with thinking replay, approval suspend and resume across two processes, gate integrity on a modified resume, a rewrite re-gated by the coding hard-deny, ownership isolation, limits, LLM compaction, a remote host with two principals, and abort. Agents are built only with `createAgent` and first-party packages, in a temporary git repository.
+
+One file serves every provider. `src/__tests__/live/fixture.ts` is the only module that names one: it maps `PRISM_LIVE_JOURNEY_PROVIDER` to a provider package, its key, and its model variable. A hermetic test checks that the scenario file and the resume child (`src/__tests__/live/resume-child.ts`) never name a provider.
+
+| `PRISM_LIVE_JOURNEY_PROVIDER` | Key | Model variable (default) |
+| --- | --- | --- |
+| `hyper` | `HYPER_API_KEY` | `PRISM_LIVE_HYPER_JOURNEY_MODEL` (`deepseek-v4-pro`) |
+| `opencode-go` | `OPENCODE_GO_API_KEY` | `PRISM_LIVE_OPENCODE_GO_JOURNEY_MODEL` (`mimo-v2.5`) |
+| `commandcode` | `COMMAND_CODE_API_KEY` | `PRISM_LIVE_COMMANDCODE_JOURNEY_MODEL` (`Qwen/Qwen3.7-Flash`) |
+| `ollama-cloud` | `OLLAMA_API_KEY` | `PRISM_LIVE_OLLAMA_CLOUD_JOURNEY_MODEL` (`gemma4:31b`) |
+
+The suite skips with a reason unless `PRISM_LIVE_PROVIDER_TESTS=1`, `PRISM_LIVE_RELEASE_JOURNEY=1`, the provider switch, and that provider's key are all set:
+
+```bash
+PRISM_LIVE_RELEASE_JOURNEY=1 PRISM_LIVE_JOURNEY_PROVIDER=hyper \
+  bun --env-file="$PRISM_LIVE_ENV_FILE" test --timeout=0 src/__tests__/live-provider-journey.test.ts
+```
+
+The release gates T2 on Command Code and Ollama Cloud (owner decision, 2026-11-08). The live matrix rows `release/journey-commandcode` and `release/journey-ollama-cloud` run `bun run test:live:journey:commandcode` and `bun run test:live:journey:ollama-cloud`, and those scripts set the provider switch. The strict release run is:
+
+```bash
+PRISM_LIVE_STRICT=1 PRISM_LIVE_RELEASE_JOURNEY=1 PRISM_LIVE_FILTER=release/journey- bun run test:live
+```
+
+**Budget.** Each provider's full run may make at most 36 provider requests and use at most 80k input tokens. Every run also carries `limits` (`maxTurns: 6`, `maxInputTokens: 20_000` unless a scenario narrows them). Two counters enforce the request ceiling: a `model.call` hook counts every agent turn and its input tokens, and a counting `fetch` handed to the provider package counts every HTTP request, including the compaction summary call and the catalog lookup. A request past a ceiling is refused before it is sent, and the scenario fails. Each scenario times out after 120 s. The suite prints one `[journey]` line per scenario with its requests, input tokens, and duration, for the acceptance evidence.
+
+**Leak scan.** After every scenario the suite checks for the provider's key (the substring rule of `assertNoSecretLeak`) in: every event, `agent.inspect()`, every SQLite row, the remote client's events and host-UI requests, the resume child's stdout and stderr, and every thrown error.
 
 ## Building a host with an agent
 

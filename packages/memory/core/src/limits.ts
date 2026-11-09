@@ -23,8 +23,6 @@ export const HARD_MAX_VECTOR_DIMENSIONS_CAP = 4_096;
 export const DEFAULT_MAX_ENTRY_TEXT_CHARS = 16_384;
 export const HARD_MAX_ENTRY_TEXT_CHARS_CAP = 64_384;
 
-export const DEFAULT_MAX_WORKING_MEMORY_BYTES = 32 * 1024;
-export const HARD_MAX_WORKING_MEMORY_BYTES_CAP = 256 * 1024;
 
 /** Retention sweeps delete in bounded batches (no full-corpus scan per run). */
 export const DEFAULT_MEMORY_RETENTION_BATCH = 500;
@@ -50,7 +48,6 @@ export interface MemoryLimits {
   readonly maxInjectedTokens: number;
   readonly maxVectorDimensions: number;
   readonly maxEntryTextChars: number;
-  readonly maxWorkingMemoryBytes: number;
   readonly exportPageSize: number;
   readonly maxExportBytes: number;
   readonly exportMs: number;
@@ -66,7 +63,6 @@ export interface MemoryLimitsInput {
   readonly maxInjectedTokens?: number;
   readonly maxVectorDimensions?: number;
   readonly maxEntryTextChars?: number;
-  readonly maxWorkingMemoryBytes?: number;
   readonly exportPageSize?: number;
   readonly maxExportBytes?: number;
   readonly exportMs?: number;
@@ -108,12 +104,6 @@ export function resolveMemoryLimits(input: MemoryLimitsInput = {}): MemoryLimits
       DEFAULT_MAX_ENTRY_TEXT_CHARS,
       HARD_MAX_ENTRY_TEXT_CHARS_CAP,
       "maxEntryTextChars",
-    ),
-    maxWorkingMemoryBytes: clampPositiveInt(
-      input.maxWorkingMemoryBytes,
-      DEFAULT_MAX_WORKING_MEMORY_BYTES,
-      HARD_MAX_WORKING_MEMORY_BYTES_CAP,
-      "maxWorkingMemoryBytes",
     ),
     exportPageSize: clampPositiveInt(
       input.exportPageSize,

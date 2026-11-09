@@ -11,7 +11,6 @@ import {
   receivedText,
   resultText,
   scripted,
-  tailSourceText,
   tailText,
 } from "./harness.mjs";
 
@@ -445,40 +444,6 @@ export const probes = [
         correct: /zod/.test(onTail) && !/zod/.test(offTail),
         on: digest(onTail),
         off: digest(offTail),
-      };
-    },
-  },
-  {
-    id: "delivery.working-memory",
-    async run(root) {
-      // The working prefix is frozen for a session's cache epoch, so the write shows from the next session.
-      const arm = async (name, write) => {
-        const s = scripted().queue(
-          { calls: write ? [{ name: "memory.insert", args: { block: "profile", text: "Name: Ada" } }] : [] },
-          { calls: [] },
-        );
-        const h = await fabricAgent(join(root, name), { config: { rules: false }, respond: s.respond });
-        try {
-          await h.run("first", "remember my name");
-          await h.closeSession("first");
-          await h.run("second", "hello");
-          return { requests: h.requests.map((row) => row.request) };
-        } finally {
-          await h.close();
-        }
-      };
-      const on = await arm("on", true);
-      const off = await arm("off", false);
-      const onText = tailSourceText(lastRequest(on), "fabric-working");
-      const offText = tailSourceText(lastRequest(off), "fabric-working");
-      return {
-        surface: "request",
-        property: "a working block written by memory.insert is rendered as the working-memory tail block on later turns",
-        fires: /Ada/.test(onText) ? 1 : 0,
-        reaches: digest(onText) !== digest(offText),
-        correct: /Ada/.test(onText) && !/Ada/.test(offText),
-        on: digest(onText),
-        off: digest(offText),
       };
     },
   },

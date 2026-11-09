@@ -72,7 +72,7 @@ Mixed tasks: pick the area that owns the entry point. Read at most the architect
 **Change discipline:**
 - **Leave the tree green after every task.** A rename updates every caller in the same task (`graft callers --depth all`).
 - **Moved export → regenerate the baseline in the same task.** Run `bun scripts/release.mjs gate --update-baseline`, and paste the diff into the task note with removals attributed.
-- **Retired name, error, or config → repo-wide grep** over `src/ packages/ apps/ scripts/ examples/ docs/` (excluding `dist/`, `plans/`, `docs/history/`, `docs/_evidence/`).
+- **Retired name, error, or config → the standing sweep.** Run `bun scripts/retired-names.mjs --generate` (or add a tool to `scripts/retired-tool-names.json`), then `bun scripts/retired-names.mjs`; `scripts/retired-names.test.mjs` fails on any live use under `src/ packages/ apps/ scripts/ examples/ docs/`.
 - **No new dependency** without an explicit plan task. The kernel has zero runtime dependencies; heavy dependencies load only inside their owning package.
 - **Shortest working diff after reading the whole flow.** Fix at the root cause where all callers route through.
 - **One runnable check per non-trivial change:** the smallest test that fails if the logic breaks.

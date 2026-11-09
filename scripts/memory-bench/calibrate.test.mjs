@@ -128,7 +128,7 @@ test("memory_bench_ablate_flag_toggles_feature", async () => {
   assert.throws(() => memoryConfigs({ config: "fabric-agentic", ablate: ["fabric.inject=on"] }));
   assert.throws(() => memoryConfigs({ config: "om", ablate: ["om.dropper.targetTokens=5000"] }));
   const om = memoryConfigs({ config: "om", ablate: ["om.reflector.observationTokens=5000", "om.dropper.targetTokens=5000"] });
-  assert.equal(om.observational.dropper.targetTokens, 5000);
+  assert.equal(om.observational.rehearsal.targetTokens, 5000);
   const policy = { inject: { query: "user" } };
   memoryConfigs({ config: "fabric", ablate: ["fabric.inject.query=task"] }, { lifecycle: true, policy });
   assert.equal(policy.inject.query, "user");
@@ -142,7 +142,7 @@ test("memory_bench_ablate_flag_toggles_feature", async () => {
     ablate: ["fabric.promote=off", "om.observer.messageTokens=2"],
   });
   assert.equal(lifecycle.memoryConfig.fabric.promote.enabled, false);
-  assert.equal(lifecycle.memoryConfig.observational.observer.messageTokens, 2);
+  assert.equal(lifecycle.memoryConfig.observational.stm.triggerTokens, 2);
 });
 
 test("promotion_fit_splits_personas_preserves_hard_gates_and_never_tunes_heldout", () => {
@@ -223,7 +223,7 @@ test("calibration_does_not_promote_sparse_or_unaudited_bins_to_defaults", () => 
 });
 
 test("bench_fabric_x_tools_is_the_preset", async () => {
-  const { resolveMemoryFabricConfig } = await import("@arnilo/prism-memory-fabric");
+  const { resolveMemoryFabricConfig } = await import("@arnilo/prism-memory-system");
   const { BENCH_SCOPES } = await import("./bench-scope.mjs");
   // The 188.10 Task 9 `fabric-x-tools` arm as it was spelled before the preset existed.
   const accepted = { retrieval: "lexical", inject: { query: "task", kinds: ["exchange"] }, scopes: BENCH_SCOPES, exchanges: {} };

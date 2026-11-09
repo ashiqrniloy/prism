@@ -11,6 +11,7 @@ import {
   buildC1Report,
   buildTask5Rows,
   C1_F4_ORIGINAL_BARS,
+  C1_RETIRED_ABLATIONS,
   C1_ROBUSTNESS_ARMS,
   c1BudgetDecision,
   c1BudgetGate,
@@ -19,6 +20,7 @@ import {
   c1Jobs,
   c1PairEffect,
   c1Scheduled,
+  dryRunC1Manifest,
   f4Disposition,
   f4LegRow,
   orientEffect,
@@ -239,7 +241,7 @@ describe("plan 210 Task 5 (gate C-1)", () => {
         expect(transformVariantSource(path, source, [spec])).not.toBe(source);
       }
     // Unset, nothing changes.
-    const tools = "packages/memory/fabric/src/tools.ts";
+    const tools = "packages/memory/system/src/ltm/tools.ts";
     const source = await readFile(tools, "utf8");
     expect(transformVariantSource(tools, source, [])).toBe(source);
   });
@@ -253,9 +255,9 @@ describe("plan 210 Task 5 (gate C-1)", () => {
       respond: s.respond,
       config: { scopes: { user: true } },
       seed: async ({ stores }) => {
-        const fabric = await import("@arnilo/prism-memory-fabric");
+        const fabric = await import("@arnilo/prism-memory-system");
         const userMemory = fabric.createMemory({ tenantId: TENANT, resourceId: "user", threadId: "default", ...stores });
-        const writer = fabric.createMemoryFabric({ memory: userMemory, vectorStore: stores.vectorStore, consolidate: false });
+        const writer = fabric.createLongTermMemory({ memory: userMemory, vectorStore: stores.vectorStore, consolidate: false });
         id = (
           await writer.remember({ kind: "preference", content: "prefers tabs over spaces in every repository" }, { status: "candidate" })
         ).id;
@@ -268,7 +270,7 @@ describe("plan 210 Task 5 (gate C-1)", () => {
         await h.closeSession(key);
       }
       const rows = await h.stores.vectorStore.getByThread({ tenantId: TENANT, resourceId: "user", threadId: "default" });
-      const fabric = await import("@arnilo/prism-memory-fabric");
+      const fabric = await import("@arnilo/prism-memory-system");
       const note = fabric.parseMemoryNoteMetadata(rows.find((item) => item.id === id).metadata);
       expect(note.useSessions ?? 0).toBeGreaterThanOrEqual(2);
     } finally {
@@ -365,3 +367,19 @@ describe("plan 210 Task 5 (gate C-1)", () => {
     expect(built.plan202Closure.some((item) => item.status === "unverified")).toBe(true);
   });
 });
+
+test("cleanup_campaign_dry_run_resolves_new_paths", async () => {
+  const run = await dryRunC1Manifest();
+  expect(run.errors).toBe(0);
+  expect(run.builds + run.retired).toBe(run.jobs);
+  expect(run.builds).toBeGreaterThan(0);
+  // Every historical variant patches a file under the moved packages, never the retired fabric/observational trees.
+  const files = [...new Set(run.rows.flatMap((row) => row.variantFiles ?? []))];
+  expect(files.length).toBeGreaterThan(0);
+  for (const file of files) expect(file).toMatch(/^packages\/(memory\/(system|core)|knowledge\/wiki)\/src\//);
+  // A job is retired only for a named removal, and each named removal retires at least one job.
+  for (const row of run.rows.filter((row) => row.status === "retired"))
+    expect(row.ablate.some((spec) => Object.hasOwn(C1_RETIRED_ABLATIONS, spec.split("=")[0]))).toBe(true);
+  for (const path of Object.keys(C1_RETIRED_ABLATIONS))
+    expect(run.rows.some((row) => row.status === "retired" && row.ablate.some((spec) => spec.startsWith(`${path}=`)))).toBe(true);
+}, 120_000);

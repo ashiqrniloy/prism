@@ -1,6 +1,6 @@
 # Memory — compaction slot, memory packages, context engineering
 
-The kernel `compaction` slot and the `compaction.when` hook, plus the memory packages (`memory-observational`, `memory-compaction`, `memory-core`, `memory-fabric`) and the knowledge packages outside memory (`rag`, `wiki`, under `packages/knowledge/`). Also covers `context-engineering` (context budget, tool-result fold, tool search, attention compiler).
+The kernel `compaction` slot and the `compaction.when` hook, plus the memory packages (`memory-compaction`, `memory-core`, `memory-system` — session tiers and long-term memory, the former `memory-observational` and `memory-fabric`) and the knowledge packages outside memory (`rag`, `wiki`, under `packages/knowledge/`). Also covers `context-engineering` (context budget, tool-result fold, tool search, attention compiler).
 
 ## Target
 
@@ -22,9 +22,9 @@ The kernel `compaction` slot and the `compaction.when` hook, plus the memory pac
 ## Today
 
 - Kernel: the `compaction` slot contract (`src/contracts-core/compaction.ts`), the deterministic default (`src/compaction.ts`), the `compaction.when` hook, and `input.ts` assembly (where `context.build` handlers compose the provider view).
-- Packages (`packages/memory/*`, `packages/context/engineering`): `compaction` (LLM summary strategy), `observational` (OM ledger, observer/reflector, `/om` commands, `createObservationalMemoryCompactor`), `core` (vector and working memory, scoring, Postgres), `fabric` (typed notes, consolidation, recall), `rag` (`packages/knowledge/rag`: chunking, embedders, fusion, connectors), `wiki` (`packages/knowledge/wiki`; was the 0.12-era compiler, `.wiki/` store, `qmd` search and `prism-wiki` CLI; plan 207 Task 5 retires them and re-scopes the package as the ontology tier), and `context-engineering` (attention compiler, context budget, tool-result fold, tool search).
+- Packages (`packages/memory/*`, `packages/context/engineering`): `compaction` (LLM summary strategy), `core` (vector memory, scoring, the SQLite, Postgres and markdown stores), `system` (`src/session`: the session tiers — ledger, STM/WM/rehearsal workers, `memory:session` commands; `src/ltm`: long-term memory, the former fabric — typed notes, consolidation, recall; `memorySystem({ ltm })`), `rag` (`packages/knowledge/rag`: chunking, embedders, fusion, connectors), `wiki` (`packages/knowledge/wiki`; was the 0.12-era compiler, `.wiki/` store, `qmd` search and `prism-wiki` CLI; plan 207 Task 5 retires them and re-scopes the package as the ontology tier), and `context-engineering` (attention compiler, context budget, tool-result fold, tool search).
 - In flight, strictly one plan after another: plan 202 Tasks 1–17 (17b) → plan 207 (17c: the ontology tier) → plan 208 (17d: three-tier criteria and ontology dev screen) → plan 209 (17e: standing rules, tool steps, lessons, work-outcome suite and dev screen) → plan 210 (17f: feature audit and removals, then the one held-out acceptance and the preset revision, defaults and claims) → 184 → 185. No held-out partition is read before plan 210 Task 9. Read the active plan's tasks and plan 202's "Structure decision" (with its 2026-10-31 amendment) before touching OM, memory-core, fabric or wiki. Do not add a memory feature without a named measurement: plan 210 removes what has none.
-- Current docs: [slots.md](../../../../docs/slots.md) (compaction slot); [`compaction`](../../../../packages/memory/compaction/README.md), [`observational`](../../../../packages/memory/observational/README.md), [`core`](../../../../packages/memory/core/README.md), [`fabric`](../../../../packages/memory/fabric/README.md), [`rag`](../../../../packages/knowledge/rag/README.md), [`wiki`](../../../../packages/knowledge/wiki/README.md), [`engineering`](../../../../packages/context/engineering/README.md).
+- Current docs: [slots.md](../../../../docs/slots.md) (compaction slot); [`compaction`](../../../../packages/memory/compaction/README.md), [`system`](../../../../packages/memory/system/README.md), [`core`](../../../../packages/memory/core/README.md), [`rag`](../../../../packages/knowledge/rag/README.md), [`wiki`](../../../../packages/knowledge/wiki/README.md), [`engineering`](../../../../packages/context/engineering/README.md).
 
 ## Graft queries
 
@@ -42,6 +42,6 @@ The kernel `compaction` slot and the `compaction.when` hook, plus the memory pac
 
 - Flat OM settings keys are rejected, and the error names the nested replacement.
 - Token estimates (`ceil(len/4)`) are for context budgeting only and never pose as billing numbers.
-- Summary generation uses the agent session id (for cache hits). OM workers use a derived `om:{session.id}`. Keep them separate.
+- Summary generation uses the agent session id (for cache hits). Session-memory workers use a derived `memory.session:{session.id}`. Keep them separate.
 - `context.build` changes only the provider view. The store keeps the full transcript until the compaction slot rewrites it.
 - Never wrap `session.run` or `session.stream` from a package. If a behavior seems to need it, a hook or kernel primitive is missing; fix that instead.

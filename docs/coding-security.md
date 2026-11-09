@@ -6,7 +6,7 @@
 
 | Export | Purpose |
 | --- | --- |
-| `createCodingApprovalPolicy(options)` | Returns an `ExecutionPolicy` with trusted roots, read-only mode, command allow/deny rules, approval caching, and timeout/abort-aware approval waits. |
+| `ExecutionPolicy`, `enforceExecutionPolicy` | The host's allow/deny rule over an `ExecutionAction` (path, command, kind), checked inside each tool before side effects. Prompting is `@arnilo/prism-approval`'s job. |
 | `createSandboxBashOperations(adapter)` | Maps a host-owned `SandboxAdapter` to coding-agent `BashOperations` for delegated shell execution. |
 | `createSandboxCodingComposition(cwd, options)` | Authoritative construction: returns `{ tools, composition }` with required `workspaceMode` (`"host"` \| `"sandbox"`), fail-closed mixed wiring, and containment metadata. |
 | `createSandboxReadOnlyComposition(cwd, options)` | Same contract for read-only tools (`read`/`grep`/`glob`). |
@@ -25,10 +25,10 @@
 
 `grep` is the one tool that runs a pattern the model writes. Regex mode runs in a Worker: the main thread reads files through the same bounded repository operations, posts file text, and calls `terminate()` when the search time limit elapses, returning the matches found so far with `truncatedBy: "time"`. Plan 001's objection (an uninterruptible `RegExp` on the main thread) therefore no longer holds — a catastrophic pattern can only hang the worker. The pattern never reaches a shell, and `literal: true` matches characters on the main thread, so a metacharacter-heavy pattern is safe to search literally.
 
-Core contracts live in `@arnilo/prism`:
+The contracts live in this package:
 
 ```ts
-import type { ExecutionAction, ExecutionPolicy, ExecutionDecision } from "@arnilo/prism";
+import type { ExecutionAction, ExecutionDecision, ExecutionPolicy } from "@arnilo/prism-tools-coding";
 ```
 
 ## When to use it
@@ -105,7 +105,7 @@ const sandbox = await createDockerSandbox({ docker, image, sourceRoot, user, net
 
 ## Outputs / response / events
 
-`createCodingApprovalPolicy()` returns an `ExecutionPolicy`. Allowed checks return `ExecutionDecision { allowed: true }`; denied checks include a stable reason; shell decisions set `exclusive: true`. Sandbox adapters return coding-agent-compatible `BashOperations`, receive `onData(Buffer)` for ordered stdout/stderr forwarding through the shell tool's existing bounded accumulator, and never grant policy approval themselves.
+An `ExecutionPolicy.check()` returns an `ExecutionDecision`. An allowed check returns `{ allowed: true }`; a denial carries a stable `reason`; `exclusive: true` serializes the call before dispatch. Sandbox adapters return coding-agent-compatible `BashOperations`, receive `onData(Buffer)` for ordered stdout/stderr forwarding through the shell tool's existing bounded accumulator, and never grant policy approval themselves.
 
 `createSandboxCodingComposition()` returns `{ tools, composition }` where `SandboxCodingComposition` carries `workspaceMode`, `capabilities`, `containmentClaim` (deprecated), `mixedWiringAllowed`, `warnings`, `workspaceRoot`, and optional `treeIdentity` (from `importIdentity` / `lastExportIdentity`). `capabilities` is a complete, frozen `SandboxCapabilities` object: `workspaceCoherent` derives from actual shell/filesystem/repository wiring; the isolation fields derive only from validated adapter capability metadata, never from `execFile`/`close` duck typing or custom operations being present. Host mode and escape-hatch mixed wiring always report no isolation capability — never treat host mode as contained execution.
 
@@ -144,18 +144,19 @@ Rules:
 
 ```ts
 import {
-  createCodingApprovalPolicy,
   createDockerSandbox,
   createSandboxCodingComposition,
+  type ExecutionPolicy,
 } from "@arnilo/prism-tools-coding";
 import { createGitTools } from "@arnilo/prism-tools-coding";
 
-const policy = createCodingApprovalPolicy({
-  roots: [workspaceRoot],
-  approve: async ({ action, signal }) => ui.confirm(action, { signal }),
-  approvalCacheScope: "run",
-  approvalTimeoutMs: 60_000,
-});
+// Prompting is `@arnilo/prism-approval`'s job; an `ExecutionPolicy` is a synchronous allow/deny rule.
+const policy: ExecutionPolicy = {
+  check: (action) =>
+    action.kind === "read" || action.command === "npm test"
+      ? { allowed: true }
+      : { allowed: false, reason: `not allowed in ${workspaceRoot}: ${action.operation}` },
+};
 
 const sandbox = await createDockerSandbox({
   docker: "/usr/bin/docker",
@@ -201,7 +202,7 @@ Policies are ordinary host values: attach one globally through `createCodingTool
 
 The Docker reference adapter starts by recorded container ID/label, uses argument arrays only, mounts source read-only, populates a size-bounded tmpfs `/workspace`, drops all capabilities, enables `no-new-privileges`, runs with `--init`, and never exposes the Docker socket, privileged mode, or host PID/IPC namespaces. Image pull/build/update stays outside Prism. Protected real-Docker checks are opt-in via `PRISM_TEST_DOCKER_SANDBOX=1` with host-supplied `PRISM_TEST_DOCKER_BIN` and digest-pinned `PRISM_TEST_DOCKER_IMAGE`.
 
-Callback approval remains process-local. For approval that must survive restart, wrap the action in an opted-in workflow `toolNode({ approval: { reason, data?, resumeSchema? } })`. `ask_user_decision` also maps onto the shared decision model: inside a durable gated agent run its call suspends as a kind-`elicitation` pending decision whose schema carries the choice contract (option-id enums) plus the full question/options UX payload on a Prism-owned schema extension property; the resume decision's `elicitation` payload (a `selectedId`/`selectedIds`/`customText` answer) is validated against the schema and the tool-level answer-shape rules, then resolves the call without invoking the blocking `ask()` callback. The process-local `ask()` path and the workflow suspend/resume path are unchanged. The workflow persists `suspended` state before any tool side effect. After explicit approve, it recomputes the action and invokes this package's current `ExecutionPolicy`; durable approval never populates or bypasses the process-local approval cache. Adapters should emit chunks through `request.onData` as they arrive and honor `request.signal`/`request.timeout`; buffering is unnecessary. Coding-agent composes caller abort with its total-output controller, so ignoring the supplied signal defeats process termination even though Prism stops retaining output at the cap. Default caching is `none`; use run-scoped caching only when repeated approval within one run is desired, and session scope only when that wider lifecycle is intentional.
+Callback approval remains process-local. For approval that must survive restart, register `@arnilo/prism-approval`: an `ask` decision suspends the run durably and `session.resume(decisions)` continues it, or gate a workflow step with `humanGate` from `@arnilo/prism-workflows`. `ask_user_decision` also maps onto the shared decision model: inside a durable gated agent run its call suspends as a kind-`elicitation` pending decision whose schema carries the choice contract (option-id enums) plus the full question/options UX payload on a Prism-owned schema extension property; the resume decision's `elicitation` payload (a `selectedId`/`selectedIds`/`customText` answer) is validated against the schema and the tool-level answer-shape rules, then resolves the call without invoking the blocking `ask()` callback. The process-local `ask()` path and the workflow suspend/resume path are unchanged. The workflow persists `suspended` state before any tool side effect. After explicit approve, it recomputes the action and invokes this package's current `ExecutionPolicy`; durable approval never populates or bypasses the process-local approval cache. Adapters should emit chunks through `request.onData` as they arrive and honor `request.signal`/`request.timeout`; buffering is unnecessary. Coding-agent composes caller abort with its total-output controller, so ignoring the supplied signal defeats process termination even though Prism stops retaining output at the cap. Default caching is `none`; use run-scoped caching only when repeated approval within one run is desired, and session scope only when that wider lifecycle is intentional.
 
 ## Security and performance notes
 
@@ -224,7 +225,7 @@ A native Windows backend (Job objects / AppContainer) is tracked, not scheduled.
 - [Work sandbox](../packages/tools/work/README.md): work image + `createWorkComposition`; host injects `createDockerSandbox` (prism-work does not fork it)
 - [Coding agent tools](../packages/tools/coding/README.md): durable plan/todo Markdown helpers and `state.coding` checkpoint metadata for restart/resume without a second runtime
 - [Hosted sandboxes](../packages/tools/coding/README.md): E2B pause/resume adapter, filesystem-only snapshots, reconnect by sandbox id
-- [Workflows](../packages/integrations/workflows/README.md): `runWorkflow` / `resumeWorkflow` / `startWorkflowBackground` composition for coding tasks
+- [Workflows](../packages/integrations/workflows/README.md): `runWorkflow` / `resumeWorkflow` / `startWorkflow` composition for coding tasks
 - [Host security guide](host-security.md)
 - [Performance limits](performance.md)
 - [Forge integration](../packages/tools/coding/README.md): GitHub adapter whose mutations can be routed through the egress proxy

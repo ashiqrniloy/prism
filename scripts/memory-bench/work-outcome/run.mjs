@@ -3,6 +3,7 @@
  * Plan 209 Task 5: the work-outcome suite runner.
  *
  *   timeout 600 bun scripts/memory-bench/work-outcome/run.mjs --offline [--partition dev] [--output report.json]
+ *   timeout 600 bun scripts/memory-bench/work-outcome/run.mjs --family long-session --offline   # plan 217 Task 5 (S1)
  *
  * Every session is one `runScenario` (plan 200) over a fresh `createAgent`, driven by the evals user simulator and
  * graded by `createStateMatchScorer` plus the scripted checks in `metrics.mjs`. A persona's sessions share one
@@ -28,7 +29,7 @@ import { providerPackage } from "@arnilo/prism/provider-kit";
 import { createScriptedHostUi } from "@arnilo/prism/testing";
 import { createStateMatchScorer, createUserSimulator, runScenario } from "@arnilo/prism-evals";
 import { createSqliteMemoryStores } from "@arnilo/prism-memory-core/sqlite";
-import fabric, { parseMemoryNoteMetadata } from "@arnilo/prism-memory-fabric";
+import memorySystem, { parseMemoryNoteMetadata } from "@arnilo/prism-memory-system";
 import { wiki } from "@arnilo/prism-wiki";
 import { tokens } from "../injection-log.mjs";
 import { curatorStats, isCuratorRequest } from "../ontology-arm.mjs";
@@ -471,11 +472,13 @@ export async function runPersonaArm({ persona, arm, providers, model, simulatorA
       const packages = [providerPackage("work-outcome-providers", providers), observer(record, v.action.tool)];
       if (config.fabric)
         packages.push(
-          fabric({
-            ...structuredClone(config.fabric),
-            tools: { root: memoryRoot },
-            store: { sqlite: { path: join(memoryRoot, "notes.sqlite") } },
-            scopes: { tenantId: persona.id, project: { id: projectId(session.project), root: join(base, session.project) } },
+          memorySystem({
+            ltm: {
+              ...structuredClone(config.fabric),
+              tools: { root: memoryRoot },
+              store: { sqlite: { path: join(memoryRoot, "notes.sqlite") } },
+              scopes: { tenantId: persona.id, project: { id: projectId(session.project), root: join(base, session.project) } },
+            },
           }),
         );
       // The wiki's own store: one root per project beside the memory root, never in the persona's workspace (plan 216
@@ -820,6 +823,7 @@ function parseArgs(argv) {
     else if (arg === "--output") options.output = argv[++index];
     else if (arg === "--arms") options.arms = argv[++index].split(",");
     else if (arg === "--personas") options.personaLimit = Number(argv[++index]);
+    else if (arg === "--family") options.family = argv[++index];
     else throw new Error(`MemoryBenchArguments: unknown flag ${arg}`);
   }
   return options;
@@ -828,6 +832,16 @@ function parseArgs(argv) {
 if (import.meta.main) {
   try {
     const options = parseArgs(process.argv.slice(2));
+    if (options.family === "long-session") {
+      // Plan 217 Task 5: the long-session family (S1). Its live runs are gate M-1's (plan 217 Task 6).
+      if (!options.offline) throw new Error("MemoryBenchGate: live long-session runs go through the gate M-1 campaign (plan 217 Task 6)");
+      const { runLongSession } = await import("./long-session.mjs");
+      const report = await runLongSession(options);
+      if (options.output) await writeFile(options.output, `${JSON.stringify(report, null, 2)}\n`);
+      console.log(JSON.stringify({ wallMs: report.wallMs, summary: report.summary }, null, 1));
+      process.exit(0);
+    }
+    if (options.family !== undefined) throw new Error(`MemoryBenchArguments: unknown family ${options.family}`);
     if (!options.offline)
       throw new Error("MemoryBenchGate: live work-outcome runs go through campaign.mjs --plan 209 after gate W-1 (plan 209 Task 6)");
     const report = await runWorkOutcome(options);

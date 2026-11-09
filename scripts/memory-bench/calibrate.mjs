@@ -2,7 +2,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { parseArgs } from "node:util";
-import { DEFAULT_PROMOTION_MIN_SCORE, DEFAULT_PROMOTION_WEIGHTS } from "../../packages/memory/fabric/src/consolidation/score.ts";
+import { DEFAULT_PROMOTION_MIN_SCORE, DEFAULT_PROMOTION_WEIGHTS } from "../../packages/memory/system/src/ltm/consolidation/score.ts";
 
 export function calibrateInjection(items, { minBinN = 20, auditedGold = false } = {}) {
   if (!Number.isSafeInteger(minBinN) || minBinN < 1) throw new Error("CalibrationMinBinN");

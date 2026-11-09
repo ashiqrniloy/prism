@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runMemoryConformance } from "../../../../fabric/src/conformance.js";
+import { runMemoryConformance } from "../../../../system/src/ltm/conformance.js";
 import { createHashEmbedder } from "../../embedder.js";
 import { MemoryValidationError } from "../../errors.js";
 import type { MemoryVectorRecord } from "../../types.js";
@@ -55,7 +55,7 @@ function findNoteFile(root: string, id: string): string {
   return found;
 }
 
-test("markdown_store_passes_vector_and_working_conformance", async () => {
+test("markdown_store_passes_vector_conformance", async () => {
   const store = await open(tempRoot());
   await runMemoryConformance(() => ({ ...store, embedder: createHashEmbedder({ dimensions: 64 }) }));
 });
@@ -319,11 +319,24 @@ test("markdown_paths_reject_traversal_and_symlink_escape", async () => {
   );
 });
 
-test("markdown_malformed_working_memory_fails_closed", async () => {
+test("working_notes_in_store_fail_with_export_hint", async () => {
+  // Plan 216 Task 7: a store written before working memory left long-term memory fails to open, naming the file
+  // and how to export it, rather than indexing it as a note or ignoring it.
   const root = tempRoot();
   mkdirSync(join(root, "t/r/working"), { recursive: true });
-  writeFileSync(join(root, "t/r/working/a.md"), "# Working memory\n\nno json block here\n");
-  await expect(createMarkdownMemoryStores({ root })).rejects.toBeInstanceOf(MemoryValidationError);
+  const record = { tenantId: "t", resourceId: "r", threadId: "a", value: { name: "Ada" }, version: 1, updatedAt: "2026-10-19T00:00:00Z" };
+  writeFileSync(join(root, "t/r/working/a.md"), `# Working memory\n\n\`\`\`json\n${JSON.stringify(record)}\n\`\`\`\n`);
+  const failure = await createMarkdownMemoryStores({ root }).then(
+    () => undefined,
+    (error: unknown) => error,
+  );
+  expect(failure).toBeInstanceOf(MemoryValidationError);
+  expect((failure as MemoryValidationError).code).toBe("working_memory_retired");
+  expect((failure as Error).message).toContain("t/r/working/a.md");
+  expect((failure as Error).message).toMatch(/Export what you need/);
+  // Moving the directory out is the documented fix: the store then opens.
+  rmSync(join(root, "t/r/working"), { recursive: true });
+  await (await createMarkdownMemoryStores({ root })).close();
 });
 
 test("markdown_log_has_no_note_text", async () => {

@@ -126,7 +126,7 @@ export async function runCacheProbe({ ref, turns = PROBE_TURNS, maxRequests = PR
   );
   const { createAgent } = await import("@arnilo/prism");
   const { providerPackage } = await import("@arnilo/prism/provider-kit");
-  const { default: memoryFabric, createMemory, createMemoryFabric } = await import("@arnilo/prism-memory-fabric");
+  const { default: memorySystem, createMemory, createLongTermMemory } = await import("@arnilo/prism-memory-system");
   const { createSqliteMemoryStores } = await import("@arnilo/prism-memory-core/sqlite");
   const dir = await mkdtemp(join(tmpdir(), "prism-cache-probe-"));
   const bodies = [];
@@ -142,7 +142,7 @@ export async function runCacheProbe({ ref, turns = PROBE_TURNS, maxRequests = PR
     const path = join(dir, "memory.sqlite");
     stores = await createSqliteMemoryStores({ path });
     const memory = createMemory({ ...scope, ...stores });
-    const writer = createMemoryFabric({ memory, vectorStore: stores.vectorStore, consolidate: false });
+    const writer = createLongTermMemory({ memory, vectorStore: stores.vectorStore, consolidate: false });
     await writer.remember({ id: SEED_ID, kind: "fact", content: CANARY, scope: "project", keywords: ["canary"] });
     agent = await createAgent({
       model: route.model,
@@ -150,12 +150,12 @@ export async function runCacheProbe({ ref, turns = PROBE_TURNS, maxRequests = PR
       retry: false,
       packages: [
         providerPackage("cache-probe-providers", route.providers),
-        memoryFabric({
+        memorySystem({ ltm: {
           preset: "conversational",
           tools: { root: dir },
           store: { sqlite: { path } },
           scopes: { tenantId: scope.tenantId, project: { id: "probe--01234567", root: dir }, agent: false, user: false },
-        }),
+        } }),
       ],
     });
     const session = await agent.session({ id: "cache-probe", create: true });

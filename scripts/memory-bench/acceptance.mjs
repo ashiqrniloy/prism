@@ -178,7 +178,7 @@ export const ACCEPTANCE_1888_PROTOCOL_VERSION = 2;
 export const PREFIX_REVISION = "140091766ab830573054befc8210314b54667950";
 export const PREFIX_WORKTREE = ".cache/memory-bench/188.8/prefix";
 /** Harness is copied into the pre-fix worktree; only these paths may differ from it. */
-export const PREFIX_PRODUCT_PATHS = ["packages/memory/fabric/src"];
+export const PREFIX_PRODUCT_PATHS = ["packages/memory/system/src/ltm"];
 export const HARNESS_PATHS = ["scripts/memory-bench"];
 /** Predeclared primary family: Holm across these four abilities. */
 export const PRIMARY_1888_ABILITIES = ["knowledge-update", "multi-session", "temporal-reasoning", "single-session-user"];
@@ -369,7 +369,7 @@ export async function fileFingerprint(paths, root = ".") {
  */
 export const WRITE_SIDE_CACHE = ".cache/memory-bench/write";
 export const WRITE_SIDE_DATASET = "longmemeval-s@98d7416c";
-export const WRITE_SIDE_PATHS = ["packages/memory/fabric/src"];
+export const WRITE_SIDE_PATHS = ["packages/memory/system/src/ltm"];
 export const EXTRACTOR_MODEL = "opencode-go/mimo-v2.5";
 export const EXTRACTOR_GENERATION = "temperature=0;maxTokens=4096";
 export const INGEST_PATHS = ["scripts/memory-bench/replay.mjs", "scripts/memory-bench/datasets.mjs"];
@@ -424,7 +424,7 @@ export async function writeSideCacheDir({
     extractorModel: EXTRACTOR_MODEL,
     generation: EXTRACTOR_GENERATION,
     writeGeneration,
-    promptTemplateHash: await fileFingerprint(["packages/memory/fabric/src/consolidation/prompts.ts"], root),
+    promptTemplateHash: await fileFingerprint(["packages/memory/system/src/ltm/consolidation/prompts.ts"], root),
     ingestHash: await fileFingerprint(INGEST_PATHS, root),
   });
 }

@@ -35,7 +35,6 @@ const apiPages = [
   "docs/provider-kit.md",
   "docs/testing.md",
   "docs/coding-security.md",
-  "docs/node-filesystem-config.md",
   "docs/resource-loading.md",
   "docs/credentials-and-redaction.md",
   "docs/settings-auth-trust-security.md",
@@ -295,6 +294,8 @@ describe("docs", () => {
       "@arnilo/prism-impeccable",
       "@arnilo/prism-memory-wiki",
       "@arnilo/prism-memory-rag",
+      "@arnilo/prism-memory-observational",
+      "@arnilo/prism-memory-fabric",
     ]) {
       assert.ok(!index.includes(retired), `docs/index.md must not name retired package ${retired} as live`);
     }
@@ -458,6 +459,11 @@ describe("docs", () => {
       "MEMORY_FABRIC_CONCEPT_HANDLER_SERVICE",
       "createConceptDeletionHandler",
       "memoryWiki",
+      // plan 216 Task 4: the session tiers moved into @arnilo/prism-memory-system, no alias.
+      "memoryObservational",
+      "memoryObservationalConfigSchema",
+      "resolveMemoryObservationalConfig",
+      "MemoryObservationalConfig",
     ];
     const packages = [
       "@arnilo/prism-agent-sdk",
@@ -474,6 +480,12 @@ describe("docs", () => {
       // plan 216 Task 3: renamed, no alias.
       "@arnilo/prism-memory-wiki",
       "@arnilo/prism-memory-rag",
+      // plan 216 Task 4: renamed, no alias.
+      "@arnilo/prism-memory-observational",
+      // plan 216 Task 5: moved into @arnilo/prism-memory-system as `ltm`, no alias.
+      "@arnilo/prism-memory-fabric",
+      "memoryFabric",
+      "createMemoryFabric",
     ];
     // Read the frozen 0.12.1 surface so the cross-check cannot drift to names that
     // never shipped. CI checkouts may be shallow (no tags), so the baseline leg is
@@ -701,7 +713,12 @@ describe("docs", () => {
     const readiness = readinessDoc();
     const pkg = JSON.parse(readFileSync("package.json", "utf8"));
     for (const workflow of [security, release]) {
-      assert.ok(workflow.includes("bun audit --audit-level=moderate"), "workflows must enforce moderate audit policy");
+      // The audit lives in security.yml; release.yml calls it rather than copying the job
+      // (plan 215 Task 36), so the release path still enforces the policy through the call.
+      assert.ok(
+        workflow.includes("bun audit --audit-level=moderate") || workflow.includes("uses: ./.github/workflows/security.yml"),
+        "workflows must enforce moderate audit policy",
+      );
     }
     for (const job of ["dependency-review", "codeql", "supply-chain"]) assert.ok(security.includes(job), `security.yml missing ${job}`);
     assert.ok(
@@ -965,7 +982,7 @@ describe("docs", () => {
     }
     for (const seam of [
       "packages/hosts/ag-ui/src/handler.ts",
-      "packages/memory/fabric/src/memory.ts",
+      "packages/memory/system/src/ltm/memory.ts",
       existsSync("packages/browser/src/policy.ts")
         ? "packages/browser/src/policy.ts"
         : existsSync("packages/tools/browser/src/policy.ts")
@@ -1056,8 +1073,8 @@ describe("docs", () => {
       "src/resources.ts",
       "packages/knowledge/rag/src/indexing.ts",
       "packages/knowledge/rag/src/retrieve.ts",
-      "packages/memory/fabric/src/memory.ts",
-      "packages/memory/fabric/src/conformance.ts",
+      "packages/memory/system/src/ltm/memory.ts",
+      "packages/memory/system/src/ltm/conformance.ts",
       "packages/tools/web/src/normalize.ts",
       "src/provider-kit/openai-compatible.ts",
       "packages/providers/hyper/src/provider.ts",
@@ -1172,7 +1189,7 @@ describe("docs", () => {
       "RunOptions.validate",
       "ToolValidator",
       "SessionStore",
-      "assertSessionStoreConforms()",
+      "storeConformance()",
       "RunLedger",
       "redactRunLedgerRecord()",
       "createAgent({ packages })",
@@ -1191,7 +1208,7 @@ describe("docs", () => {
     }
   });
 
-  it("release publication is deterministic resumable and Bun-published", () => {
+  it("release publication is deterministic resumable and OIDC-published", () => {
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as {
       scripts: Record<string, string>;
     };
@@ -1202,7 +1219,10 @@ describe("docs", () => {
     for (const phrase of ["topologicalOrder", "bun.lock", "--access", "public", "--tag", "latest"]) {
       assert.ok(release.includes(phrase), `release script missing ${phrase}`);
     }
-    assert.ok(!release.includes("--provenance"), "release script must not request npm provenance (plan 164 Task 8.4)");
+    // Plan 215 Task 38 reversed plan 164 Task 8.4's Bun publish: OIDC trusted publishing is npm's,
+    // so the script asks npm for a provenance statement and never spawns `bun publish`.
+    assert.ok(release.includes("--provenance"), "the publish path asks npm for its provenance statement");
+    assert.ok(!/spawnSync\(\s*["']bun["'],\s*publishArgs/.test(release), "bun publish has no OIDC support");
     for (const phrase of [
       "release:publish",
       "--resume",
@@ -1216,9 +1236,11 @@ describe("docs", () => {
     ]) {
       assert.ok(workflow.includes(phrase), `release workflow missing ${phrase}`);
     }
-    // biome-ignore lint/suspicious/noTemplateCurlyInString: literal workflow-grep target; the workflow YAML carries the real interpolation
-    assert.ok(workflow.includes("NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}"), "release workflow missing npm authentication");
-    assert.equal(workflow.match(/secrets\.NPM_TOKEN/g)?.length, 1, "npm credential must be scoped to one publish step");
+    // Plan 215 Task 38: trusted publishing replaced the token. npm exchanges the workflow's OIDC
+    // token, so the pipeline carries no npm credential at all.
+    assert.doesNotMatch(workflow, /NODE_AUTH_TOKEN|_authToken|secrets\.NPM_TOKEN/, "no npm credential may reach the workflow");
+    assert.match(workflow, /actions\/setup-node@[0-9a-f]{40}/, "the publish job sets up Node for npm");
+    assert.match(workflow, /environment:\s*npm-publish/, "the publish job keeps its approval environment");
 
     const docs = releaseDoc();
     const handoff = docs.slice(docs.indexOf("### 0.0.22 publish handoff"), docs.indexOf("### 0.0.21 publish handoff"));
@@ -1238,6 +1260,31 @@ describe("docs", () => {
       const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { name: string };
       assert.ok(docs.includes(manifest.name), `release.md missing ${manifest.name}`);
     }
+  });
+
+  it("docs_release_gate_list_matches_scripts", () => {
+    // Plan 215 Task 36: the docs list and the `release:gate` chain are one list. Each step in
+    // `package.json` must be named in the section (by its script, package, example or npm script).
+    const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> };
+    const steps = pkg.scripts["release:gate"].split("&&").map((step) => step.trim());
+    const docs = releaseDoc();
+    const start = docs.indexOf("## What the gate runs");
+    assert.ok(start >= 0, 'docs/release.md must keep a "What the gate runs" section');
+    const nextSection = docs.indexOf("\n## ", start + 10);
+    const section = docs.slice(start, nextSection === -1 ? undefined : nextSection);
+    const labelOf = (step: string) =>
+      /((?:scripts|examples|src)\/[\w./-]+)/.exec(step)?.[1] ??
+      /(@arnilo\/[\w-]+)/.exec(step)?.[1] ??
+      /\bbun run ([\w:.-]+)/.exec(step)?.[1];
+    const unmatched = (list: string[]) => list.filter((step) => !section.includes(labelOf(step) ?? step));
+    assert.ok(steps.length >= 8, `expected the release:gate steps, found ${steps.length}`);
+    for (const step of steps) assert.ok(labelOf(step), `release:gate step names nothing to match: ${step}`);
+    assert.deepEqual(unmatched(steps), [], 'docs/release.md "What the gate runs" must name every release:gate step');
+    for (const stage of ["version-range", "compat-baseline", "deny list", "size budget"]) {
+      assert.ok(section.includes(stage), `docs/release.md must name the ${stage} stage of scripts/release.mjs gate`);
+    }
+    // Non-vacuity: a step the docs do not name is reported.
+    assert.deepEqual(unmatched(["bun scripts/not-a-gate.mjs"]), ["bun scripts/not-a-gate.mjs"]);
   });
 
   it("current install, coverage, and SQL adapter docs match manifests and migrations", () => {
@@ -1574,7 +1621,7 @@ describe("docs", () => {
         "examples/side-call.ts",
         "examples/decision-models.ts",
         "examples/sqlite-resume.ts",
-        "examples/observational-memory.ts",
+        "examples/session-memory.ts",
         "examples/durable-approval.ts",
         "examples/coding-approval.ts",
         "examples/web-no-key.ts",
@@ -1606,7 +1653,8 @@ describe("docs", () => {
         }
         if (file === "examples/memory-and-wiki.ts") {
           const summary = JSON.parse(out.trim().split("\n").at(-1) ?? "{}") as { stored: Record<string, number> };
-          assert.deepEqual(summary.stored, { observations: 2, memoryFacts: 3, wikiConcepts: 1 });
+          // The mock observer records the same statement each pass: habituation (plan 217 Task 3) keeps one record, count 2.
+          assert.deepEqual(summary.stored, { observations: 1, memoryFacts: 3, wikiConcepts: 1 });
           assert.ok(out.includes("memory.forget: 4 claims -> 3"), "forgetting a cited memory note removed its wiki claim");
         }
         if (file === "examples/connected-slack-mcp.ts") {
@@ -1936,11 +1984,10 @@ describe("docs", () => {
 
   it("phase8_package_readmes_state_cost", () => {
     const files = [
-      "packages/memory/observational/README.md",
+      "packages/memory/system/README.md",
       "packages/memory/compaction/README.md",
       "packages/knowledge/rag/README.md",
       "packages/knowledge/wiki/README.md",
-      "packages/memory/fabric/README.md",
       "packages/context/engineering/README.md",
     ];
     for (const file of files) {
@@ -1953,11 +2000,11 @@ describe("docs", () => {
     }
   });
 
-  it("phase8_om_example_imports_only_the_package_default", () => {
-    const source = readFileSync("examples/observational-memory.ts", "utf8");
-    const imports = source.split("\n").filter((line) => /^\s*import\b/.test(line) && line.includes("@arnilo/prism-memory-observational"));
-    assert.deepEqual(imports, ['import memoryObservational from "@arnilo/prism-memory-observational";']);
-    assert.ok(!/\bimport\s*\{[^}]*\}\s*from\s*["']@arnilo\/prism-memory-observational["']/.test(source));
+  it("phase8_session_memory_example_imports_only_the_package_default", () => {
+    const source = readFileSync("examples/session-memory.ts", "utf8");
+    const imports = source.split("\n").filter((line) => /^\s*import\b/.test(line) && line.includes("@arnilo/prism-memory-system"));
+    assert.deepEqual(imports, ['import memorySystem from "@arnilo/prism-memory-system";']);
+    assert.ok(!/\bimport\s*\{[^}]*\}\s*from\s*["']@arnilo\/prism-memory-system["']/.test(source));
   });
 
   it("phase_6_examples_import_only_prism_testing_and_store_sqlite", () => {
@@ -2099,8 +2146,7 @@ describe("docs", () => {
 
   it("fabric_readme_makes_no_better_than_full_context_claim", () => {
     const files = [
-      "packages/memory/fabric/README.md",
-      "packages/memory/observational/README.md",
+      "packages/memory/system/README.md",
       "CHANGELOG.md",
       "docs/_evidence/memory-bench-0.13.0.md",
     ];
@@ -2109,7 +2155,7 @@ describe("docs", () => {
       assert.ok(!/better than full[- ]context/i.test(text), `${file} claims better than full context`);
       assert.ok(!/full[- ]context[- ]substitute/i.test(text), `${file} uses the harness substitute label as prose`);
     }
-    const fabric = readFileSync("packages/memory/fabric/README.md", "utf8");
+    const fabric = readFileSync("packages/memory/system/README.md", "utf8");
     for (const phrase of [
       "non-inferior to whole-history context on LongMemEval-S held-out v3",
       "about a quarter of the input tokens",

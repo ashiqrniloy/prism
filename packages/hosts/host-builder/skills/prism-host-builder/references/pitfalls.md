@@ -39,7 +39,7 @@ In the tables below the **Code** column holds only codes that exist in `errors.j
 - **Copying a 0.12 sample.** A `store: "memory"` field, a `loop:` option or a model-invoked workflow no longer exists.
   Read `references/upgrading.md` and copy from `data/examples/`.
 - **Two memory packages and no `slots`.** Listing `@arnilo/prism-memory-compaction` with
-  `@arnilo/prism-memory-observational` is valid only with a `compaction` owner assigned.
+  `@arnilo/prism-memory-system` is valid only with a `compaction` owner assigned.
 - **A tool in `requiresTools` that is off.** The skill disappears from the catalog; it is not an error. Check
   `agent.inspect().skills` before you debug the prompt.
 - **A host answering nothing.** With no `host.ui`, every ask answers `unavailable`. Approval asks then suspend the run

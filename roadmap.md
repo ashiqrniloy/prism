@@ -224,7 +224,7 @@ export interface AgentConfig {
   readonly slots?: SlotAssignments;                // per slot: owning package name, or a direct implementation
   readonly disable?: {                             // switch off any single contribution by id
     readonly tools?: readonly string[];            // "shell"
-    readonly hooks?: readonly string[];            // "@arnilo/prism-memory-observational:context.build"
+    readonly hooks?: readonly string[];            // "@arnilo/prism-memory-system:context.build"
     readonly commands?: readonly string[];
     readonly skills?: readonly string[];
   };
@@ -326,7 +326,7 @@ export type UiRequest =
 - `background.started`, `background.completed`, `background.failed`
 - `hook.error`
 - `package.status`
-- `package.event` (`{ package, name, data }`, for namespaced custom events such as `om.status`)
+- `package.event` (`{ package, name, data }`, for namespaced custom events such as `memory.session.status`)
 
 Every event may carry an optional `origin` (K3, §2.12.9) that says which agent produced it and who executed it: `{ kind: "prism" | "external", agent, vendor?, profile?, agentId, remote?, delegationId?, parentSessionId?, parentToolCallId?, subagentId?, depth, executedBy? }`. `origin` replaces the 0.12-era `child: { childId, delegationId, depth }` field. It adds no event types: the catalog stays at its frozen count, so a generic UI renders a vendor agent's tool calls, thinking, and sub-agents with the same code it uses for Prism's. Activity with no catalog event (skill activation, file changes, plans, vendor sub-agents, compaction, notices such as rate limits) uses the driver kit's standard `agent.*` package events.
 
@@ -549,7 +549,7 @@ Prism maintains the manifest. Hosts choose whether to read it.
       "config": { "mode": "ask" } },
     { "name": "@arnilo/prism-tools-web", "version": "^0.13.0", "integrity": "sha512-…", "optional": true,
       "config": { "backend": "brave", "apiKey": "env:BRAVE_API_KEY" } },
-    { "name": "@arnilo/prism-memory-observational", "version": "^0.13.0", "integrity": "sha512-…", "enabled": false,
+    { "name": "@arnilo/prism-memory-system", "version": "^0.13.0", "integrity": "sha512-…", "enabled": false,
       "config": { "observer": { "model": "hyper/claude-haiku-4-5" } } }
   ],
   "slots": { "store": "@arnilo/prism-store-jsonl" }
@@ -608,11 +608,10 @@ Native packages are ordinary packages. None is installed by default.
 | `@arnilo/prism-context-files` | AGENTS.md / SYSTEM.md layering with a trust policy | `context.build` | SDK instructions plane, `node/instruction-sources`, `node/system-prompts` |
 | `@arnilo/prism-context-engineering` | Context budget, tool-result fold, tool search, attention compiler | `context.build`, `compaction.when` | `src/context-budget.ts`, `tool-result-fold.ts`, `tool-search.ts`, `attention-compiler.ts` |
 | `@arnilo/prism-memory-compaction` | LLM summary compaction | `compaction` slot, `models` | `memory/compaction/llm` |
-| `@arnilo/prism-memory-observational` | Observer and reflector agents on a separate model, observation-based compaction, `recall` tool, per-session toggle, `/om` commands | `compaction` slot, `context.build`, `turn.completed` + background, state, tools, commands, events | `memory/compaction/observational-memory`, `prism-code` `observational-memory.ts` |
+| `@arnilo/prism-memory-system` (was `@arnilo/prism-memory-observational`, renamed by plan 216 Task 4; the fabric moved in as `ltm` by Task 5) | STM and WM workers (today's observer and reflector) on a separate model, observation-based compaction, `recall` tool, per-session toggle, `memory:session` commands; long-term memory (`ltm`): working, semantic, and scoped memory, the atomic-note tier and the single store of record (the `concept` notes, their deletion cascade and concept-first recall moved to `@arnilo/prism-wiki` in plan 216) | `compaction` slot, `context.build`, `turn.completed` + background, state, tools, commands, events, `services.provide("memory.ltm")` (read-only) | `memory/compaction/observational-memory`, `prism-code` `observational-memory.ts`, `memory/fabric`, `memory/scoped`, `memory` core |
 | `@arnilo/prism-rag` | Retrieval over indexed sources; owns memory's `Embedder` (batching, chunking, caps) and provides it as the `embeddings` service | tools, `context.build` | `memory/rag` (`packages/knowledge/rag` since plan 216) |
 | `@arnilo/prism-wiki` | The wiki, knowledge outside memory (plan 216 Task 3): concepts in its own store (one per subject, relations, itemized claims citing memory notes or ingested sources), a background curator pass with incremental cited edits, subject binding, claim lint, source ingest, `wiki.search`/`wiki.read` and a passive pointer; reads memory only through the read-only `memory.ltm` port | `models`, background work, commands, `wiki_ingest`/`wiki.search`/`wiki.read` tools, `context.build`, consumes `memory.ltm` and `web.fetch` | `memory/wiki` (`packages/knowledge/wiki` since plan 216), `prism-code` `wiki.ts` (the 0.12 compiler, `.wiki/` page store and `qmd` search are retired) |
 | `@arnilo/prism-memory-core` | Shared memory contracts, in-memory and Postgres vector stores, lineage, deletion propagation, source repointing, recall scoring, limits, and schema helpers used by the memory packages; a plain library with no slot and no capability (`pg` loads only under `./postgres`) | — | `memory` core |
-| `@arnilo/prism-memory-fabric` | Working, semantic, and scoped memory: the atomic-note tier and the single store of record (the `concept` notes, their deletion cascade and concept-first recall moved to `@arnilo/prism-wiki` in plan 216) | tools, `context.build`, state, `services.provide("memory.ltm")` (read-only) | `memory/fabric`, `memory/scoped`, `memory` core |
 | `@arnilo/prism-store-{jsonl, sqlite, postgres}` | Durable session stores (Postgres loads `pg` only in its own package), with session links and list/search filters (K4). SQLite and Postgres also provide the `checkpoints` and `leases` services that workflows use (§2.12.13), and the `external_state` entries that drivers archive and resume from (K5) | `store` slot, services | `node/session-store-jsonl`, `prism-core/sessions`, `src/checkpoints.ts`, `src/leases.ts` |
 | `@arnilo/prism-store-codecs` | Row, cursor, and ownership-scope codecs plus dialect-local query semantics shared by the SQLite and Postgres stores; a plain library with no slot and no capability | — | `prism-core/sessions/codecs`, `prism-core/sessions/query-semantics.ts` |
 | `@arnilo/prism-mcp` | MCP client: servers, trust over `host.ui`, header refs, status/reconnect as commands and events | tools, commands, events | `mcp` client, SDK MCP plane, `prism-code` `mcp.ts` |
@@ -666,7 +665,7 @@ prism/
 │  ├─ credentials/keyring/           @arnilo/prism-credentials-keyring
 │  ├─ tools/{coding,web,browser,work,computer-use,openapi,research}/
 │  ├─ context/{files,engineering}/
-│  ├─ memory/{core,compaction,observational,rag,wiki,fabric}/
+│  ├─ memory/{core,compaction,system}/
 │  ├─ stores/{jsonl,sqlite,postgres}/
 │  ├─ policy/{approval,governance,guardrail-packs,model-router}/
 │  ├─ integrations/{mcp,hooks-json,observability,workflows,delegate}/
@@ -715,7 +714,7 @@ createScheduler({ store, targets: { nightly: buildWorkflow } }).every("0 2 * * *
 
 ```ts
 export default definePackage({
-  name: "@arnilo/prism-memory-observational",
+  name: "@arnilo/prism-memory-system",
   version: "0.13.0",
   requires: { api: 1 },
   capabilities: ["models", "session-state", "background", "slot:compaction"],
@@ -727,11 +726,11 @@ export default definePackage({
     prism.tools.register(recallTool(om), { when: on });
     prism.hooks.on("context.build", (draft) => (on(draft.session) ? withObservations(draft, om.get(draft.session)) : draft));
     prism.hooks.on("turn.completed", (event) => {
-      if (on(event.session)) event.session.background("om.observe", () => observe(prism.models.client(observerModel(prism, event)), om, event));
+      if (on(event.session)) event.session.background("memory.session.observe", () => observe(prism.models.client(observerModel(prism, event)), om, event));
     });
     prism.slots.compaction.provide(observationalCompactor(prism, om)); // compacts using observations and reflections
     prism.commands.register({ name: "om", description: "Toggle observational memory for this session", run: (_, ctx) => toggle(om, ctx) });
-    prism.commands.register({ name: "om:model", args: modelArgSchema, run: (args, ctx) => setObserverModel(om, args, ctx) });
+    prism.commands.register({ name: "memory:session:model", args: modelArgSchema, run: (args, ctx) => setObserverModel(om, args, ctx) });
   },
 });
 ```

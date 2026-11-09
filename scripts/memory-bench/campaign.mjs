@@ -315,9 +315,39 @@ export function incrementalAttemptUsage(report, prior) {
 
 /** Per-mode evidence, journal, manifest and gate rules. 188.8 reuses 188.7's journal machinery. */
 /** The owner-gated development screens: free routes plus named paid models, re-run from checkpoint on transient faults. */
-const SCREEN_MODES = new Set(["screen208", "screen209", "campaign210"]);
+const SCREEN_MODES = new Set(["screen208", "screen209", "campaign210", "gateM1"]);
 
 function runSpec(mode) {
+  // Plan 217 Task 6: gate M-1 (STM against the pinned pre-redesign observer), paid Ollama Cloud under the allowance.
+  if (mode === "gateM1") {
+    let built;
+    const m1 = () => import("./stm-gate.mjs");
+    return {
+      evidence: "docs/_evidence/memory-bench/217/runs",
+      logs: ".cache/memory-bench/217/logs",
+      outputPrefix: process.env.PRISM_MEMORY_BENCH_217_SMOKE === "1" ? "smoke-217-m1" : "run-217-m1",
+      summaryPath: "docs/_evidence/memory-bench/217/runs/execution-run.json",
+      journalPath: ".cache/memory-bench/217/journal.json",
+      summaryKind: "217-m1-run",
+      timeout: "432000s",
+      maxAttempts: 3,
+      freeRouteRetries: true,
+      build: async () => {
+        built = await (await m1()).buildExecutableM1Manifest();
+        return built;
+      },
+      preflight: async (manifest) => (await m1()).preflightM1(manifest),
+      beforeJob: async (job) => (await m1()).m1BudgetGate(job),
+      write: async () => {
+        const { M1_EXECUTION_MANIFEST, M1_RUNS } = await m1();
+        await mkdir(M1_RUNS, { recursive: true });
+        await writeFile(
+          built.executionManifestPath ?? M1_EXECUTION_MANIFEST,
+          `${JSON.stringify({ generatedAt: new Date().toISOString(), ...built, results: [] }, null, 2)}\n`,
+        );
+      },
+    };
+  }
   // Plan 210 Task 5: the ablation campaign (gate C-1), free routes only. Loaded lazily, like plans 208 and 209.
   if (mode === "campaign210") {
     let built;
@@ -1052,6 +1082,29 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
     const writeSideDir = (jobId) => writeSideDirs.get(jobId) ?? null;
     const pushResult = (row) => manifest.results.push(row);
     const jobArgv = (job, attempt, maxInput) => {
+      // Plan 217 Task 6: a live long-session job (gate M-1), from this tree or the pinned OM-before worktree (`job.cwd`).
+      if (job.kind === "long-session")
+        return [
+          "timeout",
+          job.wallTimeCapHours ? `${Math.ceil(job.wallTimeCapHours * 3600)}s` : spec.timeout,
+          "bun",
+          "scripts/memory-bench/work-outcome/long-session-live.mjs",
+          "--job",
+          job.id,
+          "--model",
+          `${job.provider}/${job.model}`,
+          "--arm",
+          job.arm,
+          "--partition",
+          job.subset,
+          "--max-input-tokens",
+          String(maxInput),
+          "--output",
+          attempt.output,
+          "--state-dir",
+          resolve(job.stateDir),
+          ...(job.personaLimit ? ["--personas", String(job.personaLimit)] : []),
+        ];
       // Plan 209 Task 6: a work-outcome job is its own child (`work-outcome/live.mjs`), under the same journal.
       if (job.kind === "work-outcome")
         return [
@@ -1471,34 +1524,41 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
 
 if (import.meta.main) {
   const planArg = process.argv.includes("--plan") ? process.argv[process.argv.indexOf("--plan") + 1] : undefined;
+  const gateArg = process.argv.includes("--gate") ? process.argv[process.argv.indexOf("--gate") + 1] : undefined;
+  if (planArg === "memory-model" && gateArg !== "M-1") {
+    console.error(`MemoryBenchArguments: --plan memory-model supports --gate M-1 only (got ${gateArg ?? "none"})`);
+    process.exit(1);
+  }
   const mode =
-    planArg === "210"
-      ? "campaign210"
-      : planArg === "208"
-        ? "screen208"
-        : planArg === "209"
-          ? "screen209"
-          : process.argv.includes("--baseline-202")
-            ? "baseline202"
-            : process.argv.includes("--task5")
-              ? "task5"
-              : process.argv.includes("--task5-smoke")
-                ? "task5-smoke"
-                : process.argv.includes("--acceptance-188.10-screen-a")
-                  ? "screenA18810"
-                  : process.argv.includes("--acceptance-188.10")
-                    ? "acceptance18810"
-                    : process.argv.includes("--acceptance-188.9-probe")
-                      ? "probe1889"
-                      : process.argv.includes("--acceptance-188.9-screen")
-                        ? "screen1889"
-                        : process.argv.includes("--acceptance-188.9")
-                          ? "acceptance1889"
-                          : process.argv.includes("--acceptance-188.8")
-                            ? "acceptance1888"
-                            : process.argv.includes("--acceptance")
-                              ? "acceptance"
-                              : "task6";
+    planArg === "memory-model"
+      ? "gateM1"
+      : planArg === "210"
+        ? "campaign210"
+        : planArg === "208"
+          ? "screen208"
+          : planArg === "209"
+            ? "screen209"
+            : process.argv.includes("--baseline-202")
+              ? "baseline202"
+              : process.argv.includes("--task5")
+                ? "task5"
+                : process.argv.includes("--task5-smoke")
+                  ? "task5-smoke"
+                  : process.argv.includes("--acceptance-188.10-screen-a")
+                    ? "screenA18810"
+                    : process.argv.includes("--acceptance-188.10")
+                      ? "acceptance18810"
+                      : process.argv.includes("--acceptance-188.9-probe")
+                        ? "probe1889"
+                        : process.argv.includes("--acceptance-188.9-screen")
+                          ? "screen1889"
+                          : process.argv.includes("--acceptance-188.9")
+                            ? "acceptance1889"
+                            : process.argv.includes("--acceptance-188.8")
+                              ? "acceptance1888"
+                              : process.argv.includes("--acceptance")
+                                ? "acceptance"
+                                : "task6";
   if (mode === "screen208") {
     // Plan 208 reads the development partition only; held-out reads belong to plan 210 Task 9's manifest.
     const { assertScreen208Partition, writeScreen208Manifest } = await import("./ontology-screen.mjs");
@@ -1546,6 +1606,22 @@ if (import.meta.main) {
     if (process.argv.includes("--manifest")) {
       const manifest = await writeC1Manifest();
       console.log(`manifest ${manifest.manifestHash}; ${manifest.jobs.length} jobs; ${C1_MANIFEST}`);
+      process.exit(0);
+    }
+  }
+  if (mode === "gateM1") {
+    // Plan 217 Task 6: gate M-1 reads the development partition only; held-out reads are gate A's (plan 223).
+    const { assertM1Partition, writeM1Manifest, M1_MANIFEST } = await import("./stm-gate.mjs");
+    const partition = process.argv.includes("--partition") ? process.argv[process.argv.indexOf("--partition") + 1] : undefined;
+    try {
+      assertM1Partition(partition);
+    } catch (error) {
+      console.error(`${error.name}: ${error.message}`);
+      process.exit(1);
+    }
+    if (process.argv.includes("--manifest")) {
+      const manifest = await writeM1Manifest();
+      console.log(`manifest ${manifest.manifestHash}; ${manifest.jobs.length} jobs; ${M1_MANIFEST}`);
       process.exit(0);
     }
   }

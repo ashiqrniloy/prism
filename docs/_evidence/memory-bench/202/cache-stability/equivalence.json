@@ -12,11 +12,8 @@
       "arm": "preset-r1",
       "config": "fabric-x-tools",
       "differingSegments": [
-        "context",
         "system",
-        "tail",
-        "tools",
-        "transcript"
+        "tools"
       ],
       "tailPositions": {
         "base": [
@@ -117,9 +114,7 @@
       "arm": "passive-only",
       "config": "fabric-x",
       "differingSegments": [
-        "context",
-        "system",
-        "tail"
+        "system"
       ],
       "tailPositions": {
         "base": [
@@ -242,20 +237,38 @@
       "identical": false
     }
   ],
+  "harness": "per-tree",
   "base": {
-    "commit": "bc87e53904fb104737a8186df94c2f5e7f909c03",
-    "productHash": "10aa2ce6d80c93be00ae1a63baf04b7b151b11937ac53f434f486374c346aa58",
-    "harnessHash": "069f65925450990d68535cd340bb0e72ba2f9d7a485cc648c87662e7747e4442",
-    "supportingHash": "d21fb2b663026577fecab212f75bb9d6ef2af59b1b567904a1d5e55212a01939",
+    "commit": "37ee1a24f14c2e0e4a29a39fa1c71b3a83d52510",
+    "productPaths": [
+      "packages/memory/fabric/src"
+    ],
+    "productHash": "78b692360533e2fad9647f4f949a367b5cf90be2bc273a78fb5962372ad52127",
+    "harnessHash": "663f2f0339783b8f8810fce2bae9aff681f615933063c3885697d806c26807fa",
+    "supportingPaths": [
+      "src",
+      "packages/memory/core/src",
+      "packages/memory/observational/src",
+      "packages/memory/fabric/src"
+    ],
+    "supportingHash": "76df188ce37f69ec57b62bb274a8b4344292e417f58bf3a20626394bbce90957",
     "screenProductHash": "57aa47d94eb3cad629e232372f220296131583ea7ac06189d6f589b39c825799",
     "isScreenProduct": false
   },
   "post": {
-    "commit": "bc87e53904fb104737a8186df94c2f5e7f909c03",
-    "productHash": "867f82771643fe716c4d214c0ff26250cd842d1da6ee44dac5aabfdefed8759c",
-    "harnessHash": "069f65925450990d68535cd340bb0e72ba2f9d7a485cc648c87662e7747e4442",
-    "supportingHash": "b09cdc030d59e8abce3f97bf5a5c69064add3c80e320eae4261bfce27817c214"
+    "commit": "2fd3c592bee66df88be1b180a5e3414cf51b3461",
+    "productPaths": [
+      "packages/memory/system/src/ltm"
+    ],
+    "productHash": "4fb60791e80e0118cd133385bf04be121577836d1841b273fed3cb1cfb3d5976",
+    "harnessHash": "ba952a1da0c05a140a869cca812235c513bc0740b458d0bc0c63327a2727a369",
+    "supportingPaths": [
+      "src",
+      "packages/memory/core/src",
+      "packages/memory/system/src"
+    ],
+    "supportingHash": "ec217b8fa8c36454d79f25cfbf2d72ff8db1037dd4f6cd28cc6435003ce72c80"
   },
-  "policy": "Compares every answer-phase provider request on the pre-change tree and this tree, byte for byte.",
-  "sha256": "94da38ee8eddc88682e6bf68d41f771685470a2185f74695703352688c35ddc4"
+  "policy": "Compares every answer-phase provider request on the pre-change tree (its own committed harness) and this tree, byte for byte.",
+  "sha256": "01e5a22975e0e57fa22e464b4c2f72ab2ac51d01caf79b1e1815476013ef8557"
 }

@@ -9,7 +9,7 @@ import { createAgent, createDefaultRetryPolicy, resolveInputCap } from "@arnilo/
 import { providerPackage, readBoundedResponseText, THINKING_LEVELS } from "@arnilo/prism/provider-kit";
 import { parseEnvFile } from "../live-matrix.mjs";
 import { startWireProxy } from "../wire-proxy.mjs";
-import { historicalVariants, memoryConfigs, resolvedMemoryConfigs, writeGeneration } from "./ablations.mjs";
+import { canonicalArm, historicalVariants, memoryConfigs, resolvedMemoryConfigs, writeGeneration } from "./ablations.mjs";
 import { fileFingerprint } from "./acceptance.mjs";
 import { rateLimitDisposition } from "./audit/zero-score.mjs";
 import {
@@ -107,7 +107,12 @@ export const PROVIDERS = {
     url: process.env.PRISM_LIVE_LITELLM_BASE_URL ?? "http://127.0.0.1:4000",
   },
   // Plan 210 Task 5 (owner, 2026-11-08): the paid C-1 campaign. Ollama Cloud's Pro allowance bills per token.
-  "ollama-cloud": { create: "createOllamaCloudProvider", list: "listOllamaCloudModels", secret: "OLLAMA_API_KEY", url: "https://ollama.com" },
+  "ollama-cloud": {
+    create: "createOllamaCloudProvider",
+    list: "listOllamaCloudModels",
+    secret: "OLLAMA_API_KEY",
+    url: "https://ollama.com",
+  },
 };
 export function parseArgs(argv) {
   const options = {};
@@ -372,7 +377,9 @@ export async function liveProviders(refs, temp, fetchOptions) {
     for (const id of new Set(refs.map((ref) => ref.provider))) {
       const spec = PROVIDERS[id];
       if (!spec)
-        throw new Error("MemoryBenchProvider: supported providers are hyper, opencode-go, openrouter, commandcode, kilo, litellm and ollama-cloud");
+        throw new Error(
+          "MemoryBenchProvider: supported providers are hyper, opencode-go, openrouter, commandcode, kilo, litellm and ollama-cloud",
+        );
       const key = process.env[spec.secret] ?? (id === "opencode-go" ? process.env.OPENCODE_API_KEY : undefined);
       // Kilo serves its `:free` rows credentialless; the free-only check still runs on the catalog.
       if (!key && id !== "kilo") throw new Error("MemoryBenchCredentials: provider credential unavailable");
@@ -644,9 +651,9 @@ export const RUN_PATH_PATHS = [
   "scripts/memory-bench/datasets.mjs",
   "scripts/memory-bench/stats.mjs",
   "scripts/memory-bench/ablations.mjs",
-  "packages/memory/fabric/src/recall.ts",
-  "packages/memory/fabric/src/create.ts",
-  "packages/memory/fabric/src/index.ts",
+  "packages/memory/system/src/ltm/recall.ts",
+  "packages/memory/system/src/ltm/create.ts",
+  "packages/memory/system/src/ltm/index.ts",
 ];
 
 let runPathSourceHashes;
@@ -784,6 +791,7 @@ export async function runBench(input = {}) {
   }
   // An ontology arm is the conversational preset's product shape unless it names another product-ingestion arm.
   const options = { config: input.ontology ? "fabric-x" : "full", subset: "base", maxInputTokens: 15_000_000, ...input };
+  options.config = canonicalArm(options.config);
   const phase = options.phase ?? "all";
   const labelInjectionsEnabled = (options.labelInjections ?? "on") !== "off";
   if (!["answer", "judge", "all", "write"].includes(phase)) throw new Error("MemoryBenchArguments: invalid phase");
@@ -1616,6 +1624,7 @@ export async function runBench(input = {}) {
             automaticRecallCalls: response.automaticRecallCalls ?? 0,
             recalledIds: response.recalledIds ?? [],
             answerRetries: response.answerRetries ?? 0,
+            ...(typeof response.chunkStorePeakBytes === "number" ? { chunkStorePeakBytes: response.chunkStorePeakBytes } : {}),
             turns: response.turns ?? 0,
             turnTrace: safeFailureTrace({ tools: response.turnTrace })?.tools ?? [],
             writes: response.writes ?? [],

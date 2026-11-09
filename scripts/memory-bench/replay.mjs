@@ -17,19 +17,24 @@ import {
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import { createHashEmbedder, lexicalTerms } from "@arnilo/prism-memory-core";
 import { createMarkdownMemoryStores } from "@arnilo/prism-memory-core/fabric";
-import fabric, { createMemory, createMemoryFabric, parseMemoryNoteMetadata, resolveMemoryFabricConfig } from "@arnilo/prism-memory-fabric";
-import observational from "@arnilo/prism-memory-observational";
+import memorySystem, {
+  createLongTermMemory,
+  createMemory,
+  parseMemoryNoteMetadata,
+  resolveMemoryFabricConfig,
+} from "@arnilo/prism-memory-system";
 import { createProviderEmbedder, probeEmbedderDimensions } from "@arnilo/prism-rag";
 import { parseNoteFile } from "../../packages/memory/core/src/fabric/okf.ts";
+import { scanScopedMemoryContent } from "../../packages/memory/core/src/trust.ts";
 import {
   messageText as entryMessageText,
   exchangeNoteId,
   exchangePairs,
   splitExchange,
-} from "../../packages/memory/fabric/src/exchanges.ts";
-import { scanScopedMemoryContent } from "../../packages/memory/core/src/trust.ts";
+} from "../../packages/memory/system/src/ltm/exchanges.ts";
 import { isToolsConfig, memoryConfigs } from "./ablations.mjs";
 import { BENCH_SCOPE } from "./bench-scope.mjs";
+import { chunkMeterPackage, createChunkMeter } from "./chunk-meter.mjs";
 import { injectionLogger, textOf, tokens } from "./injection-log.mjs";
 import {
   conceptCites,
@@ -630,7 +635,7 @@ export function mockProvider(state) {
         );
       if (names.includes("edit_concept") && !hasToolMessage) {
         yield providerToolCall(toolCallContent("synthetic-curator", "edit_concept", { edits: mockCuratorEdits(request) }));
-      } else if (names.includes("record_observation") && !hasToolMessage) {
+      } else if (names.includes("record_event") && !hasToolMessage) {
         const text = request.messages
           .filter((message) => message.role === "user")
           .map((message) => textOf(message.content))
@@ -638,8 +643,9 @@ export function mockProvider(state) {
         const id = /\[[^\]]+\] \[([^\]]+)\] message:/.exec(text)?.[1];
         if (id)
           yield providerToolCall(
-            toolCallContent("synthetic-observation", "record_observation", {
-              content: "The current project color is cobalt.",
+            toolCallContent("synthetic-observation", "record_event", {
+              kind: "statement",
+              description: "The current project color is cobalt.",
               sourceEntryIds: [id],
               relevance: "high",
             }),
@@ -669,7 +675,7 @@ export function mockProvider(state) {
           const text = request.messages.map((message) => textOf(message.content)).join("\n");
           yield providerTextDelta(/unanswerable|unknown planet/.test(text) ? "unknown" : text.includes("cobalt") ? "cobalt" : "unknown");
         }
-      } else if (!names.includes("record_observation")) {
+      } else if (!names.includes("record_event")) {
         const text = request.messages.map((message) => textOf(message.content)).join("\n");
         // Fixture answers are derived from request evidence; gold answers never reach this provider.
         yield providerTextDelta(/unanswerable|unknown planet/.test(text) ? "unknown" : text.includes("cobalt") ? "cobalt" : "unknown");
@@ -721,7 +727,8 @@ export function mockCuratorEdits(request) {
 }
 function workerKind(request) {
   const names = request.tools?.map((tool) => tool.name) ?? [];
-  if (names.includes("record_observation")) return "observer";
+  // `record_observation` is the pinned OM-before baseline's STM tool (plan 217 Task 6 runs it from the pre-216 source).
+  if (names.includes("record_event") || names.includes("record_observation")) return "observer";
   if (names.includes("record_reflection")) return "reflector";
   if (names.includes("drop_observations")) return "dropper";
 }
@@ -996,10 +1003,9 @@ async function ingestSourceFacts(sessions, root, config, rounds) {
   const memory = createMemory({
     ...BENCH_SCOPE,
     vectorStore: stores.vectorStore,
-    workingStore: stores.workingStore,
     limits: resolved.limits,
   });
-  const writer = createMemoryFabric({ memory, vectorStore: stores.vectorStore, consolidate: false });
+  const writer = createLongTermMemory({ memory, vectorStore: stores.vectorStore, consolidate: false });
   const index = new Map();
   const counts = { policy: FACT_INGEST, sessions: sessions.length, sourceMessages: 0, coveredSourceMessages: 0, imported: 0, refused: 0 };
   const roundByMessage = new Map(rounds.flatMap((round) => round.messageIds.map((id) => [id, round.id])));
@@ -1046,7 +1052,7 @@ let factStoreSourceHash;
 async function factStoreSources() {
   if (factStoreSourceHash) return factStoreSourceHash;
   const digest = createHash("sha256");
-  for (const base of ["packages/memory/core/src", "packages/memory/fabric/src"]) {
+  for (const base of ["packages/memory/core/src", "packages/memory/system/src/ltm"]) {
     const files = (await readdir(base, { recursive: true })).filter((file) => file.endsWith(".ts") && !file.includes("__tests__")).sort();
     for (const file of files) digest.update(`${base}/${file}\0`).update(await readFile(join(base, file)));
   }
@@ -1109,7 +1115,7 @@ let ontologySourceHash;
 async function ontologySources() {
   if (ontologySourceHash) return ontologySourceHash;
   const digest = createHash("sha256");
-  for (const base of ["packages/memory/core/src", "packages/memory/fabric/src", "packages/knowledge/wiki/src"]) {
+  for (const base of ["packages/memory/core/src", "packages/memory/system/src/ltm", "packages/knowledge/wiki/src"]) {
     const files = (await readdir(base, { recursive: true })).filter((file) => file.endsWith(".ts") && !file.includes("__tests__")).sort();
     for (const file of files) digest.update(`${base}/${file}\0`).update(await readFile(join(base, file)));
   }
@@ -1397,7 +1403,12 @@ export async function replay(question, options, providers, state) {
       providers.map((provider) => measuredProvider(provider, state)),
     ),
   ];
-  if (useOm) packages.push(observational(config.observational));
+  // The session tiers and long-term memory are one package (plan 216 Task 5): an arm with long-term memory lists one
+  // `memorySystem` below, carrying the session config too when the arm has it.
+  if (useOm && !usesFabric) packages.push(memorySystem(config.observational));
+  // Plan 217 Task 6 (gate M-1): the STM arm's chunk store, metered through `memory.chunks` (same in-memory store).
+  const chunkMeter = useOm && !usesFabric ? createChunkMeter() : null;
+  if (chunkMeter) packages.push(await chunkMeterPackage(chunkMeter));
   if (isHybrid && embedder) {
     packages.push(
       definePackage({
@@ -1412,9 +1423,12 @@ export async function replay(question, options, providers, state) {
   }
   if (usesFabric) {
     packages.push(
-      fabric({
-        ...(tempRoot ? { tools: { root: tempRoot } } : {}),
-        ...config.fabric,
+      memorySystem({
+        ...(useOm ? config.observational : {}),
+        ltm: {
+          ...(tempRoot ? { tools: { root: tempRoot } } : {}),
+          ...config.fabric,
+        },
       }),
     );
   }
@@ -1789,7 +1803,7 @@ export async function replay(question, options, providers, state) {
       await new Promise((resolve) => setTimeout(resolve, 0));
       const deadline = Date.now() + 600_000;
       while (true) {
-        const status = await agent.commands.run("om:status", {}, { session });
+        const status = await agent.commands.run("memory:session:status", {}, { session });
         if (status.lastError) {
           // A worker pass is background-only by contract: an observer/reflector failure must not abort
           // the arm. Budget exhaustion is the one exception, because it ends the whole run.
@@ -1865,7 +1879,7 @@ export async function replay(question, options, providers, state) {
         // Let hydration-triggered workers finish while their provider calls are suppressed.
         if (useOm && parentId) {
           const deadline = Date.now() + 30_000;
-          while ((await agent.commands.run("om:status", {}, { session: clean })).inFlight) {
+          while ((await agent.commands.run("memory:session:status", {}, { session: clean })).inFlight) {
             if (Date.now() > deadline) throw new Error("MemoryBenchWorkerTimeout");
             await new Promise((resolve) => setTimeout(resolve, 20));
           }
@@ -1908,7 +1922,7 @@ export async function replay(question, options, providers, state) {
     if (useOm) {
       await new Promise((resolve) => setTimeout(resolve, 0));
       const deadline = Date.now() + 600_000;
-      while ((await agent.commands.run("om:status", {}, { session })).inFlight) {
+      while ((await agent.commands.run("memory:session:status", {}, { session })).inFlight) {
         if (Date.now() > deadline) throw new Error("MemoryBenchWorkerTimeout");
         await new Promise((resolve) => setTimeout(resolve, 20));
       }
@@ -1933,6 +1947,7 @@ export async function replay(question, options, providers, state) {
       answerRetries: metrics.answerRetries,
       turns: metrics.agentSteps,
       turnTrace: metrics.turnTrace,
+      ...(chunkMeter ? { chunkStorePeakBytes: chunkMeter.peakBytes, chunkStoreChunks: chunkMeter.chunks } : {}),
       writes: metrics.writes,
       visibleChannels: [
         ...new Set([

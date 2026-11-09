@@ -8,9 +8,15 @@ export class MemoryError extends Error {
   }
 }
 
+/**
+ * Named validation codes beyond the default `validation`: a retired kind or store layout fails with one of these
+ * so a host can tell a migration error from a malformed input.
+ */
+export type MemoryValidationCode = "validation" | "working_memory_retired" | "episode_kind_not_available";
+
 export class MemoryValidationError extends MemoryError {
-  constructor(message: string) {
-    super("validation", message);
+  constructor(message: string, code: MemoryValidationCode = "validation") {
+    super(code, message);
     this.name = "MemoryValidationError";
   }
 }

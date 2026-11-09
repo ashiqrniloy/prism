@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-11-08T17:57:21.969Z",
+  "envFile": "/home/arn/.config/prism/live.env",
+  "strict": true,
+  "dryRun": false,
+  "filter": "providers/openrouter",
+  "totals": {
+    "ran": 1,
+    "skipped": 0,
+    "failed": 0,
+    "planned": 0
+  },
+  "coverage": {
+    "ok": true,
+    "total": 86,
+    "covered": 82,
+    "pending": 4,
+    "mode": "baseline"
+  },
+  "results": [
+    {
+      "id": "providers/openrouter",
+      "package": "@arnilo/prism-provider-openrouter",
+      "status": "ran",
+      "reason": null,
+      "exitCode": 0,
+      "durationMs": 19994,
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts",
+      "cwd": "packages/providers/openrouter",
+      "models": [
+        {
+          "env": "PRISM_LIVE_OPENROUTER_MODEL",
+          "value": "recursive/flint-v1.0:free",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_OPENROUTER_CACHE_MODEL",
+          "value": "anthropic/claude-haiku-4.5",
+          "wired": true
+        }
+      ],
+      "outputTail": ""
+    }
+  ]
+}

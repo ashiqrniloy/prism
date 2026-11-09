@@ -129,7 +129,7 @@ export type McpOAuthRegistrationStrategy =
 
 /**
  * Persistence seam for OAuth session material. Production hosts must back this
- * with an encrypted/keychain store (e.g. `@arnilo/prism-credentials-node`
+ * with an encrypted/keychain store (e.g. `@arnilo/prism-credentials-keyring`
  * `createOAuthCredentialStoreAdapter` over an encrypted or keychain store);
  * refresh tokens must never land in plaintext stores.
  */

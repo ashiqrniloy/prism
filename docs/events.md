@@ -76,7 +76,7 @@ A driver loop reports vendor activity through `run.observe`. Tool activity emits
 | `background.failed` | `{ package?, name, taskId, reason, error? }` | The task failed or `close()` aborted it. |
 | `hook.error` | `{ hook, owner, error }` | A hook threw. The run continues; `owner` is kernel-set. |
 | `package.status` | `{ package, level, message, at }` | A package called `status.note`. Agent-scoped and redacted. |
-| `package.event` | `{ package, name, data? }` | A package emitted a namespaced event, e.g. `om.status`. Kernel modules use `package: "kernel"` until their owning phase gives them a dedicated name. |
+| `package.event` | `{ package, name, data? }` | A package emitted a namespaced event, e.g. `memory.session.status`. Kernel modules use `package: "kernel"` until their owning phase gives them a dedicated name. |
 
 ## Outputs
 

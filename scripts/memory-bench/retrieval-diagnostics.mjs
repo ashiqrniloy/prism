@@ -5,9 +5,9 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { lexicalMatches, lexicalTerms } from "@arnilo/prism-memory-core";
 import { createMarkdownMemoryStores } from "@arnilo/prism-memory-core/fabric";
-import { createMemory, createMemoryFabric, parseMemoryNoteMetadata, resolveMemoryFabricConfig } from "@arnilo/prism-memory-fabric";
-import { recallPeriod } from "../../packages/memory/fabric/src/context.ts";
-import { fitInjection } from "../../packages/memory/fabric/src/excerpt.ts";
+import { createMemory, createLongTermMemory, parseMemoryNoteMetadata, resolveMemoryFabricConfig } from "@arnilo/prism-memory-system";
+import { recallPeriod } from "../../packages/memory/system/src/ltm/context.ts";
+import { fitInjection } from "../../packages/memory/system/src/ltm/excerpt.ts";
 import { BENCH_SCOPE } from "./bench-scope.mjs";
 import { DATASETS, loadDataset, MemoryBenchDatasetError, normalizeDataset, selectQuestions } from "./datasets.mjs";
 import {
@@ -247,8 +247,8 @@ async function openProductStore(questionId, storeFrom, root, options) {
   const kinds = ["fact", "exchange"];
   const config = resolveMemoryFabricConfig({ retrieval: "lexical", inject: { query: "task", kinds } });
   const { scopes: _scopes, tools: _tools, store: _store, ...fabricOptions } = config;
-  const memory = createMemory({ ...BENCH_SCOPE, vectorStore: stores.vectorStore, workingStore: stores.workingStore });
-  const fabric = createMemoryFabric({ memory, vectorStore: stores.vectorStore, ...fabricOptions });
+  const memory = createMemory({ ...BENCH_SCOPE, vectorStore: stores.vectorStore });
+  const fabric = createLongTermMemory({ memory, vectorStore: stores.vectorStore, ...fabricOptions });
   const toRound = (hits) => hits.map((hit) => (exchangeRounds.has(hit.id) ? { ...hit, id: exchangeRounds.get(hit.id) } : hit));
   // Fact notes link their evidence with relation "evidence" to exchange-note ids, not round ids.
   const factRound = (noteId) => exchangeRounds.get(noteId);
@@ -295,11 +295,11 @@ export async function diagnoseRetrieval(options) {
       const product = options.storeFrom ? await openProductStore(question.id, options.storeFrom, root, options) : null;
       const stores = product?.stores ?? (await createMarkdownMemoryStores({ root: join(root, "notes") }));
       if (product === null) await ingestHaystackRounds(rounds, stores, null);
-      const memory = createMemory({ ...BENCH_SCOPE, vectorStore: stores.vectorStore, workingStore: stores.workingStore });
+      const memory = createMemory({ ...BENCH_SCOPE, vectorStore: stores.vectorStore });
       const kinds = product?.kinds ?? ["episode", "fact", "file"];
       const config = resolveMemoryFabricConfig({ retrieval: "lexical", inject: { query: "task", kinds } });
       const { scopes: _scopes, tools: _tools, store: _store, ...fabricOptions } = config;
-      const fabric = product?.fabric ?? createMemoryFabric({ memory, vectorStore: stores.vectorStore, ...fabricOptions });
+      const fabric = product?.fabric ?? createLongTermMemory({ memory, vectorStore: stores.vectorStore, ...fabricOptions });
       const recallOptions = {
         kinds,
         minSimilarity: 0.35,
@@ -756,10 +756,10 @@ export async function ceilingScan(options) {
     try {
       const stores = await createMarkdownMemoryStores({ root: join(root, "notes") });
       await ingestHaystackRounds(rounds, stores, null);
-      const memory = createMemory({ ...BENCH_SCOPE, vectorStore: stores.vectorStore, workingStore: stores.workingStore });
+      const memory = createMemory({ ...BENCH_SCOPE, vectorStore: stores.vectorStore });
       const config = resolveMemoryFabricConfig({ retrieval: "lexical", inject: { query: "task", kinds: ["episode", "fact", "file"] } });
       const { scopes: _scopes, tools: _tools, store: _store, ...fabricOptions } = config;
-      const fabric = createMemoryFabric({ memory, vectorStore: stores.vectorStore, ...fabricOptions });
+      const fabric = createLongTermMemory({ memory, vectorStore: stores.vectorStore, ...fabricOptions });
       const recallOptions = { kinds: ["episode", "fact", "file"], topK: CANDIDATE_TOP_K, archiveSearch: false };
       const rankings = new Map();
       for (const minSimilarity of CEILING_GRID.minSimilarity)

@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { createSessionEntry } from "@arnilo/prism";
-import { OBSERVATIONS_RECORDED, REFLECTIONS_RECORDED, TASK_STATE_RECORDED } from "@arnilo/prism-memory-observational";
+import { OBSERVATIONS_RECORDED, REFLECTIONS_RECORDED, TASK_STATE_RECORDED } from "@arnilo/prism-memory-system";
 import { args, hash, writeLedger } from "./io.mjs";
 
 export function synthLedgers({ personas = 4, projects = 3, sessions = 8, seed = 7 } = {}) {
@@ -55,7 +55,8 @@ export function synthLedgers({ personas = 4, projects = 3, sessions = 8, seed = 
                       observations: [
                         {
                           id: hash(id).slice(0, 12),
-                          content: text,
+                          kind: "statement",
+                          description: text,
                           timestamp,
                           relevance: "high",
                           sourceEntryIds: [],

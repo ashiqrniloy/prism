@@ -1,6 +1,6 @@
 import type { JsonObject } from "@arnilo/prism";
 import { MemoryValidationError } from "../errors.js";
-import type { MemoryVectorRecord, WorkingMemoryRecord } from "../types.js";
+import type { MemoryVectorRecord } from "../types.js";
 import { fabricKind, noteDescription, noteTitle } from "./layout.js";
 
 /**
@@ -25,7 +25,6 @@ const OKF_TYPE_BY_KIND: Readonly<Record<string, string>> = Object.freeze({
   procedure: "Procedure",
   episode: "Episode",
   file: "File",
-  working: "Working",
 });
 const KIND_BY_OKF_TYPE: Readonly<Record<string, string>> = Object.freeze(
   Object.fromEntries(Object.entries(OKF_TYPE_BY_KIND).map(([kind, type]) => [type.toLowerCase(), kind])),
@@ -267,35 +266,6 @@ export function parseNoteFile(content: string, filePath: string, classify?: Note
   if (reason === undefined) return record;
   // Unreadable: keep the file as written. Nothing here parses it further, and a render emits `raw` unchanged.
   return { ...record, metadata: { ...(record.metadata ?? {}), [OKF_METADATA_KEY]: { unreadable: reason, raw: content } as JsonObject } };
-}
-
-/** Working memory: a short header plus one fenced JSON block. */
-export function renderWorkingFile(record: WorkingMemoryRecord): string {
-  return `# Working memory\n\n\`\`\`json\n${json(record)}\n\`\`\`\n`;
-}
-
-export function parseWorkingFile(content: string, filePath: string): WorkingMemoryRecord {
-  const match = content.match(/```json\s*\r?\n([\s\S]*?)\r?\n```/);
-  if (!match) throw new MemoryValidationError(`working memory file has no JSON block: ${filePath}`);
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(match[1]!);
-  } catch {
-    throw new MemoryValidationError(`working memory file is malformed: ${filePath}`);
-  }
-  if (!isRecord(parsed) || !isRecord(parsed.value)) throw new MemoryValidationError(`working memory file is malformed: ${filePath}`);
-  const tenantId = requireString(parsed.tenantId, "tenantId", filePath);
-  const resourceId = requireString(parsed.resourceId, "resourceId", filePath);
-  if (!Number.isInteger(parsed.version)) throw new MemoryValidationError(`working memory file has an invalid version: ${filePath}`);
-  const updatedAt = requireTimestamp(parsed.updatedAt, "updatedAt", filePath);
-  return {
-    tenantId,
-    resourceId,
-    ...(typeof parsed.threadId === "string" ? { threadId: parsed.threadId } : {}),
-    value: parsed.value as JsonObject,
-    version: parsed.version as number,
-    updatedAt,
-  };
 }
 
 export interface IndexEntry {

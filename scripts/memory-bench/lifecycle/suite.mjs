@@ -15,9 +15,8 @@ import {
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import { validateAgainstJsonSchema } from "@arnilo/prism-memory-core";
 import { createSqliteMemoryStores } from "@arnilo/prism-memory-core/sqlite";
-import fabric, { memoryFabricConfigSchema, parseMemoryNoteMetadata } from "@arnilo/prism-memory-fabric";
-import observational from "@arnilo/prism-memory-observational";
-import { historicalVariants, memoryConfigs, resolvedMemoryConfigs } from "../ablations.mjs";
+import memorySystem, { memoryFabricConfigSchema, parseMemoryNoteMetadata } from "@arnilo/prism-memory-system";
+import { canonicalArm, historicalVariants, memoryConfigs, resolvedMemoryConfigs } from "../ablations.mjs";
 import { textOf, tokens } from "../injection-log.mjs";
 import { createAdmission, requireAttemptReservation, stableHash } from "../journal.mjs";
 import { METRIC_DEFINITIONS, METRIC_VERSION } from "../metrics.mjs";
@@ -224,10 +223,10 @@ export function lifecycleMock(state) {
         .filter((c) => c.type === "tool_call");
       const called = (name) => completed.some((c) => c.name === name);
       let call;
-      if (names.includes("record_observation")) {
+      if (names.includes("record_event")) {
         const source = /\[[^\]]+\] \[([^\]]+)\] message:/.exec(goal)?.[1];
         if (source && !messages.some((m) => m.role === "tool"))
-          call = ["record_observation", { content: goal, sourceEntryIds: [source], relevance: "high" }];
+          call = ["record_event", { kind: "statement", description: goal, sourceEntryIds: [source], relevance: "high" }];
       } else if (names.includes("record_notes")) {
         const input = JSON.parse(textOf(messages[1].content));
         const notes = input.candidates.flatMap((c) =>
@@ -347,6 +346,7 @@ export function recordUsageFailure(report, error) {
 
 export async function runLifecycle(input = {}) {
   const options = { config: "om+fabric", persona: "scripted", seed: 7, maxInputTokens: 15_000_000, ...input };
+  options.config = canonicalArm(options.config);
   if (
     !["full", "om", "fabric", "fabric-agentic", "om+fabric"].includes(options.config) ||
     !Number.isSafeInteger(options.maxInputTokens) ||
@@ -573,14 +573,23 @@ export async function runLifecycle(input = {}) {
             providers.map((p) => measuredProvider(p, state)),
           ),
         ];
-        if (options.config.includes("om")) packages.push(observational(config.observational));
-        if (options.config.includes("fabric"))
+        // One memory system (plan 216 Task 5): the session config when the arm has `om`, `ltm` when it has `fabric`.
+        const withOm = options.config.includes("om");
+        const withFabric = options.config.includes("fabric");
+        if (withOm || withFabric)
           packages.push(
-            fabric({
-              ...config.fabric,
-              tools: { root: join(temp, "memory") },
-              store: { sqlite: { path: join(temp, "memory", "notes.sqlite") } },
-              scopes: { tenantId: persona.id, project: { id: `${step.project}--${hash(step.project).slice(0, 8)}`, root } },
+            memorySystem({
+              ...(withOm ? config.observational : {}),
+              ...(withFabric
+                ? {
+                    ltm: {
+                      ...config.fabric,
+                      tools: { root: join(temp, "memory") },
+                      store: { sqlite: { path: join(temp, "memory", "notes.sqlite") } },
+                      scopes: { tenantId: persona.id, project: { id: `${step.project}--${hash(step.project).slice(0, 8)}`, root } },
+                    },
+                  }
+                : {}),
             }),
           );
         packages.push(
@@ -645,7 +654,7 @@ export async function runLifecycle(input = {}) {
           const deadline = Date.now() + 600000;
           await new Promise((resolve) => setTimeout(resolve, 0));
           for (;;) {
-            const status = await agent.commands.run("om:status", {}, { session });
+            const status = await agent.commands.run("memory:session:status", {}, { session });
             if (status.lastError) {
               if (/TokenCeiling/.test(status.lastError)) throw new Error("LifecycleTokenCeiling");
               // OM worker failures are background-only; record them and let the session complete.

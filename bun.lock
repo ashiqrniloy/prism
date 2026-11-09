@@ -31,8 +31,7 @@
         "@arnilo/prism-headless": "workspace:*",
         "@arnilo/prism-hooks-json": "workspace:*",
         "@arnilo/prism-memory-compaction": "workspace:*",
-        "@arnilo/prism-memory-fabric": "workspace:*",
-        "@arnilo/prism-memory-observational": "workspace:*",
+        "@arnilo/prism-memory-system": "workspace:*",
         "@arnilo/prism-provider-hyper": "workspace:*",
         "@arnilo/prism-rag": "workspace:*",
         "@arnilo/prism-remote": "workspace:*",
@@ -45,6 +44,9 @@
         "@arnilo/prism-workflows": "workspace:*",
       },
       "devDependencies": {
+        "@arnilo/prism-provider-commandcode": "workspace:*",
+        "@arnilo/prism-provider-ollama-cloud": "workspace:*",
+        "@arnilo/prism-provider-opencode-go": "workspace:*",
         "@types/node": "^22.20.0",
         "typescript": "^7.0.2",
       },
@@ -213,11 +215,11 @@
       },
       "dependencies": {
         "@arnilo/prism-mcp-server": "^0.13.0",
-        "@modelcontextprotocol/server": "2.0.0",
+        "@modelcontextprotocol/server": "^2.3.0",
         "zod": "^4.6.2",
       },
       "devDependencies": {
-        "@modelcontextprotocol/client": "2.0.0",
+        "@modelcontextprotocol/client": "^2.3.0",
         "@types/node": "^22.20.0",
         "typescript": "^7.0.2",
       },
@@ -230,13 +232,13 @@
       "version": "0.13.0",
       "dependencies": {
         "@arnilo/prism-mcp": "^0.13.0",
-        "@modelcontextprotocol/server": "2.0.0",
+        "@modelcontextprotocol/server": "^2.3.0",
         "zod": "^4.6.2",
       },
       "devDependencies": {
         "@arnilo/prism-approval": "file:../../policy/approval",
         "@arnilo/prism-tools-coding": "file:../../tools/coding",
-        "@modelcontextprotocol/client": "2.0.0",
+        "@modelcontextprotocol/client": "^2.3.0",
         "@types/node": "^22.20.0",
         "typescript": "^7.0.2",
       },
@@ -295,11 +297,11 @@
       "version": "0.13.0",
       "dependencies": {
         "@arnilo/prism-governance": "^0.13.0",
-        "@modelcontextprotocol/client": "2.0.0",
+        "@modelcontextprotocol/client": "^2.3.0",
         "zod": "^4.6.2",
       },
       "devDependencies": {
-        "@modelcontextprotocol/server": "2.0.0",
+        "@modelcontextprotocol/server": "^2.3.0",
       },
       "peerDependencies": {
         "@arnilo/prism": ">=0.13.0 <1.0.0",
@@ -368,7 +370,7 @@
         "@arnilo/prism-rag": "0.13.0-experimental.0",
       },
       "devDependencies": {
-        "@arnilo/prism-memory-fabric": "file:../../memory/fabric",
+        "@arnilo/prism-memory-system": "file:../../memory/system",
         "@arnilo/prism-tools-web": "file:../../tools/web",
         "@types/node": "^22.20.0",
         "typescript": "^7.0.2",
@@ -409,14 +411,14 @@
         "pg",
       ],
     },
-    "packages/memory/fabric": {
-      "name": "@arnilo/prism-memory-fabric",
+    "packages/memory/system": {
+      "name": "@arnilo/prism-memory-system",
       "version": "0.13.0-experimental.0",
       "dependencies": {
         "@arnilo/prism-memory-core": "0.13.0-experimental.0",
-        "@arnilo/prism-memory-observational": "0.13.0-experimental.0",
       },
       "devDependencies": {
+        "@arnilo/prism-memory-compaction": "file:../compaction",
         "@arnilo/prism-rag": "file:../../knowledge/rag",
         "@types/node": "^22.20.0",
         "@types/pg": "^8.23.1",
@@ -430,20 +432,6 @@
       "optionalPeers": [
         "pg",
       ],
-    },
-    "packages/memory/observational": {
-      "name": "@arnilo/prism-memory-observational",
-      "version": "0.13.0-experimental.0",
-      "dependencies": {
-        "@arnilo/prism-memory-core": "0.13.0-experimental.0",
-      },
-      "devDependencies": {
-        "@types/node": "^22.20.0",
-        "typescript": "^7.0.2",
-      },
-      "peerDependencies": {
-        "@arnilo/prism": ">=0.13.0 <1.0.0",
-      },
     },
     "packages/policy/approval": {
       "name": "@arnilo/prism-approval",
@@ -863,9 +851,7 @@
 
     "@arnilo/prism-memory-core": ["@arnilo/prism-memory-core@workspace:packages/memory/core"],
 
-    "@arnilo/prism-memory-fabric": ["@arnilo/prism-memory-fabric@workspace:packages/memory/fabric"],
-
-    "@arnilo/prism-memory-observational": ["@arnilo/prism-memory-observational@workspace:packages/memory/observational"],
+    "@arnilo/prism-memory-system": ["@arnilo/prism-memory-system@workspace:packages/memory/system"],
 
     "@arnilo/prism-model-router": ["@arnilo/prism-model-router@workspace:packages/policy/model-router"],
 
@@ -951,11 +937,11 @@
 
     "@mixmark-io/domino": ["@mixmark-io/domino@2.2.0", "", {}, "sha512-Y28PR25bHXUg88kCV7nivXrP2Nj2RueZ3/l/jdx6J9f8J4nsEGcgX0Qe6lt7Pa+J79+kPiJU3LguR6O/6zrLOw=="],
 
-    "@modelcontextprotocol/client": ["@modelcontextprotocol/client@2.0.0", "", { "dependencies": { "@modelcontextprotocol/core": "2.0.0", "cross-spawn": "^7.0.5", "eventsource": "^3.0.2", "eventsource-parser": "^3.0.0", "jose": "^6.1.3", "pkce-challenge": "^5.0.0", "zod": "^4.2.0" } }, ""],
+    "@modelcontextprotocol/client": ["@modelcontextprotocol/client@2.4.0", "", { "dependencies": { "@modelcontextprotocol/core": "2.4.0", "cross-spawn": "^7.0.5", "eventsource": "^3.0.2", "eventsource-parser": "^3.0.8", "jose": "^6.1.3", "pkce-challenge": "^5.0.0", "zod": "^4.2.0" } }, "sha512-LgrD2OphHuG12vfKFKz6SOnq7bKHQmhGJIAYdD+MZBn2npHEyry6uD8zvktodtl5CQM85MO0anUyD9JwmUmxww=="],
 
-    "@modelcontextprotocol/core": ["@modelcontextprotocol/core@2.0.0", "", { "dependencies": { "zod": "^4.2.0" } }, ""],
+    "@modelcontextprotocol/core": ["@modelcontextprotocol/core@2.4.0", "", { "dependencies": { "zod": "^4.2.0" } }, "sha512-z8QBKqdfXLPzkLQuG4xp8hrVEMm1PZ1IgxMN2sMbJiFiAKOWXnAzogXn2W4aqIBlP1ea6U5yiqVquvUNM1Cj6Q=="],
 
-    "@modelcontextprotocol/server": ["@modelcontextprotocol/server@2.0.0", "", { "dependencies": { "@modelcontextprotocol/core": "2.0.0", "zod": "^4.2.0" } }, ""],
+    "@modelcontextprotocol/server": ["@modelcontextprotocol/server@2.4.0", "", { "dependencies": { "@modelcontextprotocol/core": "2.4.0", "zod": "^4.2.0" } }, "sha512-rgR9yxSaAJ+bcsi/XroT/S2AfPiIWloXAnrdfYSCms9ivVju0ishu/wW0J21Ho6+ZOR1r7RyeRbjiRuF87ix5Q=="],
 
     "@mozilla/readability": ["@mozilla/readability@0.6.0", "", {}, "sha512-juG5VWh4qAivzTAeMzvY9xs9HY5rAcr2E4I7tiSSCokRFi7XIZCAu92ZkSTsIj1OPceCifL3cpfteP3pDT9/QQ=="],
 
@@ -1091,7 +1077,7 @@
 
     "fast-json-patch": ["fast-json-patch@3.1.1", "", {}, "sha512-vf6IHUX2SBcA+5/+4883dsIjpBTqmfBjmYiWK1savxQmFk4JfBMLa7ynTYOs1Rolp/T1betJxHiGD3g1Mn8lUQ=="],
 
-    "fast-uri": ["fast-uri@3.1.8", "", {}, ""],
+    "fast-uri": ["fast-uri@3.1.9", "", {}, "sha512-hS/0Wt3Ya043oKXs0sIxrMpKQITXhMLIrVAKKXi4gozGC9v7YRWVnXIZzjNPTO02M9BdxLCWqK1yRXgNziVyJQ=="],
 
     "fast-xml-builder": ["fast-xml-builder@1.3.1", "", { "dependencies": { "path-expression-matcher": "^1.6.2", "xml-naming": "^0.3.0" } }, ""],
 
@@ -1219,7 +1205,7 @@
 
     "xtend": ["xtend@4.0.2", "", {}, ""],
 
-    "zod": ["zod@4.6.5", "", {}, ""],
+    "zod": ["zod@4.6.7", "", {}, "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg=="],
 
     "@ag-ui/client/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 
@@ -1231,9 +1217,13 @@
 
     "@arnilo/prism-delegate/@arnilo/prism-tools-coding": ["@arnilo/prism-tools-coding@file:packages/tools/coding", { "dependencies": { "diff": "^9.0.0" }, "devDependencies": { "@arnilo/prism-evals": "file:../../hosts/evals", "@arnilo/prism-workflows": "file:../../integrations/workflows", "@types/diff": "^7.0.2", "@types/node": "^22.20.0", "typescript": "^7.0.2" }, "peerDependencies": { "@arnilo/prism": ">=0.13.0 <1.0.0", "@arnilo/prism-workflows": "^0.13.0", "e2b": "2.49.1" }, "optionalPeers": ["e2b"] }],
 
+    "@arnilo/prism-memory-system/@arnilo/prism-memory-compaction": ["@arnilo/prism-memory-compaction@file:packages/memory/compaction", { "devDependencies": { "@types/node": "^22.20.0", "typescript": "^7.0.2" }, "peerDependencies": { "@arnilo/prism": ">=0.13.0 <1.0.0" } }],
+
     "@arnilo/prism-rag/@arnilo/prism-tools-web": ["@arnilo/prism-tools-web@file:packages/tools/web", { "dependencies": { "@mozilla/readability": "0.6.0", "linkedom": "0.18.14", "turndown": "7.2.4" }, "devDependencies": { "@types/node": "^22.20.0", "@types/turndown": "5.0.6", "playwright-core": "1.63.0", "typescript": "^7.0.2" }, "peerDependencies": { "@arnilo/prism": ">=0.13.0 <1.0.0", "@arnilo/prism-mcp": "^0.13.0", "playwright-core": "1.63.0" }, "optionalPeers": ["@arnilo/prism-mcp", "playwright-core"] }],
 
     "@arnilo/prism-rag/@arnilo/prism-workflows": ["@arnilo/prism-workflows@file:packages/integrations/workflows", { "devDependencies": { "@types/node": "^22.20.0", "typescript": "^7.0.2" }, "peerDependencies": { "@arnilo/prism": ">=0.13.0 <1.0.0" } }],
+
+    "@arnilo/prism-wiki/@arnilo/prism-memory-system": ["@arnilo/prism-memory-system@file:packages/memory/system", { "dependencies": { "@arnilo/prism-memory-core": "0.13.0-experimental.0" }, "devDependencies": { "@arnilo/prism-memory-compaction": "file:../compaction", "@arnilo/prism-rag": "file:../../knowledge/rag", "@types/node": "^22.20.0", "@types/pg": "^8.23.1", "pg": "^8.23.0", "typescript": "^7.0.2" }, "peerDependencies": { "@arnilo/prism": ">=0.13.0 <1.0.0", "pg": "^8.23.0" }, "optionalPeers": ["pg"] }],
 
     "@arnilo/prism-wiki/@arnilo/prism-tools-web": ["@arnilo/prism-tools-web@file:packages/tools/web", { "dependencies": { "@mozilla/readability": "0.6.0", "linkedom": "0.18.14", "turndown": "7.2.4" }, "devDependencies": { "@types/node": "^22.20.0", "@types/turndown": "5.0.6", "playwright-core": "1.63.0", "typescript": "^7.0.2" }, "peerDependencies": { "@arnilo/prism": ">=0.13.0 <1.0.0", "@arnilo/prism-mcp": "^0.13.0", "playwright-core": "1.63.0" }, "optionalPeers": ["@arnilo/prism-mcp", "playwright-core"] }],
 
@@ -1256,6 +1246,10 @@
     "@arnilo/prism-delegate/@arnilo/prism-tools-coding/@arnilo/prism-evals": ["@arnilo/prism-evals@file:packages/hosts/evals", {}],
 
     "@arnilo/prism-delegate/@arnilo/prism-tools-coding/@arnilo/prism-workflows": ["@arnilo/prism-workflows@file:packages/integrations/workflows", { "devDependencies": { "@types/node": "^22.20.0", "typescript": "^7.0.2" }, "peerDependencies": { "@arnilo/prism": ">=0.13.0 <1.0.0" } }],
+
+    "@arnilo/prism-wiki/@arnilo/prism-memory-system/@arnilo/prism-memory-compaction": ["@arnilo/prism-memory-compaction@file:packages/memory/compaction", { "devDependencies": { "@types/node": "^22.20.0", "typescript": "^7.0.2" }, "peerDependencies": { "@arnilo/prism": ">=0.13.0 <1.0.0" } }],
+
+    "@arnilo/prism-wiki/@arnilo/prism-memory-system/@arnilo/prism-rag": ["@arnilo/prism-rag@file:packages/knowledge/rag", {}],
 
     "@types/pg/@types/node/undici-types": ["undici-types@8.9.0", "", {}, ""],
 

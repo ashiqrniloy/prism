@@ -13,10 +13,10 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { memoryFabricConfigSchema } from "@arnilo/prism-memory-fabric";
-import { memoryObservationalConfigSchema } from "@arnilo/prism-memory-observational";
+import { memoryFabricConfigSchema } from "@arnilo/prism-memory-system";
+import { memorySystemConfigSchema } from "@arnilo/prism-memory-system";
 import wiki from "@arnilo/prism-wiki";
-import { presetFields } from "../../packages/memory/fabric/src/config.ts";
+import { presetFields } from "../../packages/memory/system/src/ltm/config.ts";
 import {
   CLOSURE_202,
   EXCLUDED,
@@ -57,21 +57,22 @@ export function schemaPaths(schema, path = "", out = new Set()) {
 export function enumerateSurface() {
   const config = [
     ...[...schemaPaths(memoryFabricConfigSchema)].map((p) => `fabric:${p}`),
-    ...[...schemaPaths(memoryObservationalConfigSchema)].map((p) => `om:${p}`),
+    // The system schema carries long-term memory under `ltm` (plan 216 Task 5); those fields are the `fabric:` rows above.
+    ...[...schemaPaths(memorySystemConfigSchema)].filter((p) => p !== "ltm" && !p.startsWith("ltm.")).map((p) => `om:${p}`),
     ...[...schemaPaths(wiki.config)].map((p) => `wiki:${p}`),
   ];
-  const kindsUnion = /export type MemoryNoteKind = ([^;]+);/.exec(read("packages/memory/fabric/src/types.ts"));
+  const kindsUnion = /export type MemoryNoteKind = ([^;]+);/.exec(read("packages/memory/system/src/ltm/types.ts"));
   if (!kindsUnion) throw new Error("feature-ledger: MemoryNoteKind union not found in fabric types.ts");
   const kinds = [...kindsUnion[1].matchAll(/"([a-z]+)"/g)].map((m) => m[1]);
 
-  const fabricTools = [...read("packages/memory/fabric/src/tools.ts").matchAll(/const \w+Name = "(memory\.[a-z]+)";/g)].map((m) => m[1]);
-  const omTool = /options\.name \?\? "([a-z_]+)"/.exec(read("packages/memory/observational/src/recall-tool.ts"))?.[1];
+  const fabricTools = [...read("packages/memory/system/src/ltm/tools.ts").matchAll(/const \w+Name = "(memory\.[a-z]+)";/g)].map((m) => m[1]);
+  const omTool = /options\.name \?\? "([a-z_]+)"/.exec(read("packages/memory/system/src/session/recall-tool.ts"))?.[1];
   const wikiTool = /WIKI_INGEST_TOOL_NAME = "([a-z_]+)"/.exec(read("packages/knowledge/wiki/src/tools/ingest.ts"))?.[1];
   if (!omTool || !wikiTool || fabricTools.length === 0) throw new Error("feature-ledger: a tool name was not found in source");
   const tools = [...fabricTools, omTool, wikiTool];
 
-  const fabricCommands = [...read("packages/memory/fabric/src/index.ts").matchAll(/name: "(memory(?::[a-z]+)?)",/g)].map((m) => m[1]);
-  const omCommands = [...read("packages/memory/observational/src/commands.ts").matchAll(/name: "(om(?::[a-z]+)?)",/g)].map((m) => m[1]);
+  const fabricCommands = [...read("packages/memory/system/src/ltm/index.ts").matchAll(/name: "(memory(?::[a-z]+)?)",/g)].map((m) => m[1]);
+  const omCommands = [...read("packages/memory/system/src/session/commands.ts").matchAll(/name: "(memory:session(?::[a-z]+)?)",/g)].map((m) => m[1]);
   const wikiCommands = ["status", "lint", "ingest", "consolidate"].map(
     (file) => /_COMMAND_NAME = "(wiki:[a-z]+)"/.exec(read(`packages/knowledge/wiki/src/commands/${file}.ts`))?.[1],
   );
@@ -379,8 +380,8 @@ export function buildLedger({ features: rows = FEATURES, closure: closureRows = 
     note: "Development evidence only; no plan 210 held-out partition has been read. Candidates (neutral, negative, unmeasured) go to Tasks 2-5. Evidence entries are files and hashes; no note, question or answer text.",
     scope: {
       packages: [
-        "@arnilo/prism-memory-fabric",
-        "@arnilo/prism-memory-observational",
+        "@arnilo/prism-memory-system",
+        "@arnilo/prism-memory-system",
         "@arnilo/prism-wiki",
         "@arnilo/prism-memory-core (parts only they use)",
       ],

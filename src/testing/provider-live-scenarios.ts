@@ -5,6 +5,7 @@ import type {
   JsonObject,
   ModelConfig,
   ModelProvider,
+  ProviderEvent,
   ProviderRequest,
   ToolCallContent,
   ToolDefinition,
@@ -250,6 +251,18 @@ async function resolveModelConfig(
 
 // ── Shared Scenario Executors ────────────────────────────────────────────────
 
+/**
+ * Names the provider's terminal `error` event in a failed assertion, so a billing, quota, or
+ * retired-model refusal is not reported as an empty answer. Secrets are masked before printing.
+ */
+function terminalErrorSuffix(events: readonly ProviderEvent[], secrets: readonly string[]): string {
+  const last = events.at(-1);
+  if (last?.type !== "error") return "";
+  let message = last.error.message;
+  for (const secret of secrets) if (secret) message = message.split(secret).join("[redacted]");
+  return ` (provider error: ${message.slice(0, 500)})`;
+}
+
 export async function liveScenarioTextStream(options: {
   readonly provider: ModelProvider;
   readonly model: ModelConfig;
@@ -269,7 +282,7 @@ export async function liveScenarioTextStream(options: {
     },
   });
   const text = events.map((e) => (e.type === "content_delta" && e.content.type === "text" ? e.content.text : "")).join("");
-  assert.ok(text.length > 0, "live text response was empty");
+  assert.ok(text.length > 0, `live text response was empty${terminalErrorSuffix(events, options.secrets)}`);
   assertNoSecretLeak(events, options.secrets);
   const usage = events.find((e) => e.type === "usage")?.usage;
   if (usage) {
@@ -332,7 +345,7 @@ export async function liveScenarioToolLoop(options: {
   }
 
   const toolCallEvents = turn1Events.filter((e) => e.type === "tool_call");
-  assert.ok(toolCallEvents.length > 0, "Turn 1 tool prompt produced no tool calls");
+  assert.ok(toolCallEvents.length > 0, `Turn 1 tool prompt produced no tool calls${terminalErrorSuffix(turn1Events, options.secrets)}`);
   const toolCalls: ToolCallContent[] = [];
   for (const tc of toolCallEvents) {
     if (tc.type === "tool_call") {

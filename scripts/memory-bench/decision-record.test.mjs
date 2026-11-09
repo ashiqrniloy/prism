@@ -10,6 +10,7 @@ const inputs = () => ({
   report: json("ablations/c1-report.json"),
   predictions: json("gap-predictions.json"),
   owner: json("owner-decisions.json"),
+  dispositions: json("dispositions.json"),
 });
 const build = (edit) => {
   const value = structuredClone(inputs());

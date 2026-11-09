@@ -17,10 +17,10 @@
 import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { memoryFabricConfigSchema } from "@arnilo/prism-memory-fabric";
-import { DEFAULT_EXCHANGE_STEPS } from "../../../packages/memory/fabric/src/config.ts";
-import { DEFAULT_CAPTURE_RULES_TOKENS } from "../../../packages/memory/fabric/src/delivery/rules.ts";
-import { DEFAULT_LESSON_ARCHIVE_SESSIONS, DEFAULT_LESSON_NUDGE_TURNS } from "../../../packages/memory/fabric/src/lessons.ts";
+import { memoryFabricConfigSchema } from "@arnilo/prism-memory-system";
+import { DEFAULT_EXCHANGE_STEPS } from "../../../packages/memory/system/src/ltm/config.ts";
+import { DEFAULT_CAPTURE_RULES_TOKENS } from "../../../packages/memory/system/src/ltm/delivery/rules.ts";
+import { DEFAULT_LESSON_ARCHIVE_SESSIONS, DEFAULT_LESSON_NUDGE_TURNS } from "../../../packages/memory/system/src/ltm/lessons.ts";
 import { sourceFingerprint } from "../acceptance.mjs";
 import { ONTOLOGY_PRODUCT_PATHS } from "../audit/readiness.mjs";
 import { stableHash } from "../journal.mjs";

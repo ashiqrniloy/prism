@@ -368,7 +368,7 @@ These members stay because a host in this repo reads them:
 | Member | Why it stays | Used by |
 | --- | --- | --- |
 | `entries()` | The raw branch, for hosts that project or render the transcript — messages plus the `package_state` entries a package's `state.log` appended and the `external_state` entries a driver loop's `run.state(key)` archived. `messages()` derives from the same snapshot. | Prism Agent, AG-UI, observational memory |
-| `checkout(leafId?)` | Re-points a live session at another leaf of its own branch tree. | host branching UIs, `@arnilo/prism-memory-fabric`, the RPC `checkout` command |
+| `checkout(leafId?)` | Re-points a live session at another leaf of its own branch tree. | host branching UIs, `@arnilo/prism-memory-system` (long-term memory), the RPC `checkout` command |
 | `contextMeter()` | The context-fill read. | Prism Agent's status line |
 | `subscribe(options?)` | A session's live events, run-scoped or `acrossRuns`. | Prism Agent headless, AG-UI |
 | `leafId` | The current leaf; advances on every append. | `checkout`, `fork({ at })`, durable handles |

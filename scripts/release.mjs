@@ -6,11 +6,10 @@ import { fileURLToPath } from "node:url";
 import { lockWorkspace, readBunLock } from "./bun-lock.mjs";
 import { runGates } from "./release-gates.mjs";
 
-// Release toolchain is Bun-only (plan 164 Task 8.4): `bun pm pack` writes the release
-// tarballs and `bun publish <tarball>` ships exactly those bytes, so the GitHub build
-// attestation covers the published artifact. npm registry provenance is retired with npm;
-// `npm dist-tag`/`npm deprecate` survive only for the plan 054 legacy retirement path
-// (Phase 11), where Bun 1.4.2 has no equivalent.
+// Release artifacts are Bun's (plan 164 Task 8.4): `bun pm pack` writes the release tarballs and
+// the GitHub build attestation covers exactly those bytes. Publishing is npm's (plan 215 Task 38):
+// `npm publish <tarball> --provenance` is the only path that speaks OIDC trusted publishing, so CI
+// holds no npm token; `bun publish` carries no OIDC support.
 
 const INTERNAL_SCOPE = "@arnilo/";
 const DEPENDENCY_FIELDS = ["dependencies", "optionalDependencies", "peerDependencies"];
@@ -492,8 +491,15 @@ function releaseLineErrors(release) {
   return errors;
 }
 
-export function publishArgs(pkg, version, { dryRun = false, registry, artifactsDir = "release-artifacts" } = {}) {
+export function publishArgs(
+  pkg,
+  version,
+  { dryRun = false, registry, provenance = false, artifactsDir = "release-artifacts" } = {},
+) {
   const args = ["publish", join(artifactsDir, tarballName(pkg.manifest.name, version)), "--access", "public", "--tag", releaseTag(pkg, version)];
+  // npm's OIDC trusted publishing: the sigstore statement needs the workflow's `id-token: write`
+  // and a GitHub-hosted runner, so it is passed in CI only (a local bootstrap publish has no OIDC).
+  if (provenance && !dryRun) args.push("--provenance");
   if (registry) args.push("--registry", registry);
   if (dryRun) args.push("--dry-run");
   return args;
@@ -543,17 +549,21 @@ export async function runRelease({
     order: order.map((pkg) => pkg.manifest.name),
     packages: [],
   };
+  // release-host registry toolchain: `bun publish` has no OIDC support (plan 215 Task 38), so the
+  // pipeline publishes the packed, attested tarballs with npm, which exchanges the workflow's OIDC
+  // token for a short-lived credential.
+  const provenance = process.env.GITHUB_ACTIONS === "true";
   const publish =
     publisher ??
     ((pkg) => {
       const pubVersion = independent ? pkg.manifest.version : version;
-      const result = spawnSync("bun", publishArgs(pkg, pubVersion, { dryRun, registry, artifactsDir }), {
+      const result = spawnSync("npm", publishArgs(pkg, pubVersion, { dryRun, registry, provenance, artifactsDir }), {
         cwd: release.root,
         encoding: "utf8",
         stdio: "inherit",
         env: process.env,
       });
-      if (result.status !== 0) throw new Error(`bun publish failed for ${pkg.manifest.name}`);
+      if (result.status !== 0) throw new Error(`npm publish failed for ${pkg.manifest.name}`);
     });
 
   for (const pkg of order) {

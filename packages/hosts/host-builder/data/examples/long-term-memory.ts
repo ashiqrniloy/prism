@@ -13,7 +13,7 @@ import {
 import { mockProvider } from "@arnilo/prism/testing";
 import { createHashEmbedder, type Embedder } from "@arnilo/prism-memory-core";
 import { createMarkdownMemoryStores } from "@arnilo/prism-memory-core/fabric";
-import memoryFabric, { createMemory, createMemoryFabric } from "@arnilo/prism-memory-fabric";
+import memorySystem, { createMemory, createLongTermMemory } from "@arnilo/prism-memory-system";
 
 // Network-free: session one consolidates an explicit statement into a typed project note through
 // `memory:consolidate` and archives the turn itself through `memory:archive`; a second process (a
@@ -41,9 +41,8 @@ try {
     resourceId: "user",
     threadId: "default",
     vectorStore: seeded.vectorStore,
-    workingStore: seeded.workingStore,
   });
-  await createMemoryFabric({ memory: userMemory, consolidate: false }).remember({
+  await createLongTermMemory({ memory: userMemory, consolidate: false }).remember({
     kind: "preference",
     content: "Prefer terse changelog entries",
     scope: "user",
@@ -80,7 +79,7 @@ try {
       ]),
       embeddings(),
       // One extractor call per pass; the command runs regardless of minTurnsBetween.
-      memoryFabric({ tools: { root }, promote: { minTurnsBetween: 8 }, exchanges: {} }),
+      memorySystem({ ltm: { tools: { root }, promote: { minTurnsBetween: 8 }, exchanges: {} } }),
     ],
     slots: { store: createMemorySessionStore() },
   });
@@ -111,7 +110,7 @@ try {
         },
       ),
       embeddings(),
-      memoryFabric({ tools: { root } }),
+      memorySystem({ ltm: { tools: { root } } }),
     ],
   });
   const secondSession = await second.session({ id: "session-two", create: true });
@@ -143,7 +142,7 @@ try {
         },
       ),
       embeddings(),
-      memoryFabric({ tools: { root }, scopes: { project: { id: "other--00000001" } } }),
+      memorySystem({ ltm: { tools: { root }, scopes: { project: { id: "other--00000001" } } } }),
     ],
   });
   const thirdSession = await third.session({ id: "session-three", create: true });

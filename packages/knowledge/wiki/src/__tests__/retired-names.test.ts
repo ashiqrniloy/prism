@@ -61,7 +61,7 @@ function isRecord(path: string): boolean {
     path === "scripts/unused-sweep-report.txt" ||
     /^scripts\/compat-baseline\/arnilo__prism(-memory|-wiki)?\.txt$/.test(path) || // the 0.12 family baselines
     path === "src/__tests__/packaging.test.ts" || // asserts the bin and skills are gone
-    path === "packages/memory/fabric/src/__tests__/package.test.ts" // its allowlist names the frozen record
+    path === "packages/memory/system/src/ltm/__tests__/package.test.ts" // its allowlist names the frozen record
   );
 }
 

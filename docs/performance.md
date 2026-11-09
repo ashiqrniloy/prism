@@ -41,7 +41,7 @@ Recorded 2026-08-27, Node v24.19.0 / Linux x64, 5 warmups + 20 waves, 8 ms mock 
 ## Large-history and streamed-delta hot paths (plan 036)
 
 The `multi-agent-runtime` scenario also covers 10,000 context-budget history rows and
-5,000 streamed provider deltas. `applyContextBudget` measures the keep-set once,
+5,000 streamed provider deltas. The 0.12 `applyContextBudget` measured the keep-set once,
 advances a history head cursor during eviction, and slices the retained suffix once;
 it never front-mutates the history array. Runtime request/response limit accounting
 uses `Buffer.byteLength(JSON.stringify(value), "utf8")`, so UTF-8 byte limits do not
@@ -484,19 +484,17 @@ On default overflow, the affected subscriber receives one `event_subscriber_over
 ## Implementation example
 
 ```ts
-import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
+import { createAgent } from "@arnilo/prism";
+import { mockProvider, providerDone, providerTextDelta } from "@arnilo/prism/testing";
 
-const agent = createAgent({
+const agent = await createAgent({
   model: { provider: "mock", model: "demo" },
-  provider: createMockProvider([providerTextDelta("Hello"), providerDone()]),
+  packages: [mockProvider([[providerTextDelta("Hello"), providerDone()]])],
 });
 
-const session = agent.createSession();
+const session = await agent.session();
 const reader = (async () => {
-  for await (const event of session.subscribe({ maxQueuedEvents: 256, overflow: "close" })) {
-    if (event.type === "event_subscriber_overflow") break;
-    render(event);
-  }
+  for await (const event of session.subscribe({ maxQueuedEvents: 256 })) render(event);
 })();
 
 await session.run("Hi");
@@ -536,7 +534,7 @@ const store = {
 - `SessionStore.list(sessionId)` is a full-session read. It is fine for memory/JSONL development stores, but production adapters should use `readBranchPath` for provider context and branch views.
 - The JSONL store rereads/parses the file for validation/list/get and serializes appends only within one process. It has no cross-process lock, pagination, migrations, tenant isolation, or retention.
 - Recommended database indexes: session id, run id, parent id, branch leaf id, timestamps, tenant/account/user, event type, entry kind, `(run_id, sequence)` for event timelines, and `(run_id, recorded_at, id)` for usage. Allocate event `sequence` per run for stable timeline pagination.
-- Provider SSE parsing defaults: 256 KiB per completed event, 512 KiB incomplete buffer, 64 KiB error response bodies. Override per call via `BoundedStreamLimits` on `@arnilo/prism/providers/transport`.
+- Provider SSE parsing defaults: 256 KiB per completed event, 512 KiB incomplete buffer, 64 KiB error response bodies. Override per call via `BoundedStreamLimits` from `@arnilo/prism/provider-kit`.
 
 ### Provider-phase benchmark snapshot (2026-07-14)
 
@@ -661,7 +659,7 @@ The historical AI SDK provider adapter adapted AI SDK `LanguageModelV4` streams 
 
 ### 0.0.5 Phase 7 verification (2026-07-15)
 
-Optional `@arnilo/prism-memory-fabric` adds working memory and semantic recall without changing core session stores.
+Optional long-term memory in `@arnilo/prism-memory-system` (`ltm`) adds working memory and semantic recall without changing core session stores.
 
 | Surface | Result |
 | --- | --- |

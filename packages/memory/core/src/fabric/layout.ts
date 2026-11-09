@@ -27,7 +27,8 @@ export const FILE_MAP_FILE = ".index-files.json";
 /** Append-only journal of file-map changes since the snapshot; folded back in by reconcile. */
 export const FILE_MAP_JOURNAL_FILE = ".index-files.journal.jsonl";
 export const STATE_FILE = ".state.json";
-export const WORKING_DIRECTORY = "working";
+/** Where long-term working memory lived before plan 216 Task 7; a store that still holds it fails to open. */
+export const RETIRED_WORKING_DIRECTORY = "working";
 
 const RESOURCE_SEGMENT_CAP = 4;
 
@@ -144,10 +145,6 @@ export function noteRelPath(input: NotePathInput): string {
   const dir = input.archived ? `${ARCHIVE_DIRECTORY}/${directory}` : directory;
   const suffix = input.fullId ? input.id : input.id.slice(0, 8);
   return `${scopeDirectory(input.tenantId, input.resourceId)}/${dir}/${slugify(noteTitle(input.text))}--${suffix}.md`;
-}
-
-export function workingRelPath(tenantId: string, resourceId: string, threadId: string): string {
-  return `${scopeDirectory(tenantId, resourceId)}/${WORKING_DIRECTORY}/${encodeURIComponent(threadId)}.md`;
 }
 
 export function stateRelPath(tenantId: string, resourceId: string): string {

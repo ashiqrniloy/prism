@@ -149,7 +149,14 @@ pre-change cells (`mergeWithPreChangeCells: false`, `rerunArms: ["preset-r1", "p
 (`full`, `full-truncated`, `lexical-topk`) install no fabric (`config` has no `fabric`), were outside the attestation,
 and keep their cells. No cell was rerun and no paid call ran here.
 
-[record.json](record.json) pins the passing 4.12-4.14 prefix suite (29 pass / 0 fail, with the ten named
-tests present) and the SHA-256 of `equivalence.json` to the current fabric product hash. `runCampaign` refuses a
-manifest whose product lacks it. Editing `packages/memory/fabric/src` invalidates the record until both commands in
+[record.json](record.json) pins the passing 4.12-4.14 prefix suite and the SHA-256 of `equivalence.json` to the
+current LTM product hash (`packages/memory/system/src/ltm`). `runCampaign` refuses a manifest whose product lacks it.
+Editing that tree invalidates the record until both commands in
 [the benchmark README](../../../../../scripts/memory-bench/README.md) are rerun.
+
+**Re-attestations.** Plan 210 Task 7 re-attested the pin to the slimmed fabric product (`867f8277…`, 29 pass).
+Plan 216 Task 8 (2026-11-09) re-attested it to the memory-system LTM product (`4fb60791…`, 27 pass / 0 fail: Task 7
+deleted the two working-memory tests, one of them a named 4.12-4.14 test). The equivalence file is now the plan 216 one
+([216/equivalence.json](../../216/equivalence.json), base `37ee1a24` on its own harness): 54 requests, `different` for
+`preset-r1` (system, tools) and `passive-only` (system), all of it the Task 7 tool text; context, transcript and tail are
+identical. See [216/README.md](../../216/README.md).

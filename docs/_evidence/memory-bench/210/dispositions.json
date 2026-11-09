@@ -1,0 +1,18 @@
+{
+  "kind": "210-transferred-dispositions",
+  "note": "Each destination plan records here what it finally did with a row the plan 210 decision record transferred to it; `decision-record.mjs` renders it as the Final disposition column.",
+  "rows": [
+    {
+      "feature": "lifecycle.episode-merge",
+      "disposition": "removed by plan 216 Task 7"
+    },
+    {
+      "feature": "delivery.working-memory",
+      "disposition": "removed by plan 216 Task 7"
+    },
+    {
+      "feature": "kind.episode",
+      "disposition": "removed by plan 216 Task 7 (the episode view; the kind name stays reserved for plan 219)"
+    }
+  ]
+}

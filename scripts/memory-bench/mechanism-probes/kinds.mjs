@@ -1,83 +1,11 @@
-/** Plan 210 Task 2: note-kind probes (episode view, fact, preference, procedure, decision, file, lessons). */
+/** Plan 210 Task 2: note-kind probes (fact, preference, procedure, decision, file, lessons). The episode view left with plan 216 Task 7. */
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { digest, fabricAgent, lastValue, packages, receivedText, resultText, SCOPE, scripted, tailSourceText } from "./harness.mjs";
+import { digest, fabricAgent, lastValue, receivedText, resultText, scripted, tailSourceText } from "./harness.mjs";
 import { lib } from "./lifecycle.mjs";
 import { toolArm } from "./retrieval.mjs";
 
-/** A host package that appends one OM observation to the session ledger, as observational memory would. */
-async function observation(item) {
-  const { prism } = await packages();
-  const om = await import("@arnilo/prism-memory-observational");
-  return prism.definePackage({
-    name: "@probe/observation",
-    version: "0.0.0",
-    requires: { api: 1 },
-    capabilities: ["session-state"],
-    setup(api) {
-      const log = api.state.log("ledger");
-      let done = false;
-      api.hooks.on("turn.completed", async (_event, context) => {
-        if (done) return;
-        done = true;
-        await log.append(context.session, { type: om.OBSERVATIONS_RECORDED, observations: [item] });
-      });
-    },
-  })();
-}
-
 export const probes = [
-  {
-    id: "kind.episode",
-    async run(root) {
-      const { fabric } = await packages();
-      const id = "0b5e00000001";
-      const h = await fabricAgent(join(root, "om"), {
-        config: { rules: false },
-        extraPackages: [
-          await observation({
-            id,
-            content: "user debugged the flaky friday deploy",
-            timestamp: "2026-01-01T00:00:00.000Z",
-            relevance: "high",
-            sourceEntryIds: [],
-            tokenCount: 7,
-          }),
-        ],
-      });
-      try {
-        await h.run("probe", "hello");
-        const session = await h.session("probe");
-        const before = (await h.stores.vectorStore.getByThread(SCOPE)).length;
-        const viewer = fabric.createMemoryFabric({
-          memory: h.memory,
-          vectorStore: h.stores.vectorStore,
-          consolidate: false,
-          observational: { session },
-        });
-        const view = await viewer.remember({ kind: "episode", id });
-        const after = (await h.stores.vectorStore.getByThread(SCOPE)).length;
-        const without = await h.writer.remember({ kind: "episode", id }).then(
-          () => "accepted",
-          (error) => (/requires createMemoryFabric/.test(String(error?.message)) ? "refused" : "other"),
-        );
-        return {
-          surface: "library-result",
-          property:
-            "kind episode is a view of an observational-memory observation: the note carries its content and writes no row; without an OM source it is refused",
-          fires: view?.kind === "episode" ? 1 : 0,
-          reaches: /flaky friday deploy/.test(view?.content ?? ""),
-          correct: view?.content === "user debugged the flaky friday deploy" && after === before && without === "refused",
-          on: digest(view?.content),
-          off: digest(without),
-          finding:
-            "The package never passes an observational source to its fabric and no tool writes kind episode, so the view is reachable only from a library host; episode rows in the store come only from the consolidation extractor (promote on), which both presets leave off.",
-        };
-      } finally {
-        await h.close();
-      }
-    },
-  },
   {
     id: "kind.fact",
     async run(root) {

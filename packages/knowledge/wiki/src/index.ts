@@ -7,7 +7,7 @@
  * The agent reads it with `wiki.search` (concepts first, claims with their cited ids) and `wiki.read` (a concept, or
  * a cited note), and gets at most one passive pointer per turn when a concept's subject is in play.
  *
- * Long-term memory is optional. When `@arnilo/prism-memory-fabric` is installed the wiki reads it through the
+ * Long-term memory is optional. When `@arnilo/prism-memory-system` is installed with `ltm` the wiki reads it through the
  * read-only `memory.ltm` service: claims may cite LTM notes, and forgetting a cited note removes the claims that
  * rested on it (the deletion feed plus an open-time liveness check, no model call). The wiki never writes memory.
  * Without memory it runs on its own sources, and `wiki:status` says so.
@@ -16,13 +16,13 @@
  * `consolidate.model`; installing this package is what opts in to it.
  *
  * ```ts
- * import memoryFabric from "@arnilo/prism-memory-fabric";
+ * import memorySystem from "@arnilo/prism-memory-system";
  * import { wiki } from "@arnilo/prism-wiki";
  * import { createAgent } from "@arnilo/prism";
  *
  * const agent = await createAgent({
  *   model: "openai/gpt-5",
- *   packages: [memoryFabric({ preset: "coding" }), wiki({ root: "./wiki", consolidate: { model: "openai/gpt-5-mini" } })],
+ *   packages: [memorySystem({ ltm: { preset: "coding" } }), wiki({ root: "./wiki", consolidate: { model: "openai/gpt-5-mini" } })],
  * });
  * ```
  */

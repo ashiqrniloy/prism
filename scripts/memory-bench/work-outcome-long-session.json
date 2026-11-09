@@ -1,0 +1,43 @@
+{
+  "seed": "prism-217-long-session",
+  "draw": "SHA-256(\"prism-217-long-session:\" + id), ascending inside the family stratum",
+  "source": "work-outcome/long-session.mjs (project-owned synthetic generator); ids only",
+  "strata": {
+    "long-session-coding": [
+      4,
+      4,
+      4
+    ]
+  },
+  "part": "dev | heldout-a | heldout-b; dev is plan 217 Task 6's gate M-1; heldout-a and heldout-b belong to the memory model's gate A",
+  "residualPool": {
+    "long-session-coding": 0
+  },
+  "idsHash": "db5632ffe5a42e703f1bef5cc96de97471e66101266bc58bc7fdb843b7b3f730",
+  "abilities": {
+    "dev": {
+      "long-session-coding": [
+        "ls10",
+        "ls7",
+        "ls11",
+        "ls1"
+      ]
+    },
+    "heldout-a": {
+      "long-session-coding": [
+        "ls2",
+        "ls4",
+        "ls8",
+        "ls9"
+      ]
+    },
+    "heldout-b": {
+      "long-session-coding": [
+        "ls5",
+        "ls0",
+        "ls3",
+        "ls6"
+      ]
+    }
+  }
+}

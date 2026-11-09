@@ -22,7 +22,7 @@ async function env(levels = ["project"], ontologyOptions = {}) {
   const ltm = fabric.createMemoryLtmPort({ scopes: () => [...memories].map(([level, memory]) => ({ level, memory, store: vectorStore })) });
   const ontology = createWikiOntology({ ltm: () => ltm, ...ontologyOptions });
   const fabrics = new Map(
-    [...memories].map(([level, memory]) => [level, fabric.createMemoryFabric({ memory, vectorStore, consolidate: false })]),
+    [...memories].map(([level, memory]) => [level, fabric.createLongTermMemory({ memory, vectorStore, consolidate: false })]),
   );
   const note = (text, options = {}) =>
     fabrics.get(options.level ?? "project").remember({

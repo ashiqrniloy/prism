@@ -117,8 +117,10 @@ describe("Command Code ZDR mapping", () => {
   it.skipIf(skip !== false)(
     "live_zdr_unsupported_model_maps_422",
     async () => {
-      // Laguna free answers Chat Completions but has no zero-data-retention upstream (measured Task 1b).
-      const events = await collectProviderEvents(provider(), request(model("poolside/laguna-s-2.1-free")));
+      // A free model with no zero-data-retention upstream. Laguna free (measured Task 1b) was retired on
+      // 2026-11-04; `stealth/glyph-cluster:free` answered 422 `cmd_zdr_no_providers` on 2026-11-09 (plan 215 Task 34).
+      const nonZdrModel = process.env.PRISM_LIVE_COMMANDCODE_NON_ZDR_MODEL ?? "stealth/glyph-cluster:free";
+      const events = await collectProviderEvents(provider(), request(model(nonZdrModel)));
       const last = events.at(-1);
       assert.equal(last?.type, "error", "the non-ZDR model answered instead of failing");
       const message = last?.type === "error" ? last.error.message : "";

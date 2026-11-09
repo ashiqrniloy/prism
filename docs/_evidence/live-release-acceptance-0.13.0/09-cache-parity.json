@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-11-08T20:16:11.868Z",
+  "envFile": "/home/arn/.config/prism/live.env",
+  "strict": true,
+  "dryRun": false,
+  "filter": "release/cache-parity",
+  "totals": {
+    "ran": 0,
+    "skipped": 0,
+    "failed": 1,
+    "planned": 0
+  },
+  "coverage": {
+    "ok": true,
+    "total": 86,
+    "covered": 82,
+    "pending": 4,
+    "mode": "baseline"
+  },
+  "results": [
+    {
+      "id": "release/cache-parity",
+      "package": "@arnilo/prism-provider-commandcode",
+      "status": "failed",
+      "reason": "exit 1",
+      "exitCode": 1,
+      "durationMs": 474552,
+      "command": "bun scripts/cache-parity/live.mjs",
+      "cwd": null,
+      "models": [
+        {
+          "env": "PRISM_LIVE_PARITY_COMMANDCODE_CHAT_MODEL",
+          "value": "minimax/minimax-m3.1-flash",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_PARITY_COMMANDCODE_RESPONSES_MODEL",
+          "value": "gpt-5.6-luna",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_PARITY_COMMANDCODE_MESSAGES_MODEL",
+          "value": "claude-haiku-5-5",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_PARITY_OLLAMA_MODEL",
+          "value": "gemma4:31b",
+          "wired": true
+        }
+      ],
+      "outputTail": "commandcode/chat attempt 1: pass (44/120 requests) -> /home/arn/Projects/prism/docs/_evidence/cache-parity/commandcode-minimax-minimax-m3.1-flash-2026-11-08-3.json\ncommandcode/responses attempt 1: pass (38/120 requests) -> /home/arn/Projects/prism/docs/_evidence/cache-parity/commandcode-gpt-5.6-luna-2026-11-08-4.json\ncommandcode/messages attempt 1: inconclusive (30/120 requests) -> /home/arn/Projects/prism/docs/_evidence/cache-parity/commandcode-claude-haiku-5-5-2026-11-08-4.json\ncommandcode/messages attempt 2: pass (30/120 requests) -> /home/arn/Projects/prism/docs/_evidence/cache-parity/commandcode-claude-haiku-5-5-2026-11-08-5.json\nollama-cloud/chat attempt 1: behind (50/120 requests) -> /home/arn/Projects/prism/docs/_evidence/cache-parity/ollama-cloud-gemma4-31b-2026-11-08-3.json\n{\"pass\":false,\"failures\":[{\"id\":\"ollama-cloud/chat\",\"verdict\":\"behind\",\"reason\":null}]}\n"
+    }
+  ]
+}

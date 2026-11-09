@@ -1,6 +1,6 @@
 /**
  * The bounded model-worker loop and its limits (plan 216 Task 3): shared by the session tiers, the LTM and the wiki,
- * so the wiki does not depend on the memory system. Moved unchanged from `@arnilo/prism-memory-observational`; only
+ * so the wiki does not depend on the memory system. Moved unchanged from `@arnilo/prism-memory-system`; only
  * the error classes are core's own (`MemoryWorkerError`, `MemoryWorkerLimitError`).
  */
 import type { JsonObject, Message, ModelClient, ProviderRequestOptions, ToolCallContent, ToolDefinition, ToolResult } from "@arnilo/prism";
@@ -173,7 +173,18 @@ export interface MemoryWorkerLoopOptions extends MemoryWorkerLimitOptions {
   readonly sessionId?: string;
   readonly secrets?: readonly (string | undefined)[];
   readonly signal?: AbortSignal;
+  /**
+   * What a tool call past `maxToolCallsPerTurn` or `maxToolCalls` does. `"fail"` (the default) throws a
+   * `MemoryWorkerLimitError` and the whole loop fails, for workers whose contract is an exact number of calls.
+   * `"refuse"` does not run the extra call and answers it with a `tool_call_limit` error result, so the calls within
+   * the limits keep their effect: past the per-turn limit the model may repeat the call next turn; past the total
+   * limit the loop ends after this turn. Byte limits still fail either way.
+   */
+  readonly onToolCallLimit?: "fail" | "refuse";
 }
+
+/** The error result of a call `onToolCallLimit: "refuse"` did not run. */
+export const MEMORY_WORKER_TOOL_CALL_LIMIT = "tool_call_limit";
 
 export async function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Promise<void> {
   throwIfAborted(options.signal);
@@ -203,9 +214,10 @@ export async function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Pro
   addMessage({ role: "user", content: [{ type: "text", text: redactSecrets(options.prompt, secrets) }] });
 
   const tools = new Map(options.tools.map((tool) => [tool.name, tool]));
+  const refuse = options.onToolCallLimit === "refuse";
   let totalCalls = 0;
   for (let turn = 0; turn < limits.maxTurns; turn += 1) {
-    const calls: { readonly raw: ToolCallContent; readonly safe: ToolCallContent }[] = [];
+    const calls: { readonly raw: ToolCallContent; readonly safe: ToolCallContent; readonly refused?: string }[] = [];
     try {
       throwIfAborted(options.signal);
       const request = applyDefaultProviderRequestOptions(
@@ -231,11 +243,17 @@ export async function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Pro
         throwIfAborted(options.signal);
         if (event.type === "error") throw new Error(safeWorkerError(event.error, secrets, limits.maxErrorBytes));
         if (event.type !== "tool_call") continue;
-        if (calls.length >= limits.maxToolCallsPerTurn)
-          throw new MemoryWorkerLimitError(`Observational memory worker exceeds ${limits.maxToolCallsPerTurn} tool calls per turn`);
+        let refused: string | undefined;
+        if (calls.length >= limits.maxToolCallsPerTurn) {
+          if (!refuse)
+            throw new MemoryWorkerLimitError(`Observational memory worker exceeds ${limits.maxToolCallsPerTurn} tool calls per turn`);
+          refused = `per-turn limit of ${limits.maxToolCallsPerTurn} tool calls reached; this call was not run. Repeat it in your next turn.`;
+        }
         totalCalls += 1;
-        if (totalCalls > limits.maxToolCalls)
-          throw new MemoryWorkerLimitError(`Observational memory worker exceeds ${limits.maxToolCalls} total tool calls`);
+        if (totalCalls > limits.maxToolCalls) {
+          if (!refuse) throw new MemoryWorkerLimitError(`Observational memory worker exceeds ${limits.maxToolCalls} total tool calls`);
+          refused = `total limit of ${limits.maxToolCalls} tool calls reached; this call was not run.`;
+        }
         const tool = tools.get(event.call.name);
         if (!tool)
           throw new MemoryWorkerError(
@@ -247,7 +265,7 @@ export async function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Pro
         const safe = redactSecrets(event.call, secrets);
         measure(safe.arguments, limits.maxArgumentBytes, "Redacted observational memory tool arguments");
         messageSize({ role: "assistant", content: [...calls.map((call) => call.safe), safe] });
-        calls.push({ raw: event.call, safe });
+        calls.push({ raw: event.call, safe, ...(refused ? { refused } : {}) });
       }
     } catch (error) {
       throwIfAborted(options.signal);
@@ -258,6 +276,10 @@ export async function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Pro
     if (!calls.length) return;
     addMessage({ role: "assistant", content: calls.map((call) => call.safe) });
     for (const call of calls) {
+      if (call.refused) {
+        addMessage(toolResultMessage(call.safe, { error: { code: MEMORY_WORKER_TOOL_CALL_LIMIT, message: call.refused } }));
+        continue;
+      }
       const tool = tools.get(call.raw.name)!;
       let result: ToolResult;
       try {
@@ -278,6 +300,8 @@ export async function runMemoryWorkerLoop(options: MemoryWorkerLoopOptions): Pro
       measure(safePayload, limits.maxResultBytes, "Redacted observational memory tool result");
       addMessage(toolResultMessage(call.safe, safePayload));
     }
+    // Past the total limit nothing more can run: the calls within the limits keep their effect and the loop ends.
+    if (refuse && totalCalls >= limits.maxToolCalls) return;
   }
 }
 

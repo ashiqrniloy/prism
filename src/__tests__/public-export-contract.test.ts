@@ -1101,7 +1101,7 @@ describe("public-export contract (build-time, pre-pack)", () => {
     assert.equal(hooksJson.exports?.["."], "./src/index.ts");
     assert.equal(existsSync(join(repoRoot, "packages/integrations/hooks-json/src/index.d.ts")), false);
 
-    // The observational-memory runtime moved to `@arnilo/prism-memory-observational` (plan 157 Task 4),
+    // The observational-memory runtime moved to `@arnilo/prism-memory-system` (plan 157 Task 4),
     // its 0.12 attach surface was deleted with the family subpath (plan 157 Task 5), and the family
     // workspace itself is deleted (plan 158 Task 6) — so the 0.12 subpath can only be gone.
     assert.equal(
@@ -1109,7 +1109,7 @@ describe("public-export contract (build-time, pre-pack)", () => {
       false,
       "the @arnilo/prism-memory family workspace is deleted, not shimmed",
     );
-    const observationalPkg = readPkg("packages/memory/observational");
+    const observationalPkg = readPkg("packages/memory/system");
     assert.equal(observationalPkg.exports?.["."], "./src/index.ts", "the OM package is source-exported");
   });
 

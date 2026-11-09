@@ -13,7 +13,7 @@ import {
   runWorkflow,
   suspend,
 } from "@arnilo/prism-workflows";
-import memoryObservational from "@arnilo/prism-memory-observational";
+import memorySystem from "@arnilo/prism-memory-system";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import { mockProvider } from "@arnilo/prism/testing";
 
@@ -85,8 +85,9 @@ function memoryWorkerProvider(): ModelProvider {
       const sourceEntryIds = [...text.matchAll(/\[([^\]]+)\]/g)].map((match) => match[1] as string);
       if (!alreadyCalled && sourceEntryIds.length > 0) {
         yield providerToolCall(
-          toolCallContent("c1", "record_observation", {
-            content: "Coding loop recorded a child or parent turn.",
+          toolCallContent("c1", "record_event", {
+            kind: "statement",
+            description: "Coding loop recorded a child or parent turn.",
             relevance: "high",
             sourceEntryIds,
           }),
@@ -136,12 +137,12 @@ async function buildRuntime(store: SessionStore) {
       providerPackage("memory", [memoryWorkerProvider()]),
       // Roadmap §2.11: the package owns the toggle, the ledger, the context block, the recall tool,
       // the om* commands, and the `compaction` slot. It is off until `om` turns it on for a session.
-      memoryObservational({
-        observer: { model: { provider: "memory", model: "worker" }, messageTokens: 1 },
+      memorySystem({
+        stm: { model: { provider: "memory", model: "worker" }, triggerTokens: 1 },
         // One observation pass per message, then a high reflector gate so reflection and dropping stay
         // out of the demo; the dropper's budget must be at least the reflector's gate.
-        reflector: { model: { provider: "memory", model: "worker" }, observationTokens: 999_999 },
-        dropper: { targetTokens: 999_999 },
+        wm: { model: { provider: "memory", model: "worker" }, observationTokens: 999_999 },
+        rehearsal: { targetTokens: 999_999 },
         context: { recentMessages: 4, compactAt: { maxTokens: 999_999 } },
         worker: { maxTurns: 1 },
       }),
@@ -152,7 +153,7 @@ async function buildRuntime(store: SessionStore) {
   // Recreate from the store leaf so the ledger survives the simulated restart.
   const session = await parent.session({ id: WORKSPACE_SESSION_ID, ...(leafId ? { leafId } : {}), create: true });
   // The 0.12 `om.attach()` call is now the package's per-session toggle.
-  await parent.commands.run("om", {}, { session });
+  await parent.commands.run("memory:session", {}, { session });
 
   const workflow = defineWorkflow({
     id: "autonomous-coding-loop",
@@ -285,10 +286,10 @@ export async function demo() {
   if (!validationPassed(last.outputs)) throw new Error("happy path should pass before budget");
 
   // The ledger lives in package state, so the host reads it through the package's own commands.
-  const status = (await runtime.parent.commands.run("om:status", {}, { session: runtime.session })) as {
+  const status = (await runtime.parent.commands.run("memory:session:status", {}, { session: runtime.session })) as {
     observations?: { recorded?: number; active?: number };
   };
-  const view = (await runtime.parent.commands.run("om:view", {}, { session: runtime.session })) as { text?: string };
+  const view = (await runtime.parent.commands.run("memory:session:view", {}, { session: runtime.session })) as { text?: string };
 
   let budgetExhaustedIterations = 0;
   try {

@@ -1,0 +1,252 @@
+import type { ModelConfig, ProviderRequestOptions, SettingsProvider } from "@arnilo/prism";
+import { HARD_MAX_WORKER_TURNS } from "@arnilo/prism-memory-core";
+import { DEFAULT_COMPACT_AT_RATIO, type ResolvedCompactAt } from "./config.js";
+import { DEFAULT_RECALL_PAGE_LIMIT } from "./limits.js";
+
+export interface ObservationalMemoryObservationSettings {
+  readonly messageTokens: number;
+  readonly model?: ModelConfig;
+  readonly instruction?: string;
+  readonly thinkingLevel?: string;
+  readonly providerOptions?: ProviderRequestOptions;
+  readonly requireExplicitModel?: boolean;
+}
+
+export interface ObservationalMemoryReflectionSettings {
+  readonly observationTokens: number;
+  readonly model?: ModelConfig;
+  readonly instruction?: string;
+  readonly thinkingLevel?: string;
+  readonly providerOptions?: ProviderRequestOptions;
+  readonly requireExplicitModel?: boolean;
+}
+
+export type ObservationalMemoryDropperPolicy = "model" | "lowest-relevance";
+
+export interface ObservationalMemoryDropperSettings {
+  readonly targetTokens: number;
+  readonly policy: ObservationalMemoryDropperPolicy;
+  readonly model?: ModelConfig;
+  readonly instruction?: string;
+  readonly thinkingLevel?: string;
+  readonly providerOptions?: ProviderRequestOptions;
+  readonly requireExplicitModel?: boolean;
+}
+
+export interface ObservationalMemoryContextSettings {
+  readonly recentMessages: number;
+  readonly recentMessageMaxTokens?: number;
+  readonly compactAt: ResolvedCompactAt;
+  readonly observationsPoolMaxTokens: number;
+  readonly observationsPoolTargetTokens: number;
+}
+
+export interface ObservationalMemoryRetrievalSettings {
+  readonly pageLimit: number;
+}
+
+export interface ObservationalMemorySettings {
+  readonly observation: ObservationalMemoryObservationSettings;
+  readonly reflection: ObservationalMemoryReflectionSettings;
+  readonly dropper: ObservationalMemoryDropperSettings;
+  readonly context: ObservationalMemoryContextSettings;
+  readonly retrieval: ObservationalMemoryRetrievalSettings;
+  readonly agentMaxTurns: number;
+  readonly passive: boolean;
+  readonly debugLog: boolean;
+}
+
+export interface ObservationalMemoryObservationSettingsInput {
+  readonly messageTokens?: number;
+  readonly model?: ModelConfig;
+  readonly instruction?: string;
+  readonly thinkingLevel?: string;
+  readonly providerOptions?: ProviderRequestOptions;
+  readonly requireExplicitModel?: boolean;
+}
+
+export interface ObservationalMemoryReflectionSettingsInput {
+  readonly observationTokens?: number;
+  readonly model?: ModelConfig;
+  readonly instruction?: string;
+  readonly thinkingLevel?: string;
+  readonly providerOptions?: ProviderRequestOptions;
+  readonly requireExplicitModel?: boolean;
+}
+
+export interface ObservationalMemoryDropperSettingsInput {
+  readonly targetTokens?: number;
+  readonly policy?: ObservationalMemoryDropperPolicy;
+  readonly model?: ModelConfig;
+  readonly instruction?: string;
+  readonly thinkingLevel?: string;
+  readonly providerOptions?: ProviderRequestOptions;
+  readonly requireExplicitModel?: boolean;
+}
+
+export interface ObservationalMemoryContextSettingsInput {
+  readonly recentMessages?: number;
+  readonly recentMessageMaxTokens?: number;
+  readonly compactAt?: { readonly ratio?: number; readonly maxTokens?: number };
+  readonly observationsPoolMaxTokens?: number;
+  readonly observationsPoolTargetTokens?: number;
+}
+
+export interface ObservationalMemoryRetrievalSettingsInput {
+  readonly pageLimit?: number;
+}
+
+export interface ObservationalMemorySettingsInput {
+  readonly agentMaxTurns?: number;
+  readonly passive?: boolean;
+  readonly debugLog?: boolean;
+  readonly observation?: ObservationalMemoryObservationSettingsInput;
+  readonly reflection?: ObservationalMemoryReflectionSettingsInput;
+  readonly dropper?: ObservationalMemoryDropperSettingsInput;
+  readonly context?: ObservationalMemoryContextSettingsInput;
+  readonly retrieval?: ObservationalMemoryRetrievalSettingsInput;
+}
+
+export const defaultObservationalMemorySettings: ObservationalMemorySettings = {
+  observation: { messageTokens: 10_000 },
+  reflection: { observationTokens: 20_000 },
+  dropper: { targetTokens: 20_000, policy: "model" },
+  context: {
+    recentMessages: 8,
+    compactAt: { ratio: DEFAULT_COMPACT_AT_RATIO },
+    observationsPoolMaxTokens: 20_000,
+    observationsPoolTargetTokens: 10_000,
+  },
+  retrieval: { pageLimit: DEFAULT_RECALL_PAGE_LIMIT },
+  agentMaxTurns: 16,
+  passive: false,
+  debugLog: false,
+};
+
+export async function resolveObservationalMemorySettings(
+  settings?: SettingsProvider,
+  overrides: ObservationalMemorySettingsInput = {},
+): Promise<ObservationalMemorySettings> {
+  const fromProvider = (await settings?.get<ObservationalMemorySettingsInput>("observational-memory")) ?? {};
+  assertNoRemovedFlatKeys(fromProvider);
+  assertNoRemovedFlatKeys(overrides);
+  const merged = { ...fromProvider, ...overrides };
+  const poolTarget = positive(
+    merged.context?.observationsPoolTargetTokens,
+    defaultObservationalMemorySettings.context.observationsPoolTargetTokens,
+  );
+  return {
+    observation: {
+      messageTokens: positive(merged.observation?.messageTokens, defaultObservationalMemorySettings.observation.messageTokens),
+      model: merged.observation?.model,
+      instruction: merged.observation?.instruction,
+      thinkingLevel: merged.observation?.thinkingLevel,
+      providerOptions: merged.observation?.providerOptions,
+      requireExplicitModel: merged.observation?.requireExplicitModel === true ? true : undefined,
+    },
+    reflection: {
+      observationTokens: positive(merged.reflection?.observationTokens, defaultObservationalMemorySettings.reflection.observationTokens),
+      model: merged.reflection?.model,
+      instruction: merged.reflection?.instruction,
+      thinkingLevel: merged.reflection?.thinkingLevel,
+      providerOptions: merged.reflection?.providerOptions,
+      requireExplicitModel: merged.reflection?.requireExplicitModel === true ? true : undefined,
+    },
+    dropper: {
+      targetTokens: positive(
+        merged.dropper?.targetTokens ?? merged.context?.observationsPoolTargetTokens,
+        defaultObservationalMemorySettings.dropper.targetTokens,
+      ),
+      policy: merged.dropper?.policy === "lowest-relevance" ? "lowest-relevance" : "model",
+      model: merged.dropper?.model,
+      instruction: merged.dropper?.instruction,
+      thinkingLevel: merged.dropper?.thinkingLevel,
+      providerOptions: merged.dropper?.providerOptions,
+      requireExplicitModel: merged.dropper?.requireExplicitModel === true ? true : undefined,
+    },
+    context: {
+      recentMessages: nonNegativeInt(merged.context?.recentMessages, defaultObservationalMemorySettings.context.recentMessages),
+      recentMessageMaxTokens: optionalPositive(merged.context?.recentMessageMaxTokens),
+      compactAt: compactAtOf(merged.context?.compactAt),
+      observationsPoolMaxTokens: positive(
+        merged.context?.observationsPoolMaxTokens,
+        defaultObservationalMemorySettings.context.observationsPoolMaxTokens,
+      ),
+      observationsPoolTargetTokens: poolTarget,
+    },
+    retrieval: {
+      pageLimit: recallPageLimit(merged.retrieval?.pageLimit),
+    },
+    agentMaxTurns: workerTurns(merged.agentMaxTurns ?? defaultObservationalMemorySettings.agentMaxTurns),
+    passive: Boolean(merged.passive),
+    debugLog: Boolean(merged.debugLog),
+  };
+}
+
+/** Pre-0.0.19 flat settings keys removed in 0.1.5, with their nested replacements. */
+const REMOVED_FLAT_KEYS: readonly { key: string; replacement: string }[] = [
+  { key: "observeAfterTokens", replacement: "observation.messageTokens" },
+  { key: "reflectAfterTokens", replacement: "reflection.observationTokens" },
+  { key: "compactAfterTokens", replacement: "context.compactAt" },
+  { key: "keepRecentEntries", replacement: "context.recentMessages" },
+  { key: "recentMessageMaxTokens", replacement: "context.recentMessageMaxTokens" },
+  { key: "observationsPoolMaxTokens", replacement: "context.observationsPoolMaxTokens" },
+  { key: "observationsPoolTargetTokens", replacement: "context.observationsPoolTargetTokens" },
+  { key: "workerModel", replacement: "observation.model / reflection.model / dropper.model" },
+  { key: "thinkingLevel", replacement: "observation.thinkingLevel / reflection.thinkingLevel / dropper.thinkingLevel" },
+  {
+    key: "requireExplicitModel",
+    replacement: "observation.requireExplicitModel / reflection.requireExplicitModel / dropper.requireExplicitModel",
+  },
+];
+
+/**
+ * Fail closed on settings-provider JSON or untyped option objects that still carry a removed flat key.
+ * Runs before any worker/provider call, compaction, or session append.
+ */
+export function assertNoRemovedFlatKeys(input: unknown): void {
+  if (input === null || typeof input !== "object") return;
+  for (const { key, replacement } of REMOVED_FLAT_KEYS) {
+    if ((input as Record<string, unknown>)[key] !== undefined) {
+      throw new TypeError(`Observational memory settings: "${key}" was removed in 0.1.5; use "${replacement}" instead`);
+    }
+  }
+}
+
+function compactAtOf(value: { readonly ratio?: unknown; readonly maxTokens?: unknown } | undefined): ResolvedCompactAt {
+  const ratio =
+    typeof value?.ratio === "number" && Number.isFinite(value.ratio) && value.ratio > 0 && value.ratio <= 1
+      ? value.ratio
+      : DEFAULT_COMPACT_AT_RATIO;
+  if (value?.maxTokens !== undefined && (!Number.isSafeInteger(value.maxTokens) || (value.maxTokens as number) < 1)) {
+    throw new TypeError("context.compactAt.maxTokens must be a positive safe integer");
+  }
+  return { ratio, ...(value?.maxTokens === undefined ? {} : { maxTokens: value.maxTokens as number }) };
+}
+
+function positive(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+function nonNegativeInt(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : fallback;
+}
+
+function optionalPositive(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
+function recallPageLimit(value: unknown): number {
+  if (value === undefined) return defaultObservationalMemorySettings.retrieval.pageLimit;
+  if (!Number.isSafeInteger(value) || (value as number) < 1) {
+    throw new RangeError("retrieval.pageLimit must be a positive safe integer");
+  }
+  return value as number;
+}
+
+function workerTurns(value: unknown): number {
+  if (!Number.isSafeInteger(value) || (value as number) < 1 || (value as number) > HARD_MAX_WORKER_TURNS) {
+    throw new RangeError(`agentMaxTurns must be a positive safe integer at most ${HARD_MAX_WORKER_TURNS}`);
+  }
+  return value as number;
+}

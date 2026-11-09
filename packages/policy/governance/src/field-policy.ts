@@ -486,7 +486,7 @@ export function createProtectedFieldPolicy(options: ProtectedFieldPolicyOptions 
 export const ALLOW_FIELD_POLICY: FieldPolicy = () => ALLOW;
 
 // ---------------------------------------------------------------------------
-// Audit-export adapter (structural; no dependency on @arnilo/prism-policy)
+// Audit-export adapter (structural; no import of the audit-export module)
 // ---------------------------------------------------------------------------
 
 export interface AuditFieldRedaction {
@@ -494,7 +494,7 @@ export interface AuditFieldRedaction {
   readonly reason: string;
 }
 
-/** Structural match for `AuditRedactionPolicy` in @arnilo/prism-policy. */
+/** Structural match for `AuditRedactionPolicy` (`./policy/audit-export.ts`). */
 export interface AuditFieldRedactorLike {
   apply(record: Readonly<Record<string, unknown>>): {
     record: Readonly<Record<string, unknown>>;

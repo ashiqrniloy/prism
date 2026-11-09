@@ -1,9 +1,12 @@
 name: integration-postgres
 
+# Plan 215 Task 36: the one Postgres body. It runs on every push to main and the release
+# pipeline calls it (`workflow_call`) instead of keeping a second copy of the same job.
 on:
   push:
     branches: [main, master]
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -14,12 +17,13 @@ concurrency:
 
 jobs:
   postgres:
-    name: postgres (sessions + enterprise)
+    name: postgres (store, channels, conformance, migration drill)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     services:
       postgres:
-        image: postgres:16
+        # pgvector: the durable memory legs need the extension when they are credentialed.
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: prism
           POSTGRES_PASSWORD: prism
@@ -43,11 +47,12 @@ jobs:
         with:
           bun-version: "1.4.2"
       - run: bun ci
-      - run: bun run build:core
-      - name: run store postgres suites
+      - run: bun run build
+      # One leg list for both callers: the store suite, the channels suite and the durable
+      # conformance legs, then the evidence doc `release:gate` reads.
+      - name: run postgres suites and record evidence
         timeout-minutes: 8
-        run: |
-          bun run --filter @arnilo/prism-store-postgres test:postgres
+        run: bun run test:postgres
       - name: migration rollback/restore drill (plan 060)
         timeout-minutes: 5
         run: |

@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Long-term memory now comes from `@arnilo/prism-memory-system` (plan 216 Task 5).** The wiki's `memory.ltm` reader is unchanged; the service is provided by `memorySystem({ ltm })` instead of the retired `@arnilo/prism-memory-fabric`, with the same `scopeId` hash, so a wiki store pinned to it still opens. The dev dependency moved to `@arnilo/prism-memory-system`. Package-level tests no longer write `.prism/wiki` under the package directory.
+
 - **Renamed `@arnilo/prism-wiki` and moved out of memory (plan 216 Task 3).** Was `@arnilo/prism-memory-wiki`; no alias. The ontology code moved here from the fabric (codec, binding, review, render, pointer, the deletion cascade). Concepts, claims, relations, bindings and ingested sources live in the wiki's own store (`root`, `store`), memory is read through the read-only `memory.ltm` service, and the package requires no service. New `wiki.search` and `wiki.read` tools, the passive pointer (`pointer`), `search.maxClaimsRendered` and `bindThreshold`. `wiki_ingest` stages under `<root>/sources/` and records a wiki source, never a memory note. `wiki:status` reports `memory` and `sources`. The factory is `wiki()` (was `memoryWiki`).
 
 - **Experimental in 0.13.0 (plan 215 Task 4).** The README opens with the experimental notice: install with `bun add @arnilo/prism-memory-wiki@experimental`, outside the stability promise of the stable packages, and the API, config, preset contents and defaults may change or be removed in any release until the package graduates.

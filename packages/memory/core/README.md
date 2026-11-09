@@ -7,8 +7,8 @@
 
 The memory contracts, in-memory, SQLite, Postgres, and markdown vector stores, lineage, deletion propagation, source
 repointing, recall scoring, limits, and JSON-schema helpers that `@arnilo/prism-rag`,
-`@arnilo/prism-memory-fabric`, `@arnilo/prism-wiki`, and `@arnilo/prism-memory-observational`
-share, so four packages cannot drift on how a memory record is scoped, scored, invalidated, or
+`@arnilo/prism-wiki`, and `@arnilo/prism-memory-system` (its session tiers and long-term memory)
+share, so three packages cannot drift on how a memory record is scoped, scored, invalidated, or
 stored.
 
 This is a **plain library**: it is not an agent package, default-exports no `definePackage`, claims
@@ -27,7 +27,7 @@ themselves.
 ## Usage
 
 ```ts
-import { createHashEmbedder, createInMemoryVectorStore, type VectorStore } from "@arnilo/prism-memory-core";
+import { createHashEmbedder, createMemoryVectorStore, type VectorStore } from "@arnilo/prism-memory-core";
 // The Postgres stores are the one heavy dependency, so they live behind a subpath.
 const { createPostgresVectorStore } = await import("@arnilo/prism-memory-core/postgres");
 ```
@@ -36,18 +36,18 @@ const { createPostgresVectorStore } = await import("@arnilo/prism-memory-core/po
 
 | Export group | Symbols | Purpose |
 | --- | --- | --- |
-| Contracts | `Memory`, `Embedder`, `VectorStore`, `WorkingMemoryStore`, `MemoryScope`, `MemoryVectorRecord`, `MemoryLimits` | The types every memory package implements or consumes. |
+| Contracts | `Memory`, `Embedder`, `VectorStore`, `MemoryScope`, `MemoryVectorRecord`, `MemoryLimits` | The types every memory package implements or consumes. |
 | Embeddings | `createHashEmbedder`, `embedBatched`, `HashEmbedderOptions` | The deterministic hash embedder (tests and offline hosts) and bounded batching over any `Embedder`. |
 | Vector stores | `createMemoryVectorStore`, `selectAdjacentRecords`, `tokenizeLexical` | The in-memory vector store with lexical and vector queries. |
 | Lexical analysis | `lexicalTerms`, `stemLexical`, `lexicalCoverage`, `lexicalMatches`, `lexicalDice` | The one analyzer every lexical leg uses: Unicode letter/number terms, stopwords dropped, conservative English stemming. Index, query, and coverage use the same terms. |
 | Postgres (`./postgres`) | `createPostgresVectorStore`, `createPostgresMemoryStores`, `queryPostgres`, `buildMemoryDdl`, `buildVectorSearchDdl`, `qualifyTable`, `quoteIdentifier` | The `pg`-backed vector and memory stores and DDL builders. `pg` loads only here. |
-| SQLite (`./sqlite`) | `createSqliteMemoryStores`, `buildSqliteMemoryDdl`, `SqliteMemoryStoresOptions`, `SqliteMemoryStores` | Durable vector and working memory using Bun SQLite, exact cosine, and FTS5 BM25 over analyzed terms, with note keys weighted 3× the body. Schema version 2. The driver loads only when constructing the stores. |
+| SQLite (`./sqlite`) | `createSqliteMemoryStores`, `buildSqliteMemoryDdl`, `SqliteMemoryStoresOptions`, `SqliteMemoryStores` | Durable vector memory using Bun SQLite, exact cosine, and FTS5 BM25 over analyzed terms, with note keys weighted 3× the body. Schema version 2. The driver loads only when constructing the stores. |
 | Markdown (`./fabric`) | `createMarkdownMemoryStores`, `CreateMarkdownMemoryStoresOptions`, `MarkdownMemoryStores`, `MarkdownReconcileReport` | OKF v0.2 markdown files as the canonical store with a derived, rebuildable SQLite index. Notes are human-readable and greppable under `<tenant>/<resource>/<kind-dir>/` (`facts`, `preferences`, `procedures`, `episodes`); control state lives in `.state.json`; `reconcile()`/`rebuild()` re-derive the index, and `updateResourceFile()` writes a resource-level file such as `project.md` under the store lock. |
 | Lineage and deletion | `stampLineage`, `recordBlocked`, `listInvalidatedIds`, `revokedIdsAbsent`, `createDeletionPropagator` | Append-only invalidation records, layer ordering, and the deletion propagator over `DeletionPropagationHandler`s. |
 | Repointing | `repointSource`, `applySourceRenames` | Move or rename an indexed source without re-embedding. |
 | Scoring | `resolveRecallScoring`, `rerankRecallHits`, `deriveEntryImportance` | Composite recall scoring (similarity, recency, importance) with the documented tie-break. |
 | Limits and validation | `resolveMemoryLimits`, `HARD_TOP_K_CAP`, `estimateTokens`, `validateAgainstJsonSchema`, `mergeJsonObjects`, `assertFiniteVector` | The shared caps, token estimate, and JSON validation the packages bound their inputs with. |
-| Errors | `MemoryError`, `MemoryValidationError`, `MemoryLimitError`, `MemoryScopeError`, `MemoryConflictError`, `MemoryAbortError` | The one error family every memory package throws. |
+| Errors | `MemoryError`, `MemoryValidationError`, `MemoryValidationCode`, `MemoryLimitError`, `MemoryScopeError`, `MemoryConflictError`, `MemoryAbortError` | The one error family every memory package throws. A `MemoryValidationError`'s `code` is `validation`, or a named migration code: `working_memory_retired` or `episode_kind_not_available`. |
 
 ## Cost, security, and failure behavior
 
@@ -136,7 +136,7 @@ it) and delegates the scan and listing to its index. Postgres adds
 ```ts
 const { createSqliteMemoryStores } = await import("@arnilo/prism-memory-core/sqlite");
 const stores = await createSqliteMemoryStores({ path: "./memory.sqlite", dimensions: 64 });
-// Pass stores.vectorStore and stores.workingStore to the memory consumer.
+// Pass stores.vectorStore to the memory consumer.
 // Close after all memory operations finish.
 stores.close();
 ```
@@ -144,7 +144,7 @@ stores.close();
 Requires Bun >=1.4.2 and an existing parent directory. New files use mode 0600; existing
 file permissions are preserved. Unknown schemas and corrupt files fail with
 `MemoryValidationError`. Optional dimensions are persisted and checked on reopen.
-Each write batch and working-memory version check commits atomically. Scope, ACLs,
+Each write batch commits atomically. Scope, ACLs,
 invalidation (including legal holds), generation pointers, consent metadata, and share
 grants survive reopening. Share grants are isolated by tenant, resource, and parent thread.
 
@@ -161,7 +161,7 @@ not enforce a filesystem root.
 ```ts
 const { createMarkdownMemoryStores } = await import("@arnilo/prism-memory-core/fabric");
 const stores = await createMarkdownMemoryStores({ root: "./memory/notes" });
-// stores.vectorStore / stores.workingStore satisfy the same contracts as the SQLite stores.
+// stores.vectorStore satisfies the same contract as the SQLite store.
 // stores.reconcile() re-indexes changed files; stores.rebuild() re-indexes every file.
 await stores.close();
 ```
@@ -184,8 +184,11 @@ YAML 1.2 subset) and parsed with `Bun.YAML`. Embeddings are never written to fil
 `dimensions` set they live only in the index, so a rebuild without an embedder leaves them empty and
 recall degrades to lexical.
 
-Working memory is `<resource-path>/working/<thread>.md` (a header plus one fenced `json` block;
-malformed content fails closed naming the file). Control state — invalidations, ACL grants, share
+Long-term working memory was removed in 0.13.0 (plan 216 Task 7): a store that still holds a
+`<resource-path>/working/<thread>.md` note fails to open with `MemoryValidationError` code
+`working_memory_retired`, naming the file and how to export it; move the `working/` directory out of the
+root to reopen. The SQLite and Postgres drivers no longer create a `working_memory` table and never read
+one an older version left. Control state — invalidations, ACL grants, share
 grants, and generation pointers — is `<resource-path>/.state.json`, keyed by thread inside and
 written atomically; it is the source of truth and is replayed into a rebuilt index.
 

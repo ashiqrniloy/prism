@@ -4,8 +4,8 @@ import { readFile } from "node:fs/promises";
 import { relative, resolve } from "node:path";
 
 const root = resolve(import.meta.dir, "../..");
-const om = "packages/memory/observational/src/";
-const fabric = "packages/memory/fabric/src/";
+const om = "packages/memory/system/src/session/";
+const fabric = "packages/memory/system/src/ltm/";
 const signals = ["explicit", "correction", "outcome", "recurrence", "generality", "ephemerality", "derivability"];
 // Process-local historical experiments. Package files and public config stay unchanged.
 export const VARIANT_PATHS = {
@@ -17,7 +17,7 @@ export const VARIANT_PATHS = {
   "fabric.delivery=188.8": [`${fabric}config.ts`, `${fabric}context.ts`],
   "fabric.keyWeight=off": ["packages/memory/core/src/sqlite/index.ts"],
   "om.dates=off": [`${om}serialize.ts`, `${om}render.ts`, `${om}workers/reflector.ts`],
-  "om.taskState=off": [`${om}workers/observer.ts`, `${om}render.ts`],
+  "om.taskState=off": [`${om}workers/stm.ts`, `${om}render.ts`],
   "om.replaceOnReflect=off": [`${om}flush.ts`],
   "fabric.crossSourceDedup=off": [`${fabric}context.ts`],
   "lifecycle.verification=retrieval": [`${fabric}context.ts`],
@@ -81,6 +81,8 @@ export function transformVariantSource(path, source, input = []) {
   const replace = (before, after) => {
     source = replaceOne(source, before, after, path);
   };
+  // Plan 216 Task 4 moved and renamed the session tiers; a pinned pre-move revision keeps the old text.
+  const replaceEither = (anchors, after) => replace(anchors.find((anchor) => source.split(anchor).length === 2) ?? anchors[0], after);
   const active = (spec) => specs.includes(spec) && VARIANT_PATHS[spec].includes(path);
   if (active("fabric.stem=off")) replace("terms.add(stemLexical(raw));", "terms.add(raw);");
   if (active("fabric.multiQuery=off")) {
@@ -164,7 +166,7 @@ export function transformVariantSource(path, source, input = []) {
   if (active("om.dates=off")) {
     if (path === `${om}serialize.ts`) {
       replace("`[${entry.timestamp}] [${entry.id}] ${entry.kind}: ${text}`", "`[${entry.id}] ${entry.kind}: ${text}`");
-      replace("if (elapsed >= 600_000) {", "if (false && elapsed >= 600_000) {");
+      replaceEither(["if (elapsed < 600_000) return undefined;", "if (elapsed >= 600_000) {"], source.includes("if (elapsed < 600_000) return undefined;") ? "return undefined;" : "if (false && elapsed >= 600_000) {");
     } else if (path === `${om}render.ts`) {
       replace('${item.observedFrom && item.observedTo ? `(${item.observedFrom} – ${item.observedTo}) ` : ""}', "");
       replace(
@@ -173,7 +175,7 @@ export function transformVariantSource(path, source, input = []) {
       );
       replace("${date.slice(11, 16)} (${item.relevance})", "(${item.relevance})");
       replace('${item.referencedAt ? ` (refers to ${item.referencedAt})` : ""}', "");
-    } else replace("${item.observedAt ?? item.timestamp} ${item.content}", "${item.content}");
+    } else replace("${item.observedAt ?? item.timestamp} ${item.kind}: ${item.description}", "${item.kind}: ${item.description}");
   }
   if (active("om.taskState=off")) {
     if (path === `${om}render.ts`) replace("const task = options.taskState;", "const task = undefined;");
@@ -206,7 +208,7 @@ export function transformVariantSource(path, source, input = []) {
       try {
         const entries = await session.entries();
         const ledger = foldObservationalMemoryLedger(entries);
-        const writer = createMemoryFabric({...options, observational: {session}});
+        const writer = createLongTermMemory({...options, observational: {session}});
         const report = {pass: randomUUID(), at: new Date().toISOString(), candidates: ledger.reflections.length, extracted: ledger.reflections.length, accepted: 0,
           rejected: {score: 0, ephemeral: 0, derivable: 0, trust: 0, secret: 0}, written: 0, updated: 0, exceptions: 0, retired: 0, modelCalls: 0};
         for (const reflection of ledger.reflections) {
@@ -232,7 +234,9 @@ export function transformVariantSource(path, source, input = []) {
     );
   if (active("lifecycle.merge=off")) {
     replace("duplicateGroups(live(), { duplicateDice: lifecycle?.merge.duplicateDice, weights: lifecycle?.storageWeights })", "[]");
-    replace("const episodes = lifecycle?.merge.episodes;", "const episodes = undefined;");
+    // Episode merging left with plan 216 Task 7; a pinned earlier revision still carries the step.
+    const episodes = "const episodes = lifecycle?.merge.episodes;";
+    if (source.split(episodes).length === 2) replace(episodes, "const episodes = undefined;");
   }
   if (active("lifecycle.clock=calendar")) {
     if (path === `${fabric}lifecycle/clock.ts`) {
@@ -335,7 +339,15 @@ export function benchmarkCalendarClock(): number {
   }
   if (active("ontology.pointer=off")) replace("            if (!conceptInPlay(record, terms, touched)) continue;", "            continue;");
   if (active("om.reflector=off"))
-    replace("if (uncovered.length && uncoveredTokens >= config.reflector.observationTokens) {", "if (uncovered.length < 0) {");
+    replaceEither(
+      [
+        // Plan 216 Task 6 gated the pass on the `wm` component; the older anchors keep historical revisions building.
+        "if (config.wm.enabled && uncovered.length && uncoveredTokens >= config.wm.observationTokens) {",
+        "if (uncovered.length && uncoveredTokens >= config.wm.observationTokens) {",
+        "if (uncovered.length && uncoveredTokens >= config.reflector.observationTokens) {",
+      ],
+      "if (uncovered.length < 0) {",
+    );
   if (active("lifecycle.exchangeExempt=on"))
     replace(
       "        shouldArchive(row.metadata, clock, decision) &&",

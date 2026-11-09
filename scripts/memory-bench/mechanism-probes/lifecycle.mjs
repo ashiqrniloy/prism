@@ -1,17 +1,16 @@
 /** Plan 210 Task 2: lifecycle probes (verification, archive, capacity, merge, widening, maintain). */
 import { join } from "node:path";
-import { digest, events, fabricAgent, lastHits, packages, SCOPE, scripted, TENANT } from "./harness.mjs";
+import { digest, fabricAgent, lastHits, packages, SCOPE, scripted, TENANT } from "./harness.mjs";
 
 /** A library-level fabric over one in-memory store; the lifecycle code is the package's own. */
 export async function lib({ lifecycle = {}, scopes, memoryFor, ...options } = {}) {
   const { fabric } = await packages();
   const core = await import("@arnilo/prism-memory-core");
   const store = core.createMemoryVectorStore();
-  const working = fabric.createMemoryWorkingStore();
-  const make = (resourceId) => fabric.createMemory({ ...SCOPE, resourceId, vectorStore: store, workingStore: working });
+  const make = (resourceId) => fabric.createMemory({ ...SCOPE, resourceId, vectorStore: store });
   const memory = make(SCOPE.resourceId);
   let clock = 0;
-  const f = fabric.createMemoryFabric({
+  const f = fabric.createLongTermMemory({
     memory,
     vectorStore: store,
     consolidate: false,
@@ -267,55 +266,6 @@ export const probes = [
     },
   },
   {
-    id: "lifecycle.episode-merge",
-    async run(root) {
-      const ev = await events();
-      const arm = async (name, episodes) => {
-        let calls = 0;
-        const h = await fabricAgent(join(root, name), {
-          config: { lifecycle: { capacity: { project: { notes: 3, tokens: 60_000 } }, ...(episodes ? { merge: { episodes } } : {}) } },
-          worker: (_request, ctx) => {
-            if (ctx.toolTurn) return ev.say("");
-            calls++;
-            return ev.call("record_episode_history", {
-              kind: "procedure",
-              text: "flaky deploys recur on fridays; pin the runner image first",
-              keywords: ["deploy"],
-            });
-          },
-          seed: async ({ memory }) => {
-            for (let i = 0; i < 5; i++)
-              await rawEpisode(memory, `eeeeeeeeeee${i}`, `episode ${i}: flaky deploy on friday`, { key: "deploy.flaky" });
-          },
-        });
-        try {
-          const report = await h.command("memory:maintain", {});
-          return {
-            report,
-            calls,
-            notes: (await h.notes()).filter((note) => note.metadata?.kind === "procedure").length,
-            d: digest((await h.notes()).map((n) => [n.text, n.metadata?.status])),
-          };
-        } finally {
-          await h.close();
-        }
-      };
-      const on = await arm("on", { minCluster: 3, model: "worker/main" });
-      const off = await arm("off", undefined);
-      return {
-        surface: "stored-note",
-        property:
-          "over budget, an episode cluster of one subject is summarised by one model call into one candidate note and its episodes are archived",
-        fires: on.report?.episodesMerged ?? 0,
-        reaches: on.d !== off.d,
-        correct: on.report?.episodesMerged === 1 && on.calls === 1 && on.notes === 1 && off.calls === 0,
-        on: on.d,
-        off: off.d,
-        counts: { episodesMerged: on.report?.episodesMerged ?? 0, modelCalls: on.calls },
-      };
-    },
-  },
-  {
     id: "lifecycle.widen-narrow",
     async run() {
       const arm = async (minProjects) => {
@@ -325,7 +275,7 @@ export const probes = [
         const agent = l.make("agent");
         const { fabric } = await packages();
         const projectFabric = (memory) =>
-          fabric.createMemoryFabric({
+          fabric.createLongTermMemory({
             memory,
             scopes: [
               { level: "project", memory },
@@ -345,7 +295,7 @@ export const probes = [
           await inA.recordUses("s1", [id], { clock: 1, verifyAfterSessions: 2 });
           await inB.recordUses("s2", [id], { clock: 2, verifyAfterSessions: 2 });
         }
-        const maintainer = fabric.createMemoryFabric({
+        const maintainer = fabric.createLongTermMemory({
           memory: a,
           scopes: [
             { level: "project", memory: a },

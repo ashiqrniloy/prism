@@ -32,9 +32,9 @@ describe("plan 210 Task 1 feature ledger", () => {
     expect(surface.config).toContain("fabric:recall.gather");
     expect(surface.config).toContain("om:dropper.policy");
     expect(surface.config).toContain("wiki:consolidate.triggers");
-    expect(surface.kinds).toEqual(["working", "episode", "fact", "preference", "procedure", "decision", "file", "exchange", "concept"]);
+    expect(surface.kinds).toEqual(["episode", "fact", "preference", "procedure", "decision", "file", "exchange", "concept"]);
     expect(surface.tools).toEqual(expect.arrayContaining(["memory.recall", "memory.forget", "recall", "wiki_ingest"]));
-    expect(surface.commands).toEqual(expect.arrayContaining(["memory:maintain", "memory:share", "om:view", "wiki:lint"]));
+    expect(surface.commands).toEqual(expect.arrayContaining(["memory:maintain", "memory:share", "memory:session:view", "wiki:lint"]));
     for (const kind of ["config", "kinds", "tools", "commands"]) {
       const names = kind === "config" ? surface.config : surface[kind];
       for (const name of names) expect(ledger.coverage[kind][name]?.length ?? 0).toBeGreaterThan(0);

@@ -6,7 +6,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createAgent, definePackage, type PackageInstance } from "@arnilo/prism";
 import { packageConformance } from "@arnilo/prism/testing";
-import memoryFabric from "@arnilo/prism-memory-fabric";
+import memorySystem from "@arnilo/prism-memory-system";
 import wikiDefault, {
   WIKI_CONSOLIDATE_COMMAND_NAME,
   WIKI_INGEST_COMMAND_NAME,
@@ -63,7 +63,7 @@ describe("wiki package: knowledge outside memory", () => {
     assert.equal(pkg.files.includes("skills"), false, "the bundled skills are retired");
     assert.equal(pkg.peerDependencies["@arnilo/prism"], ">=0.13.0 <1.0.0");
     // The wiki runs without memory: no memory package is a peer or a dependency (memory-core is the shared library).
-    assert.equal(pkg.peerDependencies["@arnilo/prism-memory-fabric"], undefined);
+    assert.equal(pkg.peerDependencies["@arnilo/prism-memory-system"], undefined);
     assert.deepEqual(Object.keys(pkg.dependencies).sort(), ["@arnilo/prism-memory-core", "@arnilo/prism-rag"]);
     assert.equal(pkg.publishConfig?.access, "public");
     assert.equal(wikiDefault.name, "@arnilo/prism-wiki");
@@ -90,7 +90,7 @@ describe("wiki package: knowledge outside memory", () => {
 
   it("wiki_with_semantic_off_loads_and_reports_no_memory", async () => {
     const dir = tempRoot();
-    const agent = await createAgent({ model: mock, packages: [memoryFabric({ semantic: false }), wikiPackage({ workspaceRoot: dir })] });
+    const agent = await createAgent({ model: mock, packages: [memorySystem({ ltm: { semantic: false } }), wikiPackage({ workspaceRoot: dir })] });
     try {
       const status = (await agent.commands.run(WIKI_STATUS_COMMAND_NAME, {})) as { memory: boolean };
       assert.equal(status.memory, false, "the fabric provides memory.ltm only with indexed notes");
@@ -102,7 +102,7 @@ describe("wiki package: knowledge outside memory", () => {
 
   it("wiki_registers_three_tools_four_commands_and_the_pointer", async () => {
     const dir = tempRoot();
-    const agent = await createAgent({ model: mock, packages: [memoryFabric({}), wikiPackage({ workspaceRoot: dir })] });
+    const agent = await createAgent({ model: mock, packages: [memorySystem({ ltm: {} }), wikiPackage({ workspaceRoot: dir })] });
     try {
       const inspected = agent.inspect();
       const wikiTools = inspected.tools.map((tool) => tool.name).filter((name) => name.startsWith("wiki"));
@@ -127,7 +127,7 @@ describe("wiki package: knowledge outside memory", () => {
 
   it("wiki_listed_before_the_fabric_still_loads", async () => {
     const dir = tempRoot();
-    const agent = await createAgent({ model: mock, packages: [wikiPackage({ workspaceRoot: dir }), memoryFabric({})] });
+    const agent = await createAgent({ model: mock, packages: [wikiPackage({ workspaceRoot: dir }), memorySystem({ ltm: {} })] });
     try {
       const status = (await agent.commands.run(WIKI_STATUS_COMMAND_NAME, {})) as { subjects: number };
       assert.equal(status.subjects, 0);
@@ -139,7 +139,7 @@ describe("wiki package: knowledge outside memory", () => {
 
   it("wiki_status_reports_counts_without_model_call", async () => {
     const dir = tempRoot();
-    const agent = await createAgent({ model: mock, packages: [memoryFabric({}), wikiPackage({ workspaceRoot: dir })] });
+    const agent = await createAgent({ model: mock, packages: [memorySystem({ ltm: {} }), wikiPackage({ workspaceRoot: dir })] });
     try {
       const result = (await agent.commands.run(WIKI_STATUS_COMMAND_NAME, {})) as {
         subjects: number;
@@ -171,7 +171,7 @@ describe("wiki package: knowledge outside memory", () => {
   it("wiki_config_rejects_the_retired_fields", async () => {
     for (const retired of ["wikiRoot", "rawRoots", "profile", "qmdPath", "autoDeploySkills"]) {
       await assert.rejects(
-        () => createAgent({ model: mock, packages: [memoryFabric({}), wikiPackage({ [retired]: true } as never)] }),
+        () => createAgent({ model: mock, packages: [memorySystem({ ltm: {} }), wikiPackage({ [retired]: true } as never)] }),
         (error: unknown) =>
           (error as { code?: string }).code === "config_unknown_key" || /unknown|additional/i.test((error as Error).message),
         retired,
@@ -185,7 +185,7 @@ describe("wiki package: knowledge outside memory", () => {
     const agent = await createAgent({
       model: mock,
       packages: [
-        memoryFabric({ tools: { root: dir } }),
+        memorySystem({ ltm: { tools: { root: dir } } }),
         webFetchPackage(async (url) => {
           calls.push(url);
           return webDocument(url, "# Fetched page\n\nBody.");
@@ -212,7 +212,7 @@ describe("wiki package: knowledge outside memory", () => {
     const dir = tempRoot();
     const agent = await createAgent({
       model: mock,
-      packages: [memoryFabric({ tools: { root: dir } }), wikiPackage({ workspaceRoot: dir })],
+      packages: [memorySystem({ ltm: { tools: { root: dir } } }), wikiPackage({ workspaceRoot: dir })],
     });
     try {
       const notes = agent.inspect().statusNotes.filter((note) => note.message.startsWith("wiki:"));
@@ -239,7 +239,7 @@ describe("wiki package: knowledge outside memory", () => {
     const agent = await createAgent({
       model: mock,
       packages: [
-        memoryFabric({ tools: { root: dir } }),
+        memorySystem({ ltm: { tools: { root: dir } } }),
         webFetchPackage(async (url) => {
           calls += 1;
           return webDocument(url, "should not run");

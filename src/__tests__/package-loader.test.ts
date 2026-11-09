@@ -363,6 +363,40 @@ describe("package loader", () => {
     await loadError(load([pkg("needs", () => {}, { requires: { api: 1, prism: "^9.0.0" } })({}, { optional: true })]), "kernel_range");
   });
 
+  it("capabilities_for_narrows_per_instance_and_fails_closed_outside_declared", async () => {
+    const { load } = harness();
+    const config = { type: "object", properties: { slot: { type: "boolean", default: true } }, additionalProperties: false } as const;
+    const narrowing = pkg("narrowing", ({ slots }) => slots.compaction.provide({ compact: () => ({}) as never }), {
+      capabilities: ["slot:compaction", "models"],
+      config,
+      capabilitiesFor: (c: { slot: boolean }) => (c.slot ? ["slot:compaction"] : []),
+    });
+    const loaded = await load([narrowing({ slot: true })]);
+    assert.deepEqual([...(loaded.capabilities.get("narrowing") ?? [])], ["slot:compaction"], "narrowed to what the config enables");
+    // Turned off by config, the same call is refused: a narrowed capability is gone, not just undocumented.
+    await loadError(harness().load([narrowing({ slot: false })]), "capability_missing");
+    // Narrowing only removes: a capability outside the declared set, a non-array or a throw fails the load.
+    const widening = pkg("widening", () => {}, { capabilities: ["models"], capabilitiesFor: () => ["slot:loop"] });
+    assert.match((await loadError(harness().load([widening]), "definition_invalid")).message, /slot:loop/);
+    await loadError(
+      harness().load([pkg("not-array", () => {}, { capabilities: [], capabilitiesFor: () => "models" as never })]),
+      "definition_invalid",
+    );
+    const throwing = pkg("throwing", () => {}, {
+      capabilities: [],
+      capabilitiesFor: () => {
+        throw new Error(SECRET);
+      },
+    });
+    const thrown = await loadError(harness().load([throwing]), "definition_invalid");
+    assert.ok(!thrown.message.includes(SECRET), "the thrown message is not echoed");
+    // Without a declared set there is nothing to narrow.
+    assert.throws(
+      () => pkg("bare", () => {}, { capabilitiesFor: () => [] }),
+      (err: any) => err.code === "definition_invalid",
+    );
+  });
+
   it("capability_missing_fails_on_call", async () => {
     const { load } = harness();
     const slotCall = await loadError(

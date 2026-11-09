@@ -14,7 +14,7 @@ async function twoProjects() {
   const agent = l.make("agent");
   const projectFabric = (resourceId) => {
     const memory = l.make(resourceId);
-    return fabric.createMemoryFabric({
+    return fabric.createLongTermMemory({
       memory,
       scopes: [
         { level: "project", memory },

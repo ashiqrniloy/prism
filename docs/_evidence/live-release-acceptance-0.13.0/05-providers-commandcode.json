@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-11-08T17:57:55.475Z",
+  "envFile": "/home/arn/.config/prism/live.env",
+  "strict": true,
+  "dryRun": false,
+  "filter": "providers/commandcode",
+  "totals": {
+    "ran": 0,
+    "skipped": 0,
+    "failed": 1,
+    "planned": 0
+  },
+  "coverage": {
+    "ok": true,
+    "total": 86,
+    "covered": 82,
+    "pending": 4,
+    "mode": "baseline"
+  },
+  "results": [
+    {
+      "id": "providers/commandcode",
+      "package": "@arnilo/prism-provider-commandcode",
+      "status": "failed",
+      "reason": "exit 1",
+      "exitCode": 1,
+      "durationMs": 32902,
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts src/__tests__/live-agent.test.ts",
+      "cwd": "packages/providers/commandcode",
+      "models": [
+        {
+          "env": "PRISM_LIVE_COMMANDCODE_CHAT_MODEL",
+          "value": "minimax/minimax-m3.1-flash",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_COMMANDCODE_RESPONSES_MODEL",
+          "value": "gpt-5.6-luna",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_COMMANDCODE_MESSAGES_MODEL",
+          "value": "claude-haiku-5-5",
+          "wired": true
+        }
+      ],
+      "outputTail": "bun test v1.4.4 (38afee6c8)\n\nsrc/__tests__/live.test.ts:\n[commandcode live] openai text usage: {\"inputTokens\":208,\"outputTokens\":4,\"totalTokens\":212,\"cacheReadTokens\":197}\n[commandcode live] openai tool-loop turn1 usage: {\"inputTokens\":461,\"outputTokens\":39,\"totalTokens\":500,\"cacheReadTokens\":128}\n[commandcode live] openai tool-loop turn2 usage: {\"inputTokens\":530,\"outputTokens\":86,\"totalTokens\":616,\"cacheReadTokens\":461}\n[commandcode live] openai structured output usage: {\"inputTokens\":212,\"outputTokens\":115,\"totalTokens\":327,\"cacheReadTokens\":0}\n[commandcode live] anthropic text usage: {\"inputTokens\":18,\"outputTokens\":14,\"totalTokens\":32,\"cacheReadTokens\":0,\"cacheWriteTokens\":0}\n[commandcode live] anthropic tool-loop turn1 usage: {\"inputTokens\":407,\"outputTokens\":52,\"totalTokens\":459,\"cacheReadTokens\":0,\"cacheWriteTokens\":0}\n[commandcode live] anthropic tool-loop turn2 usage: {\"inputTokens\":493,\"outputTokens\":30,\"totalTokens\":523,\"cacheReadTokens\":0,\"cacheWriteTokens\":0}\n[commandcode live] responses text usage: {\"inputTokens\":12,\"outputTokens\":6,\"totalTokens\":18,\"cacheReadTokens\":0,\"cacheWriteTokens\":0}\n[commandcode live] responses tool-loop turn1 usage: {\"inputTokens\":65,\"outputTokens\":22,\"totalTokens\":87,\"cacheReadTokens\":0,\"cacheWriteTokens\":0}\n[commandcode live] responses tool-loop turn2 usage: {\"inputTokens\":113,\"outputTokens\":14,\"totalTokens\":127,\"cacheReadTokens\":0,\"cacheWriteTokens\":0}\n\nsrc/__tests__/live-agent.test.ts:\n120 |       // Laguna free answers Chat Completions but has no zero-data-retention upstream (measured Task 1b).\n121 |       const events = await collectProviderEvents(provider(), request(model(\"poolside/laguna-s-2.1-free\")));\n122 |       const last = events.at(-1);\n123 |       assert.equal(last?.type, \"error\", \"the non-ZDR model answered instead of failing\");\n124 |       const message = last?.type === \"error\" ? last.error.message : \"\";\n125 |       assert.match(message, /422/, \"the mapped error lost the status\");\n                   ^\nAssertionError: the mapped error lost the status\n generatedMessage: false,\n     actual: \"Command Code request failed: 403 {\\\"error\\\":{\\\"message\\\":\\\"The free Laguna S 2.1 tier ended on November 4, 2026. Run /model and pick another model to keep going.\\\\nhttps://commandcode.ai/models\\\",\\\"type\\\":\\\"permission_error\\\",\\\"code\\\":\\\"FORBIDDEN\\\"}}\",\n   expected: /422/,\n   operator: \"match\",\n       diff: \"simple\",\n       code: \"ERR_ASSERTION\"\n\n      at /home/arn/Projects/prism/packages/providers/commandcode/src/__tests__/live-agent.test.ts:125:14\n(fail) Command Code ZDR mapping > live_zdr_unsupported_model_maps_422 [74.73ms]\n\n 19 pass\n 3 skip\n 1 fail\nRan 23 tests across 2 files. [32.88s]\n"
+    }
+  ]
+}

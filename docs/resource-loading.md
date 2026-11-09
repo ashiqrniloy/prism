@@ -2,19 +2,18 @@
 
 ## What it does
 
-Resource helpers decode text, JSON objects, binary payloads, and Prism manifests through a caller-provided `ResourceLoader`.
+Resource helpers decode text, JSON objects, and binary payloads through a caller-provided `ResourceLoader`.
 
 APIs:
 
 - `loadBinaryResource()`
 - `loadTextResource()`
 - `loadJsonResource()`
-- `loadManifestResource()`
 - `ResourceLoader`, `Resource`, `ResourceLoadContext`
 
 ## When to use it
 
-Use these helpers when a host already has a resource loader and wants small decoding helpers for prompts, skills, manifests, binary attachments, or package resources.
+Use these helpers when a host already has a resource loader and wants small decoding helpers for prompts, skills, binary attachments, or package resources.
 
 Do not use them for filesystem access, network access, package discovery, URI routing, caching, trust policy, dynamic imports, or agent/session runtime startup. The host-provided loader owns all I/O and trust decisions.
 
@@ -24,7 +23,6 @@ Do not use them for filesystem access, network access, package discovery, URI ro
 loadBinaryResource(loader, uri, context?, options?)
 loadTextResource(loader, uri, context?)
 loadJsonResource(loader, uri, context?)
-loadManifestResource(loader, uri, context?)
 ```
 
 Inputs:
@@ -41,14 +39,13 @@ Inputs:
 - `loadBinaryResource()` returns `resource.data` or UTF-8 encoded `resource.text`, rejecting payloads above `maxItemBytes` (default `DEFAULT_MAX_MEDIA_ITEM_BYTES`).
 - `loadTextResource()` returns `resource.text` or decodes `resource.data` with `TextDecoder`.
 - `loadJsonResource()` parses text as JSON and returns a JSON object.
-- `loadManifestResource()` parses a JSON object and validates it with `parsePrismManifest()`.
 - No events are emitted and no registries are modified.
 
 ## Request/response example
 
 ```json
 {
-  "uri": "package://demo/prism.manifest.json",
+  "uri": "package://demo/config.json",
   "resource": {
     "mediaType": "application/json",
     "text": "{\"name\":\"demo-package\"}"
@@ -59,12 +56,12 @@ Inputs:
 ## Implementation example
 
 ```ts
-import { loadBinaryResource, loadManifestResource, loadTextResource, type ResourceLoader } from "@arnilo/prism";
+import { loadBinaryResource, loadJsonResource, loadTextResource, type ResourceLoader } from "@arnilo/prism";
 
 const loader: ResourceLoader = {
   async load(uri, context) {
     context?.signal?.throwIfAborted();
-    if (uri.endsWith("prism.manifest.json")) {
+    if (uri.endsWith("config.json")) {
       return { uri, mediaType: "application/json", text: '{"name":"demo-package"}' };
     }
     if (uri.endsWith(".pdf")) {
@@ -75,25 +72,24 @@ const loader: ResourceLoader = {
 };
 
 const bytes = await loadBinaryResource(loader, "package://demo/report.pdf");
-const manifest = await loadManifestResource(loader, "package://demo/prism.manifest.json");
+const config = await loadJsonResource(loader, "package://demo/config.json");
 const prompt = await loadTextResource(loader, "package://demo/prompt.md");
 
-console.log(bytes.byteLength, manifest.name, prompt);
+console.log(bytes.byteLength, config.name, prompt);
 ```
 
 ## Extension and configuration notes
 
-- Manifest `resources` entries can reference prompts, skills, manifests, and package resources by URI.
 - Helpers do not choose a loader by URI scheme. Hosts can use contribution registries or their own routing when they need that.
 - Helpers do not execute loaded text or imported modules. Package activation remains a host decision.
-- `loadManifestResource()` only validates manifest data; it does not register manifest contributions.
+- The package manifest is not a resource: `@arnilo/prism/manifest` (`readManifest`, `parseManifest`) reads and validates it.
 - `@arnilo/prism-rag` `createResourceDocumentLoader({ loader, context? })` is the RAG bridge for an already-authorized artifact. It calls the supplied `ResourceLoader` once for a caller-selected URI, preserves text/binary media type, and adds no URI routing, local-file discovery, or network fallback. Pair it with a bounded RAG `Parser`; `replaceDocument()` then chunks and atomically replaces one exact RAG source.
 - For public web documents, use `createWebFetchDocumentLoader({ fetcher })` with a host-configured `@arnilo/prism-tools-web` fetch adapter instead of adding web I/O to a `ResourceLoader`. It reuses normalized citation/trust data; the web adapter retains DNS/SSRF policy ownership.
 
 ## Security and performance notes
 
 - The caller-provided loader owns URI trust, permissions, filesystem/network access, and credential boundaries.
-- Node hosts can use `@arnilo/prism/node/trust` (`createPathTrustPolicy`) to guard filesystem paths. It resolves symlinks on the trusted root and target and rejects paths whose realpath escapes the root; missing roots or realpath errors fail closed.
+- Node hosts can use `createPathTrustPolicy` to guard filesystem paths. It resolves symlinks on the trusted root and target and rejects paths whose realpath escapes the root; missing roots or realpath errors fail closed.
 - `loadBinaryResource()` enforces `ResourceLoadContext.permission` and a finite byte ceiling per call.
 - Helpers call `loader.load()` once per helper call and do not cache, scan, list, watch, poll, or discover packages.
 - JSON parsing fails closed for invalid JSON or non-object JSON.
@@ -120,7 +116,7 @@ Fields Prism reads:
 ## Related APIs
 
 - [Multimodal content](provider-kit.md): bounded `resolveMediaContentBlock()` and SSRF/MIME policy for URL/resource/binary sources.
-- [Configuration and manifests](manifest.md): data-only manifests and manifest resource declarations.
+- [Configuration and manifests](manifest.md): the data-only package manifest.
 - [Contribution registries](packages.md): host-owned registries can store resource loaders.
 - [Public contracts](packages.md): base `ResourceLoader`, `Resource`, and `ResourceLoadContext` contracts.
 

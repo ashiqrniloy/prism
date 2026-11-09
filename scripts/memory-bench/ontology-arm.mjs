@@ -15,7 +15,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { definePackage } from "@arnilo/prism";
-import { MEMORY_LTM_SERVICE } from "@arnilo/prism-memory-fabric";
+import { MEMORY_LTM_SERVICE } from "@arnilo/prism-memory-system";
 import { createMarkdownWikiStore, createWikiOntology, parseConceptBody, wiki } from "@arnilo/prism-wiki";
 import { bundleFromConcepts } from "./ontology-audit.mjs";
 

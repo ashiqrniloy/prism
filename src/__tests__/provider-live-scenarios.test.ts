@@ -27,6 +27,29 @@ function readJson(relPath: string) {
 }
 
 describe("provider live scenarios", () => {
+  it("live_scenarios_name_the_provider_error_instead_of_an_empty_answer", async () => {
+    // A billing/quota/retired-model refusal ends the stream with an `error` event; the failed
+    // assertion must carry its message (masked) rather than report "empty".
+    const secret = "sk-live-fake-0123456789";
+    const provider = {
+      id: "fake",
+      async *generate(_request: ProviderRequest): AsyncIterable<ProviderEvent> {
+        yield { type: "error", error: new Error(`fake request failed: 402 no credits for ${secret}`) } as ProviderEvent;
+      },
+    } as any;
+    const model: ModelConfig = { provider: "fake", model: "m" };
+    for (const run of [
+      () => liveScenarioTextStream({ provider, model, route: "openai", secrets: [secret] }),
+      () => liveScenarioToolLoop({ provider, model, route: "openai", secrets: [secret] }),
+    ]) {
+      await assert.rejects(run, (error: Error) => {
+        assert.match(error.message, /provider error: fake request failed: 402 no credits/);
+        assert.ok(!error.message.includes(secret), "the credential must be masked");
+        return true;
+      });
+    }
+  });
+
   it("live_scenarios_run_hermetically_on_recordings", async () => {
     // 1. Routed provider scenarios over replayFetch (using Hyper OpenAI Chat wire recordings)
     const textFixture = readJson("packages/providers/hyper/src/__tests__/wire/openai/text.json");

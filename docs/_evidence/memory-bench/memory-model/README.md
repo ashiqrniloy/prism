@@ -8,10 +8,11 @@ gold, note, chunk, claim or corpus text.
 
 | File | What it is |
 | --- | --- |
-| `criteria.json` | Plan 216 Task 2. The frozen criteria hash, the three criteria hashes it pins, and the amendment log. `frozenMemoryModelHash()` refuses a criteria file that does not hash to it. |
+| `criteria.json` | Plan 216 Task 2. The frozen criteria hash, the three criteria hashes it pins, and the amendment log. `frozenMemoryModelHash()` refuses a criteria file that does not hash to it. Amendment 1 (plan 217 Task 6, 2026-11-09) adds the hashes of the two fixtures gate M-1 reads (`long-session-replay`, `long-session`) and changes no row: `2b50880b…` → `f99907bd…`. |
 | `baselines.json` | Plan 216 Task 2. The "before" baselines: `P` (plan 210's slimmed product hash) and `OM-before` (the pre-redesign observational revision, pinned at the first step of plan 216 Task 4). |
 | `gates/README.md` | The gate record template for M-1 … M-5, M-T, K-1 and A. |
 | `../<plan>/gates/owner-gate-<gate>.json` | One per gate, in the gate's plan directory, written when the owner approves it (none yet). |
+| `M-1/manifest.json` | Plan 217 Task 6. Gate M-1's job list, arms, caps, estimate and pins (`stm-gate.mjs`); the owner gate record binds its hash. |
 | `<gate>/evidence.json`, `<gate>/verdicts.json` | Written by each gate's plan: the pinned evidence and the verdicts `acceptance-report.mjs --plan memory-model` computes from it (none yet). |
 
 ## Rows and gates

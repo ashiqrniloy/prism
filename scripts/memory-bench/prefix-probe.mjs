@@ -14,7 +14,7 @@ const sha256 = (value) =>
   createHash("sha256")
     .update(typeof value === "string" ? value : JSON.stringify(value))
     .digest("hex");
-const SOURCES = ["fabric-working", "fabric-directory", "fabric-rules"];
+const SOURCES = ["fabric-directory", "fabric-rules"];
 const CANARY = "canary rollouts go first";
 const SECOND = "violet orchard retains spare keys";
 const seedId = "aaaaaaaaaaaa";
@@ -69,7 +69,7 @@ export function summarizeRequests(captures) {
 async function installObservation(maps) {
   let nonce = 0;
   globalThis.__prismPrefixProbe = { maps, nonce: () => String(++nonce).padStart(32, "0") };
-  const paths = ["packages/memory/fabric/src/context.ts", "packages/memory/fabric/src/create.ts", "src/ids.ts"];
+  const paths = ["packages/memory/system/src/ltm/context.ts", "packages/memory/system/src/ltm/create.ts", "src/ids.ts"];
   const sources = await Promise.all(paths.map(async (path) => ({ path, source: await readFile(join(root, path), "utf8") })));
   const transforms = new Map(
     sources.map(({ path, source }) => {
@@ -84,7 +84,7 @@ async function installObservation(maps) {
   Bun.plugin({
     name: "memory-prefix-probe-observation",
     setup(build) {
-      build.onLoad({ filter: /(?:memory\/fabric\/src\/(?:context|create)|src\/ids)\.ts$/ }, async ({ path }) => {
+      build.onLoad({ filter: /(?:memory\/system\/src\/ltm\/(?:context|create)|src\/ids)\.ts$/ }, async ({ path }) => {
         const contents = transforms.get(path) ?? (await readFile(path, "utf8"));
         return { contents, loader: "ts" };
       });
@@ -115,13 +115,13 @@ async function runPrefixProbe() {
     const { createAgent, definePackage } = await import("@arnilo/prism");
     const { mockProvider, providerDone, providerTextDelta, providerToolCall, toolCallContent } = await import("@arnilo/prism/testing");
     const {
-      default: memoryFabric,
+      default: memorySystem,
       createMemory,
-      createMemoryFabric,
+      createLongTermMemory,
       parseMemoryNoteMetadata,
-    } = await import("@arnilo/prism-memory-fabric");
+    } = await import("@arnilo/prism-memory-system");
     const { createSqliteMemoryStores } = await import("@arnilo/prism-memory-core/sqlite");
-    const { storageStrength } = await import("../../packages/memory/fabric/src/lifecycle/strength.ts");
+    const { storageStrength } = await import("../../packages/memory/system/src/ltm/lifecycle/strength.ts");
     const extractorRequests = [];
     const scenarios = [];
     const strengths = [];
@@ -138,11 +138,10 @@ async function runPrefixProbe() {
       const path = join(dir, "memory.sqlite");
       const stores = await createSqliteMemoryStores({ path });
       const memory = createMemory({ ...scope, ...stores });
-      const writer = createMemoryFabric({ memory, vectorStore: stores.vectorStore, consolidate: false });
+      const writer = createLongTermMemory({ memory, vectorStore: stores.vectorStore, consolidate: false });
       await writer.remember({ id: seedId, kind: "fact", content: CANARY, scope: "project", keywords: ["canary"] });
       if (name === "cited-core")
         await writer.remember({ id: "bbbbbbbbbbbb", kind: "fact", content: SECOND, scope: "project", keywords: ["orchard"] });
-      await memory.updateWorking({ profile: "fixture profile" });
       const captures = [];
       const writes = [];
       const active = new Set();
@@ -224,13 +223,15 @@ async function runPrefixProbe() {
                 ),
             },
           ),
-          memoryFabric({
-            ...(preset ? { preset } : {}),
-            ...(core === false ? { rules: false, inject: { query: "user", minSimilarity: 0 } } : {}),
-            tools: { root: dir },
-            store: { sqlite: { path } },
-            scopes: { tenantId: scope.tenantId, project: { id: "probe--01234567", root: dir }, agent: false, user: false },
-            ...(promote ? { promote: { model: "extractor/main", minTurnsBetween: 1, derivableFrom: [], minScore: 0 } } : {}),
+          memorySystem({
+            ltm: {
+              ...(preset ? { preset } : {}),
+              ...(core === false ? { rules: false, inject: { query: "user", minSimilarity: 0 } } : {}),
+              tools: { root: dir },
+              store: { sqlite: { path } },
+              scopes: { tenantId: scope.tenantId, project: { id: "probe--01234567", root: dir }, agent: false, user: false },
+              ...(promote ? { promote: { model: "extractor/main", minTurnsBetween: 1, derivableFrom: [], minScore: 0 } } : {}),
+            },
           }),
           // The package's normal trigger needs fresh OM material. Supply fixture observations via a
           // host package; the real fabric schedules and executes the background consolidation.
@@ -247,7 +248,7 @@ async function runPrefixProbe() {
                   async (_event, context) => {
                     if (turn !== 5 && turn !== 8) return;
                     await log.append(context.session, {
-                      type: "om.reflections.recorded",
+                      type: "memory.session.reflections.recorded",
                       reflections: [
                         {
                           id: turn === 5 ? "cccccccccccc" : "dddddddddddd",
@@ -316,15 +317,13 @@ async function runPrefixProbe() {
       };
     }
 
-    const names = ["exchange-archive", "cited-core", "insert", "working-update", "background-promote", "forget", "second-instance"];
+    const names = ["exchange-archive", "cited-core", "insert", "background-promote", "forget", "second-instance"];
     for (const name of names) {
       const script = [];
       for (let turn = 1; turn <= 10; turn++) {
         if (name === "cited-core" && turn > 1)
           script.push(toolStep("memory.recall", { query: "violet orchard", minSimilarity: 0 }, `recall-${turn}`));
         if (name === "insert" && turn === 5) script.push(toolStep("memory.insert", { kind: "fact", text: SECOND }, "insert-5"));
-        if (name === "working-update" && turn === 5)
-          script.push(toolStep("memory.insert", { block: "profile", text: SECOND }, "working-5"));
         if (name === "forget" && turn === 6) script.push(toolStep("memory.forget", { id: seedId }, "forget-6"));
         script.push(name === "cited-core" ? [providerTextDelta("Used [bbbbbbbbbbbb]"), providerDone()] : quiet());
       }
@@ -511,7 +510,9 @@ export function requestSegments(request) {
 
 /** The answer paths whose provider requests must not change (the Task 4 screen arms that read fabric memory). */
 export const EQUIVALENCE_ARM_IDS = ["preset-r1", "passive-only"];
-const SUPPORTING_PATHS = ["src", "packages/memory/core/src", "packages/memory/observational/src"];
+const SUPPORTING_PATHS = ["src", "packages/memory/core/src", "packages/memory/system/src"];
+/** A pre-plan-216 base's session and LTM packages (`--base-harness own` fingerprints whichever exist). */
+const PRE_MOVE_SUPPORTING_PATHS = ["packages/memory/observational/src", "packages/memory/fabric/src"];
 
 /**
  * Replay every synthetic fixture question on each answer path with a mock provider and hash each
@@ -648,10 +649,18 @@ function runCapture(tree, out, dump) {
  * Make `base` a comparable pre-change tree: its own product, the current harness. The worktree needs its
  * own node_modules (relative workspace links), so the checkout is never resolved through this tree's product.
  */
-async function prepareBase(base) {
+async function prepareBase(base, { ownHarness = false } = {}) {
   const tree = resolve(base);
   assert.notEqual(tree, root, "--base must be a separate git worktree of the pre-change commit");
   assert.ok(existsSync(join(tree, ".git")), "--base must be a git worktree");
+  if (ownHarness) {
+    // A base from before a package move (plan 216 Task 8): this harness cannot import its product, so the base runs
+    // its own committed harness against its own install. A local edit to that harness would make it a third tree.
+    assert.ok(existsSync(join(tree, "node_modules")), "--base-harness own: run `bun install --frozen-lockfile` in the base worktree");
+    const dirty = execFileSync("git", ["status", "--porcelain", "--", "scripts/memory-bench"], { cwd: tree, encoding: "utf8" });
+    assert.equal(dirty.trim(), "", "--base-harness own: the base harness must be the base commit's, unmodified");
+    return tree;
+  }
   if (!existsSync(join(tree, "node_modules")))
     await cp(join(root, "node_modules"), join(tree, "node_modules"), { recursive: true, verbatimSymlinks: true });
   await rm(join(tree, "scripts/memory-bench"), { recursive: true, force: true });
@@ -663,8 +672,8 @@ async function prepareBase(base) {
  * Plan 202 Task 4.15 equivalence attestation: the same answer paths on the pre-change tree and on this tree,
  * twice each. Writes hashes and verdicts only.
  */
-export async function runEquivalence({ base, keepText } = {}) {
-  const tree = await prepareBase(base);
+export async function runEquivalence({ base, keepText, ownHarness = false } = {}) {
+  const tree = await prepareBase(base, { ownHarness });
   const temp = await mkdtemp(join(tmpdir(), "prism-equivalence-"));
   try {
     const trees = { base: tree, post: root };
@@ -682,11 +691,20 @@ export async function runEquivalence({ base, keepText } = {}) {
     );
     assert.ok(deterministic.base && deterministic.post, "answer-path capture is not deterministic within a tree");
     const comparison = compareAnswerCaptures(captures.base[0], captures.post[0]);
+    // Each tree's product is the one its own harness names (the paths move with a package move).
+    const productPaths = async (dir) =>
+      dir === root || !ownHarness
+        ? PREFIX_PRODUCT_PATHS
+        : (await import(join(dir, "scripts/memory-bench/acceptance.mjs"))).PREFIX_PRODUCT_PATHS;
+    const supportingPaths = (dir) =>
+      [...SUPPORTING_PATHS, ...(ownHarness ? PRE_MOVE_SUPPORTING_PATHS : [])].filter((path) => existsSync(join(dir, path)));
     const describe = async (dir) => ({
       commit: execFileSync("git", ["rev-parse", "HEAD"], { cwd: dir, encoding: "utf8" }).trim(),
-      productHash: await sourceFingerprint(PREFIX_PRODUCT_PATHS, dir),
+      productPaths: await productPaths(dir),
+      productHash: await sourceFingerprint(await productPaths(dir), dir),
       harnessHash: await sourceFingerprint(HARNESS_PATHS, dir),
-      supportingHash: await sourceFingerprint(SUPPORTING_PATHS, dir),
+      supportingPaths: supportingPaths(dir),
+      supportingHash: await sourceFingerprint(supportingPaths(dir), dir),
     });
     // The screen's manifest names the product it ran; a base whose hash differs is a different baseline.
     const screen = await readFile(join(root, "docs/_evidence/memory-bench/202/baseline/manifest.json"), "utf8")
@@ -699,7 +717,7 @@ export async function runEquivalence({ base, keepText } = {}) {
       isScreenProduct: screen?.productHash !== undefined && screen.productHash === described.productHash,
     };
     const post = await describe(root);
-    assert.equal(base_.harnessHash, post.harnessHash, "both trees must run the same harness");
+    if (!ownHarness) assert.equal(base_.harnessHash, post.harnessHash, "both trees must run the same harness");
     assert.notEqual(base_.productHash, post.productHash, "the base is not a different product");
     const report = {
       kind: "202-cache-stability-equivalence",
@@ -713,9 +731,12 @@ export async function runEquivalence({ base, keepText } = {}) {
         requests: arm.questions.reduce((n, question) => n + question.requests.length, 0),
         identical: !comparison.differingArms.includes(arm.id),
       })),
+      harness: ownHarness ? "per-tree" : "shared",
       base: base_,
       post,
-      policy: "Compares every answer-phase provider request on the pre-change tree and this tree, byte for byte.",
+      policy: ownHarness
+        ? "Compares every answer-phase provider request on the pre-change tree (its own committed harness) and this tree, byte for byte."
+        : "Compares every answer-phase provider request on the pre-change tree and this tree, byte for byte.",
     };
     return { ...report, sha256: sha256(report) };
   } finally {
@@ -736,8 +757,13 @@ if (import.meta.main) {
   if (args.includes("--capture-answers")) {
     await emit(await captureAnswerPaths({ dump: flag("--dump") }), flag("--capture-answers"));
   } else if (args.includes("--equivalence")) {
-    assert.ok(flag("--base"), "usage: prefix-probe.mjs --equivalence --base <pre-change worktree> [--out path] [--keep-text dir]");
-    const report = await runEquivalence({ base: flag("--base"), keepText: flag("--keep-text") });
+    assert.ok(
+      flag("--base"),
+      "usage: prefix-probe.mjs --equivalence --base <pre-change worktree> [--base-harness own] [--out path] [--keep-text dir]",
+    );
+    const harness = flag("--base-harness");
+    assert.ok(harness === undefined || harness === "own", "--base-harness takes `own`");
+    const report = await runEquivalence({ base: flag("--base"), keepText: flag("--keep-text"), ownHarness: harness === "own" });
     await emit(report, flag("--out"));
     process.stderr.write(`${JSON.stringify({ status: report.status, differingArms: report.differingArms, sha256: report.sha256 })}\n`);
   } else {

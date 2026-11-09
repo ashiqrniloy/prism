@@ -342,4 +342,4 @@ Back up the session/checkpoint store before a rollback if the 0.7 host wrote fab
 - [Migration guide](migration.md): the era index of migration cuts with replacement tables and rollback notes.
 - [Migrate Prism 0.5 to 0.6](migrate-to-0.6.md): Node 22 floor, folded 0.5.7 delta, third-party floors.
 - [Release and install](release.md): packed surfaces, install rules, support matrix, and the offline test budget.
-- [Memory fabric](../packages/memory/fabric/README.md), [Observational memory compaction](../packages/memory/observational/README.md), [Attention compiler](../packages/context/engineering/README.md), [Supervisors](../packages/integrations/delegate/README.md): owning pages for the opt-in additions above.
+- [Memory fabric](../packages/memory/system/README.md), [Observational memory compaction](../packages/memory/system/README.md), [Attention compiler](../packages/context/engineering/README.md), [Supervisors](../packages/integrations/delegate/README.md): owning pages for the opt-in additions above.

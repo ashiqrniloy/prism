@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { memoryModelReport } from "./acceptance-report.mjs";
 import {
+  assertMemoryModelFixture,
   assertMemoryModelPin,
   frozenMemoryModelHash,
   MEMORY_MODEL_CRITERIA,
@@ -194,13 +195,23 @@ test("retrieval_set_rules_pinned_before_sets_exist", () => {
     () => verifyMemoryModelCriteria(edited((c) => (c.retrievalSets.thresholdFit.falseAbstentionWeight = 1))),
     /threshold-fit rule/,
   );
-  // Plan 219.1 adds only hashes, and only by an amendment.
+  // Plan 219.1 adds only hashes, and only by an amendment (the file without its amendment log refuses them).
   assert.throws(
-    () => verifyMemoryModelCriteria(edited((c) => (c.retrievalSets.hashes.paraphrase = "a".repeat(64)))),
+    () =>
+      verifyMemoryModelCriteria(
+        edited((c) => {
+          delete c.amendments;
+          for (const entry of c.fixtures.index) entry.hash = null;
+          c.retrievalSets.hashes.paraphrase = "a".repeat(64);
+        }),
+      ),
     /only by an amendment/,
   );
   const amended = edited((c) => {
-    c.amendments = [{ previousHash: memoryModelCriteriaHash(), date: "2026-11-20", reason: "plan 219.1 Task 2 set hashes", plan: "219.1" }];
+    c.amendments = [
+      ...(c.amendments ?? []),
+      { previousHash: memoryModelCriteriaHash(), date: "2026-11-20", reason: "plan 219.1 Task 2 set hashes", plan: "219.1" },
+    ];
     c.retrievalSets.hashes.paraphrase = "a".repeat(64);
   });
   assert.match(verifyMemoryModelCriteria(amended), /^[0-9a-f]{64}$/);
@@ -286,4 +297,36 @@ test("memory_model_report_reads_only_pinned_evidence", async () => {
   await assert.rejects(memoryModelReport({ gate: "M-1", evidencePath: join(dir, "absent.json") }), /does not exist/);
   await assert.rejects(memoryModelReport({}), /needs --gate/);
   assert.equal((await memoryModelReport({ gate: "M-5" })).status, "pending");
+});
+
+test("fixture_hashes_come_by_amendment_and_change_no_row", () => {
+  // Plan 217 Task 6: the two fixtures gate M-1 reads are hashed by the first amendment; removing it restores the frozen file.
+  const [first] = MEMORY_MODEL_CRITERIA.amendments;
+  assert.equal(first.plan, 217);
+  const before = edited((c) => {
+    delete c.amendments;
+    for (const entry of c.fixtures.index)
+      if (entry.hashOf) {
+        entry.hash = null;
+        delete entry.hashOf;
+      }
+  });
+  assert.equal(memoryModelCriteriaHash(before), first.previousHash);
+  assert.deepEqual(before.rows, MEMORY_MODEL_CRITERIA.rows);
+  assert.throws(
+    () =>
+      verifyMemoryModelCriteria(
+        edited((c) => {
+          delete c.amendments;
+        }),
+      ),
+    /fixture hashes are added only by an amendment/,
+  );
+  assert.throws(
+    () => verifyMemoryModelCriteria(edited((c) => delete c.fixtures.index.find((entry) => entry.id === "long-session").hashOf)),
+    /needs a sha256 hash and the file it hashes/,
+  );
+  assert.match(assertMemoryModelFixture("long-session"), /^[0-9a-f]{64}$/);
+  assert.match(assertMemoryModelFixture("long-session-replay"), /^[0-9a-f]{64}$/);
+  assert.throws(() => assertMemoryModelFixture("re-plan"), /has no hash yet/);
 });

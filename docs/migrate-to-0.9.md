@@ -166,7 +166,7 @@ om.attach(session, {
 });
 ```
 
-Sizing: one local write per append (flush stays local — no second writer on a branch); one branch read plus fold per participating branch per context resolve and per shared-scope recall, not per observation; 1,024 principals per scope and 256-character principal ids, on top of the existing scope caps (256 scopes, depth 8, 4,096 binds, 512-character labels). Session-private scopes stay the default: with no `sharedScopes` configured, behavior is byte-identical to 0.8. See [Compaction and observational memory](../packages/memory/observational/README.md) and `examples/shared-work-scope.ts`.
+Sizing: one local write per append (flush stays local — no second writer on a branch); one branch read plus fold per participating branch per context resolve and per shared-scope recall, not per observation; 1,024 principals per scope and 256-character principal ids, on top of the existing scope caps (256 scopes, depth 8, 4,096 binds, 512-character labels). Session-private scopes stay the default: with no `sharedScopes` configured, behavior is byte-identical to 0.8. See [Compaction and observational memory](../packages/memory/system/README.md) and `examples/shared-work-scope.ts`.
 
 ### 13. Retrieval revocation and a zero-service reranker
 

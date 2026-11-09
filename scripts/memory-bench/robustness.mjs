@@ -9,6 +9,8 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import cleanup from "./cleanup-criteria.json" with { type: "json" };
+import memoryModel from "./memory-model-criteria.json" with { type: "json" };
+import { minDetectableDifference } from "./power.mjs";
 import beam1m from "./robustness-beam-1m.json" with { type: "json" };
 import beam100k from "./robustness-beam-100k.json" with { type: "json" };
 import beam500k from "./robustness-beam-500k.json" with { type: "json" };
@@ -17,10 +19,8 @@ import criteria from "./robustness-criteria.json" with { type: "json" };
 import dreambench from "./robustness-dreambench-swe.json" with { type: "json" };
 import locomo from "./robustness-locomo.json" with { type: "json" };
 import longmemevalM from "./robustness-longmemeval-m.json" with { type: "json" };
-import memoryModel from "./memory-model-criteria.json" with { type: "json" };
 import memoryagentbench from "./robustness-memoryagentbench-cr.json" with { type: "json" };
 import memorycode from "./robustness-memorycode.json" with { type: "json" };
-import { minDetectableDifference } from "./power.mjs";
 import vibemembench from "./robustness-vibemembench.json" with { type: "json" };
 import threeTier from "./three-tier-criteria.json" with { type: "json" };
 import workOutcome from "./work-outcome-criteria.json" with { type: "json" };
@@ -420,6 +420,11 @@ export function verifyMemoryModelCriteria(value = MEMORY_MODEL_CRITERIA, files =
   const fixtureIds = new Set(index.map((entry) => entry.id));
   if (fixtureIds.size !== index.length) fail("a fixture is listed twice");
   for (const entry of index) if (!entry.plan || !entry.spec) fail(`fixture ${entry.id} needs an owner plan and a spec`);
+  // Plan 217 Task 6: a fixture's hash is added by an amendment (fixtures.rule), as a sha256 of the file it names.
+  for (const entry of index)
+    if (entry.hash !== null && entry.hash !== undefined && (!/^[0-9a-f]{64}$/.test(entry.hash) || !entry.hashOf))
+      fail(`fixture ${entry.id} needs a sha256 hash and the file it hashes`);
+  if (index.some((entry) => entry.hash) && !amendments.length) fail("fixture hashes are added only by an amendment");
   for (const name of MEMORY_MODEL_RETRIEVAL_SETS) if (!fixtureIds.has(name)) fail(`retrieval set ${name} is not in the fixture index`);
   for (const [id, row] of Object.entries(rows))
     for (const fixture of row.scope.fixtures ?? []) if (!fixtureIds.has(fixture)) fail(`row ${id} reads unindexed fixture ${fixture}`);
@@ -442,6 +447,22 @@ export function verifyMemoryModelCriteria(value = MEMORY_MODEL_CRITERIA, files =
   if (baselines.omBefore?.config !== "om" || !baselines.omBefore.revisionRule?.includes("plan 216 Task 4"))
     fail("OM-before must be the om config pinned at plan 216 Task 4");
   return memoryModelCriteriaHash(value);
+}
+
+/**
+ * Plan 217 Task 6: a gate reads a fixture only when the criteria pin its hash and the file still hashes to it. Returns
+ * the hash; an unhashed or drifted fixture is refused.
+ */
+export function assertMemoryModelFixture(id, { value = MEMORY_MODEL_CRITERIA, root = REPO_ROOT } = {}) {
+  const entry = (value.fixtures?.index ?? []).find((row) => row.id === id);
+  if (!entry) throw new Error(`MemoryModelCriteria: no fixture ${id}`);
+  if (!entry.hash)
+    throw new Error(`MemoryModelCriteria: fixture ${id} has no hash yet (fixtures.rule: an amendment adds it before the gate)`);
+  const actual = createHash("sha256")
+    .update(readFileSync(new URL(entry.hashOf, root)))
+    .digest("hex");
+  if (actual !== entry.hash) throw new Error(`MemoryModelCriteria: fixture ${id} (${entry.hashOf}) does not hash to its pinned value`);
+  return entry.hash;
 }
 
 /** The frozen hash, read from the evidence record; the current file must hash to it. */

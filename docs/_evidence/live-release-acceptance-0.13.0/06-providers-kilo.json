@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-11-08T20:03:41.893Z",
+  "envFile": "/home/arn/.config/prism/live.env",
+  "strict": true,
+  "dryRun": false,
+  "filter": "providers/kilo",
+  "totals": {
+    "ran": 0,
+    "skipped": 0,
+    "failed": 1,
+    "planned": 0
+  },
+  "coverage": {
+    "ok": true,
+    "total": 86,
+    "covered": 82,
+    "pending": 4,
+    "mode": "baseline"
+  },
+  "results": [
+    {
+      "id": "providers/kilo",
+      "package": "@arnilo/prism-provider-kilo",
+      "status": "failed",
+      "reason": "exit 1",
+      "exitCode": 1,
+      "durationMs": 7545587,
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts src/__tests__/live-agent.test.ts",
+      "cwd": "packages/providers/kilo",
+      "models": [
+        {
+          "env": "PRISM_LIVE_KILO_CHAT_MODEL",
+          "value": "google/gemma-4-26b-a4b-it",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_KILO_RESPONSES_MODEL",
+          "value": "openai/gpt-6-luna",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_KILO_MESSAGES_MODEL",
+          "value": "anthropic/claude-haiku-5.5",
+          "wired": true
+        }
+      ],
+      "outputTail": " |     },\n270 |   });\n271 |   const text = events.map((e) => (e.type === \"content_delta\" && e.content.type === \"text\" ? e.content.text : \"\")).join(\"\");\n272 |   assert.ok(text.length > 0, \"live text response was empty\");\n               ^\nAssertionError: live text response was empty\n generatedMessage: false,\n     actual: false,\n   expected: true,\n   operator: \"==\",\n       diff: \"simple\",\n       code: \"ERR_ASSERTION\"\n\n      at liveScenarioTextStream (/home/arn/Projects/prism/src/testing/provider-live-scenarios.ts:272:10)\n      at /home/arn/Projects/prism/src/testing/provider-live-scenarios.ts:893:19\n      at node:test:1445:26\n      at executeTestNode (node:test:1448:63)\n(fail) @arnilo/prism-provider-kilo live tests > responses route > live_text_generation_streams_and_leaks_no_secret [72583.99ms]\n330 |   if (turn1Usage) {\n331 |     console.info(`[${options.provider.id} live] ${options.route} tool-loop turn1 usage: ${JSON.stringify(turn1Usage)}`);\n332 |   }\n333 | \n334 |   const toolCallEvents = turn1Events.filter((e) => e.type === \"tool_call\");\n335 |   assert.ok(toolCallEvents.length > 0, \"Turn 1 tool prompt produced no tool calls\");\n               ^\nAssertionError: Turn 1 tool prompt produced no tool calls\n generatedMessage: false,\n     actual: false,\n   expected: true,\n   operator: \"==\",\n       diff: \"simple\",\n       code: \"ERR_ASSERTION\"\n\n      at liveScenarioToolLoop (/home/arn/Projects/prism/src/testing/provider-live-scenarios.ts:335:10)\n      at /home/arn/Projects/prism/src/testing/provider-live-scenarios.ts:907:19\n      at node:test:1445:26\n      at executeTestNode (node:test:1448:63)\n(fail) @arnilo/prism-provider-kilo live tests > responses route > live_two_turn_tool_loop_with_thinking_replay [254.59ms]\n\nsrc/__tests__/live-agent.test.ts:\n59 |           },\n60 |         });\n61 |         const session = await agent.session();\n62 | \n63 |         const first = await session.run(\"Call echo_value with value 7, then say done.\");\n64 |         assert.equal(first.status, \"completed\", `${wire.name} first turn: ${first.text}`);\n                    ^\nAssertionError: chat first turn: \n+ actual - expected\n\n+ 'failed'\n- 'completed'\n\n generatedMessage: false,\n     actual: \"failed\",\n   expected: \"completed\",\n   operator: \"strictEqual\",\n       diff: \"simple\",\n       code: \"ERR_ASSERTION\"\n\n      at /home/arn/Projects/prism/packages/providers/kilo/src/__tests__/live-agent.test.ts:64:16\n(fail) Kilo chat kernel smoke > live_agent_two_turn_tool_session [248.55ms]\n59 |           },\n60 |         });\n61 |         const session = await agent.session();\n62 | \n63 |         const first = await session.run(\"Call echo_value with value 7, then say done.\");\n64 |         assert.equal(first.status, \"completed\", `${wire.name} first turn: ${first.text}`);\n                    ^\nAssertionError: responses first turn: \n+ actual - expected\n\n+ 'failed'\n- 'completed'\n\n generatedMessage: false,\n     actual: \"failed\",\n   expected: \"completed\",\n   operator: \"strictEqual\",\n       diff: \"simple\",\n       code: \"ERR_ASSERTION\"\n\n      at /home/arn/Projects/prism/packages/providers/kilo/src/__tests__/live-agent.test.ts:64:16\n(fail) Kilo responses kernel smoke > live_agent_two_turn_tool_session [254.83ms]\n59 |           },\n60 |         });\n61 |         const session = await agent.session();\n62 | \n63 |         const first = await session.run(\"Call echo_value with value 7, then say done.\");\n64 |         assert.equal(first.status, \"completed\", `${wire.name} first turn: ${first.text}`);\n                    ^\nAssertionError: messages first turn: \n+ actual - expected\n\n+ 'failed'\n- 'completed'\n\n generatedMessage: false,\n     actual: \"failed\",\n   expected: \"completed\",\n   operator: \"strictEqual\",\n       diff: \"simple\",\n       code: \"ERR_ASSERTION\"\n\n      at /home/arn/Projects/prism/packages/providers/kilo/src/__tests__/live-agent.test.ts:64:16\n(fail) Kilo messages kernel smoke > live_agent_two_turn_tool_session [218.28ms]\n\n 11 pass\n 3 skip\n 9 fail\nRan 23 tests across 2 files. [7545.56s]\n"
+    }
+  ]
+}

@@ -423,8 +423,8 @@
   "fixtures": {
     "rule": "each fixture is built by its owner plan, frozen, and its hash added by an amendment before the gate that reads it; dataset-derived text stays in the gitignored bench cache, evidence holds hashes",
     "index": [
-      { "id": "long-session-replay", "kind": "offline", "plan": 217, "spec": "offline long-session coding replay, >= 6 tasks and >= 200 entries", "extendedBy": { "218": ["re-plan", "protected items"], "219": ["preference stated once", "superseded fact"], "220": ["repeated benign event", "repeated failure"], "221": ["episode:end"] }, "hash": null },
-      { "id": "long-session", "kind": "live", "plan": 217, "spec": "live long-session coding family, added to the work-outcome runner", "hash": null },
+      { "id": "long-session-replay", "kind": "offline", "plan": 217, "spec": "offline long-session coding replay, >= 6 tasks and >= 200 entries", "extendedBy": { "218": ["re-plan", "protected items"], "219": ["preference stated once", "superseded fact"], "220": ["repeated benign event", "repeated failure"], "221": ["episode:end"] }, "hash": "1bc074d11e1cb5d735c14dae02ac04fa8eebed185b669e44e2379766d7e3cab3", "hashOf": "scripts/memory-bench/fixtures/memory-model/long-session/index.json" },
+      { "id": "long-session", "kind": "live", "plan": 217, "spec": "live long-session coding family, added to the work-outcome runner", "hash": "803650cb6418bcaf7354ec3cebd309dc9d7a5165d2e32b7615236afca4ac7674", "hashOf": "scripts/memory-bench/work-outcome-long-session.json" },
       { "id": "re-plan", "kind": "live", "plan": 218, "spec": "live re-plan family (a mid-episode re-plan), added to the work-outcome runner", "hash": null },
       { "id": "recurring-failure", "kind": "live", "plan": 220, "spec": "live recurring-failure family (a repeated failure signature), added to the work-outcome runner", "hash": null },
       { "id": "multi-session-lifecycle", "kind": "offline+live", "plan": "219, 221", "spec": "multi-session lifecycle built on plan 202 Task 16's offline lifecycle suite (scripts/memory-bench/lifecycle)", "hash": null },
@@ -441,5 +441,14 @@
     "fields": ["gate", "plan", "approved", "approvedAt", "approvedBy", "text", "budget", "models", "arms", "partitions", "caps", "memoryModelCriteriaHash", "criteriaHash"],
     "models": "the providers of plan 210 gate C-1 (docs/_evidence/memory-bench/210/gates/owner-gate-c1.json scope) unless the owner names others; never openrouter/free"
   },
-  "noTextRule": "Evidence and reports carry ids, labels, counts, rates, scores and hashes; never question, gold, note, chunk, claim or corpus text."
+  "noTextRule": "Evidence and reports carry ids, labels, counts, rates, scores and hashes; never question, gold, note, chunk, claim or corpus text.",
+  "amendments": [
+    {
+      "previousHash": "2b50880bdc7ebee4f4a2a6c7dd574b6e2acdbb0bfbd58901d37e66f9d02ef9d5",
+      "date": "2026-11-09",
+      "plan": 217,
+      "task": 6,
+      "reason": "fixtures.rule: the two plan 217 fixtures gate M-1 reads get their hashes before the gate (long-session-replay: the sha256 of its index.json, which pins session.json and annotations.json; long-session: the sha256 of its frozen partition file). No row, threshold or partition changes."
+    }
+  ]
 }

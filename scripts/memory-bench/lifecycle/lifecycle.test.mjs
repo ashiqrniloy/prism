@@ -184,7 +184,7 @@ test("replay_caches_injected_model_client_and_separates_models", () =>
   }));
 test("recorded_om_ids_remain_valid_and_shared_scope_identity_survives", () =>
   temporary(async (dir) => {
-    const { foldObservationalMemoryLedger } = await import("@arnilo/prism-memory-observational");
+    const { foldObservationalMemoryLedger } = await import("@arnilo/prism-memory-system");
     const { loadLedgers } = await import("./io.mjs");
     const synthetic = synthLedgers({ personas: 1, projects: 1, sessions: 2 });
     for (const ledger of synthetic)

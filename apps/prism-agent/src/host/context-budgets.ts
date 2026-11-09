@@ -38,7 +38,7 @@ export function foldClearAtLeastTokensFor(ref: ModelRef): number {
 }
 
 /** OM's gate: 0.6 of the input cap, never above the measured budget. */
-export function observationalCompactAtFor(ref: ModelRef): { ratio: number; maxTokens?: number } {
+export function sessionCompactAtFor(ref: ModelRef): { ratio: number; maxTokens?: number } {
   const budget = contextBudgetFor(ref);
   return budget === undefined ? { ratio: 0.6 } : { ratio: 0.6, maxTokens: budget.inputTokens };
 }

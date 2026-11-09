@@ -345,7 +345,7 @@ Runtime skill activation remains explicit: `RunOptions.activeSkills` narrows per
 
 - [Evaluations](../packages/hosts/evals/README.md): optional `@arnilo/prism-evals` scorers/datasets/experiments over `AgentRunResult`.
 - [Provider kit](provider-kit.md): shared foundation for building model provider packages on `@arnilo/prism/provider-kit`.
-- [Working and semantic memory](../packages/memory/fabric/README.md): optional `@arnilo/prism-memory` working/semantic recall primitives.
+- [Working and semantic memory](../packages/memory/system/README.md): optional `@arnilo/prism-memory` working/semantic recall primitives.
 - [Retrieval-augmented generation](../packages/knowledge/rag/README.md): optional text/Markdown chunk, index, retrieval, and citation helpers.
 - [Web-standard server handler](host.md): optional authorized agent/workflow HTTP routes.
 - [Supervisor delegation](../packages/integrations/delegate/README.md) and [A2A interoperability](../packages/hosts/ag-ui/README.md): optional install only; core agent/workflow behavior is unchanged. Child factories now receive package-derived memory IDs and narrowing permission, while remote endpoints require exact HTTPS origin allow-lists.

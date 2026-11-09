@@ -31,10 +31,15 @@
           "env": "PRISM_LIVE_OLLAMA_CLOUD_THINKING_MODEL",
           "default": "gpt-oss:20b",
           "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_OLLAMA_CLOUD_DECISION_MODEL",
+          "default": "clef:27b",
+          "wired": true
         }
       ],
-      "scope": "Ollama Cloud key; native NDJSON and OpenAI-compatible routes. Shared scenarios per route: text, 2-turn tool loop, abort, 3-turn prefix-cache probe, structured output with a concrete prompt, and an unknown model id returning a named error (both via the shared suite's `structuredPrompt`/`errorModel` route hooks). The package adds a 3-turn kernel smoke: tool echo, the tool result read back, then an image turn.",
-      "cost": "~19 generation requests (6 per route in the shared scenarios, 2 structured-output and 2 unknown-model per route, plus the 3-turn kernel smoke), plus free discovery metadata only if a model id is not in the static catalog. Separate manual cache probe with --ttft: 4 requests per route, 8 for native + openai, plus catalog discovery per invocation (1 + N free metadata requests, concurrency 4); the pi comparison adds 4 requests. Free-tier session/weekly limits apply."
+      "scope": "Ollama Cloud key; native NDJSON and OpenAI-compatible routes. Shared scenarios per route: text, 2-turn tool loop, abort, 3-turn prefix-cache probe, structured output with a concrete prompt, and an unknown model id returning a named error (both via the shared suite's `structuredPrompt`/`errorModel` route hooks). The package adds a 3-turn kernel smoke: tool echo, the tool result read back, then an image turn. A decision model (`clef`) runs the shared System One scenarios over `/v1/systemone`: schema-valid decision, raw `decide` answers, tools rejected before fetch, abort, and a leak-free error response.",
+      "cost": "~19 generation requests (6 per route in the shared scenarios, 2 structured-output and 2 unknown-model per route, plus the 3-turn kernel smoke), plus ~3 System One decision requests (input-only billing), plus free discovery metadata only if a model id is not in the static catalog. Separate manual cache probe with --ttft: 4 requests per route, 8 for native + openai, plus catalog discovery per invocation (1 + N free metadata requests, concurrency 4); the pi comparison adds 4 requests. Free-tier session/weekly limits apply."
     },
     {
       "id": "providers/hyper",
@@ -227,6 +232,11 @@
           "env": "PRISM_LIVE_COMMANDCODE_MESSAGES_MODEL",
           "default": "claude-haiku-5-5",
           "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_COMMANDCODE_NON_ZDR_MODEL",
+          "default": "stealth/glyph-cluster:free",
+          "wired": true
         }
       ],
       "scope": "Three Provider API wires: Chat Completions, Responses, Anthropic Messages, one exemplar each. Per route: text, tool loop, structured output, abort, leak scan. No cache probe: the gateway caches upstream and Chat has no lever.",
@@ -329,8 +339,8 @@
       "cost": "Local process, no API spend."
     },
     {
-      "id": "memory/observational-live",
-      "package": "@arnilo/prism-memory-observational",
+      "id": "memory/system-live",
+      "package": "@arnilo/prism-memory-system",
       "status": "active",
       "source": "scripts/memory-bench/observational-live.test.mjs",
       "command": "bun test --timeout=0 scripts/memory-bench/observational-live.test.mjs",
@@ -353,17 +363,17 @@
     },
     {
       "id": "memory/fabric-conversational-live",
-      "package": "@arnilo/prism-memory-fabric",
+      "package": "@arnilo/prism-memory-system",
       "status": "planned",
       "source": null,
       "command": null,
-      "cwd": "packages/memory/fabric",
+      "cwd": "packages/memory/system",
       "requiresAny": [
         "HYPER_API_KEY",
         "OPENCODE_GO_API_KEY"
       ],
       "scope": "Conversational preset across sessions: session A states a fact, session B recalls it through injection or memory.recall, principal C sees none of it (plan 186 Task 3 scenario 11).",
-      "cost": "\u2264 6 requests, \u2264 20k input tokens.",
+      "cost": "≤ 6 requests, ≤ 20k input tokens.",
       "plan": "plans/064-E2E-Live-Test-Coverage-Matrix.md",
       "notes": "Plan 188.11 Task 7 adds the row; plan 186 Task 3 scenario 11 registers it and owns the journey fixture and budget guard."
     },
@@ -569,7 +579,7 @@
           "wired": true
         }
       ],
-      "cost": "1 rerank request per configured endpoint (\u22642 total)."
+      "cost": "1 rerank request per configured endpoint (≤2 total)."
     },
     {
       "id": "memory/local-rerank-live",
@@ -591,9 +601,9 @@
           "wired": true
         }
       ],
-      "scope": "In-process cross-encoder (transformers.js, q8/cpu) plus a semantic embedder on this machine; no service and no credential. Weights come from the documented model ids into a host cache dir; a cold run downloads a \u2248280 MB reranker and a \u224823 MB embedder.",
+      "scope": "In-process cross-encoder (transformers.js, q8/cpu) plus a semantic embedder on this machine; no service and no credential. Weights come from the documented model ids into a host cache dir; a cold run downloads a ≈280 MB reranker and a ≈23 MB embedder.",
       "notes": "Real runtime through createTransformersRerankRuntime (no stub): conformance, top-1 ordering on a fixed query, top-50 latency, offline replay with allowRemoteModels:false, and recall@5 over the inlined 24-query / 96-chunk corpus (rerank off vs on, whole-corpus pool, pool-bound rows at 20 and 32 candidates) for the deterministic hash embedder and a real semantic embedder (\"Xenova/all-MiniLM-L6-v2\", q8/cpu, identity control, local_files_only replay). Writes generated docs/_evidence/phase102-local-rerank-latency.md and docs/_evidence/phase111-reranker-semantic-recall.md rows (no paths, no secrets).",
-      "cost": "Two model downloads on a cold cache (\u2248280 MB reranker + \u224823 MB embedder); zero network after load, no API spend. \u224850 s wall clock after the cache is warm (the recall legs score 24 \u00d7 96 query/document pairs three times)."
+      "cost": "Two model downloads on a cold cache (≈280 MB reranker + ≈23 MB embedder); zero network after load, no API spend. ≈50 s wall clock after the cache is warm (the recall legs score 24 × 96 query/document pairs three times)."
     },
     {
       "id": "memory/drive-sync-live",
@@ -623,7 +633,7 @@
       ],
       "scope": "Real public OpenAPI 3.1 spec (warnely.com) + real GET tool calls; no credential.",
       "cwd": "packages/tools/openapi",
-      "cost": "3 HTTP requests against example.com-class public hosts (plan budget \u22645)."
+      "cost": "3 HTTP requests against example.com-class public hosts (plan budget ≤5)."
     },
     {
       "id": "tools-computer-use/computer-use-live",
@@ -636,9 +646,9 @@
         "PRISM_COMPUTER_USE_BIN"
       ],
       "scope": "Real host computer-use-linux MCP binary over stdio; real tool inventory + one bounded read-only screenshot.",
-      "notes": "Headless/no-session environments skip at the screenshot probe; binary-wire contract is proven by the inventory. No network I/O in suite \u2014 screenshot bytes cannot leave the process.",
+      "notes": "Headless/no-session environments skip at the screenshot probe; binary-wire contract is proven by the inventory. No network I/O in suite — screenshot bytes cannot leave the process.",
       "cwd": "packages/tools/computer-use",
-      "cost": "Local desktop only; \u226430s ceiling."
+      "cost": "Local desktop only; ≤30s ceiling."
     },
     {
       "id": "mcp/client-smoke",
@@ -653,7 +663,7 @@
       "plan": "plans/064-E2E-Live-Test-Coverage-Matrix.md",
       "notes": "Modern+legacy handshake, tools/list, tools/call round-trip, authorize-gated denial, malformed-frame fail-closed. The fixture is a plain SDK McpServer (Prism tool serving waits for Phase 14 serveTools); approvals over MCP are covered by packages/hosts/mcp-server serve.test.ts and the bridge-side MRTR elicitation round-trip over real HTTP by packages/integrations/mcp modern-bridge tests.",
       "cwd": ".",
-      "cost": "Local only; \u226430s."
+      "cost": "Local only; ≤30s."
     },
     {
       "id": "acp/in-process",
@@ -665,7 +675,7 @@
       "scope": "In-process serveAcp over TransformStreams. Approval resumes through session/request_permission.",
       "notes": "No network. No credential.",
       "cwd": ".",
-      "cost": "Local only; \u226430s."
+      "cost": "Local only; ≤30s."
     },
     {
       "id": "cli/journey",
@@ -694,16 +704,16 @@
     {
       "id": "memory/postgres",
       "status": "active",
-      "source": "packages/memory/fabric/src/__tests__/postgres-memory.integration.test.ts",
+      "source": "packages/memory/system/src/ltm/__tests__/postgres-memory.integration.test.ts",
       "command": "bun run test:postgres",
-      "cwd": "packages/memory/fabric",
+      "cwd": "packages/memory/system",
       "requires": [
         "PRISM_TEST_POSTGRES_URL"
       ],
       "scope": "Postgres memory store + pgvector index round-trips on the operator database, including durable deletion propagation (1,000 derived rows tombstoned in one transaction) and grant-change re-pointing.",
       "cost": "Bounded insert/query cycles against the configured Postgres.",
       "notes": "Existing integration suites (postgres-memory, postgres-vector, postgres-propagation) over the real wire.",
-      "package": "@arnilo/prism-memory-fabric"
+      "package": "@arnilo/prism-memory-system"
     },
     {
       "id": "memory/wiki",
@@ -752,7 +762,7 @@
       "scope": "Thinking coverage: first-party reasoning catalog models declare capabilities.thinkingLevels + a compat.thinkingFamily stamp and emit a legal effort field on the wire.",
       "cost": "free",
       "plan": "065 (task 15)",
-      "notes": "Hermetic leg \u2014 no credentials. Live acceptance of the emitted fields is pinned by the thinkingProbe entries."
+      "notes": "Hermetic leg — no credentials. Live acceptance of the emitted fields is pinned by the thinkingProbe entries."
     },
     {
       "id": "channels/telegram-live",
@@ -866,7 +876,7 @@
     },
     {
       "id": "release/memory-bench",
-      "package": "@arnilo/prism-memory-fabric",
+      "package": "@arnilo/prism-memory-system",
       "status": "active",
       "source": "scripts/memory-bench/live.mjs",
       "command": "bun scripts/memory-bench/live.mjs",
@@ -948,6 +958,52 @@
         "PRISM_LIVE_OPENROUTER_PAID",
         "OPENROUTER_API_KEY"
       ]
+    },
+    {
+      "id": "release/journey-commandcode",
+      "package": "@arnilo/prism-agent",
+      "status": "active",
+      "source": "apps/prism-agent/src/__tests__/live-provider-journey.test.ts",
+      "command": "bun run test:live:journey:commandcode",
+      "cwd": "apps/prism-agent",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "PRISM_LIVE_RELEASE_JOURNEY",
+        "COMMAND_CODE_API_KEY"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_COMMANDCODE_JOURNEY_MODEL",
+          "default": "Qwen/Qwen3.7-Flash",
+          "wired": true
+        }
+      ],
+      "scope": "T2 release journey (plan 215 Task 32): ten provider-agnostic scenarios through createAgent and first-party packages (stream contract, tool loop with thinking replay, cross-process approval resume, gate integrity, rewrite re-gate, ownership isolation, limits, compaction, two-principal remote host, abort), leak-scanned with COMMAND_CODE_API_KEY. Use a least-privilege COMMAND_CODE_API_KEY with a provider-side spend cap.",
+      "cost": "Hard budget enforced by the suite: at most 36 provider requests and 80k input tokens per run (catalog lookups counted separately); per-scenario timeout 120 s, suite at most 15 min. Measured 2026-11-08: 25-28 requests, under 15k input tokens, about 2 minutes.",
+      "notes": "Owner decision 2026-11-08: Command Code and Ollama Cloud gate T2. The same file also accepts hyper and opencode-go via PRISM_LIVE_JOURNEY_PROVIDER for ad-hoc runs; scenario 2's thinking-replay leg is vacuous on a model that produces no thinking."
+    },
+    {
+      "id": "release/journey-ollama-cloud",
+      "package": "@arnilo/prism-agent",
+      "status": "active",
+      "source": "apps/prism-agent/src/__tests__/live-provider-journey.test.ts",
+      "command": "bun run test:live:journey:ollama-cloud",
+      "cwd": "apps/prism-agent",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "PRISM_LIVE_RELEASE_JOURNEY",
+        "OLLAMA_API_KEY"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_OLLAMA_CLOUD_JOURNEY_MODEL",
+          "default": "gemma4:31b",
+          "wired": true
+        }
+      ],
+      "scope": "T2 release journey (plan 215 Task 32): ten provider-agnostic scenarios through createAgent and first-party packages (stream contract, tool loop with thinking replay, cross-process approval resume, gate integrity, rewrite re-gate, ownership isolation, limits, compaction, two-principal remote host, abort), leak-scanned with OLLAMA_API_KEY. Use a least-privilege OLLAMA_API_KEY with a provider-side spend cap.",
+      "cost": "Hard budget enforced by the suite: at most 36 provider requests and 80k input tokens per run (catalog lookups counted separately); per-scenario timeout 120 s, suite at most 15 min. Measured 2026-11-08: 25-28 requests, under 15k input tokens, about 2 minutes.",
+      "notes": "Owner decision 2026-11-08: Command Code and Ollama Cloud gate T2. The same file also accepts hyper and opencode-go via PRISM_LIVE_JOURNEY_PROVIDER for ad-hoc runs; scenario 2's thinking-replay leg is vacuous on a model that produces no thinking."
     },
     {
       "id": "providers/kilo",

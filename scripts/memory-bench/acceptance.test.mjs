@@ -372,20 +372,20 @@ test("prefix_arm_differs_from_postfix_only_in_product_paths", async () => {
     }
   };
   await write(dir, ["scripts/memory-bench"], [{ name: "run.mjs", body: "same" }]);
-  await write(dir, ["packages/memory/fabric/src"], [{ name: "context.ts", body: "old product" }]);
+  await write(dir, ["packages/memory/system/src/ltm"], [{ name: "context.ts", body: "old product" }]);
   const postfix = await mkdtemp(join(tmpdir(), "prism-postfix-"));
   await write(postfix, ["scripts/memory-bench"], [{ name: "run.mjs", body: "same" }]);
-  await write(postfix, ["packages/memory/fabric/src"], [{ name: "context.ts", body: "new product" }]);
+  await write(postfix, ["packages/memory/system/src/ltm"], [{ name: "context.ts", body: "new product" }]);
   const harnessHash = await sourceFingerprint(["scripts/memory-bench"], postfix);
-  const prefixHash = await sourceFingerprint(["packages/memory/fabric/src"], dir);
-  const productHash = await sourceFingerprint(["packages/memory/fabric/src"], postfix);
+  const prefixHash = await sourceFingerprint(["packages/memory/system/src/ltm"], dir);
+  const productHash = await sourceFingerprint(["packages/memory/system/src/ltm"], postfix);
   const recorded = { ...manifest, prefix: { ...manifest.prefix, harnessHash, productHash: prefixHash, postfixProductHash: productHash } };
   const audited = await prefixArmAudit(recorded, { root: postfix, worktree: dir });
   assert.notEqual(audited.productHash, audited.postfixProductHash);
   // A changed harness file makes the pre-fix arm a different protocol, not a treatment.
   const drifted = await mkdtemp(join(tmpdir(), "prism-drift-"));
   await write(drifted, ["scripts/memory-bench"], [{ name: "run.mjs", body: "changed" }]);
-  await write(drifted, ["packages/memory/fabric/src"], [{ name: "context.ts", body: "old product" }]);
+  await write(drifted, ["packages/memory/system/src/ltm"], [{ name: "context.ts", body: "old product" }]);
   await assert.rejects(prefixArmAudit(recorded, { root: postfix, worktree: drifted }), /harness differs/);
   // An identical product is not the treatment either.
   await assert.rejects(prefixArmAudit(recorded, { root: postfix, worktree: postfix }), /identical to the post-fix product/);

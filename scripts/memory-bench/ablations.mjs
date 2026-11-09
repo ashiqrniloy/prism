@@ -1,7 +1,7 @@
 import { validateJsonSchema } from "@arnilo/prism";
-import { memoryFabricConfigSchema, resolveMemoryFabricConfig } from "@arnilo/prism-memory-fabric";
-import { memoryObservationalConfigSchema, resolveMemoryObservationalConfig } from "@arnilo/prism-memory-observational";
-import { presetFields } from "../../packages/memory/fabric/src/config.ts";
+import { memoryFabricConfigSchema, resolveMemoryFabricConfig } from "@arnilo/prism-memory-system";
+import { memorySystemConfigSchema, resolveMemorySystemConfig } from "@arnilo/prism-memory-system";
+import { presetFields } from "../../packages/memory/system/src/ltm/config.ts";
 import { BENCH_SCOPES } from "./bench-scope.mjs";
 import { parseVariantSpecs, VARIANT_PATHS } from "./variants.mjs";
 
@@ -11,10 +11,50 @@ export function historicalVariants(specs = []) {
   );
 }
 
+/**
+ * Plan 216 Task 4: the session tiers moved into `@arnilo/prism-memory-system` with renamed config
+ * (`observer` → `stm`, `messageTokens` → `triggerTokens`, `reflector` → `wm`, `dropper` → `rehearsal`).
+ * `session` is the arm's current name; `om` stays the arm id of finished plan 202/210 evidence and the
+ * frozen OM-before row, and its `om.*` ablation paths translate onto the renamed fields.
+ */
+export const SESSION_ARM_KEYS = { observer: "stm", messageTokens: "triggerTokens", reflector: "wm", dropper: "rehearsal" };
+
+/**
+ * Plan 216 Task 5: long-term memory (the fabric) is the memory system's `ltm` component. The arms take the component
+ * names at the entry point: `session` → `om`, `session+ltm` → `om+fabric`, `ltm…` → `fabric…`. Internally, and in every
+ * report, the arm keeps its historical id, so a new run compares like with like against plan 202/210 evidence, the
+ * frozen criteria and resume fingerprints.
+ */
+export const ARM_ALIASES = Object.freeze({
+  session: "om",
+  "session+ltm": "om+fabric",
+  ltm: "fabric",
+  "ltm-agentic": "fabric-agentic",
+  "ltm-x": "fabric-x",
+  "ltm-xc": "fabric-xc",
+  "ltm-xc-agentic": "fabric-xc-agentic",
+  "ltm-x-tools": "fabric-x-tools",
+  "ltm-xc-tools": "fabric-xc-tools",
+});
+
+/** The historical arm id for a component-named arm; any other id is returned unchanged. */
+export function canonicalArm(config) {
+  return typeof config === "string" && Object.hasOwn(ARM_ALIASES, config) ? ARM_ALIASES[config] : config;
+}
+
+/** True for an arm that installs the session tiers: `session…`, or the historical `om…` ids. */
+export function isSessionConfig(config) {
+  return typeof config === "string" && (config.startsWith("session") || config.includes("om"));
+}
+
 const paths = new Set([
   "om.observer.messageTokens",
   "om.reflector.observationTokens",
   "om.dropper.targetTokens",
+  "session.stm.triggerTokens",
+  "session.wm.observationTokens",
+  "session.rehearsal.targetTokens",
+  "session.rehearsal.policy",
   "fabric.inject",
   "fabric.inject.query",
   "fabric.inject.budgetTokens",
@@ -32,7 +72,6 @@ const paths = new Set([
   "fabric.lifecycle.archive.graceSessions",
   "fabric.lifecycle.exchangeCapacity.hotTokens",
   "fabric.lifecycle.merge.duplicateDice",
-  "fabric.lifecycle.merge.episodes",
   "fabric.rules",
   // Plan 209 Task 6: the `P+W` no-harm arm on plan 202's suites (tool steps, confirmed rule capture, the lesson nudge).
   "fabric.exchanges.steps",
@@ -96,8 +135,8 @@ export function writeGeneration(options = {}) {
 export function memoryConfigs(options, { lifecycle = false, policy = {} } = {}) {
   // Plan 210 Task 7 removed `retrieval: "hybrid"`: the fabric package is lexical and has no embeddings arm.
   if (options.config === "fabric-hybrid") throw new Error("MemoryBenchAblation: fabric-hybrid was removed with retrieval hybrid (plan 210 Task 7)");
-  const observational = options.config?.includes("om")
-    ? { enabled: true, ...(options.offline || lifecycle ? { observer: { messageTokens: options.offline ? 1 : 1000 } } : {}) }
+  const observational = isSessionConfig(options.config)
+    ? { enabled: true, ...(options.offline || lifecycle ? { stm: { triggerTokens: options.offline ? 1 : 1000 } } : {}) }
     : null;
   const fabric = options.config?.includes("fabric")
     ? {
@@ -148,7 +187,7 @@ export function memoryConfigs(options, { lifecycle = false, policy = {} } = {}) 
   if (options.ontology && !fabric) throw new Error("MemoryBenchArguments: --ontology needs a fabric arm");
   // The offline fixture holds a handful of notes, so its accumulation threshold is two, the smallest cluster the curator accepts (the OM arm does the same with messageTokens).
   const wiki = options.ontology ? { consolidate: options.offline ? { minNotes: 2 } : {} } : null;
-  const configs = { om: observational, fabric, ...(wiki ? { wiki } : {}) };
+  const configs = { om: observational, session: observational, fabric, ...(wiki ? { wiki } : {}) };
   const seen = new Set();
   if (options.ablate !== undefined && !Array.isArray(options.ablate)) throw new Error("MemoryBenchAblation: expected array");
   const historical = historicalVariants(options.ablate);
@@ -159,7 +198,8 @@ export function memoryConfigs(options, { lifecycle = false, policy = {} } = {}) 
   for (const spec of options.ablate ?? []) {
     if (typeof spec !== "string") throw new Error("MemoryBenchAblation: expected path=value");
     if (historical.includes(spec)) {
-      if ((spec.startsWith("om.") && !observational) || (!spec.startsWith("om.") && !fabric))
+      const sessionSpec = spec.startsWith("om.") || spec.startsWith("session.");
+      if ((sessionSpec && !observational) || (!sessionSpec && !fabric))
         throw new Error("MemoryBenchAblation: inactive historical arm");
       continue;
     }
@@ -174,7 +214,8 @@ export function memoryConfigs(options, { lifecycle = false, policy = {} } = {}) 
     )
       throw new Error("MemoryBenchAblation: unsupported or conflicting setting");
     seen.add(path);
-    const [arm, ...keys] = path.split(".");
+    const [arm, ...rawKeys] = path.split(".");
+    const keys = arm === "om" ? rawKeys.map((key) => SESSION_ARM_KEYS[key] ?? key) : rawKeys;
     let target = configs[arm];
     if (!target) throw new Error("MemoryBenchAblation: setting does not belong to selected arm");
     // An explicit field replaces the preset's whole value, so an ablation of one nested key starts from the preset's field.
@@ -192,7 +233,7 @@ export function memoryConfigs(options, { lifecycle = false, policy = {} } = {}) 
     }
     if (raw === "on") value = true;
     if (raw === "off") value = false;
-    if (["fabric.inject", "fabric.promote", "fabric.lifecycle.merge.episodes"].includes(path) && value === true) value = {};
+    if (["fabric.inject", "fabric.promote"].includes(path) && value === true) value = {};
     for (const key of keys.slice(0, -1)) {
       if (!target[key] || typeof target[key] !== "object") target[key] = {};
       target = target[key];
@@ -200,8 +241,8 @@ export function memoryConfigs(options, { lifecycle = false, policy = {} } = {}) 
     target[keys.at(-1)] = value;
   }
   if (observational) {
-    if (!validateJsonSchema(memoryObservationalConfigSchema, observational).ok) throw new Error("MemoryBenchAblation: invalid OM settings");
-    resolveMemoryObservationalConfig(observational);
+    if (!validateJsonSchema(memorySystemConfigSchema, observational).ok) throw new Error("MemoryBenchAblation: invalid session-memory settings");
+    resolveMemorySystemConfig(observational);
   }
   if (fabric) {
     if (!validateJsonSchema(memoryFabricConfigSchema, fabric).ok) throw new Error("MemoryBenchAblation: invalid fabric settings");
@@ -212,7 +253,7 @@ export function memoryConfigs(options, { lifecycle = false, policy = {} } = {}) 
 
 export function resolvedMemoryConfigs(configs) {
   const resolved = {
-    observational: configs.observational ? resolveMemoryObservationalConfig(configs.observational) : null,
+    observational: configs.observational ? resolveMemorySystemConfig(configs.observational) : null,
     fabric: configs.fabric ? resolveMemoryFabricConfig(configs.fabric) : null,
     // Explicit settings only: the package's defaults move its product hash, which every ontology manifest pins.
     ...(configs.wiki ? { wiki: structuredClone(configs.wiki) } : {}),
@@ -227,5 +268,5 @@ export function resolvedMemoryConfigs(configs) {
 
 export function defaultSnapshot() {
   const { scopes, tools, store, ...fabric } = resolveMemoryFabricConfig();
-  return { observational: resolveMemoryObservationalConfig(), fabric };
+  return { observational: resolveMemorySystemConfig(), fabric };
 }

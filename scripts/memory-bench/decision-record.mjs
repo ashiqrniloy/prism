@@ -3,7 +3,8 @@
  *
  * `docs/_evidence/memory-bench/210/decisions.{json,md}` is generated from the feature ledger (Task 1), the gap
  * predictions (Task 3), the pre-registered criteria (Task 4), the wave-1 report (Task 5) and the owner's notes
- * (`owner-decisions.json`). Every verdict is `cleanupVerdict()`'s: the owner supplies holds and their written reasons,
+ * (`owner-decisions.json`), plus the final dispositions destination plans record for transferred rows
+ * (`dispositions.json`). Every verdict is `cleanupVerdict()`'s: the owner supplies holds and their written reasons,
  * never a verdict. The record carries ids, labels, counts, rates and scores, and no question, note or corpus text.
  *
  *   timeout 120 bun scripts/memory-bench/decision-record.mjs            # write decisions.json and decisions.md
@@ -16,6 +17,8 @@ const EVIDENCE = "docs/_evidence/memory-bench/210";
 export const DECISIONS_JSON = `${EVIDENCE}/decisions.json`;
 export const DECISIONS_MD = `${EVIDENCE}/decisions.md`;
 export const OWNER_DECISIONS = `${EVIDENCE}/owner-decisions.json`;
+/** `{ rows: [{ feature, disposition }] }`: what a destination plan finally did with a transferred row. */
+export const DISPOSITIONS = `${EVIDENCE}/dispositions.json`;
 const root = new URL("../../", import.meta.url);
 const readJson = (path) => JSON.parse(readFileSync(new URL(path, root), "utf8"));
 
@@ -74,7 +77,7 @@ function task5Summary(report, feature) {
  * Builds the record. Pure: every input is passed in. `owner` holds the owner's notes:
  * `holds` (feature -> written reason), `inertApproval`, `beamContradictionPrompt` and `unmeasuredPolicy`.
  */
-export function buildDecisionRecord({ ledger, report, predictions, criteria = CLEANUP_CRITERIA, owner }) {
+export function buildDecisionRecord({ ledger, report, predictions, criteria = CLEANUP_CRITERIA, owner, dispositions = { rows: [] } }) {
   assertCleanupCriteriaPin(report, verifyCleanupCriteria(criteria));
   const verdictOf = new Map(report.verdicts.map((row) => [row.feature, row]));
   const transferred = new Map(criteria.transferred.features.map((row) => [row.feature, row]));
@@ -82,6 +85,9 @@ export function buildDecisionRecord({ ledger, report, predictions, criteria = CL
   const conditional = new Set(criteria.inertRemoval.conditional.features);
   const holds = owner.holds ?? {};
   const predictionRows = predictions.predictions;
+  const finalDisposition = new Map(dispositions.rows.map((row) => [row.feature, row.disposition]));
+  for (const id of finalDisposition.keys())
+    if (!transferred.has(id)) throw new Error(`DecisionRecord: disposition for ${id}, which is not a transferred row`);
 
   for (const id of Object.keys(holds))
     if (!verdictOf.get(id)?.measured) throw new Error(`DecisionRecord: owner hold on ${id}, which has no wave-1 verdict`);
@@ -91,7 +97,15 @@ export function buildDecisionRecord({ ledger, report, predictions, criteria = CL
     const base = { feature: row.id, group: row.group, ledgerStatus: row.status, candidate: row.candidate === true };
     const transfer = transferred.get(row.id);
     if (transfer) {
-      features.push({ ...base, section: "transferred", verdict: "transferred", plan: transfer.plan, reason: transfer.reason });
+      const disposition = finalDisposition.get(row.id);
+      features.push({
+        ...base,
+        section: "transferred",
+        verdict: "transferred",
+        plan: transfer.plan,
+        reason: transfer.reason,
+        ...(disposition === undefined ? {} : { disposition }),
+      });
       continue;
     }
     if (!row.candidate) {
@@ -300,11 +314,13 @@ export function renderDecisionMarkdown(record) {
     "",
     "## Transferred rows",
     "",
-    "Not kept, fixed or removed here. Each destination plan writes its final disposition, and none is scored as a miss.",
+    "Not kept, fixed or removed here. Each destination plan writes its final disposition (`dispositions.json`), and none is scored as a miss.",
     "",
-    row(["Feature", "Verdict", "Destination", "Reason"]),
-    row(["---", "---", "---", "---"]),
-    ...by("transferred").map((item) => row([code(item.feature), "transferred", `plan ${item.plan}`, item.reason])),
+    row(["Feature", "Verdict", "Destination", "Reason", "Final disposition"]),
+    row(["---", "---", "---", "---", "---"]),
+    ...by("transferred").map((item) =>
+      row([code(item.feature), "transferred", `plan ${item.plan}`, item.reason, item.disposition ?? "pending"]),
+    ),
     "",
     "## Unmeasured, not removed",
     "",
@@ -374,7 +390,8 @@ function main() {
   const report = readJson(`${EVIDENCE}/ablations/c1-report.json`);
   const predictions = readJson(`${EVIDENCE}/gap-predictions.json`);
   const owner = readJson(OWNER_DECISIONS);
-  const record = assertDecisionRecord(buildDecisionRecord({ ledger, report, predictions, owner }), { ledger });
+  const dispositions = readJson(DISPOSITIONS);
+  const record = assertDecisionRecord(buildDecisionRecord({ ledger, report, predictions, owner, dispositions }), { ledger });
   const json = `${JSON.stringify(record, null, 2)}\n`;
   const markdown = renderDecisionMarkdown(record);
   if (process.argv.includes("--check")) {

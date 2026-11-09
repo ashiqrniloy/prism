@@ -72,7 +72,7 @@ export interface StateConcurrencyRouterFactory {
   readonly nowInjected?: boolean;
 }
 
-/** Narrow idempotency seam (structurally satisfied by `@arnilo/prism-work-tools`'s `IdempotencyStore`). */
+/** Narrow idempotency seam (structurally satisfied by `@arnilo/prism-tools-work`'s `IdempotencyStore`). */
 export interface StateConcurrencyIdempotencyStore {
   get(input: StateConcurrencyIdempotencyKey): Promise<StateConcurrencyIdempotencyRecord | undefined>;
   begin(input: StateConcurrencyIdempotencyKey): Promise<{

@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { createAgent } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import { lexicalDice, lexicalTerms } from "@arnilo/prism-memory-core";
-import { gatherConsolidationCandidates } from "../../../packages/memory/fabric/src/consolidation/gather.ts";
+import { gatherConsolidationCandidates } from "../../../packages/memory/system/src/ltm/consolidation/gather.ts";
 import { scanSecrets } from "../../scan-secrets.mjs";
 import { judgeLifecycle } from "../judge.mjs";
 import prompts from "../judge-prompts.json" with { type: "json" };
@@ -83,7 +83,7 @@ function candidatesFrom(ledgers) {
                 ?.flatMap((b) => (b.type === "text" ? [b.text] : (b.content ?? []).filter((b) => b.type === "text").map((b) => b.text)))
                 .join("\n") ??
               (e.data?.observations ?? e.data?.reflections ?? e.data?.taskState?.decisions ?? [])
-                .map((v) => (typeof v === "string" ? v : v.content))
+                .map((v) => (typeof v === "string" ? v : (v.description ?? v.content)))
                 .join("\n"),
           )
           .join("\n")

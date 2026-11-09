@@ -208,50 +208,50 @@ The non-inferiority rule is met by the byte-identical-preset test, which Task 7 
 
 ## Transferred rows
 
-Not kept, fixed or removed here. Each destination plan writes its final disposition, and none is scored as a miss.
+Not kept, fixed or removed here. Each destination plan writes its final disposition (`dispositions.json`), and none is scored as a miss.
 
-| Feature | Verdict | Destination | Reason |
-| --- | --- | --- | --- |
-| `retrieval.decay-per-kind` | transferred | plan 220 | non-declarative long-term memory and priming |
-| `write.session-consolidation` | transferred | plan 219 | Rehearsal and declarative long-term memory |
-| `write.om-promotion` | transferred | plan 219 | Rehearsal and declarative long-term memory |
-| `write.exchange-steps` | transferred | plan 219 | Rehearsal and declarative long-term memory |
-| `lifecycle.verification` | transferred | plan 219 | Rehearsal and declarative long-term memory |
-| `lifecycle.archive-revival` | transferred | plan 221 | Sleep |
-| `lifecycle.duplicate-merge` | transferred | plan 221 | Sleep |
-| `lifecycle.episode-merge` | transferred | plan 216 | retired by owner decision (memory model, 2026-11-08) |
-| `lifecycle.maintain` | transferred | plan 221 | Sleep |
-| `delivery.passive-tail` | transferred | plan 220 | non-declarative long-term memory and priming |
-| `delivery.standing-rules` | transferred | plan 220 | non-declarative long-term memory and priming |
-| `delivery.rule-capture` | transferred | plan 220 | non-declarative long-term memory and priming |
-| `delivery.working-memory` | transferred | plan 216 | retired by owner decision (memory model, 2026-11-08) |
-| `kind.episode` | transferred | plan 216 | retired by owner decision (memory model, 2026-11-08) |
-| `kind.procedure` | transferred | plan 220 | non-declarative long-term memory and priming |
-| `kind.concept` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 |
-| `lessons` | transferred | plan 220 | non-declarative long-term memory and priming |
-| `ontology.tier` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 |
-| `ontology.binding-deterministic` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 |
-| `ontology.binding-extractor` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 |
-| `ontology.curator-pass` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 |
-| `ontology.trigger.co-read` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 |
-| `ontology.trigger.accumulation` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 |
-| `ontology.trigger.repair` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 |
-| `ontology.concept-prior` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 |
-| `ontology.passive-pointer` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 |
-| `ontology.concept-sharing` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 |
-| `ontology.claim-lint` | transferred | plan 216 | moves with the wiki; stays safety-proven |
-| `ontology.source-ingest` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 |
-| `ontology.coding-o6` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 |
-| `om.observer` | transferred | plan 217 | short-term memory |
-| `om.reflector` | transferred | plan 218 | working memory |
-| `om.dropper-model` | transferred | plan 219 | Rehearsal and declarative long-term memory |
-| `om.dropper-lowest-relevance` | transferred | plan 219 | Rehearsal and declarative long-term memory |
-| `om.task-state` | transferred | plan 217 | short-term memory |
-| `om.compaction` | transferred | plan 218 | working memory |
-| `om.recall-tool` | transferred | plan 219 | Rehearsal and declarative long-term memory |
-| `om.pinned-context` | transferred | plan 218 | working memory |
-| `om.commands` | transferred | plan 216 | carried into the new package; stays safety-proven |
-| `om.worker-limits` | transferred | plan 216 | carried into the new package; stays safety-proven |
+| Feature | Verdict | Destination | Reason | Final disposition |
+| --- | --- | --- | --- | --- |
+| `retrieval.decay-per-kind` | transferred | plan 220 | non-declarative long-term memory and priming | pending |
+| `write.session-consolidation` | transferred | plan 219 | Rehearsal and declarative long-term memory | pending |
+| `write.om-promotion` | transferred | plan 219 | Rehearsal and declarative long-term memory | pending |
+| `write.exchange-steps` | transferred | plan 219 | Rehearsal and declarative long-term memory | pending |
+| `lifecycle.verification` | transferred | plan 219 | Rehearsal and declarative long-term memory | pending |
+| `lifecycle.archive-revival` | transferred | plan 221 | Sleep | pending |
+| `lifecycle.duplicate-merge` | transferred | plan 221 | Sleep | pending |
+| `lifecycle.episode-merge` | transferred | plan 216 | retired by owner decision (memory model, 2026-11-08) | removed by plan 216 Task 7 |
+| `lifecycle.maintain` | transferred | plan 221 | Sleep | pending |
+| `delivery.passive-tail` | transferred | plan 220 | non-declarative long-term memory and priming | pending |
+| `delivery.standing-rules` | transferred | plan 220 | non-declarative long-term memory and priming | pending |
+| `delivery.rule-capture` | transferred | plan 220 | non-declarative long-term memory and priming | pending |
+| `delivery.working-memory` | transferred | plan 216 | retired by owner decision (memory model, 2026-11-08) | removed by plan 216 Task 7 |
+| `kind.episode` | transferred | plan 216 | retired by owner decision (memory model, 2026-11-08) | removed by plan 216 Task 7 (the episode view; the kind name stays reserved for plan 219) |
+| `kind.procedure` | transferred | plan 220 | non-declarative long-term memory and priming | pending |
+| `kind.concept` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 | pending |
+| `lessons` | transferred | plan 220 | non-declarative long-term memory and priming | pending |
+| `ontology.tier` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 | pending |
+| `ontology.binding-deterministic` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 | pending |
+| `ontology.binding-extractor` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 | pending |
+| `ontology.curator-pass` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 | pending |
+| `ontology.trigger.co-read` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 | pending |
+| `ontology.trigger.accumulation` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 | pending |
+| `ontology.trigger.repair` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 | pending |
+| `ontology.concept-prior` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 | pending |
+| `ontology.passive-pointer` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 | pending |
+| `ontology.concept-sharing` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 | pending |
+| `ontology.claim-lint` | transferred | plan 216 | moves with the wiki; stays safety-proven | pending |
+| `ontology.source-ingest` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 | pending |
+| `ontology.coding-o6` | transferred | plan 216 | extracted into the wiki; verdict in plan 222 | pending |
+| `om.observer` | transferred | plan 217 | short-term memory | pending |
+| `om.reflector` | transferred | plan 218 | working memory | pending |
+| `om.dropper-model` | transferred | plan 219 | Rehearsal and declarative long-term memory | pending |
+| `om.dropper-lowest-relevance` | transferred | plan 219 | Rehearsal and declarative long-term memory | pending |
+| `om.task-state` | transferred | plan 217 | short-term memory | pending |
+| `om.compaction` | transferred | plan 218 | working memory | pending |
+| `om.recall-tool` | transferred | plan 219 | Rehearsal and declarative long-term memory | pending |
+| `om.pinned-context` | transferred | plan 218 | working memory | pending |
+| `om.commands` | transferred | plan 216 | carried into the new package; stays safety-proven | pending |
+| `om.worker-limits` | transferred | plan 216 | carried into the new package; stays safety-proven | pending |
 
 ## Unmeasured, not removed
 

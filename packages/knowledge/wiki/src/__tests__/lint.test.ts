@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { createAgent, type ModelClient } from "@arnilo/prism";
 import { mockProvider, providerDone, providerTextDelta } from "@arnilo/prism/testing";
 import { createHashEmbedder, createMemoryVectorStore, MemoryScopeError } from "@arnilo/prism-memory-core";
-import { createMemory, createMemoryFabric, createMemoryLtmPort, type LtmScope, memoryFabric } from "@arnilo/prism-memory-fabric";
+import memorySystem, { createMemory, createLongTermMemory, createMemoryLtmPort, type LtmScope } from "@arnilo/prism-memory-system";
 import { resolveMemoryWorkerLimits } from "@arnilo/prism-memory-core";
 import { createWikiLease, runWikiPass } from "../consolidate/pass.js";
 import { WIKI_LINT_COMMAND_NAME, wiki } from "../index.js";
@@ -32,7 +32,7 @@ function setup() {
   const ltm = createMemoryLtmPort({ scopes: () => scopes });
   const store = createMemoryWikiStore();
   const port = createWikiOntology({ store, ltm: () => ltm });
-  const fabric = createMemoryFabric({ memory, vectorStore, consolidate: false });
+  const fabric = createLongTermMemory({ memory, vectorStore, consolidate: false });
   const note = async (text: string, subject?: string) =>
     await fabric.remember({ kind: "fact", content: text, ...(subject === undefined ? {} : { subject }) });
   return { vectorStore, memory, scopes, store, port, note };
@@ -264,7 +264,7 @@ describe("wiki:lint on a real agent", () => {
       model: { provider: "mock", model: "wiki" },
       packages: [
         mockProvider([[providerTextDelta("ok"), providerDone()]]),
-        memoryFabric({}),
+        memorySystem({ ltm: {} }),
         wiki({ store: "memory", consolidate: { triggers: [] } }),
       ],
     });

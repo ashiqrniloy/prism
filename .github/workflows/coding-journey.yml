@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   protected-coding-journey:
-    name: "protected real coding-agent journey (0.2.6, plan 026)"
+    name: "protected real coding-agent journey (plan 026)"
     environment: coding-journey
     runs-on: ubuntu-latest
     timeout-minutes: 45

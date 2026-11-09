@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism";
 import { createMemoryVectorStore } from "@arnilo/prism-memory-core";
-import { createMemory, createMemoryFabric, createMemoryWorkingStore } from "@arnilo/prism-memory-fabric";
+import { createMemory, createLongTermMemory } from "@arnilo/prism-memory-system";
 import { normalizeDataset } from "./datasets.mjs";
 import {
   extractEvidence,
@@ -196,10 +196,9 @@ test("diagnostic_observer_records_candidates_before_topk_and_cannot_break_recall
     resourceId: "r",
     threadId: "s",
     vectorStore: createMemoryVectorStore(),
-    workingStore: createMemoryWorkingStore(),
   });
   const events = [];
-  const fabric = createMemoryFabric({ memory, consolidate: false, onRecall: (e) => events.push(e) });
+  const fabric = createLongTermMemory({ memory, consolidate: false, onRecall: (e) => events.push(e) });
   await fabric.remember({ kind: "fact", content: "project color cobalt" });
   await fabric.remember({ kind: "fact", content: "project color amber" });
   const opts = { topK: 1, minSimilarity: 0, archiveSearch: false };
@@ -210,7 +209,7 @@ test("diagnostic_observer_records_candidates_before_topk_and_cannot_break_recall
     events[0].returnedIds,
     result.hits.map((h) => h.id),
   );
-  const brokenObserver = createMemoryFabric({
+  const brokenObserver = createLongTermMemory({
     memory,
     onRecall: () => {
       throw new Error("observer failed");

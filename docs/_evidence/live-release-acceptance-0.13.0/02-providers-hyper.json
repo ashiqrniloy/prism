@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-11-08T17:56:55.797Z",
+  "envFile": "/home/arn/.config/prism/live.env",
+  "strict": true,
+  "dryRun": false,
+  "filter": "providers/hyper",
+  "totals": {
+    "ran": 0,
+    "skipped": 0,
+    "failed": 1,
+    "planned": 0
+  },
+  "coverage": {
+    "ok": true,
+    "total": 86,
+    "covered": 82,
+    "pending": 4,
+    "mode": "baseline"
+  },
+  "results": [
+    {
+      "id": "providers/hyper",
+      "package": "@arnilo/prism-provider-hyper",
+      "status": "failed",
+      "reason": "exit 1",
+      "exitCode": 1,
+      "durationMs": 4459,
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts",
+      "cwd": "packages/providers/hyper",
+      "models": [
+        {
+          "env": "PRISM_LIVE_HYPER_CHAT_MODEL",
+          "value": "deepseek-v4-pro",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_HYPER_MESSAGES_MODEL",
+          "value": "qwen3.6-plus",
+          "wired": true
+        }
+      ],
+      "outputTail": "= \"usage\")?.usage;\n587 |   console.info(\n588 |     `[${options.provider.id} live] chat-route cache probe: turn1 {read:${u1?.cacheReadTokens ?? 0}, write:${u1?.cacheWriteTokens ?? 0}} ` +\n589 |       `turn2 {read:${u2?.cacheReadTokens ?? 0}, write:${u2?.cacheWriteTokens ?? 0}}`,\n590 |   );\n591 |   assert.ok((u2?.cacheReadTokens ?? 0) > 0, \"Warm chat-route replay reported no cached tokens\");\n               ^\nAssertionError: Warm chat-route replay reported no cached tokens\n generatedMessage: false,\n     actual: false,\n   expected: true,\n   operator: \"==\",\n       diff: \"simple\",\n       code: \"ERR_ASSERTION\"\n\n      at liveScenarioCacheProbe (/home/arn/Projects/prism/src/testing/provider-live-scenarios.ts:591:10)\n      at /home/arn/Projects/prism/src/testing/provider-live-scenarios.ts:965:17\n      at node:test:1445:26\n      at executeTestNode (node:test:1448:63)\n(fail) @arnilo/prism-provider-hyper live probes > openai route > live_warm_prefix_cache_probe [668.77ms]\n267 |         sessionId: options.sessionId ?? `live-text-${Date.now()}`,\n268 |       },\n269 |     },\n270 |   });\n271 |   const text = events.map((e) => (e.type === \"content_delta\" && e.content.type === \"text\" ? e.content.text : \"\")).join(\"\");\n272 |   assert.ok(text.length > 0, \"live text response was empty\");\n               ^\nAssertionError: live text response was empty\n generatedMessage: false,\n     actual: false,\n   expected: true,\n   operator: \"==\",\n       diff: \"simple\",\n       code: \"ERR_ASSERTION\"\n\n      at liveScenarioTextStream (/home/arn/Projects/prism/src/testing/provider-live-scenarios.ts:272:10)\n      at /home/arn/Projects/prism/src/testing/provider-live-scenarios.ts:893:19\n      at node:test:1445:26\n      at executeTestNode (node:test:1448:63)\n(fail) @arnilo/prism-provider-hyper live probes > anthropic route > live_text_generation_streams_and_leaks_no_secret [606.18ms]\n330 |   if (turn1Usage) {\n331 |     console.info(`[${options.provider.id} live] ${options.route} tool-loop turn1 usage: ${JSON.stringify(turn1Usage)}`);\n332 |   }\n333 | \n334 |   const toolCallEvents = turn1Events.filter((e) => e.type === \"tool_call\");\n335 |   assert.ok(toolCallEvents.length > 0, \"Turn 1 tool prompt produced no tool calls\");\n               ^\nAssertionError: Turn 1 tool prompt produced no tool calls\n generatedMessage: false,\n     actual: false,\n   expected: true,\n   operator: \"==\",\n       diff: \"simple\",\n       code: \"ERR_ASSERTION\"\n\n      at liveScenarioToolLoop (/home/arn/Projects/prism/src/testing/provider-live-scenarios.ts:335:10)\n      at /home/arn/Projects/prism/src/testing/provider-live-scenarios.ts:907:19\n      at node:test:1445:26\n      at executeTestNode (node:test:1448:63)\n(fail) @arnilo/prism-provider-hyper live probes > anthropic route > live_two_turn_tool_loop_with_thinking_replay [297.20ms]\n[hyper live] messages-route cache probe: create {write:0, read:0} warm {read:0, write:0}\n557 |     const u2 = turn2Events.find((e) => e.type === \"usage\")?.usage;\n558 |     console.info(\n559 |       `[${options.provider.id} live] messages-route cache probe: create {write:${u1?.cacheWriteTokens ?? 0}, read:${u1?.cacheReadTokens ?? 0}} ` +\n560 |         `warm {read:${u2?.cacheReadTokens ?? 0}, write:${u2?.cacheWriteTokens ?? 0}}`,\n561 |     );\n562 |     assert.ok((u2?.cacheReadTokens ?? 0) > 0, \"Warm messages-route replay reported no cached tokens\");\n                 ^\nAssertionError: Warm messages-route replay reported no cached tokens\n generatedMessage: false,\n     actual: false,\n   expected: true,\n   operator: \"==\",\n       diff: \"simple\",\n       code: \"ERR_ASSERTION\"\n\n      at liveScenarioCacheProbe (/home/arn/Projects/prism/src/testing/provider-live-scenarios.ts:562:12)\n      at /home/arn/Projects/prism/src/testing/provider-live-scenarios.ts:965:17\n      at node:test:1445:26\n      at executeTestNode (node:test:1448:63)\n(fail) @arnilo/prism-provider-hyper live probes > anthropic route > live_warm_prefix_cache_probe [651.77ms]\n\n 6 pass\n 6 fail\nRan 12 tests across 1 file. [4.42s]\n"
+    }
+  ]
+}

@@ -62,7 +62,7 @@ const answer = await session.run("How does approval protect tool execution?");
 ## Tools, services, hooks
 
 - `rag_search` (`effects: ["read"]`) — one retrieval per call.
-- `embeddings` service — the configured `Embedder`; `@arnilo/prism-memory-fabric` consumes it.
+- `embeddings` service — the configured `Embedder`; long-term memory in `@arnilo/prism-memory-system` consumes it.
 - `context.build` — registered only when `context: true`; retrieved blocks stay `untrusted`, `inert`, and `injectionCapable`.
 
 ## Cost, security, and failure behavior

@@ -1,0 +1,274 @@
+{
+  "kind": "202-cache-stability-equivalence",
+  "version": 1,
+  "status": "different",
+  "requestsCompared": 54,
+  "differingArms": [
+    "preset-r1",
+    "passive-only"
+  ],
+  "differing": [
+    {
+      "arm": "preset-r1",
+      "config": "fabric-x-tools",
+      "differingSegments": [
+        "system",
+        "tools"
+      ],
+      "tailPositions": {
+        "base": [
+          "after-latest-user"
+        ],
+        "post": [
+          "after-latest-user"
+        ]
+      },
+      "questions": [
+        {
+          "id": "synthetic:knowledge-update",
+          "baseRequests": 3,
+          "postRequests": 3,
+          "firstDifferentRequest": 1
+        },
+        {
+          "id": "synthetic:multi-session",
+          "baseRequests": 3,
+          "postRequests": 3,
+          "firstDifferentRequest": 1
+        },
+        {
+          "id": "synthetic:single-session-assistant",
+          "baseRequests": 3,
+          "postRequests": 3,
+          "firstDifferentRequest": 1
+        },
+        {
+          "id": "synthetic:single-session-preference",
+          "baseRequests": 3,
+          "postRequests": 3,
+          "firstDifferentRequest": 1
+        },
+        {
+          "id": "synthetic:single-session-user",
+          "baseRequests": 3,
+          "postRequests": 3,
+          "firstDifferentRequest": 1
+        },
+        {
+          "id": "synthetic:temporal-reasoning",
+          "baseRequests": 3,
+          "postRequests": 3,
+          "firstDifferentRequest": 1
+        },
+        {
+          "id": "synthetic:abstention",
+          "baseRequests": 2,
+          "postRequests": 2,
+          "firstDifferentRequest": 1
+        },
+        {
+          "id": "synthetic:single-hop",
+          "baseRequests": 3,
+          "postRequests": 3,
+          "firstDifferentRequest": 1
+        },
+        {
+          "id": "synthetic:multi-hop",
+          "baseRequests": 3,
+          "postRequests": 3,
+          "firstDifferentRequest": 1
+        },
+        {
+          "id": "synthetic:temporal",
+          "baseRequests": 3,
+          "postRequests": 3,
+          "firstDifferentRequest": 1
+        },
+        {
+          "id": "synthetic:open-domain",
+          "baseRequests": 3,
+          "postRequests": 3,
+          "firstDifferentRequest": 1
+        },
+        {
+          "id": "synthetic:adversarial",
+          "baseRequests": 2,
+          "postRequests": 2,
+          "firstDifferentRequest": 1
+        },
+        {
+          "id": "synthetic:conflict-resolution-single-hop",
+          "baseRequests": 3,
+          "postRequests": 3,
+          "firstDifferentRequest": 1
+        },
+        {
+          "id": "synthetic:conflict-resolution-multi-hop",
+          "baseRequests": 3,
+          "postRequests": 3,
+          "firstDifferentRequest": 1
+        }
+      ]
+    },
+    {
+      "arm": "passive-only",
+      "config": "fabric-x",
+      "differingSegments": [
+        "system"
+      ],
+      "tailPositions": {
+        "base": [
+          "after-latest-user"
+        ],
+        "post": [
+          "after-latest-user"
+        ]
+      },
+      "questions": [
+        {
+          "id": "synthetic:knowledge-update",
+          "baseRequests": 1,
+          "postRequests": 1,
+          "firstDifferentRequest": 1
+        },
+        {
+          "id": "synthetic:multi-session",
+          "baseRequests": 1,
+          "postRequests": 1,
+          "firstDifferentRequest": 1
+        },
+        {
+          "id": "synthetic:single-session-assistant",
+          "baseRequests": 1,
+          "postRequests": 1,
+          "firstDifferentRequest": 1
+        },
+        {
+          "id": "synthetic:single-session-preference",
+          "baseRequests": 1,
+          "postRequests": 1,
+          "firstDifferentRequest": 1
+        },
+        {
+          "id": "synthetic:single-session-user",
+          "baseRequests": 1,
+          "postRequests": 1,
+          "firstDifferentRequest": 1
+        },
+        {
+          "id": "synthetic:temporal-reasoning",
+          "baseRequests": 1,
+          "postRequests": 1,
+          "firstDifferentRequest": 1
+        },
+        {
+          "id": "synthetic:abstention",
+          "baseRequests": 1,
+          "postRequests": 1,
+          "firstDifferentRequest": 1
+        },
+        {
+          "id": "synthetic:single-hop",
+          "baseRequests": 1,
+          "postRequests": 1,
+          "firstDifferentRequest": 1
+        },
+        {
+          "id": "synthetic:multi-hop",
+          "baseRequests": 1,
+          "postRequests": 1,
+          "firstDifferentRequest": 1
+        },
+        {
+          "id": "synthetic:temporal",
+          "baseRequests": 1,
+          "postRequests": 1,
+          "firstDifferentRequest": 1
+        },
+        {
+          "id": "synthetic:open-domain",
+          "baseRequests": 1,
+          "postRequests": 1,
+          "firstDifferentRequest": 1
+        },
+        {
+          "id": "synthetic:adversarial",
+          "baseRequests": 1,
+          "postRequests": 1,
+          "firstDifferentRequest": 1
+        },
+        {
+          "id": "synthetic:conflict-resolution-single-hop",
+          "baseRequests": 1,
+          "postRequests": 1,
+          "firstDifferentRequest": 1
+        },
+        {
+          "id": "synthetic:conflict-resolution-multi-hop",
+          "baseRequests": 1,
+          "postRequests": 1,
+          "firstDifferentRequest": 1
+        }
+      ]
+    }
+  ],
+  "rerunArms": [
+    "preset-r1",
+    "passive-only"
+  ],
+  "mergeWithPreChangeCells": false,
+  "deterministic": {
+    "base": true,
+    "post": true
+  },
+  "arms": [
+    {
+      "id": "preset-r1",
+      "config": "fabric-x-tools",
+      "questions": 14,
+      "requests": 40,
+      "identical": false
+    },
+    {
+      "id": "passive-only",
+      "config": "fabric-x",
+      "questions": 14,
+      "requests": 14,
+      "identical": false
+    }
+  ],
+  "harness": "per-tree",
+  "base": {
+    "commit": "37ee1a24f14c2e0e4a29a39fa1c71b3a83d52510",
+    "productPaths": [
+      "packages/memory/fabric/src"
+    ],
+    "productHash": "78b692360533e2fad9647f4f949a367b5cf90be2bc273a78fb5962372ad52127",
+    "harnessHash": "663f2f0339783b8f8810fce2bae9aff681f615933063c3885697d806c26807fa",
+    "supportingPaths": [
+      "src",
+      "packages/memory/core/src",
+      "packages/memory/observational/src",
+      "packages/memory/fabric/src"
+    ],
+    "supportingHash": "76df188ce37f69ec57b62bb274a8b4344292e417f58bf3a20626394bbce90957",
+    "screenProductHash": "57aa47d94eb3cad629e232372f220296131583ea7ac06189d6f589b39c825799",
+    "isScreenProduct": false
+  },
+  "post": {
+    "commit": "2fd3c592bee66df88be1b180a5e3414cf51b3461",
+    "productPaths": [
+      "packages/memory/system/src/ltm"
+    ],
+    "productHash": "4fb60791e80e0118cd133385bf04be121577836d1841b273fed3cb1cfb3d5976",
+    "harnessHash": "ba952a1da0c05a140a869cca812235c513bc0740b458d0bc0c63327a2727a369",
+    "supportingPaths": [
+      "src",
+      "packages/memory/core/src",
+      "packages/memory/system/src"
+    ],
+    "supportingHash": "ec217b8fa8c36454d79f25cfbf2d72ff8db1037dd4f6cd28cc6435003ce72c80"
+  },
+  "policy": "Compares every answer-phase provider request on the pre-change tree (its own committed harness) and this tree, byte for byte.",
+  "sha256": "01e5a22975e0e57fa22e464b4c2f72ab2ac51d01caf79b1e1815476013ef8557"
+}

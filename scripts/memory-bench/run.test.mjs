@@ -268,7 +268,7 @@ function truncatingProvider(state, onAnswer, onIngest) {
     id: "mock",
     async *generate(request) {
       const names = request.tools?.map((tool) => tool.name) ?? [];
-      const worker = names.some((name) => ["record_observation", "record_reflection", "drop_observations"].includes(name));
+      const worker = names.some((name) => ["record_event", "record_reflection", "drop_observations"].includes(name));
       if (!worker) {
         const answerAttempt = first ? 1 : 2;
         onAnswer?.(request, answerAttempt);
@@ -345,7 +345,7 @@ test("two_rate_limited_answers_fork_from_the_forked_session_leaf", async () => {
     id: "mock",
     async *generate(request) {
       const names = request.tools?.map((tool) => tool.name) ?? [];
-      const worker = names.some((name) => ["record_observation", "record_reflection", "drop_observations"].includes(name));
+      const worker = names.some((name) => ["record_event", "record_reflection", "drop_observations"].includes(name));
       if (!worker && answers < 2) {
         answers++;
         yield providerError(new Error("Chat stream ended without completion evidence ([DONE]: missing, finish_reason: missing)"));
@@ -1717,12 +1717,12 @@ test("delivery_diagnostic_reports_all_needed_visible_without_text", async () => 
 });
 
 test("delivery_diagnostic_mirrors_shipped_injection_rule", async () => {
-  const { createFabricContext } = await import("../../packages/memory/fabric/src/context.ts");
-  const { createMemory, createMemoryFabric } = await import("@arnilo/prism-memory-fabric");
+  const { createFabricContext } = await import("../../packages/memory/system/src/ltm/context.ts");
+  const { createMemory, createLongTermMemory } = await import("@arnilo/prism-memory-system");
   const { selectInjection } = await import("./retrieval-diagnostics.mjs");
   assert.deepEqual(selectInjection([], "question"), { ids: [], lines: [], tokens: 0 });
   const memory = createMemory({ tenantId: "t", resourceId: "r", threadId: "s" });
-  const fabric = createMemoryFabric({ memory, consolidate: false });
+  const fabric = createLongTermMemory({ memory, consolidate: false });
   const hits = [];
   for (const content of ["x".repeat(2400), "short", "tiny"]) {
     const note = await fabric.remember({ kind: "fact", content });
@@ -1775,8 +1775,8 @@ test("delivery_diagnostic_mirrors_shipped_injection_rule", async () => {
 
 test("delivery_seams_date_prefix_order_store_timestamp_and_iso_period", async () => {
   const { createMemorySessionStore, definePackage } = await import("@arnilo/prism");
-  const { createFabricContext, recallPeriod } = await import("../../packages/memory/fabric/src/context.ts");
-  const { createMemory } = await import("@arnilo/prism-memory-fabric");
+  const { createFabricContext, recallPeriod } = await import("../../packages/memory/system/src/ltm/context.ts");
+  const { createMemory } = await import("@arnilo/prism-memory-system");
   const { datedMessages } = await import("./replay.mjs");
   const sourceDate = "2023-05-30T23:40:00.000Z";
   const store = createMemorySessionStore();
@@ -1846,7 +1846,7 @@ test("delivery_seams_date_prefix_order_store_timestamp_and_iso_period", async ()
 });
 
 test("v2_question_message_carries_date_metadata_not_query_text", async () => {
-  const context = await import("../../packages/memory/fabric/src/context.ts");
+  const context = await import("../../packages/memory/system/src/ltm/context.ts");
   const build = context.createFabricContext;
   const queries = [];
   const probe = spyOn(context, "createFabricContext").mockImplementation((memory, recall, ...args) =>
@@ -1909,7 +1909,7 @@ test("v2_answer_entry_timestamp_equals_question_date_including_retry_fork", asyn
 });
 
 test("named_month_resolves_against_question_date_in_replay", async () => {
-  const context = await import("../../packages/memory/fabric/src/context.ts");
+  const context = await import("../../packages/memory/system/src/ltm/context.ts");
   const build = context.createFabricContext;
   const periods = [];
   const probe = spyOn(context, "createFabricContext").mockImplementation((memory, recall, ...args) =>
@@ -2698,7 +2698,7 @@ test("screen_ms_v1_is_development_only_and_refuses_v3", async () => {
  */
 async function multiSessionFixture({ instances = false } = {}) {
   const { createMarkdownMemoryStores } = await import("@arnilo/prism-memory-core/fabric");
-  const { createMemory, createMemoryFabric, resolveMemoryFabricConfig } = await import("@arnilo/prism-memory-fabric");
+  const { createMemory, createLongTermMemory, resolveMemoryFabricConfig } = await import("@arnilo/prism-memory-system");
   const { BENCH_SCOPE } = await import("./bench-scope.mjs");
   const { EXCHANGE_ROUNDS_FILE } = await import("./replay.mjs");
   const dir = await mkdtemp(join(tmpdir(), "prism-ms-diagnostics-"));
@@ -2747,10 +2747,10 @@ async function multiSessionFixture({ instances = false } = {}) {
   const rounds = question.sessions.flatMap((session, index) => sessionRounds(session, index));
   const questionRoot = join(dir, encodeURIComponent(question.id));
   const stores = await createMarkdownMemoryStores({ root: join(questionRoot, "notes") });
-  const memory = createMemory({ ...BENCH_SCOPE, vectorStore: stores.vectorStore, workingStore: stores.workingStore });
+  const memory = createMemory({ ...BENCH_SCOPE, vectorStore: stores.vectorStore });
   const config = resolveMemoryFabricConfig({ retrieval: "lexical", inject: { query: "task", kinds: ["fact", "exchange"] } });
   const { scopes: _scopes, tools: _tools, store: _store, ...fabricOptions } = config;
-  const fabric = createMemoryFabric({ memory, vectorStore: stores.vectorStore, ...fabricOptions });
+  const fabric = createLongTermMemory({ memory, vectorStore: stores.vectorStore, ...fabricOptions });
   const exchangeRounds = {};
   const exchangeIdByRound = {};
   for (const round of rounds) {
@@ -2974,7 +2974,7 @@ test("diagnostics_refuse_heldout_v3", async () => {
 test("defaults_match_pre_registered_grid_choice", async () => {
   const { readFile } = await import("node:fs/promises");
   const { chooseDeliveryDefaults, INJECT_DEFAULTS } = await import("./retrieval-diagnostics.mjs");
-  const { memoryFabricConfigSchema } = await import("../../packages/memory/fabric/src/config.ts");
+  const { memoryFabricConfigSchema } = await import("../../packages/memory/system/src/ltm/config.ts");
   const report = JSON.parse(await readFile("docs/_evidence/memory-bench/188.9/ceiling-development.json", "utf8"));
   const chosen = chooseDeliveryDefaults(report);
   assert.deepEqual(chosen, {
@@ -3231,4 +3231,17 @@ test("free_product_only_keeps_paid_panel_separate_and_pins_answer_billing", asyn
   const report = { suite: "beam-100k", provider: "openrouter", model: "answer:free", freeOnly: false, boundedWire: true };
   assert.notEqual(protocolFingerprint(report), protocolFingerprint({ ...report, freeProductOnly: true }));
   assert.notEqual(await runPathFingerprint(report), await runPathFingerprint({ ...report, freeProductOnly: true }));
+});
+
+test("ltm_arm_aliases_resolve_to_historical_ids", async () => {
+  // Plan 216 Task 5: the component names are accepted at the entry point; reports keep the historical arm id.
+  const { ARM_ALIASES, canonicalArm, memoryConfigs } = await import("./ablations.mjs");
+  assert.equal(canonicalArm("session+ltm"), "om+fabric");
+  assert.equal(canonicalArm("ltm-x-tools"), "fabric-x-tools");
+  assert.equal(canonicalArm("om+fabric"), "om+fabric", "a historical id resolves to itself");
+  for (const [alias, historical] of Object.entries(ARM_ALIASES)) {
+    assert.deepEqual(memoryConfigs({ config: canonicalArm(alias), offline: true }), memoryConfigs({ config: historical, offline: true }));
+  }
+  const { runBench } = await import("./run.mjs");
+  await assert.rejects(runBench({ config: "ltm-unknown", offline: true }), /invalid config/);
 });

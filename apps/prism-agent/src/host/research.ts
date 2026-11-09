@@ -1,16 +1,14 @@
-import { dirname, join } from "node:path";
 import { type Agent, createAgent } from "@arnilo/prism";
 import { approvalPackage } from "@arnilo/prism-approval";
 import contextEngineering from "@arnilo/prism-context-engineering";
 import compaction from "@arnilo/prism-memory-compaction";
-import memoryFabric from "@arnilo/prism-memory-fabric";
-import observational from "@arnilo/prism-memory-observational";
 import { memoryRag } from "@arnilo/prism-rag";
 import { toolsBrowser } from "@arnilo/prism-tools-browser";
 import { toolsResearch } from "@arnilo/prism-tools-research";
 import { toolsWeb } from "@arnilo/prism-tools-web";
 import type { HostConfig, HostDeps } from "./config.js";
-import { compactionTriggerFor, contextBudgetNotice, foldClearAtLeastTokensFor, observationalCompactAtFor } from "./context-budgets.js";
+import { compactionTriggerFor, contextBudgetNotice, foldClearAtLeastTokensFor } from "./context-budgets.js";
+import { memoryProfileFor } from "./memory.js";
 import { ontologyPackages } from "./ontology.js";
 import { sqlitePackage } from "./store.js";
 
@@ -45,15 +43,10 @@ export async function createResearchWorker(config: HostConfig, deps: HostDeps = 
         ...(config.web.cache === undefined ? {} : { cache: config.web.cache }),
       }),
       toolsBrowser(),
-      // Experimental packages load only on an opt-in: `embeddings` for the RAG tier, `memory` for the fabric and
-      // the observational memory. With both unset the worker loads none (plan 215 Task 3).
+      // Experimental packages load only on an opt-in: `embeddings` for the RAG tier, `memory` for the memory
+      // system (session tiers and long-term memory). With both unset the worker loads none (plan 215 Task 3).
       ...(config.embeddings === undefined ? [] : [memoryRag({ embeddings: { model: config.embeddings.model } })]),
-      ...(config.memory === undefined
-        ? []
-        : [
-            memoryFabric({ preset: config.memory, tools: { root: join(dirname(config.storePath), "memory") } }),
-            observational({ context: { compactAt: observationalCompactAtFor(config.models.research) } }),
-          ]),
+      ...(config.memory === undefined ? [] : [memoryProfileFor({ ...config, memory: config.memory }, config.models.research)]),
       ...ontologyPackages(config, config.workspace),
       toolsResearch({ maxRepairs: repairs }),
       approvalPackage({ mode: "ask", rules: ALLOWED.map((tool) => ({ tool })) }),

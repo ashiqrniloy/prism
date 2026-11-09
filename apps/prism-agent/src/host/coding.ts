@@ -1,17 +1,16 @@
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { type Agent, createAgent } from "@arnilo/prism";
 import { approvalPackage } from "@arnilo/prism-approval";
 import contextEngineering from "@arnilo/prism-context-engineering";
 import { contextFiles } from "@arnilo/prism-context-files";
 import { type HooksJsonConfig, hooksJson } from "@arnilo/prism-hooks-json";
 import compaction from "@arnilo/prism-memory-compaction";
-import memoryFabric from "@arnilo/prism-memory-fabric";
-import observational from "@arnilo/prism-memory-observational";
 import { toolsCoding } from "@arnilo/prism-tools-coding";
 import type { HostConfig, HostDeps } from "./config.js";
 import { hostPortOf } from "./config.js";
-import { compactionTriggerFor, contextBudgetNotice, foldClearAtLeastTokensFor, observationalCompactAtFor } from "./context-budgets.js";
+import { compactionTriggerFor, contextBudgetNotice, foldClearAtLeastTokensFor } from "./context-budgets.js";
+import { memoryProfileFor } from "./memory.js";
 import { ontologyPackages } from "./ontology.js";
 import { sqlitePackage } from "./store.js";
 
@@ -34,19 +33,14 @@ export async function createCodingWorker(config: HostConfig, deps: HostDeps = {}
     ...(host === undefined ? {} : { host }),
     ...(deps.limits === undefined ? {} : { limits: deps.limits }),
     ...(deps.hooks === undefined ? {} : { hooks: deps.hooks }),
-    // Compaction and the observational memory (opt-in) both claim the compaction slot. The assignment is the SDK's conflict resolution.
+    // Compaction and the memory system's session tiers (opt-in) both claim the compaction slot. The assignment is the SDK's conflict resolution.
     slots: { compaction: COMPACTION },
     packages: [
       sqlitePackage(config.storePath),
       toolsCoding({ root: config.workspace, principal: { id: "prism-agent" } }),
       approvalPackage({ mode: config.approval }),
       // Memory is the experimental opt-in: unset, the worker loads no experimental package (plan 215 Task 3).
-      ...(config.memory === undefined
-        ? []
-        : [
-            memoryFabric({ preset: config.memory, tools: { root: join(dirname(config.storePath), "memory") } }),
-            observational({ context: { compactAt: observationalCompactAtFor(config.models.coding) } }),
-          ]),
+      ...(config.memory === undefined ? [] : [memoryProfileFor({ ...config, memory: config.memory }, config.models.coding)]),
       ...ontologyPackages(config, config.workspace),
       contextFiles({ root: config.workspace }),
       hooksFromWorkspace(config.workspace),

@@ -51,7 +51,7 @@ A matching rule or session grant allows without asking, except in `deny`.
 
 Hard denies from a tool package stay in force in every mode, including `auto`, because any deny wins at `tool.call`. This package never returns `allow` in order to override another handler's deny.
 
-`mode: "auto"` in a project-scope manifest cannot be rejected here: `PackageAPI` does not expose the entry's scope. Prism Code still rejects it in project config (`validatePrismCodeApproval`). A code instance may select `auto`.
+`mode: "auto"` in a project-scope manifest cannot be rejected here: `PackageAPI` does not expose the entry's scope. A host that must refuse `auto` from project config checks the manifest scope itself. A code instance may select `auto`.
 
 ## Capabilities
 

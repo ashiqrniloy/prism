@@ -25,7 +25,7 @@ test("prefix_probe_detects_a_seeded_prefix_change", () => {
 test("prefix_probe_is_deterministic", async () => {
   const first = await probe();
   assert.deepEqual(await probe(), first);
-  assert.equal(first.scenarios.length, 7);
+  assert.equal(first.scenarios.length, 6);
   for (const scenario of first.scenarios) assert.equal(new Set(scenario.requests.map((row) => row.turn)).size, 10);
   assert.equal(first.assumptions.storageStrength.increasesOnRecordedUse, true);
   assert.equal(first.assumptions.storageStrength.coreOnlyCitationRecorded, false);
@@ -48,7 +48,7 @@ test("prefix_probe_is_deterministic", async () => {
   assert.equal(first.tailCache.entriesAfterClose, 0);
   const byId = Object.fromEntries(first.scenarios.map((row) => [row.id, row]));
   assert.equal(byId["exchange-archive"].archivedExchanges, 10);
-  for (const id of ["exchange-archive", "cited-core", "insert", "working-update", "background-promote"]) {
+  for (const id of ["exchange-archive", "cited-core", "insert", "background-promote"]) {
     assert.equal(byId[id].distinctPrefixes, 1, `${id}: additive writes keep the epoch prefix`);
   }
   assert.equal(byId.forget.distinctPrefixes, 2);

@@ -1,0 +1,197 @@
+{
+  "schemaVersion": 1,
+  "kind": "217-task5-stm-probes",
+  "plan": "217",
+  "task": "5",
+  "note": "Offline, deterministic STM mechanism probes on the long-session fixture: scripted main and STM models, real memory system. Counts, hashes and verdicts only.",
+  "fixture": {
+    "sha256": {
+      "session.json": "c38e325c7d35e801757ef50758305fe958c92e94779038ae280ad109afd246ca",
+      "annotations.json": "60cd45d06720c5109906c0483199f534305f4e5773a6d0b28938f97403eee506"
+    },
+    "messageEntries": 204,
+    "tasks": 7,
+    "events": 56
+  },
+  "summary": {
+    "probes": 8,
+    "verdicts": {
+      "works": 8
+    },
+    "errors": 0
+  },
+  "errors": [],
+  "probes": [
+    {
+      "id": "stm.boundaries",
+      "fires": 15,
+      "reaches": true,
+      "correct": true,
+      "verdict": "works",
+      "surface": "ledger",
+      "property": "outcome, task-state and idle-gap boundaries each leave a marker; with stm.boundaries an idle-gap user turn runs an STM pass below the trigger",
+      "onSha256": "059aa3deacd7f2310e299194201a8b92cc29133a94d38e04628bf73212b47c39",
+      "offSha256": "2066ccd63459ec9bfc95885349546f77672be4e1f52915e86a702af2e2150bec",
+      "counts": {
+        "outcome": 7,
+        "taskState": 7,
+        "idleGap": 1,
+        "gapPassesOn": 1,
+        "gapPassesOff": 0
+      },
+      "group": "stm"
+    },
+    {
+      "id": "stm.cost",
+      "fires": 102,
+      "reaches": true,
+      "correct": true,
+      "verdict": "works",
+      "surface": "worker-request",
+      "property": "on the long-session fixture, STM worker tokens per 10k eligible tokens against the pre-redesign observer, and stored chunk bytes under 25% of the transcript they cover",
+      "onSha256": "194b92b3b6f8ae65464382a95df56db3f978cf63d1e0b2d68e391021a8d8c250",
+      "offSha256": "a6f94de4a910fcd97b97ed9e154d785050c711555e3d0cce9aa6a97216b55fab",
+      "counts": {
+        "stm": {
+          "eligibleTokens": 46160,
+          "passes": 102,
+          "outputTokens": 3628,
+          "inputTokens": 214025,
+          "outputPer10k": 786,
+          "inputPer10k": 46365.9,
+          "records": 45,
+          "savedByHabituation": 11,
+          "chunks": 9,
+          "chunkBytes": 588,
+          "chunkBytesPer10k": 127.4,
+          "chunkShareOfCovered": 0.018,
+          "chunkShareOfTranscript": 0.0032
+        },
+        "omBefore": {
+          "eligibleTokens": 46160,
+          "passes": 102,
+          "outputTokens": 2889,
+          "inputTokens": 188913,
+          "outputPer10k": 625.9,
+          "inputPer10k": 40925.7
+        }
+      },
+      "group": "stm"
+    },
+    {
+      "id": "stm.habituation",
+      "fires": 3,
+      "reaches": true,
+      "correct": true,
+      "verdict": "works",
+      "surface": "ledger",
+      "property": "repeated identical events (polling, an identical failure) collapse into one record whose count is the repeats; habituation off records each",
+      "onSha256": "bfe626caf9728a4058d65e90d081f310b60ecaea9b719952929941caef872593",
+      "offSha256": "402f73344bd526f350aa2dd94ced246578f2df6cc35a9f24f4de4d8195f98b60",
+      "counts": {
+        "records": [
+          1,
+          1,
+          1
+        ],
+        "counts": [
+          8,
+          3,
+          3
+        ],
+        "recordsWithout": [
+          8,
+          3,
+          3
+        ]
+      },
+      "group": "stm"
+    },
+    {
+      "id": "stm.outcome",
+      "fires": 7,
+      "reaches": true,
+      "correct": true,
+      "verdict": "works",
+      "surface": "ledger",
+      "property": "every task of the long-session fixture ends with an outcome event that names what changed and how it was verified",
+      "onSha256": "c26412bd8b8d35c6293979e7c8bd9a2f116ff94976c092296622199cbcde0cf0",
+      "offSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "counts": {
+        "tasks": 7,
+        "outcomes": 7,
+        "outcomeBoundaries": 7,
+        "rejected": 0
+      },
+      "group": "stm"
+    },
+    {
+      "id": "stm.oversized-tail",
+      "fires": 1,
+      "reaches": true,
+      "correct": true,
+      "verdict": "works",
+      "surface": "ledger",
+      "property": "an unread tail larger than the worker budget is split into batches and an oversized entry is cut with a marker; every pass completes",
+      "onSha256": "15d9a6a9a4ebfdd650bda763bc6c6270adf5c53f7442f9812c2cfcfde0d8449e",
+      "offSha256": "ea0af5386b32a2011f8867737a2890165053b35c046ba1ce3610fa330e464822",
+      "counts": {
+        "stmPasses": 6,
+        "truncatedBatches": 1,
+        "failures": 0
+      },
+      "group": "stm"
+    },
+    {
+      "id": "stm.recall-verbatim",
+      "fires": 2,
+      "reaches": true,
+      "correct": true,
+      "verdict": "works",
+      "surface": "tool-result",
+      "property": "recall by STM id returns the large tool output's chunk and the code-read chunk byte-equal, after the source left context, with no other tool run",
+      "onSha256": "9a9e809fc9741486e294fc15e5b759566da2b5a6fd9b6cacd6808469d007d15f",
+      "offSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "counts": {
+        "chunks": 2,
+        "byteEqual": 2,
+        "otherToolCalls": 0
+      },
+      "group": "stm"
+    },
+    {
+      "id": "stm.referrer-delete",
+      "fires": 1,
+      "reaches": true,
+      "correct": true,
+      "verdict": "works",
+      "surface": "chunk-store",
+      "property": "a chunk is deleted only when its last referrer goes (a superseded record's chunk); no other path reaches delete",
+      "onSha256": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+      "offSha256": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+      "counts": {
+        "deletes": 1,
+        "unrefDeletes": 1,
+        "liveChunks": 9
+      },
+      "group": "stm"
+    },
+    {
+      "id": "stm.scope-blind",
+      "fires": 47,
+      "reaches": true,
+      "correct": true,
+      "verdict": "works",
+      "surface": "worker-request",
+      "property": "an STM request carries only the batch, the task state and the recent STM index: never the episode scope, a WM item or an LTM note",
+      "onSha256": "31489056e0916d59fe3add79e63f095af3ffb81604691f21cad442a85c7be617",
+      "offSha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9",
+      "counts": {
+        "stmRequests": 47,
+        "leaks": 0
+      },
+      "group": "stm"
+    }
+  ],
+  "durationSeconds": 14
+}

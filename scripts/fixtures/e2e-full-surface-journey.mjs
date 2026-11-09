@@ -215,8 +215,8 @@ await section("@arnilo/prism-memory-core: shared core", async () => {
   assert.equal(typeof core.resolveMemoryLimits().topK, "number", "the core owns the memory limits");
 });
 
-await section("@arnilo/prism-memory-fabric: working and semantic memory", async () => {
-  const fabric = await import("@arnilo/prism-memory-fabric");
+await section("@arnilo/prism-memory-system: semantic memory (ltm)", async () => {
+  const fabric = await import("@arnilo/prism-memory-system");
   const core = await import("@arnilo/prism-memory-core");
   const m = fabric.createMemory({
     tenantId: "t",
@@ -227,8 +227,7 @@ await section("@arnilo/prism-memory-fabric: working and semantic memory", async 
   await m.remember({ entries: [{ text: "prism full surface probe", consent: { state: "granted" } }] });
   const recalled = await m.recall("surface probe");
   assert.ok(recalled, "hash-embedded memory must recall");
-  const working = await m.updateWorking({ note: "working" });
-  assert.equal(working.record?.patch?.note ?? working.patch?.note ?? true, true);
+  assert.equal("updateWorking" in m, false, "working memory left long-term memory (plan 216 Task 7)");
 });
 
 await section("@arnilo/prism-rag: rag + loaders + parsers", async () => {
@@ -246,7 +245,7 @@ await section("@arnilo/prism-memory-compaction: summarization compaction", async
 });
 
 await section("@arnilo/prism-memory-compaction: compaction strategies", async () => {
-  const om = await import("@arnilo/prism-memory-observational");
+  const om = await import("@arnilo/prism-memory-system");
   assert.equal(typeof om.foldObservationalMemoryLedger, "function", "observational memory must export the ledger fold");
 });
 

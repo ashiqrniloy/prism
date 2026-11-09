@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "kind": "memory-model-long-session-annotations",
+  "note": "Hand-written once (plan 217 Task 5) and hashed in index.json. `sources` and `chunks[].source` name fixture steps: `<turn>:user`, `<turn>:reply`, `<call>` (the tool result) or `<call>:call` (the assistant's tool call). An event is emitted in the STM batch that holds its last source. `supersedes` names an earlier event id.",
+  "events": [
+    { "id": "e001", "kind": "request", "relevance": "low", "description": "User asked to look around the ledgerkit repo before starting", "sources": ["t0:user"] },
+    { "id": "e002", "kind": "result", "relevance": "medium", "description": "ledgerkit layout: pnpm 9.12.0 TypeScript project (package.json scripts dev/test=vitest/typecheck/lint/docs:check), src/, test/, docs/, config/, build.log; last commit a71d0e4", "sources": ["c001", "c002", "c004", "c006"], "chunks": [{ "source": "c002", "text": "\"test\": \"vitest run\"," }] },
+
+    { "id": "e101", "kind": "request", "relevance": "high", "description": "User gave the 7-step ledgerkit 0.4 plan (rename parseRow, strict mode, server port from config, CI, export command, docs port, build.log summary) and asked to start with step 1", "sources": ["t1:user"], "chunks": [{ "source": "t1:user", "text": "1. Rename parseRow to parseLedgerRow in src/parse.ts and update every caller." }] },
+    { "id": "e102", "kind": "statement", "relevance": "high", "description": "User preference: use pnpm, never npm, in the ledgerkit repo", "sources": ["t1:user"], "chunks": [{ "source": "t1:user", "text": "I use pnpm, never npm, in this repo." }] },
+    { "id": "e103", "kind": "result", "relevance": "medium", "description": "grep parseRow: defined in src/parse.ts:12, used in src/index.ts, src/cli.ts, src/import.ts and test/parse.test.ts", "sources": ["c102"] },
+    { "id": "e104", "kind": "action", "relevance": "medium", "description": "Read src/parse.ts: parseRow(line, header) splits on commas and maps date, memo, amount by header name", "sources": ["c103"], "chunks": [{ "source": "c103", "text": "export function parseRow(line: string, header: string[]): LedgerRow {\n  const cells = line.split(\",\");\n  const at = (name: string) => cell(cells[header.indexOf(name)]);" }] },
+    { "id": "e105", "kind": "change", "relevance": "high", "description": "Renamed parseRow to parseLedgerRow in src/parse.ts, src/cli.ts, src/import.ts, src/index.ts and test/parse.test.ts", "sources": ["c104", "c105", "c106", "c107", "c108"] },
+    { "id": "e106", "kind": "result", "relevance": "high", "description": "pnpm typecheck clean; pnpm test passed 41 tests in 9 files after the rename", "sources": ["c110", "c111"], "chunks": [{ "source": "c111", "text": " Test Files  9 passed (9)\n      Tests  41 passed (41)" }] },
+    { "id": "e107", "kind": "request", "relevance": "medium", "description": "User asked to update the README usage example", "sources": ["t1b:user"] },
+    { "id": "e108", "kind": "change", "relevance": "medium", "description": "README.md usage example now imports and calls parseLedgerRow", "sources": ["c114"] },
+    { "id": "e109", "kind": "outcome", "relevance": "high", "description": "Step 1 done: parseRow renamed to parseLedgerRow (src/parse.ts; callers src/cli.ts, src/import.ts, src/index.ts, test/parse.test.ts; README.md example); verified by grep (no parseRow left), pnpm typecheck and pnpm test (41 pass)", "sources": ["t1:reply", "c109", "t1b:reply"] },
+
+    { "id": "e201", "kind": "request", "relevance": "high", "description": "User asked for plan step 2: strict mode and the --strict flag", "sources": ["t2:user"] },
+    { "id": "e202", "kind": "action", "relevance": "medium", "description": "Read src/cli.ts: parseArgs options header/json; each line goes through parseLedgerRow(line, header)", "sources": ["c201"] },
+    { "id": "e203", "kind": "change", "relevance": "high", "description": "Added src/errors.ts MissingAmountError; parseLedgerRow(line, header, options: ParseOptions) throws it when options.strict and the amount is empty; src/cli.ts --strict passes { strict: values.strict }", "sources": ["c204", "c205", "c206"] },
+    { "id": "e204", "kind": "result", "relevance": "medium", "description": "test/strict.test.ts written and passing (3 tests)", "sources": ["c207", "c208"] },
+    { "id": "e205", "kind": "result", "relevance": "high", "description": "pnpm test --reporter verbose: 10 files, 44 tests passed (large verbose log)", "sources": ["c209"], "chunks": [{ "source": "c209", "text": " Test Files  10 passed (10)\n      Tests  44 passed (44)" }] },
+    { "id": "e206", "kind": "result", "relevance": "low", "description": "pnpm lint clean (24 files); git diff --stat: 8 files changed, 59 insertions, 19 deletions", "sources": ["c210", "c211"] },
+    { "id": "e207", "kind": "request", "relevance": "medium", "description": "User asked MissingAmountError's message to include the line number", "sources": ["t2b:user"] },
+    { "id": "e208", "kind": "change", "relevance": "high", "description": "MissingAmountError(line) message is `line N: row has no amount`; ParseOptions gains lineNumber passed to it (src/errors.ts, src/parse.ts)", "sources": ["c213", "c214"] },
+    { "id": "e209", "kind": "outcome", "relevance": "high", "description": "Step 2 done: strict mode in parseLedgerRow (ParseOptions.strict, lineNumber; MissingAmountError in src/errors.ts) and --strict in src/cli.ts; verified by test/strict.test.ts (4 pass) and the verbose suite (44 pass)", "sources": ["t2:reply", "c215", "t2b:reply"] },
+
+    { "id": "e301", "kind": "request", "relevance": "high", "description": "User asked for plan step 3: the server reads its port from config/server.json", "sources": ["t3:user"] },
+    { "id": "e302", "kind": "result", "relevance": "high", "description": "config/server.json sets host 0.0.0.0, port 8080, tls false", "sources": ["c301"], "chunks": [{ "source": "c301", "text": "{ \"host\": \"0.0.0.0\", \"port\": 8080, \"tls\": false }" }] },
+    { "id": "e303", "kind": "result", "relevance": "low", "description": ".env.local holds LEDGER_ENV=dev, LEDGER_API_KEY (a secret) and LEDGER_LOG=info", "sources": ["c303"], "chunks": [{ "source": "c303", "text": "LEDGER_API_KEY={secret}" }] },
+    { "id": "e304", "kind": "change", "relevance": "high", "description": "src/server.ts reads host and port from config/server.json via loadServerConfig instead of const PORT = 3000; test/server.test.ts expects the config port", "sources": ["c304", "c305", "c306"] },
+    { "id": "e305", "kind": "outcome", "relevance": "high", "description": "Step 3 done: src/server.ts uses loadServerConfig (config/server.json, port 8080); verified by test/server.test.ts (6 pass) and pnpm dev --dry-run listening on 0.0.0.0:8080, also with tls off", "sources": ["t3:reply", "c310", "t3b:reply"] },
+
+    { "id": "e401", "kind": "request", "relevance": "medium", "description": "User asked for plan step 4: commit, push and wait for CI on main", "sources": ["t4:user"] },
+    { "id": "e402", "kind": "change", "relevance": "high", "description": "Committed 3f9c2ab (ledgerkit 0.4: parseLedgerRow, --strict, server port from config) and pushed to main; CI run 4812 started", "sources": ["c401", "c402", "c403"] },
+    { "id": "e403", "kind": "result", "relevance": "low", "description": "CI run 4812 status: in_progress", "sources": ["c404"] },
+    { "id": "e404", "kind": "result", "relevance": "low", "description": "CI run 4812 status: in_progress", "sources": ["c405"] },
+    { "id": "e405", "kind": "result", "relevance": "low", "description": "CI run 4812 status: in_progress", "sources": ["c406"] },
+    { "id": "e406", "kind": "result", "relevance": "low", "description": "CI run 4812 status: in_progress", "sources": ["c407"] },
+    { "id": "e407", "kind": "result", "relevance": "low", "description": "CI run 4812 status: in_progress", "sources": ["c408"] },
+    { "id": "e408", "kind": "result", "relevance": "low", "description": "CI run 4812 status: in_progress", "sources": ["c409"] },
+    { "id": "e409", "kind": "result", "relevance": "low", "description": "CI run 4812 status: in_progress", "sources": ["c410"] },
+    { "id": "e410", "kind": "result", "relevance": "low", "description": "CI run 4812 status: in_progress", "sources": ["c411"] },
+    { "id": "e411", "kind": "outcome", "relevance": "high", "description": "Step 4 done: commit 3f9c2ab pushed to main; verified by CI run 4812 completed with success", "sources": ["c412", "t4:reply"] },
+
+    { "id": "e501", "kind": "request", "relevance": "high", "description": "User asked for plan step 5: the export command", "sources": ["t5:user"] },
+    { "id": "e502", "kind": "change", "relevance": "medium", "description": "Wrote src/commands/export.ts (exportCommand) and test/export.test.ts", "sources": ["c503", "c504"] },
+    { "id": "e503", "kind": "error", "relevance": "high", "description": "pnpm test test/export.test.ts failed: export > rejects rows without amount (expected [Function] to throw an error)", "sources": ["c505"], "chunks": [{ "source": "c505", "text": "AssertionError: expected [Function] to throw an error\n ❯ test/export.test.ts:21:46" }] },
+    { "id": "e504", "kind": "error", "relevance": "high", "description": "pnpm test test/export.test.ts failed: export > rejects rows without amount (expected [Function] to throw an error)", "sources": ["c506"], "chunks": [{ "source": "c506", "text": "AssertionError: expected [Function] to throw an error\n ❯ test/export.test.ts:21:46" }] },
+    { "id": "e505", "kind": "error", "relevance": "high", "description": "pnpm test test/export.test.ts failed: export > rejects rows without amount (expected [Function] to throw an error)", "sources": ["c507"], "chunks": [{ "source": "c507", "text": "AssertionError: expected [Function] to throw an error\n ❯ test/export.test.ts:21:46" }] },
+    { "id": "e506", "kind": "decision", "relevance": "high", "description": "The failure is exportCommand calling parseLedgerRow without { strict: true }; fix by passing strict and lineNumber", "sources": ["c508", "c509"] },
+    { "id": "e507", "kind": "result", "relevance": "medium", "description": "test/export.test.ts passes (3 tests); pnpm test passes 51 tests in 11 files; lint and typecheck clean", "sources": ["c510", "c511", "c512", "c513"] },
+    { "id": "e508", "kind": "change", "relevance": "medium", "description": "Committed 8e21d4c (export command) and pushed to main; CI run 4813 queued", "sources": ["c514", "c515", "c516"] },
+    { "id": "e509", "kind": "result", "relevance": "low", "description": "CI run 4813 status: in_progress", "sources": ["c517"] },
+    { "id": "e510", "kind": "result", "relevance": "low", "description": "CI run 4813 status: in_progress", "sources": ["c518"] },
+    { "id": "e511", "kind": "result", "relevance": "low", "description": "CI run 4813 status: in_progress", "sources": ["c519"] },
+    { "id": "e512", "kind": "outcome", "relevance": "high", "description": "Step 5 done: src/commands/export.ts exportCommand parses with parseLedgerRow(line, header, { strict: true, lineNumber }); verified by test/export.test.ts (3 pass), pnpm test (51 pass) and CI run 4813 success (commit 8e21d4c)", "sources": ["t5:reply", "c520", "t5b:reply"] },
+
+    { "id": "e601", "kind": "statement", "relevance": "critical", "description": "Server port is now 9090 in config/server.json (staging moved), replacing 8080", "sources": ["t6:user"], "supersedes": "e302", "chunks": [{ "source": "t6:user", "text": "the server port is now 9090 in config/server.json." }] },
+    { "id": "e602", "kind": "request", "relevance": "high", "description": "User asked for plan step 6: update docs/server.md with the server port", "sources": ["t6:user"] },
+    { "id": "e603", "kind": "change", "relevance": "high", "description": "config/server.json port 8080 -> 9090; docs/server.md says the server listens on the config/server.json port (9090) instead of 3000", "sources": ["c601", "c602", "c603"] },
+    { "id": "e604", "kind": "change", "relevance": "medium", "description": "docs/deploy.md load balancer port 8080 -> 9090; grep finds no 8080 left", "sources": ["c606", "c607", "c608"] },
+    { "id": "e605", "kind": "outcome", "relevance": "high", "description": "Step 6 done: docs/server.md and docs/deploy.md state port 9090 from config/server.json; verified by pnpm docs:check (14 pages ok), pnpm test (51 pass) and grep (no 8080 left)", "sources": ["c604", "c605", "t6:reply", "t6b:reply"] },
+
+    { "id": "e701", "kind": "request", "relevance": "medium", "description": "User asked for plan step 7: summarise build.log for the release notes", "sources": ["t7:user"] },
+    { "id": "e702", "kind": "result", "relevance": "high", "description": "build.log (148230 bytes): ledgerkit 0.4.0 release build emitted 1200 chunks, 3.4 MB, in 41.7s with 0 warnings", "sources": ["c701", "c703"], "chunks": [{ "source": "c703", "text": "[build] done in 41.7s: 1200 chunks, 3.4 MB" }] },
+    { "id": "e703", "kind": "outcome", "relevance": "high", "description": "Step 7 done: release-note summary of build.log (1200 chunks, 3.4 MB, 41.7s, 0 warnings); verified by tail -n 2 build.log", "sources": ["c703", "t7:reply"] }
+  ],
+  "taskStates": [
+    { "turn": "t1", "source": "t1:user", "goal": "ledgerkit 0.4 plan, step 1: rename parseRow to parseLedgerRow", "nextSteps": ["step 2: strict mode and --strict"] },
+    { "turn": "t2", "source": "t2:user", "goal": "ledgerkit 0.4 plan, step 2: strict mode in parseLedgerRow and --strict", "nextSteps": ["step 3: server port from config/server.json"] },
+    { "turn": "t3", "source": "t3:user", "goal": "ledgerkit 0.4 plan, step 3: server port from config/server.json", "nextSteps": ["step 4: commit, push, CI"] },
+    { "turn": "t4", "source": "t4:user", "goal": "ledgerkit 0.4 plan, step 4: commit, push and wait for CI", "nextSteps": ["step 5: export command"] },
+    { "turn": "t5", "source": "t5:user", "goal": "ledgerkit 0.4 plan, step 5: export command with strict parsing", "nextSteps": ["step 6: docs/server.md port"] },
+    { "turn": "t6", "source": "t6:user", "goal": "ledgerkit 0.4 plan, step 6: docs/server.md states port 9090", "nextSteps": ["step 7: summarise build.log"] },
+    { "turn": "t7", "source": "t7:user", "goal": "ledgerkit 0.4 plan, step 7: summarise build.log for the release notes" }
+  ],
+  "tasks": [
+    { "id": "T1", "outcome": "e109", "changes": ["parseLedgerRow", "src/parse.ts", "src/cli.ts", "src/import.ts", "test/parse.test.ts", "README.md"], "verification": ["pnpm test", "41 pass"], "targets": ["src/parse.ts", "parseLedgerRow", "src/cli.ts", "src/import.ts", "src/index.ts", "test/parse.test.ts", "README.md"] },
+    { "id": "T2", "outcome": "e209", "changes": ["ParseOptions.strict", "MissingAmountError", "src/errors.ts", "--strict", "src/cli.ts"], "verification": ["test/strict.test.ts", "44 pass"], "targets": ["ParseOptions", "MissingAmountError", "src/errors.ts", "--strict", "test/strict.test.ts"] },
+    { "id": "T3", "outcome": "e305", "changes": ["src/server.ts", "loadServerConfig", "config/server.json"], "verification": ["test/server.test.ts", "--dry-run"], "targets": ["src/server.ts", "loadServerConfig", "config/server.json", "test/server.test.ts"] },
+    { "id": "T4", "outcome": "e411", "changes": ["3f9c2ab"], "verification": ["CI run 4812", "success"], "targets": ["3f9c2ab", "4812"] },
+    { "id": "T5", "outcome": "e512", "changes": ["src/commands/export.ts", "exportCommand", "strict: true"], "verification": ["test/export.test.ts", "51 pass", "CI run 4813"], "targets": ["src/commands/export.ts", "exportCommand", "test/export.test.ts", "8e21d4c"] },
+    { "id": "T6", "outcome": "e605", "changes": ["docs/server.md", "docs/deploy.md", "9090"], "verification": ["pnpm docs:check", "grep"], "targets": ["docs/server.md", "docs/deploy.md"] },
+    { "id": "T7", "outcome": "e703", "changes": ["release-note summary"], "verification": ["tail -n 2 build.log"], "targets": [] }
+  ],
+  "related": [
+    { "a": "T1", "b": "T2", "rederivations": ["c201"] },
+    { "a": "T1", "b": "T5", "rederivations": ["c501"] },
+    { "a": "T2", "b": "T5", "rederivations": [] },
+    { "a": "T3", "b": "T6", "rederivations": [] }
+  ],
+  "expected": {
+    "habituated": [
+      { "kind": "result", "description": "CI run 4812 status: in_progress", "count": 8 },
+      { "kind": "result", "description": "CI run 4813 status: in_progress", "count": 3 },
+      { "kind": "error", "description": "pnpm test test/export.test.ts failed: export > rejects rows without amount (expected [Function] to throw an error)", "count": 3 }
+    ],
+    "superseded": [{ "event": "e302", "by": "e601" }],
+    "idleGap": { "turn": "t6", "minutes": 45 },
+    "recall": [
+      { "event": "e205", "why": "large tool result" },
+      { "event": "e104", "why": "code read" }
+    ],
+    "secretEvent": "e303",
+    "oversizedCall": "c702"
+  }
+}

@@ -16,8 +16,6 @@ import type {
   VectorQuery,
   VectorScanMetadataQuery,
   VectorStore,
-  WorkingMemoryRecord,
-  WorkingMemoryStore,
 } from "../types.js";
 import { assertNotAborted, requireNonEmptyString, requireScope } from "../util.js";
 import {
@@ -40,8 +38,7 @@ import {
   STATE_FILE,
   scopeDirectory,
   stateRelPath,
-  WORKING_DIRECTORY,
-  workingRelPath,
+  RETIRED_WORKING_DIRECTORY,
 } from "./layout.js";
 import { createWriteLock } from "./lock.js";
 import {
@@ -50,12 +47,10 @@ import {
   type NoteClassifier,
   parseLogFile,
   parseNoteFile,
-  parseWorkingFile,
   renderIndexFile,
   renderIndexLine,
   renderLogFile,
   renderNoteFile,
-  renderWorkingFile,
   unreadableReason,
 } from "./okf.js";
 
@@ -122,7 +117,6 @@ export interface MarkdownReconcileReport extends MarkdownUnreadableCounts {
 export interface MarkdownMemoryStores {
   readonly root: string;
   readonly vectorStore: Required<VectorStore>;
-  readonly workingStore: WorkingMemoryStore;
   close(): Promise<void>;
   /** Full pass: re-index every file, ignoring the cached mtime/size. */
   rebuild(options?: { readonly signal?: AbortSignal }): Promise<MarkdownReconcileReport>;
@@ -243,7 +237,9 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
   const states = new Map<string, ResourceState>();
   const stateKey = (tenantId: string, resourceId: string) => `${tenantId}\0${resourceId}`;
 
-  // Load control state and working memory from their canonical files, then replay state into the index.
+  // Load control state from its canonical files, then replay state into the index. A `working/` note from before
+  // plan 216 Task 7 fails the open: working memory was retired from long-term memory, and silently indexing or
+  // ignoring the file would hide what the host stored there.
   for await (const rel of walkFiles(root)) {
     if (rel.split("/").at(-1) === STATE_FILE) {
       const state = await readResourceState(join(root, rel));
@@ -252,10 +248,14 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
       }
       continue;
     }
-    if (rel.endsWith(".md") && rel.split("/").at(-2) === WORKING_DIRECTORY) {
-      const abs = join(root, rel);
-      await assertInsideRoot(root, abs);
-      await sqlite.workingStore.set(parseWorkingFile(await readFile(abs, "utf8"), rel));
+    if (rel.endsWith(".md") && rel.split("/").at(-2) === RETIRED_WORKING_DIRECTORY) {
+      sqlite.close();
+      throw new MemoryValidationError(
+        `working_memory_retired: ${rel} holds long-term working memory, which was retired in 0.13.0. Export what you need ` +
+          "(the file is one fenced JSON block: copy durable facts into notes with memory.insert), then move the working/ directory " +
+          "out of the memory root and reopen.",
+        "working_memory_retired",
+      );
     }
   }
   for (const state of states.values()) {
@@ -765,46 +765,11 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
     },
   };
 
-  async function writeWorkingFile(record: WorkingMemoryRecord): Promise<void> {
-    const threadId = requireNonEmptyString(record.threadId, "threadId");
-    const abs = join(root, workingRelPath(record.tenantId, record.resourceId, threadId));
-    await assertInsideRoot(root, abs);
-    await atomicWriteFile(abs, renderWorkingFile(record));
-  }
-
-  const workingStore: WorkingMemoryStore = {
-    async get(scope, opts = {}) {
-      return sqlite.workingStore.get(scope, opts);
-    },
-    async set(record, opts = {}) {
-      await lock.run(async () => {
-        await sqlite.workingStore.set(record, opts);
-        await writeWorkingFile(record);
-      });
-    },
-    async update(scope, patch, opts = {}) {
-      return lock.run(async () => {
-        const record = await sqlite.workingStore.update(scope, patch, opts);
-        await writeWorkingFile(record);
-        return record;
-      });
-    },
-    async delete(scope, opts = {}) {
-      return lock.run(async () => {
-        const deleted = await sqlite.workingStore.delete(scope, opts);
-        const threadId = requireNonEmptyString(scope.threadId, "threadId");
-        await rm(join(root, workingRelPath(scope.tenantId, scope.resourceId, threadId)), { force: true });
-        return deleted;
-      });
-    },
-  };
-
   await reconcileInternal(force, undefined);
 
   return {
     root,
     vectorStore,
-    workingStore,
     async close() {
       await lock.drain();
       sqlite.close();

@@ -551,14 +551,6 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Compromise: `resolveAccess` is host code, so a Drive source is not a JSON config ref. The reranker key and the Postgres connection are the ref-only config fields.
 - Implications: A config-only host cannot sync Drive. `memory_rag_secret_refs_never_echoed` covers the config refs.
 
-## Fabric tools do not wire the observational session
-- Review (plan 174 Task 1, 2026-10-14): post-0.13. Additive feature or a break that waits for 0.14. Not a public 0.13 contract change small enough for plan 174 Tasks 2–11.
-- Section: Compromises Made
-- Priority: P2
-- Source: plans/158-Phase-8-Part-B-RAG-Wiki-Fabric-And-Context-Engineering-Packages.md
-- Compromise: `kind: "episode"` and `reflectionId` promotion work through `createMemoryFabric({ observational })`. The registered tools do not pass `context.session`.
-- Implications: A tool-only host cannot promote episodes. The library path still can.
-
 ## phase29 freeze manifest has no lateAdditions for plans 157-158
 - Review (plan 174 Task 1, 2026-10-14): post-0.13. Additive feature or a break that waits for 0.14. Not a public 0.13 contract change small enough for plan 174 Tasks 2–11.
 - Section: Compromises Made
@@ -609,10 +601,11 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 
 ## Give deletion propagation an observational-memory leg
 - Review (plan 174 Task 1, 2026-10-14): post-0.13. Additive feature or a break that waits for 0.14. Not a public 0.13 contract change small enough for plan 174 Tasks 2–11.
+- Re-pointed (plan 216 Task 4, 2026-11-08): inherited by plan 217. Session chunks there are reference-counted across tiers under the cross-tier deletion invariant (design principle 2 and §5.2 of `docs/_evidence/memory-model/design.md`); the leg is built against `@arnilo/prism-memory-system`'s `memory.session.ledger` log, not the retired observational package.
 - Section: Further Actions
 - Priority: P2
 - Source: plans/157-Phase-8-Part-A-Observational-Memory-And-Compaction-Packages.md
-- What: Append a drop record to `state.log("ledger")` and let the projection filter revoked observations.
+- What: Append a drop record to the session ledger (`state.log("memory.session.ledger")`) and let the projection filter revoked observations.
 - Why: `createObservationalMemoryDropHandler` is gone. Hosts rely on the build-time `invalidatedIds` filter alone.
 
 ## Carry the out-of-run model-call seams
@@ -620,16 +613,8 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Section: Further Actions
 - Priority: P2
 - Source: plans/157-Phase-8-Part-A-Observational-Memory-And-Compaction-Packages.md
-- What: Deliver `om.status` to `session.subscribe()`, and give a package worker a channel for `thinkingLevel` and provider request options. Redact `models.client` provider requests with the agent's secrets.
-- Why: Observe hooks see the event; subscribers do not. Worker prompts currently leave the agent secret set.
-
-## Wire fabric tools to the observational session
-- Review (plan 174 Task 1, 2026-10-14): post-0.13. Additive feature or a break that waits for 0.14. Not a public 0.13 contract change small enough for plan 174 Tasks 2–11.
-- Section: Further Actions
-- Priority: P2
-- Source: plans/158-Phase-8-Part-B-RAG-Wiki-Fabric-And-Context-Engineering-Packages.md
-- What: Pass `context.session` into the fabric on tool calls so `kind: "episode"` and `reflectionId` promotion work without a host calling the library.
-- Why: The tools already receive `context.session`. The package does not forward it.
+- What: Deliver `memory.session.status` (was `om.status`) to `session.subscribe()`, and give a package worker a channel for provider request options. Redact `models.client` provider requests with the agent's secrets.
+- Why: Observe hooks see the event; subscribers do not. Plan 216 Task 4 gave the session workers `thinkingLevel` and `instruction` through package config, and forwards the secret set the kernel hands the `compaction` slot (kept per session) to every worker call. A package still has no seam for the agent's secret set outside a compaction context, so a background pass that runs before the session's first compaction redacts only what the kernel already redacted at append.
 
 ## Work scopes deleted with no replacement
 - Review (plan 174 Task 1, 2026-10-14): post-0.13. Additive feature or a break that waits for 0.14. Not a public 0.13 contract change small enough for plan 174 Tasks 2–11.
@@ -641,6 +626,7 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 
 ## Observational-memory deletion-propagation leg deleted
 - Review (plan 174 Task 1, 2026-10-14): post-0.13. Additive feature or a break that waits for 0.14. Not a public 0.13 contract change small enough for plan 174 Tasks 2–11.
+- Re-pointed (plan 216 Task 4, 2026-11-08): plan 217 inherits the follow-up (cross-tier deletion invariant for session chunks).
 - Section: Compromises Made
 - Priority: P2
 - Source: plans/157-Phase-8-Part-A-Observational-Memory-And-Compaction-Packages.md
@@ -1396,3 +1382,75 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Source: plans/209-Phase-11-Part-O15-Memory-For-The-Working-Agent-Standing-Rules-Tool-Steps-Lessons-And-Work-Outcomes.md
 - What: Three of six simultaneous reservations on a fresh journal were lost (`unknown attempt`); serialize reservation writes in `journal.mjs`.
 - Why: A lost reservation is a setup failure that halts the campaign until a rerun.
+
+## Revisit the 216 equivalence base and its per-tree harness
+
+- Section: Compromises Made
+- Priority: P2
+- Source: plans/216-Phase-11-Part-O17-Memory-System-Foundation-Criteria-Ontology-Extraction-One-Package-And-Partial-Use.md
+- Compromise: Task 8 compared against `OM-before` (`37ee1a24`, plan 210's slimmed product plus Tasks 1–3), because the slimmed product was never committed alone. The base ran its own committed harness (`prefix-probe.mjs --base-harness own`), since the current harness cannot import a pre-move product.
+- Implications: Task 3 is covered only by its in-tree golden re-pin, and the two trees ran different harness bytes. Only the session replay runs the same script on both products.
+
+## Retire the historical arm ids and MemoryFabric type names
+
+- Section: Compromises Made
+- Priority: P3
+- Source: plans/216-Phase-11-Part-O17-Memory-System-Foundation-Criteria-Ontology-Extraction-One-Package-And-Partial-Use.md
+- Compromise: The `om`/`om+fabric` arm ids and the `MemoryFabric*` type names were kept; the component names are entry-point aliases.
+- Implications: Two vocabularies live side by side in the bench and the LTM types until a later plan renames them along with their evidence.
+
+## Retired C-1 arm families
+
+- Section: Compromises Made
+- Priority: P3
+- Source: plans/216-Phase-11-Part-O17-Memory-System-Foundation-Criteria-Ontology-Extraction-One-Package-And-Partial-Use.md
+- Compromise: 36 C-1 jobs across six arm families (`supersessionHint`, `enrichment`, `timeline`, `conceptPrior`) are reported `retired` by `dryRunC1Manifest` instead of being re-expressed.
+- Implications: Plan 210's ablation matrix cannot measure those removed features again without a new arm.
+
+## Bring the release gate back to green on the kernel size budget
+
+- Section: Further Actions
+- Priority: P1
+- Source: plans/216-Phase-11-Part-O17-Memory-System-Foundation-Criteria-Ontology-Extraction-One-Package-And-Partial-Use.md
+- What: Attribute the kernel `packedBytes`/`unpackedBytes` growth (+1,238/+3,362 bytes, from uncommitted `src/` edits newer than plan 216 Task 7) to its plan, then shrink it or rebaseline `budgets.json` `kernel` with a reason.
+- Why: `release.mjs gate` fails, and plan 216 Task 8 left it rather than rebaseline a change it did not make.
+
+## Reconcile the plan 210 removals in the mechanism probes and feature ledger
+
+- Section: Further Actions
+- Priority: P2
+- Source: plans/216-Phase-11-Part-O17-Memory-System-Foundation-Criteria-Ontology-Extraction-One-Package-And-Partial-Use.md
+- What: Retire the seven probe rows (`recall.supersession-hint`, `write.consolidate-model-decider`, `recall.state-wrapper`, `decisions.P1/P2/P6`, `scoped.policy`) and the feature ledger's 17 rows through `210/dispositions.json` and `ledgerRows()`.
+- Why: `mechanism-probes/run.mjs` exits 1 and `feature-ledger.test.mjs` fails on features that no longer exist.
+
+## Check the rehearsal target only when rehearsal is on
+
+- Section: Further Actions
+- Priority: P2
+- Source: plans/216-Phase-11-Part-O17-Memory-System-Foundation-Criteria-Ontology-Extraction-One-Package-And-Partial-Use.md
+- What: In `packages/memory/system/src/session/config.ts`, apply `rehearsal.targetTokens >= wm.observationTokens` only when the `rehearsal` component is on.
+- Why: A session-only config with `wm.observationTokens` above 20,000 fails to load, although rehearsal is off.
+
+## Make the markdown-scale write-p50 ratio budget robust
+
+- Section: Further Actions
+- Priority: P3
+- Source: plans/216-Phase-11-Part-O17-Memory-System-Foundation-Criteria-Ontology-Extraction-One-Package-And-Partial-Use.md
+- What: Run `markdown_store_write_amplification_within_budget` in isolation or with more samples.
+- Why: Its 2.75 ratio failed at 3.50 inside the parallel memory-bench suite and once alone (2.85), with no change to the markdown store.
+
+## Track or remove the untracked retired-names.json
+
+- Section: Further Actions
+- Priority: P3
+- Source: plans/216-Phase-11-Part-O17-Memory-System-Foundation-Criteria-Ontology-Extraction-One-Package-And-Partial-Use.md
+- What: Commit or delete `scripts/retired-names.json`.
+- Why: Three package suites fail on it (`no_workspace_imports_prism_memory_family`, `removed_memory_names_absent_repo_wide`, `retired_wiki_names_absent_repo_wide`).
+
+## Remove the 216 OM-before worktree after plan 217
+
+- Section: Further Actions
+- Priority: P3
+- Source: plans/216-Phase-11-Part-O17-Memory-System-Foundation-Criteria-Ontology-Extraction-One-Package-And-Partial-Use.md
+- What: Remove `.cache/memory-bench/216/om-before` once plan 217 has run its `OM-before` arms.
+- Why: Until then it is the base for every plan 216 re-attestation.

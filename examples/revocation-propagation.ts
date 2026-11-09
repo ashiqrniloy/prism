@@ -35,7 +35,7 @@ import {
   createMemoryId,
   foldObservationalMemoryLedger,
   OBSERVATIONS_RECORDED,
-} from "@arnilo/prism-memory-observational";
+} from "@arnilo/prism-memory-system";
 import { chunkMarkdown, createRagDeletionHandler, indexChunks, retrieveContext } from "@arnilo/prism-rag";
 import { mockProvider } from "@arnilo/prism/testing";
 
@@ -142,7 +142,8 @@ const session: Session = await (
 ).session({ id: "s-revocation", create: true });
 const observation = {
   id: createMemoryId("x"),
-  content: OBSERVATION_TEXT,
+  kind: "statement" as const,
+  description: OBSERVATION_TEXT,
   timestamp: "2026-01-01T00:00:00.000Z",
   relevance: "high" as const,
   sourceEntryIds: [PAYROLL],
@@ -159,7 +160,7 @@ await sessionStore.append(observationEntry);
 await session.checkout(observationEntry.id);
 
 const memoryContent = (blocks: readonly ContextBlock[]): string => {
-  const content = blocks.find((block) => block.title === "observational-memory")?.content;
+  const content = blocks.find((block) => block.title === "session-memory")?.content;
   return typeof content === "string" ? content : "";
 };
 const entriesBeforeRevocation = await session.entries();

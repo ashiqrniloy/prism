@@ -41,8 +41,8 @@ const FILES = {
 const PRODUCT_PATHS = [
   "src",
   "packages/memory/core/src",
-  "packages/memory/fabric/src",
-  "packages/memory/observational/src",
+  "packages/memory/system/src/ltm",
+  "packages/memory/system/src",
   "packages/providers",
 ];
 const json = async (path) => JSON.parse(await readFile(path, "utf8"));
@@ -359,7 +359,7 @@ export function operationalBlockers(e, now = Date.now()) {
 /** Plan 202 Task 4.15: where the cache-stability record and the equivalence attestation live. */
 export const CACHE_STABILITY = `${EVIDENCE}/cache-stability`;
 export const CACHE_STABILITY_SUITE = [
-  "packages/memory/fabric/src/__tests__/prefix-stability.test.ts",
+  "packages/memory/system/src/ltm/__tests__/prefix-stability.test.ts",
   "scripts/memory-bench/prefix-probe.test.mjs",
 ];
 /** The 4.12-4.14 tests that must be among the passing ones; a record without them is not a cache-stability record. */
@@ -368,7 +368,6 @@ export const CACHE_STABILITY_TESTS = [
   "fabric_prefix_survives_insert_and_lifecycle_writes",
   "forget_breaks_the_epoch_on_the_next_request",
   "compaction_completed_starts_a_new_epoch_with_new_notes",
-  "working_memory_update_reaches_the_tail_not_the_prefix",
   "epoch_snapshot_is_evicted_on_session_closed",
   "tail_cache_is_evicted_on_session_closed",
   "another_instances_forget_leaves_the_prefix_on_the_next_request",
@@ -520,7 +519,7 @@ export async function writeCacheStabilityRecord({ root = ".", run = runPrefixSui
 /** Plan 210 Task 7: where the slimmed product's record and its equivalence attestation live. */
 export const SLIMMED = "docs/_evidence/memory-bench/210/slimmed";
 const DECISIONS_210 = "docs/_evidence/memory-bench/210/decisions.json";
-export const REMOVAL_GOLDEN = "packages/memory/fabric/src/__tests__/fixtures/removal-byte-identical.json";
+export const REMOVAL_GOLDEN = "packages/memory/system/src/ltm/__tests__/fixtures/removal-byte-identical.json";
 /**
  * What each of the 14 removals did to the `conversational` and `coding` presets on the offline replay
  * (`removal-byte-identical.test.ts`, 12 requests per preset). "byte-identical" means every provider request and tool
@@ -616,7 +615,7 @@ export async function writeSlimmedRecord({ root = ".", run = runPrefixSuite } = 
         baseProductHash: equivalence.base?.productHash,
       },
     },
-    note: "Plans 216-223 compare against this product. A later change to packages/memory/fabric/src moves the hash; rerun `readiness.mjs --slimmed` for a new record, never edit this one.",
+    note: "Plans 216-223 compare against this product. A later change to packages/memory/system/src/ltm moves the hash; rerun `readiness.mjs --slimmed` for a new record, never edit this one.",
   };
   await writeFile(join(root, SLIMMED, "record.json"), `${JSON.stringify(record, null, 2)}\n`);
   return record;

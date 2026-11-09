@@ -96,7 +96,8 @@ all-required evidence coverage per ability. The file also holds:
 - the "before" baselines: `P` (plan 210's slimmed product hash) and `OM-before` (pinned at plan 216 Task 4's first
   step in `docs/_evidence/memory-bench/memory-model/baselines.json`);
 - the retrieval-set construction rules and the threshold-fit rule (plan 219.1 adds the set hashes by amendment);
-- the fixture index with each fixture's owner plan;
+- the fixture index with each fixture's owner plan (plan 217 Task 6's amendment adds the `long-session-replay` and
+  `long-session` hashes; `assertMemoryModelFixture()` refuses a gate read of an unhashed or drifted fixture);
 - R1's threshold, fixed with `power.mjs`.
 
 The frozen hash is recorded in `docs/_evidence/memory-bench/memory-model/criteria.json`; `frozenMemoryModelHash()`
@@ -105,8 +106,113 @@ not pin it. Gate records follow `docs/_evidence/memory-bench/memory-model/gates/
 
 ```sh
 timeout 60 bun scripts/memory-bench/robustness.mjs --verify-criteria memory-model-criteria.json
-timeout 600 bun scripts/memory-bench/acceptance-report.mjs --plan memory-model --partition dev --gate M-1   # reads <gate>/evidence.json or --evidence; --write saves verdicts.json
+timeout 600 bun scripts/memory-bench/acceptance-report.mjs --plan memory-model --partition dev --gate M-1   # reads <gate>/evidence.json or --evidence; --write saves verdicts.json; --build (M-1) computes the evidence from the run reports
 ```
+
+### Long-session fixture and STM probes (plan 217 Task 5)
+
+`fixtures/memory-model/long-session/` is the fixture index's offline long-session coding replay: ledgerkit 0.4, seven
+plan tasks over 14 user turns, 88 tool calls and 204 message entries. `session.json` holds the turns (a plan whose
+later steps depend on earlier ones, related task pairs, a 29 KB verbose test log, a code read, a preference stated
+once, a fact superseded after a 45-minute idle gap, eight identical CI polls, three identical test failures, a seeded
+fake secret and a 118 KB read as the oversized tail). `annotations.json` holds the hand-written expected STM events,
+task states, each task's changes and verification, and the related pairs. `index.json` pins both files' sha256;
+`loadLongSessionFixture()` (`long-session.mjs`) refuses a changed byte.
+
+`mechanism-probes/stm.mjs` replays the fixture through a real agent with the memory system. The main model is
+scripted from `session.json`, the probe tools answer with its outputs, and the STM worker records the annotated
+events of each batch, citing the batch's own entry ids. Everything in between is product code. The `stm` group
+stays out of the plan 210 ledger groups.
+
+```sh
+timeout 1800 bun scripts/memory-bench/mechanism-probes/run.mjs --only stm --out docs/_evidence/memory-bench/217/stm-probes.json
+```
+
+| Probe | Checks |
+|---|---|
+| `stm.outcome` | every task ends with an `outcome` naming its changes and verification, each with an outcome boundary |
+| `stm.recall-verbatim` (S2) | after compaction, recall returns the large test log's chunk and the code-read chunk byte-equal to the source; no other tool runs |
+| `stm.scope-blind` | no STM request carries the scope, WM or LTM sentinel, while the main model sees the scope |
+| `stm.habituation` | polling (×8, ×3) and the identical failure (×3) are one record each with that count; habituation off records each |
+| `stm.boundaries` | outcome, task-state and idle-gap markers; with `stm.boundaries` the idle gap alone runs one pass below the trigger |
+| `stm.oversized-tail` | with a 64 KB worker budget the 118 KB read is cut into its own batch; every pass completes and coverage moves past it |
+| `stm.referrer-delete` | the only deleted chunk is the superseded fact's, through the zero-referrer path of `apply`; no live chunk holds the secret |
+| `stm.cost` | worker tokens and chunk bytes per 10k eligible tokens, against the pinned pre-redesign observer |
+
+Measured on the fixture (`docs/_evidence/memory-bench/217/stm-probes.json`; 15 s, deterministic). Token counts use
+the probe's counter, `ceil(len/4)` of the scripted worker's calls and of each worker request. The worker is scripted,
+so the output side measures the record shape, not a model's choices. The input side is the product's prompt.
+
+| Per 10k eligible tokens (46,160) | STM | OM-before (`37ee1a24`, worktree `.cache/memory-bench/216/om-before`) |
+|---|---|---|
+| worker passes | 102 | 102 |
+| worker output tokens | 786 | 626 |
+| worker input tokens | 46,366 | 40,926 |
+| chunk bytes stored | 127 (9 chunks, 588 bytes) | — |
+
+Stored chunks take 1.8% of the bytes of the entries they cover (the rule caps it at 25%) and 0.32% of the transcript.
+Habituation saved 11 records (45 kept). Task 6 regenerated the file after the STM batch-target fix: one backlog now
+splits in two, so STM makes 102 passes (was 101) and reads 1% more input; every probe still reads `works`. STM's output is 1.26× the observer's: `kind` and the chunks cost tokens the
+old shape did not have. Gate M-1 measures S4 on live models (plan 217 Task 6).
+
+`work-outcome/long-session.mjs` is the live long-session coding family (S1). Each of its 12 personas has one session
+with six tasks. Task 3 needs what task 1 changed (a renamed function and its module); task 6 needs what task 4 changed
+(a config key and its value). Tasks 2 and 5 read a four-part log, so the earlier task leaves the provider view first.
+S1 counts, per related task, the `grep` and `read_file` calls whose target names something the earlier task changed
+(`rederivationCalls`, shared with the fixture's labelled re-derivations). The partitions
+(`work-outcome-long-session.json`, 4 / 4 / 4) are drawn label-blind by `SHA-256("prism-217-long-session:" + id)` and
+pinned by `idsHash`. The family is not a W-criteria family, so `work-outcome-criteria.json` stays frozen. Live runs are
+gate M-1's (`work-outcome/long-session-live.mjs`, a campaign child), and `OM-before` runs from the pinned revision.
+
+```sh
+timeout 600 bun scripts/memory-bench/work-outcome/run.mjs --family long-session --offline [--partition dev] [--output report.json]
+```
+
+### Gate M-1: STM against the pinned pre-redesign observer (plan 217 Task 6, paid)
+
+`stm-gate.mjs` holds gate M-1's jobs, manifest, gate check, preflight and evidence (rows S1–S4). It runs on the
+development partition only, with three arms per answer model:
+
+- `STM`: this tree's `om` config, the `session` profile with the plan-216 reflector and dropper;
+- `OM-before`: the same config from the pinned pre-216 revision (`baselines.json` `omBefore.revision`, `37ee1a24`).
+  Each job runs in the worktree `.cache/memory-bench/216/om-before` with `PRISM_MEMORY_BENCH_SOURCE` set to that
+  revision. Preflight checks the worktree's HEAD, its observational product hash and its `node_modules`, then copies
+  the long-session family's harness files in (the `acceptance.mjs` harness-copy pattern) and checks they match;
+- `memory-off`: `none` on the suites, the kernel's own compaction on the family.
+
+The suites are `beam-1m` (40 questions) and `longmemeval-m` (50), plus the live `long-session` family (4 personas,
+two related pairs each). The roles are gate C-1's paid Ollama Cloud routes: answers `beam` and `nemotron-3-nano:30b`,
+judges `gpt-oss:120b` and `gemma4:31b`. The worker is each arm's answer model. The jobs come in run order: the family,
+then memory-off, then STM and OM-before back to back per model and suite (small model first). If the allowance guard
+halts the run, the reports written so far are whole pairs.
+
+Each pair differs only in the arm: same items, model, judges and flags (`assertM1Paired`). The evidence pairs
+identical items only, and an unfinished item is reported unpaired.
+
+| Row | Computed from |
+|---|---|
+| S1 | family reports: re-derivation calls per related task, paired by persona and pair, clustered by persona; positive = STM re-derives less |
+| S2 | `217/stm-probes.json` `stm.recall-verbatim` (offline, Task 5): byte-equal share and other tool runs |
+| S3 | suite reports: paired accuracy (points, STM − OM-before) per answer model and suite, every cell non-inferior; STM's all-required evidence coverage per ability |
+| S4 | the largest STM / OM-before worker-token ratio over every (model, scope) cell: worker tokens per question on the suites (identical histories), per 10k eligible tokens on the family. A ratio above 1.25 passes only with `217/s4-justification.md` |
+
+The performance block reports, per arm, worker calls and tokens, context-block bytes per question, chunk-store bytes
+at peak, cost and p95 answer latency. The chunk-store figure comes from `chunk-meter.mjs`, which supplies the STM arm's
+default in-memory store through `memory.chunks`; the arm itself is unchanged. The family's worker and eligible tokens
+come from `meteredLongSessionProviders`.
+
+```sh
+timeout 120 bun scripts/memory-bench/campaign.mjs --plan memory-model --gate M-1 --partition dev --manifest   # memory-model/M-1/manifest.json
+set -a; source ~/.config/prism/live.env; set +a
+timeout 28800 bun scripts/memory-bench/campaign.mjs --plan memory-model --gate M-1 --partition dev   # refuses until 217/gates/owner-gate-m1.json is approved
+timeout 600 bun scripts/memory-bench/acceptance-report.mjs --plan memory-model --gate M-1 --partition dev --build --write
+```
+
+The campaign refuses to start unless `217/gates/owner-gate-m1.json` has `approved: true` and binds the current
+manifest hash. Any harness or product edit changes that hash, so it means a new approval, not a resume.
+`PRISM_MEMORY_BENCH_217_SMOKE=1` runs two questions (one persona) per job in its own journal;
+`PRISM_MEMORY_BENCH_217_JOBS=<id substrings>` runs a subset. Long runs go in a `systemd-run --user` unit, as gate C-1's
+did.
 
 Plan 208 Task 2's claim-support audit is `ontology-audit.mjs`. It samples model-written, cited concept claims
 (seeded, stratified by suite and subject size, at most 200 per arm and model; human-written claims are excluded) and asks
@@ -201,7 +307,7 @@ needed. No kernel or memory package depends on either library.
 
 New runs use `product-phases-delivery-v3`; old answer/reuse fingerprints are incompatible. The owner-closed 23-cell screen stays closed, and its report bytes and scores remain historical evidence.
 
-MemoryAgentBench is explicitly a `fact-list` source. Product-ingestion arms write each original source line as a distinct typed `fact` through `createMemoryFabric().remember`, preserving source ids, order and synthetic `tRef` dates, with deterministic ids and no model call, extraction or fabricated assistant replies. Its recorded ingestion is `product-source-facts-v1`, and its resolved injection kinds explicitly include facts. This corpus adapter is an override of the conversational preset, so its future results cannot be presented as an unchanged exchange-only preset. Trust refusals are counted. Conversation archives continue to require completed user/assistant pairs; an unsupported user-only corpus or unexplained empty archive stops before answering and is never scored as 0% quality.
+MemoryAgentBench is explicitly a `fact-list` source. Product-ingestion arms write each original source line as a distinct typed `fact` through `createLongTermMemory().remember`, preserving source ids, order and synthetic `tRef` dates, with deterministic ids and no model call, extraction or fabricated assistant replies. Its recorded ingestion is `product-source-facts-v1`, and its resolved injection kinds explicitly include facts. This corpus adapter is an override of the conversational preset, so its future results cannot be presented as an unchanged exchange-only preset. Trust refusals are counted. Conversation archives continue to require completed user/assistant pairs; an unsupported user-only corpus or unexplained empty archive stops before answering and is never scored as 0% quality.
 
 Ingestion reports record source-message counts, eligible exchanges or imported facts, refusals, unpaired messages and actual persisted source coverage. Product snapshots retain `ingest-report.json` and the note-to-round index. Missing proof, changed source identity or changed persisted coverage refuses reuse.
 
@@ -273,14 +379,32 @@ arms in `rerunArms` with `mergeWithPreChangeCells: false`: those cells are rerun
 stated there and are never mixed with pre-change cells. `--keep-text` writes the request text to a private
 directory for diagnosis; the report itself holds hashes and counts only.
 
+**A base from before a package move** (plan 216 Task 8). This harness imports `@arnilo/prism-memory-system`, which a
+tree from before plan 216 Task 4 lacks, so `--base-harness own` runs the base on its own committed harness and its own
+install (`bun install --frozen-lockfile` in the worktree first; a locally edited base harness is refused). The file
+then records `harness: "per-tree"`, both harness hashes and each tree's own product paths. `preservation.mjs` builds
+the plan 216 behaviour-preservation record on top of it: the session-tier replay (`session-replay.mjs`, same script on
+both products), the answer paths compared again with the tool schemas and the system tool catalogue taken out (naming
+the tools that differ), the prefix-probe report shape, the plan 210 golden's re-pin chain and the C-1 dry run
+(`dryRunC1Manifest`: every job's arm config and historical variants resolved against the current paths).
+
+```sh
+git worktree add --detach .cache/memory-bench/216/om-before 37ee1a24
+(cd .cache/memory-bench/216/om-before && timeout 300 bun install --frozen-lockfile)
+timeout 600 bun scripts/memory-bench/prefix-probe.mjs --equivalence --base .cache/memory-bench/216/om-before --base-harness own \
+  --out docs/_evidence/memory-bench/216/equivalence.json
+timeout 900 bun scripts/memory-bench/preservation.mjs --base .cache/memory-bench/216/om-before \
+  --equivalence docs/_evidence/memory-bench/216/equivalence.json --out docs/_evidence/memory-bench/216/preservation.json
+```
+
 **Pin.** `readiness.mjs --cache-stability` runs `prefix-stability.test.ts` and `prefix-probe.test.mjs` and writes
-`cache-stability/record.json`: the suite result (the ten named 4.12-4.14 tests must be among the passing ones),
+`cache-stability/record.json`: the suite result (the named 4.12-4.14 tests in `CACHE_STABILITY_TESTS` must be among the passing ones),
 the fabric product hash (`PREFIX_PRODUCT_PATHS`, the hash every manifest carries) and the SHA-256 of
 `equivalence.json`. `runCampaign` calls `assertCacheStabilityPin(manifest)` right after the manifest is built, so a
 campaign of any mode is refused with a named blocker (`cache-stability-record-missing`, `-suite-failed`,
 `-product-changed`, `-equivalence-missing`, `-manifest-unpinned`) when the product changed after the record, the
 equivalence file was edited, or a manifest carries another product hash. Re-run both commands after any change to
-`packages/memory/fabric/src`.
+`packages/memory/system/src/ltm`.
 
 **Cache probe.** One scripted 12-turn `conversational` session through the wire proxy on one route, at most 12
 wire attempts (the bound is enforced in the fetch hook, retries included). A second memory instance over the same
@@ -1029,7 +1153,7 @@ to each question date, and the 0.35 coverage floor. The committed pre-fix v1
 baseline retains its frozen wall-clock reference `2026-10-22T00:00:00.000Z`
 and date-prefixed query; rerunning the command above produces v2 evidence. Injection
 visibility comes from the product's own rendering decision (`fitInjection` in
-`packages/memory/fabric/src/excerpt.ts`), not a copy: confidence floors, pointer
+`packages/memory/system/src/ltm/excerpt.ts`), not a copy: confidence floors, pointer
 cards, whole notes by rank until the budget runs out, a skipped note rather than a
 truncated one, the best hit excerpted only when it alone exceeds the budget, and
 time-ordered delivery. Diagnosis uses the shipped defaults (plan 188.9 Task 5 and

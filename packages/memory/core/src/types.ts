@@ -2,7 +2,7 @@ import type { JsonObject, Message, SecretRedactor } from "@arnilo/prism";
 import type { MemoryDirectoryQuery, MemoryTagCount, MemoryTopTagsQuery } from "./directory.js";
 import type { MemoryLimits, MemoryLimitsInput } from "./limits.js";
 
-/** Mandatory tenant + resource scope; thread is optional for resource-level working memory. */
+/** Mandatory tenant + resource scope; thread is optional for resource-level operations. */
 export interface MemoryScope {
   readonly tenantId: string;
   readonly resourceId: string;
@@ -329,29 +329,6 @@ export interface VectorStore {
   ): Promise<MemoryShareGrant | undefined>;
 }
 
-export interface WorkingMemoryKey extends MemoryScope {}
-
-export interface WorkingMemoryRecord extends MemoryScope {
-  readonly value: JsonObject;
-  readonly version: number;
-  readonly updatedAt: string;
-}
-
-export type WorkingMemoryUpdateMode = "merge" | "replace";
-
-export interface WorkingMemoryUpdateOptions {
-  readonly mode?: WorkingMemoryUpdateMode;
-  readonly expectedVersion?: number;
-  readonly signal?: AbortSignal;
-}
-
-export interface WorkingMemoryStore {
-  get(key: WorkingMemoryKey, options?: { readonly signal?: AbortSignal }): Promise<WorkingMemoryRecord | undefined>;
-  set(record: WorkingMemoryRecord, options?: { readonly signal?: AbortSignal }): Promise<void>;
-  update(key: WorkingMemoryKey, patch: JsonObject, options?: WorkingMemoryUpdateOptions): Promise<WorkingMemoryRecord>;
-  delete(key: WorkingMemoryKey, options?: { readonly signal?: AbortSignal }): Promise<boolean>;
-}
-
 export interface MemoryEntryInput {
   readonly id: string;
   readonly text: string;
@@ -458,11 +435,7 @@ export interface CreateMemoryOptions extends MemoryScope {
    */
   readonly embedder?: Embedder;
   readonly vectorStore?: VectorStore;
-  readonly workingStore?: WorkingMemoryStore;
   readonly limits?: MemoryLimitsInput;
-  readonly schema?: JsonObject;
-  readonly validateWorkingMemory?: (value: JsonObject) => undefined | string | Error | Promise<undefined | string | Error>;
-  readonly workingMemoryTemplate?: string;
   readonly redactor?: SecretRedactor;
   readonly secrets?: readonly (string | undefined)[];
   /** Strict mode: recall/injection excludes entries lacking explicit consent. */
@@ -475,7 +448,6 @@ export interface CreateMemoryOptions extends MemoryScope {
 
 export interface MemoryContextProviderOptions {
   readonly name?: string;
-  readonly includeWorking?: boolean;
   readonly includeSemantic?: boolean;
   /** Explicit recall query; otherwise derived from the latest user message text. */
   readonly query?: string | ((context: { readonly messages: readonly Message[] }) => string | undefined);
@@ -483,20 +455,11 @@ export interface MemoryContextProviderOptions {
   readonly messageRange?: number;
 }
 
-export interface WorkingMemoryProcessorOptions {
-  readonly extract: (messages: readonly Message[]) => JsonObject | undefined | Promise<JsonObject | undefined>;
-  readonly mode?: WorkingMemoryUpdateMode;
-}
-
 export interface Memory {
   readonly scope: MemoryScope;
   readonly limits: MemoryLimits;
   /** The retrieval mode this memory was created with: `"hybrid"` with an embedder, else `"lexical"`. */
   readonly retrieval?: "lexical" | "hybrid";
-  getWorking(options?: { readonly signal?: AbortSignal }): Promise<WorkingMemoryRecord | undefined>;
-  updateWorking(patch: JsonObject, options?: WorkingMemoryUpdateOptions): Promise<WorkingMemoryRecord>;
-  deleteWorking(options?: { readonly signal?: AbortSignal }): Promise<boolean>;
-  renderWorking(template?: string): Promise<string | undefined>;
   remember(input: RememberInput, options?: RememberOptions): Promise<RememberResult>;
   recall(query: string, options?: RecallOptions): Promise<RecallResult>;
   get(ids: readonly string[], options?: { readonly signal?: AbortSignal }): Promise<readonly MemoryVectorRecord[]>;
@@ -537,7 +500,7 @@ export interface Memory {
   exportMemory(options: ExportMemoryOptions): Promise<MemoryExportResult>;
   /** Re-embeds one bounded page; return `nextCursor` to resume. */
   rebuildIndex(options?: RebuildIndexOptions): Promise<RebuildIndexResult>;
-  /** Project working + semantic memory into one `context.build` draft (roadmap §2.4). */
+  /** Project semantic memory into one `context.build` draft (roadmap §2.4). */
   contextBlocks(
     draft: import("@arnilo/prism").ContextDraft,
     context: import("@arnilo/prism").HookContext,
@@ -545,7 +508,4 @@ export interface Memory {
   ): Promise<import("@arnilo/prism").ContextDraft | undefined>;
   /** Register {@link Memory.contextBlocks} on a bus as one named `context.build` handler. */
   registerContextBuild(hooks: import("@arnilo/prism").HookRegistrar, options?: MemoryContextProviderOptions): void;
-  createWorkingMemoryProcessor(options: WorkingMemoryProcessorOptions): {
-    process(messages: readonly Message[], options?: { readonly signal?: AbortSignal }): Promise<WorkingMemoryRecord | undefined>;
-  };
 }

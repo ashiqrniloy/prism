@@ -205,6 +205,12 @@ export interface PackageDefinitionInput<C = Readonly<Record<string, never>>> {
   readonly description?: string;
   readonly requires?: PackageRequires;
   readonly capabilities?: readonly Capability[];
+  /**
+   * Narrows `capabilities` for one instance from its validated config (with defaults applied): a package whose parts
+   * a host can turn off declares only what the enabled parts use. The result must be a subset of `capabilities`, the
+   * set a manifest records and consents to; anything else, or a throw, fails the load with `definition_invalid`.
+   */
+  capabilitiesFor?(config: C): readonly Capability[];
   readonly config?: JsonSchema;
   setup(prism: PackageAPI<C>): void | Promise<void>;
 }

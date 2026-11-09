@@ -146,7 +146,7 @@ function pairs(messages) {
 /** Replay one history through the fabric package on its preset; count what each turn delivered. */
 export async function replayHistory(history, root) {
   const { testing } = await packages();
-  const counts = { turns: 0, cuedTurns: 0, passive: 0, directory: 0, rules: 0, working: 0, excerptTurns: 0, nudges: 0 };
+  const counts = { turns: 0, cuedTurns: 0, passive: 0, directory: 0, rules: 0, excerptTurns: 0, nudges: 0 };
   let reply = "ok";
   const ui = testing.createScriptedHostUi({ confirm: true });
   const projects = [...new Set(history.sessions.map((session) => session.project))];
@@ -181,7 +181,6 @@ export async function replayHistory(history, root) {
         if (tailText(first)) counts.passive++;
         if (blocksOf(first, "fabric-directory").length) counts.directory++;
         if (blocksOf(first, "fabric-rules").length) counts.rules++;
-        if (tailSourceText(first, "fabric-working")) counts.working++;
         if (tailSourceText(first, "fabric-lesson-nudge") || blocksOf(first, "fabric-lesson-nudge").length) counts.nudges++;
         // The delivery mode this turn ran under (the state machine advances once per user turn).
         if ((await h.command("memory:status", {}, session.key))?.delivery === "excerpts") counts.excerptTurns++;
@@ -219,13 +218,11 @@ export async function replayHistory(history, root) {
       verifiedByUse: notes.filter((note) => note.status === "verified" && (note.metadata?.useSessions ?? 0) >= 2).length,
       captured: notes.filter((note) => note.metadata?.kind !== "exchange" && note.metadata?.generated?.by !== "host").length,
       decisions: notes.filter((note) => note.metadata?.kind === "decision").length,
-      episodes: notes.filter((note) => note.metadata?.kind === "episode").length,
       confirmations: ui.requestsOf("confirm").length,
       maintenance: maintenance
         ? {
             archived: maintenance.archived,
             merged: maintenance.merged,
-            episodesMerged: maintenance.episodesMerged,
             evicted: maintenance.evicted,
             widened: maintenance.widened,
             superseded: maintenance.superseded,
@@ -256,12 +253,6 @@ export function triggerRates(replays) {
     "delivery.passive-tail": rate(sum("passive"), turns, "turns"),
     "delivery.directory": rate(sum("directory"), turns, "turns"),
     "delivery.standing-rules": rate(sum("rules"), turns, "turns"),
-    "delivery.working-memory": rate(
-      sum("working"),
-      turns,
-      "turns",
-      "no replayed turn writes a working block (scripted replies make no tool call)",
-    ),
     "delivery.weak-tool-caller": rate(
       sum("excerptTurns"),
       turns,
@@ -287,12 +278,6 @@ export function triggerRates(replays) {
     ),
     "lifecycle.capacity-eviction": rate(maint("evicted"), notes, "notes", "evicted also counts exchange demotions"),
     "lifecycle.duplicate-merge": rate(maint("merged"), notes, "notes"),
-    "lifecycle.episode-merge": rate(
-      maint("episodesMerged"),
-      Math.max(1, sum("episodes")),
-      "episodes",
-      "no product path writes episode rows with promote off",
-    ),
     "lifecycle.widen-narrow": rate(maint("widened") + maint("superseded"), notes, "notes"),
     "kind.decision": rate(sum("decisions"), turns, "turns"),
   };

@@ -665,7 +665,7 @@ export async function c1Task5Pin({ root = "." } = {}) {
 }
 
 export async function buildC1Manifest({ root = "." } = {}) {
-  const productHash = await sourceFingerprint(["packages/memory/fabric/src", "packages/memory/core/src"], root);
+  const productHash = await sourceFingerprint(["packages/memory/system/src/ltm", "packages/memory/core/src"], root);
   const ingestHash = await fileFingerprint(["scripts/memory-bench/replay.mjs", "scripts/memory-bench/datasets.mjs"], root);
   const predictions = JSON.parse(await readFile(join(root, C1_GAP_PREDICTIONS), "utf8"));
   const manifest = {
@@ -803,6 +803,73 @@ export async function writeC1Manifest({ root = ".", path = join(root, C1_MANIFES
   await mkdir(join(root, C1_EVIDENCE), { recursive: true });
   await writeFile(path, `${JSON.stringify({ generatedAt: new Date().toISOString(), ...manifest }, null, 2)}\n`);
   return manifest;
+}
+
+/**
+ * Plan 216 Task 8: ablations whose feature a later task removed, so the arm can no longer be built. A plan 210 row is
+ * checked against the slimmed record's removals; anything else that fails to build is an error.
+ */
+export const C1_RETIRED_ABLATIONS = Object.freeze({
+  "fabric.recall.supersessionHint": { feature: "recall.supersession-hint", removedBy: "plan 210 Task 7" },
+  "fabric.enrichment": { feature: "write.keyword-enrichment", removedBy: "plan 210 Task 7" },
+  "fabric.timeline": { feature: "timeline", removedBy: "plan 210 Task 7" },
+  // The concept kind prior in recall went with the ontology; the wiki has no recall prior to ablate.
+  "fabric.ontology.conceptPrior": { feature: "ontology.concept-prior", removedBy: "plan 216 Task 3" },
+});
+
+/**
+ * Plan 216 Task 8: build every C-1 job's arm against the current paths without running it. Each job's memory config
+ * resolves through the package schemas and each historical variant patches its (moved) source file; a job whose
+ * ablation names a retired feature is reported `retired`, never silently skipped.
+ */
+export async function dryRunC1Manifest({ root = ".", manifest } = {}) {
+  manifest ??= await buildC1Manifest({ root });
+  const { canonicalArm, historicalVariants, memoryConfigs } = await import("./ablations.mjs");
+  const { variantProvenance } = await import("./variants.mjs");
+  const { armConfig } = await import("./work-outcome/run.mjs");
+  const slimmed = JSON.parse(await readFile(join(root, "docs/_evidence/memory-bench/210/slimmed/record.json"), "utf8"));
+  const removed = new Set(slimmed.removals.map((row) => row.feature));
+  for (const [path, row] of Object.entries(C1_RETIRED_ABLATIONS))
+    if (row.removedBy === "plan 210 Task 7" && !removed.has(row.feature))
+      throw new Error(`C1DryRun: ${path} names ${row.feature}, which the slimmed record does not remove`);
+  const jobs = [];
+  for (const job of manifest.jobs) {
+    const ablate = job.ablate ?? [];
+    const retired = ablate.map((spec) => C1_RETIRED_ABLATIONS[spec.split("=")[0]]).find(Boolean);
+    if (retired) {
+      jobs.push({ id: job.id, kind: job.kind, config: job.config, ablate, status: "retired", ...retired });
+      continue;
+    }
+    let variantFiles = [];
+    try {
+      if (job.kind === "work-outcome") armConfig(job.config, { fabricOverlay: job.fabricOverlay });
+      else {
+        const historical = historicalVariants(ablate);
+        memoryConfigs({
+          config: canonicalArm(job.config),
+          suite: job.suite,
+          ontology: job.ontology,
+          ablate: ablate.filter((spec) => !historical.includes(spec)),
+        });
+        variantFiles = (await variantProvenance(historical)).map((row) => row.path);
+      }
+      jobs.push({ id: job.id, kind: job.kind, config: job.config, ablate, status: "builds", variantFiles });
+    } catch (error) {
+      jobs.push({ id: job.id, kind: job.kind, config: job.config, ablate, status: "error", error: error.message });
+    }
+  }
+  const count = (status) => jobs.filter((job) => job.status === status).length;
+  return {
+    kind: "216-c1-dry-run",
+    manifestHash: manifest.manifestHash,
+    productHash: manifest.productHash,
+    jobs: jobs.length,
+    builds: count("builds"),
+    retired: count("retired"),
+    errors: count("error"),
+    retiredArms: [...new Set(jobs.filter((job) => job.status === "retired").map((job) => `${job.ablate.join(",")} (${job.removedBy})`))],
+    rows: jobs,
+  };
 }
 
 /** The owner's approval, bound to the manifest hash. Pure: checks, never writes. */

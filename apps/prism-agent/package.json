@@ -10,6 +10,8 @@
   "scripts": {
     "eval:baseline": "bun src/evals/suite.ts --write-baseline",
     "test": "bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 src",
+    "test:live:journey:commandcode": "PRISM_LIVE_JOURNEY_PROVIDER=commandcode bun test --timeout=0 src/__tests__/live-provider-journey.test.ts",
+    "test:live:journey:ollama-cloud": "PRISM_LIVE_JOURNEY_PROVIDER=ollama-cloud bun test --timeout=0 src/__tests__/live-provider-journey.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
@@ -24,8 +26,7 @@
     "@arnilo/prism-headless": "workspace:*",
     "@arnilo/prism-hooks-json": "workspace:*",
     "@arnilo/prism-memory-compaction": "workspace:*",
-    "@arnilo/prism-memory-fabric": "workspace:*",
-    "@arnilo/prism-memory-observational": "workspace:*",
+    "@arnilo/prism-memory-system": "workspace:*",
     "@arnilo/prism-rag": "workspace:*",
     "@arnilo/prism-wiki": "workspace:*",
     "@arnilo/prism-provider-hyper": "workspace:*",
@@ -38,6 +39,9 @@
     "@arnilo/prism-workflows": "workspace:*"
   },
   "devDependencies": {
+    "@arnilo/prism-provider-commandcode": "workspace:*",
+    "@arnilo/prism-provider-ollama-cloud": "workspace:*",
+    "@arnilo/prism-provider-opencode-go": "workspace:*",
     "@types/node": "^22.20.0",
     "typescript": "^7.0.2"
   },

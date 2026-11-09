@@ -134,3 +134,100 @@ test("committed_mechanisms_evidence_has_no_problems_and_covers_the_candidates", 
   for (const row of report.probes) assert.ok(["works", "never-fires", "no-effect", "wrong-effect"].includes(row.verdict));
   assert.ok(report.durationSeconds <= 1800, "offline probes finish in 30 minutes");
 });
+
+/** Plan 217 Task 5: the long-session fixture and the STM probes. */
+const STM_PROBE_IDS = [
+  "stm.outcome",
+  "stm.recall-verbatim",
+  "stm.scope-blind",
+  "stm.habituation",
+  "stm.boundaries",
+  "stm.oversized-tail",
+  "stm.referrer-delete",
+  "stm.cost",
+];
+
+test("long_session_fixture_is_hashed_and_has_its_shape", async () => {
+  const { loadLongSessionFixture, longSessionHashes } = await import("../long-session.mjs");
+  const fixture = loadLongSessionFixture();
+  assert.deepEqual(fixture.hashes, longSessionHashes(), "index.json pins both files");
+  assert.ok(fixture.tasks.length >= 6, "at least 6 tasks");
+  assert.ok(fixture.messageEntries >= 200, "at least 200 entries");
+  const kinds = new Set(fixture.events.map((event) => event.kind));
+  for (const kind of ["request", "statement", "action", "result", "change", "decision", "error", "outcome"])
+    assert.ok(kinds.has(kind), kind);
+  assert.ok(
+    fixture.plan.split("\n").filter((line) => /Depends on/.test(line)).length >= 2,
+    "a plan whose later steps depend on earlier ones",
+  );
+  assert.ok(fixture.related.length >= 2, "related task pairs");
+  assert.ok(fixture.calls.get("c209").output.length > 16_384, "a large tool result");
+  assert.ok(
+    fixture.events.some((event) => event.kind === "statement" && /preference/.test(event.description)),
+    "a preference stated once",
+  );
+  assert.equal(fixture.expected.superseded.length, 1, "a superseded fact");
+  assert.ok(
+    fixture.expected.habituated.some((item) => item.kind === "result" && item.count >= 3),
+    "repeated benign polling",
+  );
+  assert.ok(
+    fixture.expected.habituated.some((item) => item.kind === "error" && item.count >= 3),
+    "a repeated identical failure",
+  );
+  assert.ok(
+    fixture.turns.some((turn) => turn.gapMinutes >= 10),
+    "an idle gap",
+  );
+  for (const task of fixture.tasks)
+    assert.ok(
+      fixture.events.some((event) => event.id === task.outcome && event.kind === "outcome"),
+      task.id,
+    );
+});
+
+test("stm_long_session_probe_covers_probes_1_to_7", async () => {
+  const probes = (await loadProbes(["stm"])).filter((probe) => STM_PROBE_IDS.includes(probe.id));
+  assert.deepEqual(
+    probes.map((probe) => probe.id),
+    STM_PROBE_IDS,
+  );
+  const started = performance.now();
+  const { rows, errors } = await runProbes(probes);
+  assert.deepEqual(errors, []);
+  for (const row of rows) assert.equal(row.verdict, "works", `${row.id}: ${JSON.stringify(row.counts)}`);
+  assert.ok(performance.now() - started < 600_000, "the STM probes run in under 10 minutes");
+  // The rows carry counts, hashes and verdicts only: no fixture text, no secret.
+  const { loadLongSessionFixture } = await import("../long-session.mjs");
+  const fixture = loadLongSessionFixture();
+  const text = JSON.stringify(rows);
+  for (const fragment of ["parseLedgerRow", "ledgerkit", "config/server.json", fixture.secret])
+    assert.ok(!text.includes(fragment), fragment);
+  // The cost row compares against the pinned pre-redesign observer when its worktree is present.
+  const cost = rows.find((row) => row.id === "stm.cost");
+  assert.equal(typeof cost.counts.stm.outputPer10k, "number");
+  assert.ok(cost.counts.stm.chunkShareOfCovered < 0.25);
+}, 600_000);
+
+test("fixture_seeded_secret_redacted_in_chunks", async () => {
+  const { replayLongSession } = await import("./stm.mjs");
+  const memory = await import("@arnilo/prism-memory-system");
+  await withProbeEnv(async () => {
+    const store = await memory.createSqliteChunkStore({ path: ":memory:" });
+    const h = await replayLongSession({ chunkStore: store, turns: ["t0", "t3"] });
+    try {
+      const record = await h.recordOf(h.fx.expected.secretEvent);
+      assert.equal(record?.chunkRefs?.length, 1, "the .env.local result keeps its chunk");
+      const chunk = await store.get(record.chunkRefs[0].id, h.session.id);
+      assert.ok(chunk.text.startsWith("LEDGER_API_KEY="), "the chunk is the cited line");
+      assert.ok(!chunk.text.includes(h.fx.secret), "the seeded secret is redacted before the chunk is written");
+      const afterSecret = h.stmRequests().filter((request) => request.text.includes("LEDGER_API_KEY"));
+      assert.ok(afterSecret.length > 0);
+      for (const request of afterSecret) assert.ok(!request.text.includes(h.fx.secret), "the STM batch is redacted too");
+      assert.ok(!JSON.stringify(await h.session.entries()).includes(`"chunks":[{"sourceEntryId"`), "chunk text never lands on the branch");
+    } finally {
+      await h.close();
+      store.close();
+    }
+  });
+}, 120_000);

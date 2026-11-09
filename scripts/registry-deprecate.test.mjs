@@ -12,7 +12,8 @@ import { createRegistryDeprecator, escapedName, main, versionInRange } from "./r
 
 const ANCHOR = "#012-family-package-native-package-map";
 const GUIDE_URL = "https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md";
-const TOKEN = "npm_s3cr3t_do_not_log_7f2c";
+
+const ROOT = join(import.meta.dirname, "..");
 
 function mkdtemp() {
   return mkdtempSync(join(tmpdir(), "prism-deprecate-"));
@@ -63,22 +64,18 @@ function makeRegistry(state) {
       if (!found) return { ok: false, status: 404, json: async () => ({}) };
       return { ok: true, status: 200, json: async () => structuredClone(found) };
     }
-    calls.put.push({ name, headers: init.headers ?? {}, body: JSON.parse(init.body) });
-    if (!state[name]) return { ok: false, status: 404 };
-    state[name] = JSON.parse(init.body);
-    return { ok: true, status: 200, json: async () => ({ ok: true }) };
+    throw new Error(`unexpected ${method} ${name}: the deprecator mutates nothing`);
   };
   return { fetchImpl, calls };
 }
 
-function makeDeprecator({ dir, state, token = TOKEN }) {
+function makeDeprecator({ dir, state }) {
   const { fetchImpl, calls } = makeRegistry(state);
   const out = [];
   const err = [];
   const deprecator = createRegistryDeprecator({
     rootDir: dir,
     registry: "https://fixture.invalid",
-    token,
     fetchImpl,
     listPath: makeList(dir, Object.keys(state)),
     planPath: join(dir, "deprecation-plan.json"),
@@ -101,118 +98,65 @@ test("deprecate_plan_scopes_reused_names: a reused name deprecates only the pre-
   assert.equal(plan[0].range, "<0.13.0");
   assert.equal(plan[0].latest, "0.13.0");
   assert.equal(calls.get[0].headers.authorization, undefined, "generate is anonymous");
+  assert.equal(calls.get[0].headers.accept, "application/json", "no credential header is ever built");
 
-  const code = await deprecator.apply({ entries: plan });
-  assert.equal(code, 0, "apply succeeds");
-  assert.equal(calls.put.length, 1, "one PUT");
-  const body = calls.put[0].body;
-  for (const version of ["0.3.0", "0.12.0", "0.12.1"]) {
-    assert.equal(body.versions[version].deprecated, plan[0].message, `${version} is deprecated`);
+  const [command] = deprecator.commands(plan);
+  assert.ok(command.startsWith(`npm deprecate '@arnilo/prism-mcp@<0.13.0' '`), command);
+  assert.ok(command.includes(plan[0].message), "the printed command carries the migration message");
+});
+
+test("deprecate_treats_an_unpublished_name_as_done", async () => {
+  const dir = mkdtemp();
+  const state = {
+    "@arnilo/prism-mcp": packument("@arnilo/prism-mcp", ["0.12.1", "0.13.0"], "0.13.0"),
+  };
+  const { deprecator, out, err } = makeDeprecator({ dir, state });
+  const listPath = join(dir, "deprecations.json");
+  const list = JSON.parse(readFileSync(listPath, "utf8"));
+  list.names.push({ ...list.names[0], name: "@arnilo/prism-deleted" });
+  writeFileSync(listPath, JSON.stringify(list), "utf8");
+
+  // Task 37 unpublished the legacy names, so absence is the finished state, not a problem.
+  const plan = await deprecator.generate();
+  assert.deepEqual(
+    plan.map((entry) => entry.name),
+    ["@arnilo/prism-mcp"],
+    "an absent name is left out of the plan",
+  );
+  assert.ok(
+    out.some((line) => line.includes("unpublished: @arnilo/prism-deleted")),
+    out.join("\n"),
+  );
+
+  // A plan generated before the cleanup still carries it; the dry run reports it as done.
+  const stale = [...plan, { ...plan[0], name: "@arnilo/prism-deleted", latest: "0.12.1" }];
+  const code = await deprecator.dryRun(stale);
+  assert.equal(code, 0, "a 404 is not a failure");
+  assert.ok(
+    err.some((line) => line.includes("1 unpublished") && line.includes("0 problem(s)")),
+    `the summary counts it as done: ${err.join("\n")}`,
+  );
+});
+
+test("deprecate_commands_are_the_owner_run_lines", async () => {
+  const dir = mkdtemp();
+  const state = { "@arnilo/prism-mcp": packument("@arnilo/prism-mcp", ["0.12.1", "0.13.0"], "0.13.0") };
+  const { deprecator } = makeDeprecator({ dir, state });
+  const plan = await deprecator.generate();
+  assert.deepEqual(deprecator.commands(plan), [`npm deprecate '@arnilo/prism-mcp@<0.13.0' '${plan[0].message}'`]);
+  assert.ok(!deprecator.commands(plan)[0].includes("--confirm"), "no mutation path is offered");
+});
+
+test("registry_deprecate_has_no_apply_path", async () => {
+  const source = readFileSync(join(ROOT, "scripts/registry-deprecate.mjs"), "utf8");
+  const code = source
+    .split("\n")
+    .filter((line) => !line.trim().startsWith("//"))
+    .join("\n");
+  for (const forbidden of ['method: "PUT"', "authorization", "NPM_TOKEN", "process.env.NPM_TOKEN", "writePackument"]) {
+    assert.ok(!code.includes(forbidden), `registry-deprecate.mjs must not contain ${forbidden}`);
   }
-  assert.equal(body.versions["0.13.0"].deprecated, undefined, "the 0.13.0 line is untouched");
-});
-
-test("apply_refuses_when_latest_in_range: zero PUTs, and the error names the package", async () => {
-  const dir = mkdtemp();
-  const state = {
-    "@arnilo/prism-mcp": packument("@arnilo/prism-mcp", ["0.12.1", "0.13.0"], "0.12.1"),
-  };
-  const { deprecator, calls, err } = makeDeprecator({ dir, state });
-  const plan = await deprecator.generate();
-
-  const code = await deprecator.apply({ entries: plan });
-  assert.equal(code, 1, "apply fails closed");
-  assert.equal(calls.put.length, 0, "zero PUTs on a mismatch");
-  assert.ok(
-    err.some((line) => line.includes("@arnilo/prism-mcp") && line.includes("latest 0.12.1 is inside")),
-    `the report names the package and the reason: ${err.join("\n")}`,
-  );
-});
-
-test("apply_refuses_when_a_reused_name_has_no_0_13_published", async () => {
-  const dir = mkdtemp();
-  const state = {
-    "@arnilo/prism-mcp": packument("@arnilo/prism-mcp", ["0.11.1", "0.12.1"], "0.12.1"),
-  };
-  const { deprecator, calls, err } = makeDeprecator({ dir, state });
-  const plan = await deprecator.generate();
-
-  const code = await deprecator.apply({ entries: plan });
-  assert.equal(code, 1, "apply fails closed");
-  assert.equal(calls.put.length, 0, "zero PUTs");
-  assert.ok(
-    err.some((line) => line.includes("@arnilo/prism-mcp") && line.includes("0.13.0 is not published yet")),
-    `the report names the missing line: ${err.join("\n")}`,
-  );
-});
-
-test("apply_refuses_on_registry_state_drift", async () => {
-  const dir = mkdtemp();
-  const state = { "@arnilo/prism-mcp": packument("@arnilo/prism-mcp", ["0.12.1", "0.13.0"], "0.13.0") };
-  const { deprecator, calls, err } = makeDeprecator({ dir, state });
-  const plan = await deprecator.generate();
-  // A release lands after the plan was generated.
-  state["@arnilo/prism-mcp"].versions["0.13.1"] = {};
-
-  const code = await deprecator.apply({ entries: plan });
-  assert.equal(code, 1, "apply fails closed");
-  assert.equal(calls.put.length, 0, "zero PUTs");
-  assert.ok(
-    err.some((line) => line.includes("registry state differs from the generated plan")),
-    `the report names the drift: ${err.join("\n")}`,
-  );
-});
-
-test("apply_skips_already_deprecated: idempotent resume", async () => {
-  const dir = mkdtemp();
-  const message = `Legacy 0.12 release. Prism 0.13+ republishes this name at 0.13.0: @arnilo/prism-mcp@0.13.0. ${GUIDE_URL}${ANCHOR}`;
-  const state = {
-    "@arnilo/prism-mcp": packument("@arnilo/prism-mcp", ["0.12.1", "0.13.0"], "0.13.0", { "0.12.1": message }),
-  };
-  const { deprecator, calls } = makeDeprecator({ dir, state });
-  const plan = await deprecator.generate();
-  assert.deepEqual(plan[0].deprecateVersions, ["0.12.1"]);
-
-  const code = await deprecator.apply({ entries: plan });
-  assert.equal(code, 0, "resume succeeds");
-  assert.equal(calls.put.length, 0, "an already-deprecated entry issues no PUT");
-  const written = JSON.parse(readFileSync(join(dir, "deprecation-plan.json"), "utf8"));
-  assert.equal(written.summary.skipped, 1);
-  assert.equal(written.summary.applied, 0);
-});
-
-test("apply_refuses_without_a_token and never writes one to the plan", async () => {
-  const dir = mkdtemp();
-  const state = { "@arnilo/prism-mcp": packument("@arnilo/prism-mcp", ["0.12.1", "0.13.0"], "0.13.0") };
-  const { deprecator, calls, err } = makeDeprecator({ dir, state, token: "" });
-  const plan = await deprecator.generate();
-
-  const code = await deprecator.apply({ entries: plan });
-  assert.equal(code, 2, "a missing token is a usage error");
-  assert.equal(calls.put.length, 0, "zero PUTs");
-  assert.ok(
-    err.some((line) => line.includes("NPM_TOKEN is required")),
-    err.join("\n"),
-  );
-});
-
-test("apply_never_logs_token: stdout, stderr, and the plan file carry no token", async () => {
-  const dir = mkdtemp();
-  const state = { "@arnilo/prism-mcp": packument("@arnilo/prism-mcp", ["0.12.1", "0.13.0"], "0.13.0") };
-  const { deprecator, out, err, calls } = makeDeprecator({ dir, state });
-  const plan = await deprecator.generate();
-  const code = await deprecator.apply({ entries: plan });
-  assert.equal(code, 0);
-
-  const planText = readFileSync(join(dir, "deprecation-plan.json"), "utf8");
-  for (const [label, text] of [
-    ["stdout", out.join("\n")],
-    ["stderr", err.join("\n")],
-    ["plan", planText],
-  ]) {
-    assert.ok(!text.includes(TOKEN), `${label} must not contain the token`);
-  }
-  assert.equal(calls.put[0].headers.authorization, `Bearer ${TOKEN}`, "the token travels only in the request header");
+  assert.match(source, /--apply\b.*not OIDC-capable/s, "the CLI tells the owner why --apply is gone");
 });
 
 test("versionInRange matches `*` everywhere and excludes the 0.13.0 line", () => {
@@ -228,18 +172,19 @@ test("escapedName uses the registry path form npm builds", () => {
   assert.equal(escapedName("plain"), "plain");
 });
 
-test("the CLI applies against a fixture registry through PRISM_DEPRECATE_REGISTRY", async () => {
+test("the CLI plans and prints commands against a fixture registry through PRISM_DEPRECATE_REGISTRY", async () => {
   const dir = mkdtemp();
   const state = { "@arnilo/prism-mcp": packument("@arnilo/prism-mcp", ["0.12.1", "0.13.0"], "0.13.0") };
+  const mutations = [];
   const server = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
     fetch: async (request) => {
-      const name = decodeURIComponent(new URL(request.url).pathname.slice(1));
-      if (request.method === "PUT") {
-        state[name] = await request.json();
+      if (request.method !== "GET") {
+        mutations.push(request.method);
         return Response.json({ ok: true });
       }
+      const name = decodeURIComponent(new URL(request.url).pathname.slice(1));
       if (!state[name]) return new Response("not found", { status: 404 });
       return Response.json(state[name]);
     },
@@ -250,21 +195,28 @@ test("the CLI applies against a fixture registry through PRISM_DEPRECATE_REGISTR
   process.env.PRISM_DEPRECATE_REGISTRY = `http://127.0.0.1:${server.port}`;
   process.env.PRISM_DEPRECATE_LIST = listPath;
   process.env.PRISM_DEPRECATE_PLAN = planPath;
-  process.env.NPM_TOKEN = TOKEN;
+  const printed = [];
+  const originalLog = console.log;
+  console.log = (line) => printed.push(String(line));
   try {
     assert.equal(await main(["--generate"]), 0);
     assert.equal(await main(["--dry-run"]), 0);
-    assert.equal(await main(["--apply"]), 2, "apply without --confirm refuses");
-    assert.equal(await main(["--apply", "--confirm"]), 0);
+    assert.equal(await main(["--commands"]), 0);
+    assert.equal(await main(["--apply", "--confirm"]), 2, "there is no apply path at all");
   } finally {
+    console.log = originalLog;
     server.stop(true);
-    for (const key of ["PRISM_DEPRECATE_REGISTRY", "PRISM_DEPRECATE_LIST", "PRISM_DEPRECATE_PLAN", "NPM_TOKEN"]) {
+    for (const key of ["PRISM_DEPRECATE_REGISTRY", "PRISM_DEPRECATE_LIST", "PRISM_DEPRECATE_PLAN"]) {
       if (previous[key] === undefined) delete process.env[key];
       else process.env[key] = previous[key];
     }
   }
+  assert.deepEqual(mutations, [], "the CLI never mutates the registry");
   const written = JSON.parse(readFileSync(planPath, "utf8"));
-  assert.equal(written.summary.applied, 1);
-  assert.equal(state["@arnilo/prism-mcp"].versions["0.12.1"].deprecated, written.entries[0].message);
-  assert.equal(state["@arnilo/prism-mcp"].versions["0.13.0"].deprecated, undefined);
+  assert.equal(written.summary.pending, 1);
+  assert.equal(state["@arnilo/prism-mcp"].versions["0.12.1"].deprecated, undefined, "the registry state is untouched");
+  assert.ok(
+    printed.some((line) => line === `npm deprecate '@arnilo/prism-mcp@<0.13.0' '${written.entries[0].message}'`),
+    printed.join("\n"),
+  );
 });

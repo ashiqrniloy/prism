@@ -52,10 +52,6 @@ CREATE TRIGGER ${quoteIdentifier(`${table}_update`)} AFTER UPDATE ON ${t} BEGIN
   INSERT INTO ${f}(${f}, rowid, lex_text, lex_keys) VALUES ('delete', old.rowid, old.lex_text, old.lex_keys);
   INSERT INTO ${f}(rowid, lex_text, lex_keys) VALUES (new.rowid, new.lex_text, new.lex_keys);
 END;
-CREATE TABLE working_memory (
-  tenant_id TEXT NOT NULL, resource_id TEXT NOT NULL, thread_id TEXT NOT NULL,
-  record TEXT NOT NULL, PRIMARY KEY (tenant_id, resource_id, thread_id)
-);
 CREATE TABLE memory_state (
   tenant_id TEXT NOT NULL, resource_id TEXT NOT NULL, thread_id TEXT NOT NULL,
   kind TEXT NOT NULL, id TEXT NOT NULL, value TEXT NOT NULL,

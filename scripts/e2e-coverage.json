@@ -76,7 +76,8 @@
           "src/__tests__/thinking.test.ts",
           "src/__tests__/tool-effects-annotation.test.ts",
           "src/__tests__/run-controller.test.ts",
-          "src/__tests__/tools.test.ts"
+          "src/__tests__/tools.test.ts",
+          "apps/prism-agent/src/__tests__/live-provider-journey.test.ts"
         ],
         "mode": ""
       },
@@ -121,7 +122,8 @@
           "src/__tests__/hook-catalog-coverage.test.ts",
           "src/__tests__/hook-invariants.test.ts",
           "src/__tests__/package-conformance.test.ts",
-          "src/__tests__/session-index.test.ts"
+          "src/__tests__/session-index.test.ts",
+          "apps/prism-agent/src/__tests__/live-provider-journey.test.ts"
         ],
         "mode": ""
       },
@@ -349,7 +351,8 @@
           "packages/hosts/remote/src/__tests__/mirror.test.ts",
           "packages/hosts/remote/src/__tests__/network.test.ts",
           "packages/hosts/remote/src/__tests__/serve.test.ts",
-          "packages/hosts/remote/src/__tests__/wire.test.ts"
+          "packages/hosts/remote/src/__tests__/wire.test.ts",
+          "apps/prism-agent/src/__tests__/live-provider-journey.test.ts"
         ],
         "mode": ""
       },
@@ -532,27 +535,61 @@
           "packages/memory/compaction/src/__tests__/runtime.test.ts",
           "packages/memory/compaction/src/__tests__/serialize.test.ts",
           "packages/memory/compaction/src/__tests__/strategy.test.ts",
-          "packages/memory/compaction/src/__tests__/tokens-fixtures.test.ts"
+          "packages/memory/compaction/src/__tests__/tokens-fixtures.test.ts",
+          "apps/prism-agent/src/__tests__/live-provider-journey.test.ts"
         ],
         "mode": ""
       }
     },
-    "@arnilo/prism-memory-observational": {
+    "@arnilo/prism-memory-system": {
       ".": {
         "suites": [
-          "packages/memory/observational/src/__tests__/context-cache.test.ts",
-          "packages/memory/observational/src/__tests__/coverage.test.ts",
-          "packages/memory/observational/src/__tests__/ledger.test.ts",
-          "packages/memory/observational/src/__tests__/observational.test.ts",
-          "packages/memory/observational/src/__tests__/recall.test.ts",
-          "packages/memory/observational/src/__tests__/recent-messages.test.ts",
-          "packages/memory/observational/src/__tests__/reflection-replacement.test.ts",
-          "packages/memory/observational/src/__tests__/settings.test.ts",
-          "packages/memory/observational/src/__tests__/strategy.test.ts",
-          "packages/memory/observational/src/__tests__/temporal.test.ts",
-          "packages/memory/observational/src/__tests__/tokens-fixtures.test.ts",
-          "packages/memory/observational/src/__tests__/worker-split.test.ts",
-          "packages/memory/observational/src/__tests__/workers.test.ts"
+          "examples/memory-lifecycle.ts",
+          "examples/memory-system.ts",
+          "packages/memory/system/src/__tests__/components.test.ts",
+          "packages/memory/system/src/ltm/__tests__/consolidate.test.ts",
+          "packages/memory/system/src/ltm/__tests__/context-recall.test.ts",
+          "packages/memory/system/src/ltm/__tests__/deletion-propagation.test.ts",
+          "packages/memory/system/src/ltm/__tests__/directory.test.ts",
+          "packages/memory/system/src/ltm/__tests__/eval-procedure.test.ts",
+          "packages/memory/system/src/ltm/__tests__/eval-revocation.test.ts",
+          "packages/memory/system/src/ltm/__tests__/host-wiring.test.ts",
+          "packages/memory/system/src/ltm/__tests__/lexical-retrieval.test.ts",
+          "packages/memory/system/src/ltm/__tests__/lineage.test.ts",
+          "packages/memory/system/src/ltm/__tests__/markdown-store.test.ts",
+          "packages/memory/system/src/ltm/__tests__/memory.test.ts",
+          "packages/memory/system/src/ltm/__tests__/notes.test.ts",
+          "packages/memory/system/src/ltm/__tests__/observational-source.test.ts",
+          "packages/memory/system/src/ltm/__tests__/okf-bundle.test.ts",
+          "packages/memory/system/src/ltm/__tests__/package.test.ts",
+          "packages/memory/system/src/ltm/__tests__/postgres-memory.integration.test.ts",
+          "packages/memory/system/src/ltm/__tests__/postgres-propagation.integration.test.ts",
+          "packages/memory/system/src/ltm/__tests__/postgres-vector.integration.test.ts",
+          "packages/memory/system/src/ltm/__tests__/prefix-stability.test.ts",
+          "packages/memory/system/src/ltm/__tests__/promote.test.ts",
+          "packages/memory/system/src/ltm/__tests__/provenance.test.ts",
+          "packages/memory/system/src/ltm/__tests__/public-surface.test.ts",
+          "packages/memory/system/src/ltm/__tests__/rag-acl.test.ts",
+          "packages/memory/system/src/ltm/__tests__/recall.test.ts",
+          "packages/memory/system/src/ltm/__tests__/reconcile.test.ts",
+          "packages/memory/system/src/ltm/__tests__/repoint.test.ts",
+          "packages/memory/system/src/ltm/__tests__/selective-recall.test.ts",
+          "packages/memory/system/src/ltm/__tests__/source-repoint.test.ts",
+          "packages/memory/system/src/ltm/__tests__/tools.test.ts",
+          "packages/memory/system/src/ltm/__tests__/touch.test.ts",
+          "packages/memory/system/src/session/__tests__/context-cache.test.ts",
+          "packages/memory/system/src/session/__tests__/coverage.test.ts",
+          "packages/memory/system/src/session/__tests__/ledger.test.ts",
+          "packages/memory/system/src/session/__tests__/observational.test.ts",
+          "packages/memory/system/src/session/__tests__/recall.test.ts",
+          "packages/memory/system/src/session/__tests__/recent-messages.test.ts",
+          "packages/memory/system/src/session/__tests__/reflection-replacement.test.ts",
+          "packages/memory/system/src/session/__tests__/settings.test.ts",
+          "packages/memory/system/src/session/__tests__/strategy.test.ts",
+          "packages/memory/system/src/session/__tests__/temporal.test.ts",
+          "packages/memory/system/src/session/__tests__/tokens-fixtures.test.ts",
+          "packages/memory/system/src/session/__tests__/worker-split.test.ts",
+          "packages/memory/system/src/session/__tests__/workers.test.ts"
         ],
         "mode": ""
       }
@@ -587,48 +624,11 @@
         "mode": ""
       }
     },
-    "@arnilo/prism-memory-fabric": {
-      ".": {
-        "suites": [
-          "examples/memory-lifecycle.ts",
-          "packages/memory/fabric/src/__tests__/consolidate.test.ts",
-          "packages/memory/fabric/src/__tests__/context-recall.test.ts",
-          "packages/memory/fabric/src/__tests__/deletion-propagation.test.ts",
-          "packages/memory/fabric/src/__tests__/directory.test.ts",
-          "packages/memory/fabric/src/__tests__/eval-procedure.test.ts",
-          "packages/memory/fabric/src/__tests__/eval-revocation.test.ts",
-          "packages/memory/fabric/src/__tests__/host-wiring.test.ts",
-          "packages/memory/fabric/src/__tests__/lexical-retrieval.test.ts",
-          "packages/memory/fabric/src/__tests__/lineage.test.ts",
-          "packages/memory/fabric/src/__tests__/markdown-store.test.ts",
-          "packages/memory/fabric/src/__tests__/memory.test.ts",
-          "packages/memory/fabric/src/__tests__/notes.test.ts",
-          "packages/memory/fabric/src/__tests__/observational-source.test.ts",
-          "packages/memory/fabric/src/__tests__/package.test.ts",
-          "packages/memory/fabric/src/__tests__/postgres-memory.integration.test.ts",
-          "packages/memory/fabric/src/__tests__/postgres-propagation.integration.test.ts",
-          "packages/memory/fabric/src/__tests__/postgres-vector.integration.test.ts",
-          "packages/memory/fabric/src/__tests__/prefix-stability.test.ts",
-          "packages/memory/fabric/src/__tests__/promote.test.ts",
-          "packages/memory/fabric/src/__tests__/provenance.test.ts",
-          "packages/memory/fabric/src/__tests__/okf-bundle.test.ts",
-          "packages/memory/fabric/src/__tests__/public-surface.test.ts",
-          "packages/memory/fabric/src/__tests__/rag-acl.test.ts",
-          "packages/memory/fabric/src/__tests__/recall.test.ts",
-          "packages/memory/fabric/src/__tests__/reconcile.test.ts",
-          "packages/memory/fabric/src/__tests__/repoint.test.ts",
-          "packages/memory/fabric/src/__tests__/selective-recall.test.ts",
-          "packages/memory/fabric/src/__tests__/source-repoint.test.ts",
-          "packages/memory/fabric/src/__tests__/tools.test.ts",
-          "packages/memory/fabric/src/__tests__/touch.test.ts"
-        ],
-        "mode": ""
-      }
-    },
     "@arnilo/prism-approval": {
       ".": {
         "suites": [
-          "packages/policy/approval/src/__tests__/approval.test.ts"
+          "packages/policy/approval/src/__tests__/approval.test.ts",
+          "apps/prism-agent/src/__tests__/live-provider-journey.test.ts"
         ],
         "mode": ""
       }
@@ -675,7 +675,8 @@
         "suites": [
           "packages/providers/opencode-go/src/__tests__/live.test.ts",
           "packages/providers/opencode-go/src/__tests__/opencode-go.test.ts",
-          "packages/providers/opencode-go/src/__tests__/package.test.ts"
+          "packages/providers/opencode-go/src/__tests__/package.test.ts",
+          "apps/prism-agent/src/__tests__/live-provider-journey.test.ts"
         ],
         "mode": ""
       }
@@ -685,7 +686,8 @@
         "suites": [
           "packages/providers/hyper/src/__tests__/hyper.test.ts",
           "packages/providers/hyper/src/__tests__/live.test.ts",
-          "packages/providers/hyper/src/__tests__/package.test.ts"
+          "packages/providers/hyper/src/__tests__/package.test.ts",
+          "apps/prism-agent/src/__tests__/live-provider-journey.test.ts"
         ],
         "mode": ""
       }
@@ -745,7 +747,8 @@
           "packages/providers/commandcode/src/__tests__/commandcode.test.ts",
           "packages/providers/commandcode/src/__tests__/live-agent.test.ts",
           "packages/providers/commandcode/src/__tests__/live.test.ts",
-          "packages/providers/commandcode/src/__tests__/package.test.ts"
+          "packages/providers/commandcode/src/__tests__/package.test.ts",
+          "apps/prism-agent/src/__tests__/live-provider-journey.test.ts"
         ],
         "mode": ""
       }
@@ -779,7 +782,8 @@
         "suites": [
           "packages/providers/ollama-cloud/src/__tests__/live.test.ts",
           "packages/providers/ollama-cloud/src/__tests__/ollama-cloud.test.ts",
-          "packages/providers/ollama-cloud/src/__tests__/package.test.ts"
+          "packages/providers/ollama-cloud/src/__tests__/package.test.ts",
+          "apps/prism-agent/src/__tests__/live-provider-journey.test.ts"
         ],
         "mode": ""
       }
@@ -814,7 +818,8 @@
           "scripts/e2e-full-surface.test.mjs",
           "examples/sqlite-resume.ts",
           "examples/durable-approval.ts",
-          "packages/stores/sqlite/src/__tests__/evaluations.test.ts"
+          "packages/stores/sqlite/src/__tests__/evaluations.test.ts",
+          "apps/prism-agent/src/__tests__/live-provider-journey.test.ts"
         ],
         "mode": ""
       }
@@ -889,7 +894,8 @@
           "packages/tools/coding/src/security/__tests__/semaphore.test.ts",
           "packages/tools/coding/src/security/__tests__/workspace-consistency.test.ts",
           "packages/tools/coding/src/workspace/__tests__/routing.test.ts",
-          "packages/tools/coding/src/workspace/__tests__/workspace.test.ts"
+          "packages/tools/coding/src/workspace/__tests__/workspace.test.ts",
+          "apps/prism-agent/src/__tests__/live-provider-journey.test.ts"
         ],
         "mode": ""
       }

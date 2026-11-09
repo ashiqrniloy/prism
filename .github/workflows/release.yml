@@ -3,7 +3,11 @@ name: release
 on:
   push:
     branches: [main, master]
-    tags: ["v0.3.0", "v0.4.0", "v0.5.0", "v0.5.1", "v0.5.2", "v0.5.3", "v0.5.4", "v0.5.5", "v0.5.6", "v0.6.0", "v0.7.0", "v0.8.0", "v0.9.0", "v0.10.0", "v0.11.0", "v0.11.1", "v0.12.0", "v0.12.1", "v0.13.0", "@arnilo/*@*"]
+    # One pattern per line, never a version list (plan 215 Task 36): `v*` is a lockstep cut,
+    # `@arnilo/<name>@<version>` an independent-line cut. Nothing here names a version, so a new
+    # tag needs no workflow edit — the enumeration that stopped at v0.12.1 silently skipped
+    # `codeql-release` and `publish` for v0.13.0 (plan 215 Task 1 (b)).
+    tags: ["v*", "@arnilo/*@*"]
   pull_request:
   workflow_dispatch:
 
@@ -111,75 +115,22 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
+  # Plan 215 Task 36: one body per gate. The Postgres job lived here AND in
+  # integration-postgres.yml; the CodeQL and supply-chain jobs here AND in security.yml.
+  # Each invoked workflow is now the only copy and this file calls it (`workflow_call`).
   postgres-integration:
-    name: postgres integration (session-store, memory, enterprise adapters)
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: pgvector/pgvector:pg16
-        env:
-          POSTGRES_USER: prism
-          POSTGRES_PASSWORD: prism
-          POSTGRES_DB: prism
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U prism -d prism"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version: "1.4.2"
-      - run: bun ci
-      - run: bun run build
-      - name: run postgres live adapter suite
-        env:
-          PRISM_TEST_POSTGRES_URL: postgres://prism:prism@localhost:5432/prism
-        run: bun run test:postgres
-        timeout-minutes: 5
+    name: postgres integration (store, channels, conformance, migration drill)
+    uses: ./.github/workflows/integration-postgres.yml
 
-  codeql-release:
-    name: CodeQL release SAST
-    if: github.ref == 'refs/tags/v0.3.0' || github.ref == 'refs/tags/v0.4.0' || github.ref == 'refs/tags/v0.5.0' || github.ref == 'refs/tags/v0.5.1' || github.ref == 'refs/tags/v0.5.2' || github.ref == 'refs/tags/v0.5.3' || github.ref == 'refs/tags/v0.5.4' || github.ref == 'refs/tags/v0.5.5' || github.ref == 'refs/tags/v0.5.6' || github.ref == 'refs/tags/v0.6.0' || github.ref == 'refs/tags/v0.7.0' || github.ref == 'refs/tags/v0.8.0' || github.ref == 'refs/tags/v0.9.0' || github.ref == 'refs/tags/v0.10.0' || github.ref == 'refs/tags/v0.11.0' || github.ref == 'refs/tags/v0.11.1' || github.ref == 'refs/tags/v0.12.0' || github.ref == 'refs/tags/v0.12.1' || startsWith(github.ref, 'refs/tags/@arnilo/')
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+  security-release:
+    name: "security (CodeQL SAST, audit, SPDX, licenses, source secrets)"
+    if: startsWith(github.ref, 'refs/tags/')
+    uses: ./.github/workflows/security.yml
+    # The called workflow's max: `codeql` writes security-events; its other jobs narrow
+    # themselves back to `contents: read`.
     permissions:
       contents: read
       security-events: write
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: github/codeql-action/init@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
-        with:
-          languages: javascript-typescript
-          build-mode: none
-          config-file: ./.github/codeql/codeql-config.yml
-      - uses: github/codeql-action/analyze@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
-
-  supply-chain:
-    name: supply chain (audit, SPDX, licenses, source secrets)
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version: "1.4.2"
-      - run: bun ci
-      - run: bun audit --audit-level=moderate
-      - run: |
-          mkdir -p security-artifacts
-          bun scripts/sbom.mjs > security-artifacts/sbom.spdx.json
-          bun scripts/verify-sbom.mjs security-artifacts/sbom.spdx.json security/license-policy.json
-          git ls-files -z | xargs -0 bun scripts/scan-secrets.mjs
 
   office-validation:
     name: "office validation (LibreOffice PDF conversion of golden artifacts)"
@@ -201,8 +152,11 @@ jobs:
 
   publish:
     name: publish (deterministic, resumable, provenance)
-    needs: [verify, postgres-integration, office-validation, codeql-release, supply-chain]
-    if: github.ref == 'refs/tags/v0.3.0' || github.ref == 'refs/tags/v0.4.0' || github.ref == 'refs/tags/v0.5.0' || github.ref == 'refs/tags/v0.5.1' || github.ref == 'refs/tags/v0.5.2' || github.ref == 'refs/tags/v0.5.3' || github.ref == 'refs/tags/v0.5.4' || github.ref == 'refs/tags/v0.5.5' || github.ref == 'refs/tags/v0.5.6' || github.ref == 'refs/tags/v0.6.0' || github.ref == 'refs/tags/v0.7.0' || github.ref == 'refs/tags/v0.8.0' || github.ref == 'refs/tags/v0.9.0' || github.ref == 'refs/tags/v0.10.0' || github.ref == 'refs/tags/v0.11.0' || github.ref == 'refs/tags/v0.11.1' || github.ref == 'refs/tags/v0.12.0' || github.ref == 'refs/tags/v0.12.1' || startsWith(github.ref, 'refs/tags/@arnilo/')
+    needs: [verify, postgres-integration, office-validation, security-release]
+    # Any tag publishes: `v*` lockstep, `@arnilo/<name>@<version>` independent. A pattern, not a
+    # version list, so the next cut needs no edit here (plan 215 Task 36 (b)).
+    if: startsWith(github.ref, 'refs/tags/')
+    environment: npm-publish
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -215,12 +169,19 @@ jobs:
           persist-credentials: false
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          bun-version: "1.4.2"
+          bun-version: "1.4.4"
+      # Trusted publishing needs Node >= 22.14.0 and npm >= 11.5.1; `npm publish --provenance`
+      # exchanges the job's OIDC token for a short-lived credential, so no npm token is stored.
+      # Node 24.10.0 bundles npm 11.6.2, above the trusted-publishing floor of 11.5.1. The publish
+      # itself runs inside `bun run release:publish` (scripts/release.mjs), so no npm command line
+      # sits in this workflow.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24.10.0"
       - run: bun ci
       - run: bun run build
-      # Bun-only release toolchain (plan 164 Task 8.4): pack the tarballs once, then attest and
-      # publish exactly those bytes. Bun 1.4.2 has no `--provenance`, so provenance is the GitHub
-      # build attestation below, not an npm sigstore statement.
+      # Bun packs the tarballs once (plan 164 Task 8.4) and the workflow attests exactly those
+      # bytes; npm publishes them under OIDC (plan 215 Task 38) and adds its sigstore statement.
       - name: pack release artifacts, checksums, SBOM, and secret scan
         run: |
           SAFE_REF=$(echo "$GITHUB_REF_NAME" | sed 's#[/@:]#-#g')
@@ -252,17 +213,13 @@ jobs:
           name: release-artifacts-${{ env.SAFE_REF }}
           path: release-artifacts
           retention-days: 30
-      - name: wire registry auth
-        # Registry auth reaches the client only through config keys (`//<registry>/:_authToken`).
-        # The value stays the `${NODE_AUTH_TOKEN}` reference: bun reads `.npmrc` and expands it from
-        # the publish step's env at publish time instead of storing the secret.
-        run: |
-          printf '//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}\n' >> "$HOME/.npmrc"
       - name: publish in dependency order
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        # No credential step: npm detects the OIDC environment and authenticates with the
+        # trusted publisher configured for each name. `environment: npm-publish` is the approval.
         run: |
-          if [ "$GITHUB_REF_NAME" = "v0.3.0" ] || [ "$GITHUB_REF_NAME" = "v0.4.0" ] || [ "$GITHUB_REF_NAME" = "v0.5.0" ] || [ "$GITHUB_REF_NAME" = "v0.5.1" ] || [ "$GITHUB_REF_NAME" = "v0.5.2" ] || [ "$GITHUB_REF_NAME" = "v0.5.3" ] || [ "$GITHUB_REF_NAME" = "v0.5.4" ] || [ "$GITHUB_REF_NAME" = "v0.5.5" ] || [ "$GITHUB_REF_NAME" = "v0.5.6" ] || [ "$GITHUB_REF_NAME" = "v0.6.0" ] || [ "$GITHUB_REF_NAME" = "v0.7.0" ] || [ "$GITHUB_REF_NAME" = "v0.8.0" ] || [ "$GITHUB_REF_NAME" = "v0.9.0" ] || [ "$GITHUB_REF_NAME" = "v0.10.0" ] || [ "$GITHUB_REF_NAME" = "v0.11.0" ] || [ "$GITHUB_REF_NAME" = "v0.11.1" ] || [ "$GITHUB_REF_NAME" = "v0.12.0" ] || [ "$GITHUB_REF_NAME" = "v0.12.1" ]; then
+          # Lockstep cut = a `v*` tag; every other tag is an independent-line cut
+          # (`@arnilo/<name>@<version>`). One rule for every future version.
+          if [ "${GITHUB_REF_NAME#v}" != "$GITHUB_REF_NAME" ]; then
             bun run release:publish -- --lockstep --version "${GITHUB_REF_NAME#v}" --resume --report release-artifacts/publish-report.json
           else
             bun run release:publish -- --resume --report release-artifacts/publish-report.json

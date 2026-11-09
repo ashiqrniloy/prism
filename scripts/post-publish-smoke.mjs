@@ -81,12 +81,12 @@ console.log(`post-publish smoke: PASS (${local ? "local tarballs" : `registry @$
 function smokeSource() {
   return `import { createAgent, definePackage, providerTextDelta, providerDone } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import { createMemory, createMemoryFabric } from "@arnilo/prism-memory-fabric";
+import { createMemory, createLongTermMemory } from "@arnilo/prism-memory-system";
 import hooksJson, { hookCommandHash } from "@arnilo/prism-hooks-json";
 
 const checks = [];
 checks.push(["root: createAgent + definePackage", [createAgent, definePackage].every((f) => typeof f === "function")]);
-checks.push(["memory-fabric: createMemory + createMemoryFabric", [createMemory, createMemoryFabric].every((f) => typeof f === "function")]);
+checks.push(["memory-system: createMemory + createLongTermMemory", [createMemory, createLongTermMemory].every((f) => typeof f === "function")]);
 checks.push(["hooks-json default export", typeof hooksJson === "function" && hooksJson.name === "@arnilo/prism-hooks-json"]);
 checks.push(["hooks-json hash helper", typeof hookCommandHash === "function"]);
 

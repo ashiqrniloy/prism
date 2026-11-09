@@ -12,9 +12,9 @@ import { dirname, join } from "node:path";
 import { createSecretRedactor } from "@arnilo/prism";
 import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
 import { createMarkdownMemoryStores } from "@arnilo/prism-memory-core/fabric";
-import { createFabricRules, resolveFabricRulesOptions } from "../../../packages/memory/fabric/src/delivery/rules.js";
-import { createExchangeArchive } from "../../../packages/memory/fabric/src/exchanges.js";
-import { createMemory, createMemoryFabric, createMemoryWorkingStore, exportMemoryOkf } from "../../../packages/memory/fabric/src/index.js";
+import { createFabricRules, resolveFabricRulesOptions } from "../../../packages/memory/system/src/ltm/delivery/rules.js";
+import { createExchangeArchive } from "../../../packages/memory/system/src/ltm/exchanges.js";
+import { createMemory, createLongTermMemory, exportMemoryOkf } from "../../../packages/memory/system/src/index.js";
 import { loadDataset, normalizeDataset } from "../datasets.mjs";
 import { auditAdversarial, auditQuestions } from "../trust-scan-audit.mjs";
 import criteria from "./criteria.json" with { type: "json" };
@@ -59,17 +59,15 @@ function entry(id, role, text) {
 
 function inMemoryFabric(threadId = "safety") {
   const vectorStore = createMemoryVectorStore();
-  const workingStore = createMemoryWorkingStore();
   const memory = createMemory({
     tenantId: "t",
     resourceId: "safety",
     threadId,
     embedder: createHashEmbedder({ dimensions: 8 }),
     vectorStore,
-    workingStore,
   });
-  const fabric = createMemoryFabric({ memory, vectorStore, consolidate: false });
-  return { memory, fabric, vectorStore, workingStore };
+  const fabric = createLongTermMemory({ memory, vectorStore, consolidate: false });
+  return { memory, fabric, vectorStore };
 }
 
 function archiveFor(harness, redactor) {
@@ -155,16 +153,14 @@ export async function runPoisoning() {
 
 async function openScope(tenantId, resourceId) {
   const vectorStore = createMemoryVectorStore();
-  const workingStore = createMemoryWorkingStore();
   const memory = createMemory({
     tenantId,
     resourceId,
     threadId: "main",
     embedder: createHashEmbedder({ dimensions: 8 }),
     vectorStore,
-    workingStore,
   });
-  return { memory, vectorStore, workingStore };
+  return { memory, vectorStore };
 }
 
 /**
@@ -181,7 +177,7 @@ export async function runLeakage() {
   const team = await openScope("tenant-a", "team:shared");
   const otherTenant = await openScope("tenant-b", "project:a");
 
-  const aFabric = createMemoryFabric({
+  const aFabric = createLongTermMemory({
     memory: a.memory,
     scopes: [
       { level: "project", memory: a.memory },
@@ -190,7 +186,7 @@ export async function runLeakage() {
     ],
     consolidate: false,
   });
-  const bFabric = createMemoryFabric({
+  const bFabric = createLongTermMemory({
     memory: b.memory,
     scopes: [
       { level: "project", memory: b.memory },
@@ -200,7 +196,7 @@ export async function runLeakage() {
     readOnlyScopes: [{ level: "team", memory: team.memory }],
     consolidate: false,
   });
-  const bWithoutTeam = createMemoryFabric({
+  const bWithoutTeam = createLongTermMemory({
     memory: b.memory,
     scopes: [
       { level: "project", memory: b.memory },
@@ -209,7 +205,7 @@ export async function runLeakage() {
     ],
     consolidate: false,
   });
-  const otherFabric = createMemoryFabric({
+  const otherFabric = createLongTermMemory({
     memory: otherTenant.memory,
     scopes: [{ level: "project", memory: otherTenant.memory }],
     consolidate: false,
@@ -293,9 +289,8 @@ export async function runDeletion() {
     threadId: "main",
     embedder: createHashEmbedder({ dimensions: 8 }),
     vectorStore: stores.vectorStore,
-    workingStore: stores.workingStore,
   });
-  const fabric = createMemoryFabric({ memory, vectorStore: stores.vectorStore, consolidate: false });
+  const fabric = createLongTermMemory({ memory, vectorStore: stores.vectorStore, consolidate: false });
   const core = createFabricRules({
     options: resolveFabricRulesOptions(true, true),
     scopes: [{ level: "project", memory }],
@@ -316,7 +311,7 @@ export async function runDeletion() {
     links: [{ id: target.id, relation: "related", weight: 1 }],
   });
   const beforeCore = (await core.block())?.content ?? "";
-  await exportMemoryOkf(memory, { dir: exportDir, stores: { vectorStore: stores.vectorStore, workingStore: stores.workingStore } });
+  await exportMemoryOkf(memory, { dir: exportDir, stores: { vectorStore: stores.vectorStore } });
   const before = {
     noteFile: await noteFilesContain(root, marker),
     recall: (await fabric.recall(marker, { topK: 8 })).hits.length > 0,
@@ -327,7 +322,7 @@ export async function runDeletion() {
   };
 
   await fabric.forget({ id: target.id });
-  await exportMemoryOkf(memory, { dir: exportAfterDir, stores: { vectorStore: stores.vectorStore, workingStore: stores.workingStore } });
+  await exportMemoryOkf(memory, { dir: exportAfterDir, stores: { vectorStore: stores.vectorStore } });
   const after = {
     noteFile: await noteFilesContain(root, marker),
     recall: (await fabric.recall(marker, { topK: 8 })).hits.length > 0,

@@ -103,13 +103,12 @@ test("phase54 package map: partitioning - every current manifest is accounted fo
     "@arnilo/prism-memory-core",
     // Plan 158 Task 3: the RAG package, moved out of @arnilo/prism-memory/rag.
     "@arnilo/prism-rag",
-    // Plan 158 Task 4: the fabric package, moved out of @arnilo/prism-memory/{fabric,scoped}.
-    "@arnilo/prism-memory-fabric",
     // Plan 158 Task 5: the wiki package, moved out of @arnilo/prism-memory/wiki.
     "@arnilo/prism-wiki",
-    // Plan 157 Tasks 3-4: the compaction and observational-memory packages.
+    // Plan 157 Tasks 3-4: the compaction and observational-memory packages; plan 216 Tasks 4-5 made the latter the
+    // memory system and moved the fabric (plan 158 Task 4) into it.
     "@arnilo/prism-memory-compaction",
-    "@arnilo/prism-memory-observational",
+    "@arnilo/prism-memory-system",
     // Plan 159 Task 3: the MCP server host library package.
     "@arnilo/prism-mcp-server",
     // Plan 161 Task 2: the ACP host library.

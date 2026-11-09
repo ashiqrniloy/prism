@@ -47,6 +47,7 @@ import type {
   MemoryRetentionPolicy,
   MemoryRetentionResult,
   MemoryScope,
+  MemoryValidationCode,
   MemoryShareGrant,
   MemoryTagCount,
   MemoryTopTagsQuery,
@@ -88,12 +89,6 @@ import type {
   VectorQuery,
   VectorScanMetadataQuery,
   VectorStore,
-  WorkingMemoryKey,
-  WorkingMemoryProcessorOptions,
-  WorkingMemoryRecord,
-  WorkingMemoryStore,
-  WorkingMemoryUpdateMode,
-  WorkingMemoryUpdateOptions,
 } from "../index.js";
 
 type _StableTypes = [
@@ -131,6 +126,7 @@ type _StableTypes = [
   MemoryRetentionPolicy,
   MemoryRetentionResult,
   MemoryScope,
+  MemoryValidationCode,
   MemoryShareGrant,
   MemoryTagCount,
   MemoryTopTagsQuery,
@@ -172,12 +168,6 @@ type _StableTypes = [
   VectorQuery,
   VectorScanMetadataQuery,
   VectorStore,
-  WorkingMemoryKey,
-  WorkingMemoryProcessorOptions,
-  WorkingMemoryRecord,
-  WorkingMemoryStore,
-  WorkingMemoryUpdateMode,
-  WorkingMemoryUpdateOptions,
 ];
 export type StableTypeCount = _StableTypes["length"];
 
@@ -230,7 +220,6 @@ const SHARED_ROOT = [
   "mergeJsonObjects",
   "recordBlocked",
   "redactJson",
-  "renderTemplate",
   "requireNonEmptyString",
   "requireScope",
   "rerankRecallHits",
@@ -303,7 +292,7 @@ describe("memory-core exports", () => {
 
   it("core_subpath_exports_are_frozen", () => {
     expect(Object.keys(fabricStores).sort()).toEqual(["createMarkdownMemoryStores", "noteRelPath"]);
-    expect(Object.keys(sqlite).sort()).toEqual(["buildSqliteMemoryDdl", "createSqliteMemoryStores"]);
+    expect(Object.keys(sqlite).sort()).toEqual(["buildSqliteMemoryDdl", "createSqliteMemoryStores", "openSqliteDatabase"]);
     expect(Object.keys(postgres).sort()).toEqual(["DEFAULT_MEMORY_SCHEMA", "DEFAULT_VECTOR_TABLE", "buildMemoryDdl", "buildVectorSearchDdl", "createPostgresMemoryStores", "createPostgresVectorStore", "qualifyTable", "queryPostgres", "quoteIdentifier"]);
   });
 

@@ -143,6 +143,21 @@ describe("tools-coding hard denies", () => {
     assert.equal(inside, undefined, "a file inside the roots is not a hard deny");
   });
 
+  it("hard_deny_allows_create_under_new_directories", async () => {
+    // Plan 215 Task 32 (live journey): a write two levels below an existing directory was denied as outside.
+    const root = await tempRoot();
+    const outside = await tempRoot();
+    await symlink(outside, join(root, "escape"));
+    const deny = createHardDenyHook({ targets: createCodingTargets(root, []), readOnly: false });
+    const call = (path: string) =>
+      deny({ name: "write", args: { path, content: "x" }, effects: ["write"], callId: "c", sessionId: "s", runId: "r" });
+    assert.equal(await call("notes/x.txt"), undefined, "a create under one new directory is inside");
+    assert.equal(await call("a/b/c/x.txt"), undefined, "a create under several new directories is inside");
+    // The nearest existing ancestor is realpath'd, so a symlinked directory above new ones still escapes.
+    assert.match(denyReason(await call("escape/new/x.txt")), /outside coding roots/);
+    assert.match(denyReason(await call("../new-dir/x.txt")), /outside coding roots/);
+  });
+
   it("hard_deny_holds_under_rewrite", async () => {
     const root = await tempRoot();
     const outside = join(root, "..", `outside-rewritten-${Date.now()}.txt`);

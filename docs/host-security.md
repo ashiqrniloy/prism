@@ -18,7 +18,7 @@ Start from explicit host inputs. Do not let runtime code discover security state
 
 | Security input | Host-owned source | Prism API / page |
 | --- | --- | --- |
-| Settings | app config object or caller-named files | `createStaticSettingsProvider`, `loadSettingsFiles()` |
+| Settings | app config object or caller-named files | a host `SettingsProvider` ([Security/auth/trust](settings-auth-trust-security.md)) |
 | Credentials | `env:`/`keyring:` refs resolved by the credentials slot | `AgentConfig.slots.credentials`, `createEnvRefCredentialResolver`, `SecretSource` / `refSource()` ([Credentials](credentials-and-redaction.md)) |
 | Redaction values | exact known credential strings | `createSecretRedactor`, `redactSecrets()` |
 | Trust roots | app-selected directories/resources | `createPathTrustPolicy`, `assertTrusted()` |
@@ -28,16 +28,16 @@ Start from explicit host inputs. Do not let runtime code discover security state
 | Guardrail decisions | host callback allow/block/tripwire policy | `Guardrails`, `Guardrail`, `GuardrailError` |
 | Coding execution policy | path/command approval adapter | `ExecutionPolicy`, `@arnilo/prism-tools-coding` |
 | Remote media policy | public/default pinned DNS or explicit trusted transport | `SsrfPolicy`, `resolveMediaContentBlock()` |
-| Durable history | host database adapter | `SessionStore`, `assertSessionStoreConforms()` |
+| Durable history | host database adapter | `SessionStore`, `storeConformance()` (`@arnilo/prism/testing`) |
 | Durable audit | host ledger adapter | `RunLedger`, `redactRunLedgerRecord()` |
 | Telemetry | host OpenTelemetry SDK/exporter | metadata-only adapter, controlled metric labels, `onTraceReference` |
-| Durable interruption | host checkpoint + session stores, exact ownership | `RunOptions.runState`, `resumeAgentRun()`, `createAgentRunLifecycle()`, `createSecureAgent()` |
+| Durable interruption | host session store, exact ownership | `RunResult.pending`, `session.resume(decisions)` on `agent.session({ id })` ([Agent](agent.md)) |
 | Packages | explicit package list only; packages are trusted code | `createAgent({ packages })`, [Packages](packages.md) |
 | Remote agent/workflow API | host authentication + ownership mapping | `@arnilo/prism-remote`, `@arnilo/prism-mcp-server` |
 | Authenticated identity | host `IdentityVerifier` → verified `AgentIdentity`; optional OIDC/JWKS reference adapter (`@arnilo/prism-credentials-keyring/oidc`, pinned issuer/audience/JWKS, fail closed) | [Agent identity](../packages/policy/governance/README.md), `assertIdentityActive`, `narrowIdentity` |
 | Policy decision audit | optional redacted ledger + host WORM sink | [Policy and audit](../packages/policy/governance/README.md), `@arnilo/prism-governance` |
 | Durable enterprise state | host PostgreSQL pool, TLS, exact owner/principal projection, migration/runtime database roles, backup and explicit cleanup schedule | [Enterprise PostgreSQL state](../packages/stores/postgres/README.md), `@arnilo/prism-store-postgres` |
-| MCP server exposure | host MCP auth + selected capability list | `createPrismMcpServer()`, `createPrismMcpWebHandler()` |
+| MCP server exposure | host MCP auth + selected capability list | `serveMcp()`, `createPrismMcpWebHandler()` (`@arnilo/prism-mcp-server`) |
 
 ## Outputs / response / events
 
@@ -49,7 +49,7 @@ Security controls fail closed before side effects when wired at the guarded edge
 - validator failures emit `tool_execution_blocked` with `validation_failed`
 - configured guardrails fail closed; output stages buffer blocked provider/tool content before events, ledgers, session entries, or MCP responses
 - configured redactors scrub provider requests, agent events, session entries, ledger records, tool errors, extension errors, injector context, and durable run checkpoints
-- durable resume requires host-derived exact ownership and checkpoint version; coding-task resume also revalidates plan/workspace artifact hashes plus tool/policy/image fingerprints via `assertCodingResumeAllowed` before import; `createAgentRunLifecycle()` exposes only public state through explicitly selected server/MCP capabilities; never accept ownership or resume input from an approval body
+- durable resume requires host-derived exact ownership and checkpoint version; coding-task resume also revalidates plan/workspace artifact hashes plus tool/policy/image fingerprints via `assertCodingResumeAllowed` before import; the `@arnilo/prism-remote` and `@arnilo/prism-mcp-server` boundaries expose only public state through explicitly selected capabilities; never accept ownership or resume input from an approval body
 
 These checks are explicit function calls during load, assembly, dispatch, append, or run handling. Prism adds no background watchers, filesystem scanners, network probes, credential polling, or automatic extension discovery.
 
@@ -73,6 +73,7 @@ The JSON above is an app security plan, not a Prism config format. Hosts transla
 ```ts
 import {
   createEnvRefCredentialResolver,
+  createPathTrustPolicy,
   createSecretRedactor,
   createStaticPermissionPolicy,
   createToolRegistry,
@@ -80,7 +81,6 @@ import {
   type ToolDefinition,
   type ToolValidator,
 } from "@arnilo/prism";
-import { createPathTrustPolicy } from "@arnilo/prism/node/trust";
 import { refSource } from "@arnilo/prism/provider-kit";
 
 const workspaceRoot = "/workspace/app";
@@ -112,7 +112,7 @@ const tools = createToolRegistry(filterTools([readNotes], { allow: ["notes/read"
 void { apiKey, redactor, permission, trust, tools, validate };
 ```
 
-Wire those values where they matter: assign `credentials` to `AgentConfig.slots.credentials` (packages resolve refs through it per request; a low-level provider factory takes the `refSource()` result as its `SecretSource`), agents/runs receive `redactor`, tool dispatch receives `trust`, `permission`, and `validate`, resource/extension loaders receive `trust` and `permission`, and durable adapters receive already-redacted entries/records. `createSecureAgent()` is an opt-in shortcut that requires these agent/tool seams, strict schemas, finite limits, exact ownership, and durable approval before every tool side effect; low-level `createAgent()` stays explicit.
+Wire those values where they matter: assign `credentials` to `AgentConfig.slots.credentials` (packages resolve refs through it per request; a low-level provider factory takes the `refSource()` result as its `SecretSource`), agents/runs receive `redactor`, tool dispatch receives `trust`, `permission`, and `validate`, resource/extension loaders receive `trust` and `permission`, and durable adapters receive already-redacted entries/records. `createAgent()` stays explicit: no shortcut wires these seams for you.
 
 ## Multi-user hosts on one agent
 
@@ -144,12 +144,12 @@ When serving a multi-user agent over `@arnilo/prism-remote`, `serveAgent` partit
 - Assign `AgentConfig.slots.credentials` to choose the resolver (the default `createEnvRefCredentialResolver()` answers `env:` refs; `@arnilo/prism-credentials-keyring` answers `keyring:` refs). Every secret-bearing package config field rejects a literal with `literal_secret`, and a low-level provider factory accepts only a `SecretSource`.
 - Do not treat a local vendor CLI credential file, setup token, browser session, or consumer subscription as a Prism credential source. In 0.0.12 only OpenAI Codex has a first-party subscription OAuth flow; Anthropic and Google providers remain API-key-only under their published third-party restrictions. See [Credentials and redaction](credentials-and-redaction.md#subscription-oauth-eligibility).
 - Use `createPathTrustPolicy()` for workspace/resource roots and fail closed on symlink escapes.
-- Use `createContributionRegistries({ duplicate: "error" })` and prefixed names for third-party packages to prevent silent shadowing.
+- Use prefixed tool names for third-party packages to prevent silent shadowing.
 - Extension contributions are inert until selected. Loading an extension package runs its `setup(api)` code, so hosts should load only trusted packages or isolate untrusted code outside Prism.
 - Skills and instruction injectors grant no tools, permissions, validators, or resource access. Host-active tools and permission policies still decide execution.
 - Optional ledger batching accepts runtime-redacted records only. Prefer `flush_on_terminal`; `buffered` explicitly permits crash-before-flush loss. Flush failures propagate; hosts can call `dispose({ flush: false })` to clear queued objects when deliberately discarding an aborted buffered workload.
 - Session snapshot cache holds one session-local leaf. It is revalidated against the store at most every TTL (`snapshotCacheTtlMs`, default one second): one `store.get` of the cached tip, which must still exist in this session with the same parent and ownership stamps, or the branch is re-read. It is extended only by the session's own CAS-accepted appends at its tip; a compaction entry, an append conflict, checkout, fork and resume drop it. `snapshotCacheTtlMs: 0` reads the store on every snapshot. It never crosses session/branch/ownership.
-- For production persistence, implement a database-backed `SessionStore`/`RunLedger`, run `assertSessionStoreConforms()` against the store, and follow the database schema guidance. Do not ship provider instances, credential resolvers, or secrets into durable rows.
+- For production persistence, implement a database-backed `SessionStore`/`RunLedger`, run `storeConformance()` (`@arnilo/prism/testing`) against the store, and follow the database schema guidance. Do not ship provider instances, credential resolvers, or secrets into durable rows.
 
 ## Security and performance notes
 

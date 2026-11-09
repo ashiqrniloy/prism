@@ -287,6 +287,28 @@ export function createRunController(internals: RunControllerInternals): RunContr
     });
   };
 
+  /**
+   * A `tool.call` deny (or an ask the host refused) never runs the tool, but it still settles as one
+   * `tool.completed { status: "blocked" }` (docs/events.md), on a fresh run and on a resumed one alike.
+   * Found by the plan 215 Task 32 live journey: the result reached the transcript with no event.
+   */
+  const blocked = (call: ToolCallContent, reason: string): ToolResult => {
+    const result: ToolResult = { toolCallId: call.id, name: call.name, error: { code: "hook_denied", message: reason } };
+    internals.emit({
+      type: "tool.completed",
+      sessionId: internals.sessionId,
+      runId: internals.runId,
+      toolCallId: call.id,
+      name: call.name,
+      result,
+      metadata: { durationMs: 0, status: "blocked" },
+      status: "blocked",
+      reason,
+      error: result.error!,
+    });
+    return result;
+  };
+
   const dispatchOne = async (
     call: ToolCallContent,
     effective: ToolCallContent,
@@ -297,14 +319,10 @@ export function createRunController(internals: RunControllerInternals): RunContr
     // A dispose can land while the round is gated: the check runs again per call, before execution.
     if (disposedAbort()) return disposedResult(call);
     if (decision !== undefined && decision !== "allow") {
-      if (typeof decision === "object" && "deny" in decision) {
-        return { toolCallId: call.id, name: call.name, error: { code: "hook_denied", message: decision.deny } };
-      }
+      if (typeof decision === "object" && "deny" in decision) return blocked(call, decision.deny);
       if (typeof decision === "object" && "ask" in decision) {
         const resolution = askResolutions.get(call.id) ?? { kind: "deny" as const, reason: decision.ask };
-        if (resolution.kind === "deny") {
-          return { toolCallId: call.id, name: call.name, error: { code: "hook_denied", message: resolution.reason } };
-        }
+        if (resolution.kind === "deny") return blocked(call, resolution.reason);
       }
       if (typeof decision === "object" && "respond" in decision) return decision.respond;
     }

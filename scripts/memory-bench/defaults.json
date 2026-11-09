@@ -4,13 +4,24 @@
     "observational": {
       "enabled": false,
       "recall": true,
-      "observer": {
-        "messageTokens": 10000
+      "stm": {
+        "triggerTokens": 10000,
+        "contextTokens": 4000,
+        "maxChunksPerEvent": 2,
+        "maxChunkBytes": 4096,
+        "chunkStore": "memory",
+        "habituation": {
+          "windowEvents": 50
+        },
+        "boundaries": false,
+        "boundaryGapMinutes": 10
       },
-      "reflector": {
+      "wm": {
+        "enabled": true,
         "observationTokens": 20000
       },
-      "dropper": {
+      "rehearsal": {
+        "enabled": true,
         "targetTokens": 20000,
         "policy": "model"
       },
@@ -64,7 +75,6 @@
       "lifecycle": {
         "verifyAfterSessions": 2,
         "decay": {
-          "working": 0.4,
           "episode": 0.8,
           "fact": 0.4,
           "preference": 0.2,

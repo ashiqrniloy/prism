@@ -3,7 +3,7 @@ import type { OwnershipScope } from "../contracts.js";
 
 /**
  * Durable artifact co-work review types (Phase 9 / 0.0.14). Core exports types only;
- * the service + delivery-link signer live in `@arnilo/prism-server`. Prism persists bounded
+ * the host implements the service and the delivery-link signer. Prism persists bounded
  * metadata, revisions, approvals, and delivery references — never file bodies (hosts own blobs).
  */
 
@@ -121,7 +121,7 @@ export interface ArtifactBodyPresignOptions extends ArtifactBodyTransferOptions 
 
 /**
  * Host-owned blob storage contract (Phase 11 / 0.0.28). Core exports the contract only;
- * the reference S3-compatible adapter lives in `@arnilo/prism-server/artifact-bodies`.
+ * the host supplies the adapter (Prism ships no S3 reference adapter since 0.13.0).
  * Implementations must verify ownership on every operation, verify hash/size/MIME on
  * put/get (fail closed), refuse delete under legal hold, and never disclose bucket/path/key
  * in errors, telemetry, or records. All failures surface typed errors, never silent success.

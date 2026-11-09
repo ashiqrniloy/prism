@@ -27,8 +27,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # JSON array repo variable, e.g. ["openai","anthropic"].
-        provider: ${{ fromJSON(vars.PRISM_CANARY_PROVIDERS || '["openai"]') }}
+        # JSON array repo variable, e.g. ["openrouter","openai-codex"]. The default is the
+        # gating T1 provider set (docs/live-testing.md, "T1"): every name here must be a
+        # `packages/providers/<name>` workspace with a live suite, which
+        # `scripts/workflow-liveness.test.mjs` asserts. It named `openai` — a package plan 182
+        # deleted — so every scheduled run failed on a path that no longer exists.
+        provider: ${{ fromJSON(vars.PRISM_CANARY_PROVIDERS || '["hyper","opencode-go","typesafe","laya","liquid","openrouter","openai-codex","kilo","litellm"]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

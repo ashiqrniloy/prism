@@ -38,7 +38,7 @@ export interface HostConfig {
   readonly memory?: "conversational" | "coding";
   /**
    * Opt-in wiki: adds `@arnilo/prism-wiki`, whose store lives under `<workspace>/.prism/wiki`. A background pass
-   * consolidates evidence (its own ingested sources, and the fabric's notes read-only when `memory` is on) into cited
+   * consolidates evidence (its own ingested sources, and long-term memory's notes read-only when `memory` is on) into cited
    * concepts that `wiki.search` returns. Default off. The pass is extra model calls, on `ontologyModel` when set and on
    * the agent's own model otherwise.
    */

@@ -7,8 +7,8 @@ import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { createOpenCodeGoProvider, openCodeGoModels } from "@arnilo/prism-provider-opencode-go";
 
-import { runObserver } from "../../packages/memory/observational/src/workers/observer.ts";
-import { runReflector } from "../../packages/memory/observational/src/workers/reflector.ts";
+import { runStm } from "../../packages/memory/system/src/session/workers/stm.ts";
+import { runReflector } from "../../packages/memory/system/src/session/workers/reflector.ts";
 
 const enabled = process.env.PRISM_LIVE_OBSERVATIONAL_MEMORY_TESTS === "1";
 const modelId = process.env.PRISM_LIVE_OPENCODE_GO_CHAT_MODEL ?? "mimo-v2.5";
@@ -50,7 +50,7 @@ test.skipIf(!enabled)(
   "observational_live_observer_and_reflector_complete",
   async () => {
     const observer = liveClient();
-    const observations = await runObserver({
+    const observations = await runStm({
       entries: [source],
       client: observer.client,
       maxTurns: 4,

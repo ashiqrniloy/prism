@@ -16,12 +16,12 @@ import { providerDone, providerToolCall, toolCallContent } from "@arnilo/prism/t
 import { createMemoryVectorStore, MemoryScopeError, scanScopedMemoryContent } from "@arnilo/prism-memory-core";
 import {
   createMemory,
-  createMemoryFabric,
+  createLongTermMemory,
   createMemoryLtmPort,
   exportMemoryOkf,
   importMemoryOkf,
   parseMemoryNoteMetadata,
-} from "../../../packages/memory/fabric/src/index.js";
+} from "../../../packages/memory/system/src/index.js";
 import { createWikiPointer } from "../../../packages/knowledge/wiki/src/context.js";
 import { createWikiLease, runWikiPass } from "../../../packages/knowledge/wiki/src/consolidate/pass.js";
 import { EDIT_TOOL_NAME } from "../../../packages/knowledge/wiki/src/consolidate/schema.js";
@@ -91,7 +91,7 @@ function harnessFor({ memories, vectorStore, knowledgeRoot }) {
   const store = knowledgeRoot === undefined ? createMemoryWikiStore() : createMarkdownWikiStore({ root: knowledgeRoot });
   const port = createWikiOntology({ store, ltm: () => ltm });
   const project = memories.find((entry) => entry.level === "project")?.memory ?? memories[0].memory;
-  const fabric = createMemoryFabric({ memory: project, scopes: memories, vectorStore, consolidate: false });
+  const fabric = createLongTermMemory({ memory: project, scopes: memories, vectorStore, consolidate: false });
   const search = createWikiSearchTool({ port: () => port, maxClaimsRendered: 8 });
   const read = createWikiReadTool({ port: () => port, maxClaimsRendered: 8 });
   const pointer = createWikiPointer({ port: () => port, root: "/workspace" });
@@ -153,7 +153,7 @@ async function observeCascade(harness, knowledgeRoot, marker, noteMarker = CASCA
   const exportDir = await mkdtemp(join(tmpdir(), "prism-safety-onto-export-"));
   try {
     await harness.port.refresh();
-    await exportMemoryOkf(harness.memory, { dir: exportDir, stores: { vectorStore: harness.vectorStore, workingStore: undefined } });
+    await exportMemoryOkf(harness.memory, { dir: exportDir, stores: { vectorStore: harness.vectorStore } });
     const [row] = await harness.port.subjects("project");
     const search = await harness.search("payments retries backoff zod");
     const read = row === undefined ? "" : await harness.read({ id: row.conceptId });
@@ -460,7 +460,7 @@ export async function runConceptPoisoning() {
   // (a) The archive refuses poisoned exchanges, so none reaches the curator; a control note still becomes a claim.
   {
     const harness = memoryHarness("poison-archive");
-    const { createExchangeArchive } = await import("../../../packages/memory/fabric/src/exchanges.js");
+    const { createExchangeArchive } = await import("../../../packages/memory/system/src/ltm/exchanges.js");
     await seedForPass(harness);
     const archive = createExchangeArchive({ remember: harness.fabric.remember, maxTextChars: 16_384, scope: "project" });
     const pair = (index, user) =>
@@ -508,13 +508,13 @@ export async function runConceptPoisoning() {
     const injected = await source.fabric.remember({ kind: "fact", content: POISON_NOTE, subject: "payments" });
     const bundle = await mkdtemp(join(tmpdir(), "prism-safety-onto-bundle-"));
     try {
-      await exportMemoryOkf(source.memory, { dir: bundle, stores: { vectorStore: source.vectorStore, workingStore: undefined } });
+      await exportMemoryOkf(source.memory, { dir: bundle, stores: { vectorStore: source.vectorStore } });
       const harness = memoryHarness("poison-bundle");
       await seedForPass(harness);
       const imported = await importMemoryOkf(harness.memory, {
         dir: bundle,
         mode: "merge",
-        stores: { vectorStore: harness.vectorStore, workingStore: undefined },
+        stores: { vectorStore: harness.vectorStore },
       });
       const [record] = await harness.memory.get([injected.id]);
       const note = record === undefined ? undefined : parseMemoryNoteMetadata(record.metadata);

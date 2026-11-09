@@ -44,8 +44,7 @@ test("conversational_memory_scenario_recalls_across_sessions_and_forgets", async
 
 const EXPERIMENTAL = [
   "@arnilo/prism-memory-core",
-  "@arnilo/prism-memory-observational",
-  "@arnilo/prism-memory-fabric",
+  "@arnilo/prism-memory-system",
   "@arnilo/prism-wiki",
   "@arnilo/prism-rag",
 ];
@@ -78,7 +77,7 @@ test("reference_host_default_loads_no_experimental_package", async () => {
   }
 });
 
-test("reference_host_memory_opt_in_loads_om_and_fabric", async () => {
+test("reference_host_memory_opt_in_loads_the_memory_system_with_ltm", async () => {
   const root = mkdtempSync(join(tmpdir(), "pa-memory-optin-"));
   mkdirSync(join(root, "workspace"));
   try {
@@ -88,8 +87,14 @@ test("reference_host_memory_opt_in_loads_om_and_fabric", async () => {
     try {
       for (const agent of [coding, research]) {
         const names = agent.inspect().packages.map((entry) => entry.name);
-        assert.equal(names.includes("@arnilo/prism-memory-fabric"), true);
-        assert.equal(names.includes("@arnilo/prism-memory-observational"), true);
+        assert.equal(names.includes("@arnilo/prism-memory-system"), true);
+        const memory = agent.inspect().packages.find((entry) => entry.name === "@arnilo/prism-memory-system");
+        assert.notEqual((memory?.config as { ltm?: unknown } | undefined)?.ltm ?? null, null, "the memory opt-in configures ltm");
+        // Plan 216 Task 6: the opt-in is the `ltm` profile plus the `session` profile (stm + wm, OM's per-session
+        // opt-in), with rehearsal resolved on, as before the components existed.
+        assert.ok(agent.inspect().tools.some((tool) => tool.name === "memory.recall"), "ltm's tools");
+        assert.ok(agent.inspect().commands.some((command) => command.name === "memory:session"), "the session tiers' toggle");
+        assert.deepEqual([...(memory?.capabilities ?? [])].sort(), ["background", "credentials", "host-ui", "models", "session-state", "slot:compaction"]);
         assert.equal(names.includes("@arnilo/prism-memory-compaction"), true, "compaction stays on the compaction slot");
       }
       assert.equal(
@@ -115,7 +120,7 @@ test("research_worker_loads_memory_rag_only_with_embeddings", async () => {
     try {
       const names = research.inspect().packages.map((entry) => entry.name);
       assert.equal(names.includes("@arnilo/prism-rag"), true);
-      assert.equal(names.includes("@arnilo/prism-memory-fabric"), false);
+      assert.equal(names.includes("@arnilo/prism-memory-system"), false);
     } finally {
       await research.dispose();
     }
@@ -197,16 +202,16 @@ test("reference_host_ontology_off_by_default", async () => {
       }
     };
     for (const list of await names({ ...config(root), memory: "coding" })) {
-      assert.equal(list.includes("@arnilo/prism-memory-fabric"), true);
+      assert.equal(list.includes("@arnilo/prism-memory-system"), true);
       assert.equal(list.includes("@arnilo/prism-wiki"), false, "memory alone never adds the ontology tier");
     }
     for (const list of await names({ ...config(root), memory: "coding", ontology: true })) {
-      assert.equal(list.includes("@arnilo/prism-wiki"), true, "ontology: true adds the wiki beside the fabric");
+      assert.equal(list.includes("@arnilo/prism-wiki"), true, "ontology: true adds the wiki beside long-term memory");
     }
     // The wiki runs without memory on its own sources (plan 216 Task 3).
     for (const list of await names({ ...config(root), ontology: true })) {
       assert.equal(list.includes("@arnilo/prism-wiki"), true);
-      assert.equal(list.includes("@arnilo/prism-memory-fabric"), false);
+      assert.equal(list.includes("@arnilo/prism-memory-system"), false);
     }
   } finally {
     rmSync(root, { recursive: true, force: true });

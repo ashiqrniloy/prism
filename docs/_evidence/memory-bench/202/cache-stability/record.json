@@ -2,13 +2,13 @@
   "kind": "202-cache-stability-record",
   "version": 1,
   "status": "passed",
-  "productHash": "867f82771643fe716c4d214c0ff26250cd842d1da6ee44dac5aabfdefed8759c",
+  "productHash": "4fb60791e80e0118cd133385bf04be121577836d1841b273fed3cb1cfb3d5976",
   "suite": {
     "files": [
-      "packages/memory/fabric/src/__tests__/prefix-stability.test.ts",
+      "packages/memory/system/src/ltm/__tests__/prefix-stability.test.ts",
       "scripts/memory-bench/prefix-probe.test.mjs"
     ],
-    "pass": 29,
+    "pass": 27,
     "fail": 0,
     "skip": 0,
     "passed": [
@@ -29,12 +29,10 @@
       "retention_breaks_the_epoch_on_the_next_request",
       "new_session_and_refresh_see_writes_from_another_memory_instance",
       "epoch_snapshot_is_evicted_on_session_closed",
-      "working_memory_update_reaches_the_tail_not_the_prefix",
       "conversational_prefix_passes_provider_visible_conformance",
       "compaction_completed_starts_a_new_epoch_with_new_notes",
       "single_turn_answer_path_context_bytes_unchanged",
       "imported_tombstones_break_an_existing_epoch",
-      "working_tail_follows_the_transcript_across_first_and_second_turns_and_tool_updates",
       "candidate_inserts_and_evidence_patches_stay_reachable_without_retracting",
       "tail_cache_is_evicted_on_session_closed",
       "another_instances_forget_leaves_the_prefix_on_the_next_request",
@@ -45,7 +43,7 @@
   },
   "equivalence": {
     "file": "equivalence.json",
-    "sha256": "fe4124e83406105915e14e972cfa1756fcdcdf7ee91aaea63379205e5acd9bec",
+    "sha256": "8e11dab0b72658b595c0b0ef9a45919d9d4e38dddbb5da85dcf7b197b97a796c",
     "status": "different"
   }
 }

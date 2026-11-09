@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-08T16:21:03.726Z",
+  "generatedAt": "2026-11-08T22:14:09.871Z",
   "root": {
     "name": "@arnilo/prism",
     "version": "0.13.0"
@@ -28,9 +28,8 @@
     "@arnilo/prism-wiki": "0.13.0-experimental.0",
     "@arnilo/prism-rag": "0.13.0-experimental.0",
     "@arnilo/prism-memory-compaction": "0.13.0",
-    "@arnilo/prism-memory-observational": "0.13.0-experimental.0",
     "@arnilo/prism-memory-core": "0.13.0-experimental.0",
-    "@arnilo/prism-memory-fabric": "0.13.0-experimental.0",
+    "@arnilo/prism-memory-system": "0.13.0-experimental.0",
     "@arnilo/prism-approval": "0.13.0",
     "@arnilo/prism-guardrail-packs": "0.13.0",
     "@arnilo/prism-governance": "0.13.0",
@@ -59,12 +58,12 @@
     "@arnilo/prism-tools-research": "0.13.0"
   },
   "counts": {
-    "publishable": 52,
-    "workspace": 51,
+    "publishable": 51,
+    "workspace": 50,
     "provider": 11,
     "prismFamily": 1,
-    "capability": 39,
-    "codeWithPeer": 51,
+    "capability": 38,
+    "codeWithPeer": 50,
     "pureManifest": 0
   },
   "providers": [
@@ -104,8 +103,7 @@
     "@arnilo/prism-mcp-server",
     "@arnilo/prism-memory-compaction",
     "@arnilo/prism-memory-core",
-    "@arnilo/prism-memory-fabric",
-    "@arnilo/prism-memory-observational",
+    "@arnilo/prism-memory-system",
     "@arnilo/prism-model-router",
     "@arnilo/prism-observability",
     "@arnilo/prism-rag",

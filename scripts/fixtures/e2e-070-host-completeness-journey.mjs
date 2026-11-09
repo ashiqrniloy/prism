@@ -35,8 +35,8 @@ import { createTimelineFolder, summarizeTimeline } from "@arnilo/prism-observabi
 import { defineWorkflow, serializeWorkflowGraph, workflowGraphToMermaid } from "@arnilo/prism-workflows";
 import { inspectHostComposition } from "@arnilo/prism-governance";
 import { createHashEmbedder, revokedIdsAbsent } from "@arnilo/prism-memory-core";
-import { createMemory, createMemoryFabric } from "@arnilo/prism-memory-fabric";
-import memoryObservational, { foldObservationalMemoryLedger } from "@arnilo/prism-memory-observational";
+import { createMemory, createLongTermMemory } from "@arnilo/prism-memory-system";
+import memorySystem, { foldObservationalMemoryLedger } from "@arnilo/prism-memory-system";
 import { createMemoryWorkDraftStore, validateApproval } from "@arnilo/prism-tools-work/connectors";
 
 const marks = [];
@@ -528,7 +528,7 @@ mark("VOICE OK");
 
 // --- R16 observational memory package + fabric reflection promotion ---
 const scopeStore = createMemorySessionStore();
-// One worker provider serves both roles: the loop offers `record_observation` to the observer and
+// One worker provider serves both roles: the loop offers `record_event` to the observer and
 // `record_reflection` to the reflector, and each prompt lists its inputs as `[id]`.
 const observerProvider = {
   id: "memory",
@@ -546,12 +546,12 @@ const observerProvider = {
           name: "record_reflection",
           arguments: { content: "Task one prefers the smallest retry budget.", supportingObservationIds: sourceEntryIds },
         });
-      } else if (toolNames.has("record_observation")) {
+      } else if (toolNames.has("record_event")) {
         yield providerToolCall({
           type: "tool_call",
           id: "c1",
-          name: "record_observation",
-          arguments: { content: "Journey turn observed.", relevance: "high", sourceEntryIds },
+          name: "record_event",
+          arguments: { kind: "statement", description: "Journey turn observed.", relevance: "high", sourceEntryIds },
         });
       }
     }
@@ -563,9 +563,9 @@ const scopeAgent = await createAgent({
   packages: [
     mockProvider([[providerTextDelta("ready"), providerDone()]]),
     providerPackage("memory", [observerProvider]),
-    memoryObservational({
-      observer: { model: { provider: "memory", model: "worker" }, messageTokens: 1 },
-      reflector: { model: { provider: "memory", model: "worker" }, observationTokens: 1 },
+    memorySystem({
+      stm: { model: { provider: "memory", model: "worker" }, triggerTokens: 1 },
+      wm: { model: { provider: "memory", model: "worker" }, observationTokens: 1 },
       context: { compactAt: { maxTokens: 999_999 } },
       worker: { maxTurns: 1 },
     }),
@@ -573,15 +573,15 @@ const scopeAgent = await createAgent({
   slots: { store: scopeStore },
 });
 const scopeSession = await scopeAgent.session({ id: "om-journey", create: true });
-const beforeToggle = await scopeAgent.commands.run("om:status", {}, { session: scopeSession });
+const beforeToggle = await scopeAgent.commands.run("memory:session:status", {}, { session: scopeSession });
 assert.equal(beforeToggle.enabled, false, "the package is off until the session toggles it");
 await scopeSession.run("start observational-memory journey");
-await scopeAgent.commands.run("om", {}, { session: scopeSession });
+await scopeAgent.commands.run("memory:session", {}, { session: scopeSession });
 await scopeSession.run("second turn the observer can see");
-const omStatus = await scopeAgent.commands.run("om:status", {}, { session: scopeSession });
+const omStatus = await scopeAgent.commands.run("memory:session:status", {}, { session: scopeSession });
 assert.equal(omStatus.enabled, true, "the toggle sticks to the session");
 assert.ok((omStatus.observations?.recorded ?? 0) > 0, "the observer recorded an observation");
-const omView = await scopeAgent.commands.run("om:view", {}, { session: scopeSession });
+const omView = await scopeAgent.commands.run("memory:session:view", {}, { session: scopeSession });
 assert.ok(typeof omView.text === "string" && omView.text.length > 0, "the ledger renders");
 
 // The fabric folds the branch the package wrote to: `state.log` records reach it as `package_state`
@@ -599,7 +599,7 @@ const promotionMemory = createMemory({
   threadId: "fabric-promotion",
   embedder: createHashEmbedder({ dimensions: 2 }),
 });
-const fabric = createMemoryFabric({ memory: promotionMemory, observational: { session: scopeSession } });
+const fabric = createLongTermMemory({ memory: promotionMemory, observational: { session: scopeSession } });
 const promoted = await fabric.remember({ kind: "procedure", reflectionId: ledger.reflections[0].id });
 assert.equal(promoted.content, "Task one prefers the smallest retry budget.");
 assert.deepEqual(promoted.promotedFrom, { reflectionId: ledger.reflections[0].id });

@@ -10,10 +10,10 @@ const ids = (text) => [...new Set(text.match(/\b[0-9a-f]{12}\b/g) ?? [])];
  */
 export async function omAgent({ config = {}, mainCalls = [], compaction, mainModel, reflect = true } = {}) {
   const { prism, testing } = await packages();
-  const om = await import("@arnilo/prism-memory-observational");
+  const om = await import("@arnilo/prism-memory-system");
   const ev = await events();
   const requests = [];
-  const workerCalls = { record_observation: 0, record_reflection: 0, drop_observations: 0, record_task_state: 0 };
+  const workerCalls = { record_event: 0, record_reflection: 0, drop_observations: 0, record_task_state: 0 };
   const queue = [...mainCalls];
   const main = await responder(
     "mock",
@@ -33,22 +33,24 @@ export async function omAgent({ config = {}, mainCalls = [], compaction, mainMod
     if (request.messages.some((message) => message.role === "tool")) return ev.say("");
     const tools = (request.tools ?? []).map((tool) => tool.name);
     const text = receivedText({ messages: request.messages });
-    if (tools.includes("record_observation")) {
+    if (tools.includes("record_event")) {
       const source = /\[[^\]]+\] \[([^\]]+)\] message:/.exec(text)?.[1];
-      workerCalls.record_observation++;
+      workerCalls.record_event++;
       if (tools.includes("record_task_state") && /task/.test(text)) workerCalls.record_task_state++;
       return source
         ? [
             testing.providerToolCall(
-              testing.toolCallContent("o1", "record_observation", {
-                content: "User asked about the staging cluster",
+              testing.toolCallContent("o1", "record_event", {
+                kind: "statement",
+                description: "User asked about the staging cluster",
                 relevance: "high",
                 sourceEntryIds: [source],
               }),
             ),
             testing.providerToolCall(
-              testing.toolCallContent("o2", "record_observation", {
-                content: "User mentioned lunch plans",
+              testing.toolCallContent("o2", "record_event", {
+                kind: "statement",
+                description: "User mentioned lunch plans",
                 relevance: "low",
                 sourceEntryIds: [source],
               }),
@@ -81,7 +83,7 @@ export async function omAgent({ config = {}, mainCalls = [], compaction, mainMod
   const agent = await prism.createAgent({
     // OM fails closed without a context window (compactAt needs it), so the probe model declares one.
     model: mainModel ?? { provider: "mock", model: "main", limits: { contextWindow: 64_000, maxOutputTokens: 0 } },
-    packages: [main, worker, om.default({ enabled: true, observer: { model: OM_MODEL, messageTokens: 1 }, ...config })],
+    packages: [main, worker, om.default({ enabled: true, stm: { model: OM_MODEL, triggerTokens: 1 }, ...config })],
     ...(compaction ? { slots: { compaction } } : {}),
   });
   const session = await agent.session({ id: "om", create: true });
@@ -105,8 +107,8 @@ export async function omAgent({ config = {}, mainCalls = [], compaction, mainMod
       await settle();
       return results;
     },
-    status: () => agent.commands.run("om:status", {}, { session }),
-    view: () => agent.commands.run("om:view", {}, { session }),
+    status: () => agent.commands.run("memory:session:status", {}, { session }),
+    view: () => agent.commands.run("memory:session:view", {}, { session }),
     async close() {
       await session.close();
       await agent.dispose();
@@ -117,7 +119,7 @@ export async function omAgent({ config = {}, mainCalls = [], compaction, mainMod
 /** The OM block: the pinned context block (`observational-memory`) or OM's own compaction summary. */
 const omBlock = (request) =>
   [...(request?.context ?? []), ...(request?.messages ?? [])].filter((item) =>
-    /observational-memory|# Observational Memory/.test(JSON.stringify(item)),
+    /session-memory|# Session Memory/.test(JSON.stringify(item)),
   );
 
 export const probes = [
@@ -129,7 +131,7 @@ export const probes = [
         try {
           await h.run("Where does the staging cluster run?");
           const status = await h.status();
-          return { recorded: status.observations.recorded, calls: h.workerCalls.record_observation, view: (await h.view()).text };
+          return { recorded: status.observations.recorded, calls: h.workerCalls.record_event, view: (await h.view()).text };
         } finally {
           await h.close();
         }
@@ -153,7 +155,12 @@ export const probes = [
     async run() {
       const arm = async (observationTokens) => {
         const h = await omAgent({
-          config: { reflector: { model: OM_MODEL, observationTokens }, dropper: { targetTokens: 2_000_000, policy: "lowest-relevance" } },
+          // Plan 216: `reflector` → `wm`, `dropper` → `rehearsal` (inert here, as before), which needs `ltm` on (Task 6).
+          config: {
+            wm: { model: OM_MODEL, observationTokens },
+            rehearsal: { targetTokens: 2_000_000, policy: "lowest-relevance" },
+            ltm: {},
+          },
         });
         try {
           await h.run("Where does the staging cluster run?");
@@ -185,8 +192,10 @@ export const probes = [
         const h = await omAgent({
           reflect: false,
           config: {
-            reflector: { model: OM_MODEL, observationTokens: targetTokens },
-            dropper: { model: OM_MODEL, targetTokens, policy: "model" },
+            // Plan 216: `reflector` → `wm`, `dropper` → `rehearsal`, which needs `ltm` on (Task 6).
+            wm: { model: OM_MODEL, observationTokens: targetTokens },
+            rehearsal: { model: OM_MODEL, targetTokens, policy: "model" },
+            ltm: {},
           },
         });
         try {
@@ -218,8 +227,9 @@ export const probes = [
         const h = await omAgent({
           reflect: false,
           config: {
-            reflector: { model: OM_MODEL, observationTokens: targetTokens },
-            dropper: { targetTokens, policy: "lowest-relevance" },
+            wm: { model: OM_MODEL, observationTokens: targetTokens },
+            rehearsal: { targetTokens, policy: "lowest-relevance" },
+            ltm: {},
           },
         });
         try {
@@ -368,7 +378,7 @@ export const probes = [
       const h = await omAgent({ config: { enabled: false } });
       try {
         const before = await h.status();
-        const toggled = await h.agent.commands.run("om", {}, { session: h.session });
+        const toggled = await h.agent.commands.run("memory:session", {}, { session: h.session });
         await h.run("Where does the staging cluster run?");
         const after = await h.status();
         const view = await h.view();

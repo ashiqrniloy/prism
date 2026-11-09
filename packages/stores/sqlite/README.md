@@ -91,11 +91,12 @@ ownership helpers.
 
 ```ts
 import sqliteStore, { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
-import { createAgent, mockProvider } from "@arnilo/prism/testing";
+import { createAgent } from "@arnilo/prism";
+import { mockProvider, providerDone, providerTextDelta } from "@arnilo/prism/testing";
 
 const agent = await createAgent({
-  model: mockProvider([{ text: "hello" }]).model,
-  packages: [sqliteStore({ path: ".prism/sessions.db" })],
+  model: { provider: "mock", model: "demo" },
+  packages: [mockProvider([[providerTextDelta("hello"), providerDone()]]), sqliteStore({ path: ".prism/sessions.db" })],
 });
 
 // Or drive the persistence object directly (companions included):

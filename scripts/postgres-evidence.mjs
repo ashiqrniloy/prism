@@ -14,15 +14,15 @@ const BUN = process.platform === "win32" ? "bun.exe" : "bun";
 //   (pass) pendingDecisionsOf returns the new pendingDecisions when present [3.19ms]
 //   (fail) redaction benchmark scenario (plan 070) > runs through the parameterized runner within the frozen caps [279.18ms]
 // and one summary per leg (three workspace-prefixed plus one phase conformance):
-// Plan 158 Task 6: the memory leg moved from the deleted family to @arnilo/prism-memory-fabric.
+// Plan 158 Task 6: the memory leg moved from the deleted family to the fabric package; plan 216 Task 5 moved it into @arnilo/prism-memory-system.
 //   @arnilo/prism-store-postgres test:postgres: Ran 78 tests across 17 files. [8.46s]
 //   Ran 11 tests across 3 files. [7.86s]
 // Node's TAP (`ℹ pass N`, `# fail N`) is gone: every leg runs `bun test` (plan 124 Tasks 2/3).
 // Bun prints each failure twice (at its position and again in the end-of-run failure block), so
 // `counts.fail` can over-count — harmless here, because any `(fail)` line fails the leg closed.
 // `(pass)` lines print exactly once; counts sum all four leg summaries, never just the final one.
-const RESULT = /^(?:@arnilo\/prism-(?:core|store-postgres|memory-fabric|channels) test:postgres: )?\((pass|fail)\) /gm;
-const SUMMARY = /^(?:(@arnilo\/prism-(?:core|store-postgres|memory-fabric|channels) test:postgres): )?Ran (\d+) tests? across (\d+) files?\./gm;
+const RESULT = /^(?:@arnilo\/prism-(?:core|store-postgres|memory-system|channels) test:postgres: )?\((pass|fail)\) /gm;
+const SUMMARY = /^(?:(@arnilo\/prism-(?:core|store-postgres|memory-system|channels) test:postgres): )?Ran (\d+) tests? across (\d+) files?\./gm;
 // Plan 153 Task 5: the session-store integrations moved to the store package, so its leg owns them.
 const REQUIRED_POSTGRES_CASES = [
   "postgres_evaluation_store_conformance",

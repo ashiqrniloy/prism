@@ -3,7 +3,7 @@ import { MemoryValidationError } from "./errors.js";
 import { assertSafeJsonKey, isPlainObject } from "./util.js";
 
 /**
- * Minimal JSON Schema subset checker for working-memory shapes.
+ * Minimal JSON Schema subset checker for small host-supplied shapes.
  * Supports: type, properties, required, additionalProperties, enum, const,
  * minLength, maxLength, minimum, maximum, items, minItems, maxItems.
  */

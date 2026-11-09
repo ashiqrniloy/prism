@@ -2,7 +2,7 @@ import { HARD_DIRECTORY_TAGS, resolveDirectoryAsOf, resolveDirectoryLimit } from
 import type { JsonObject } from "@arnilo/prism";
 import type { Pool, PoolClient, PoolConfig } from "pg";
 import { assertAccessConstraint, assertAccessGrants, assertAuthorizationTenant } from "../acl.js";
-import { MemoryConflictError, MemoryValidationError } from "../errors.js";
+import { MemoryValidationError } from "../errors.js";
 import { assertInvalidationBatch, assertShareGrant, HARD_LINEAGE_EDGES } from "../lineage.js";
 import { decodeMemoryCursor, decodeMetadataCursor, encodeMemoryCursor, encodeMetadataCursor } from "../pagination.js";
 import { lexicalCoverage, lexicalTerms, recordLexicalTerms } from "../lexical.js";
@@ -11,6 +11,7 @@ import { qualifyTable, quoteIdentifier, validateIdentifier } from "./postgres-id
 import { normalizeImportance } from "../scoring.js";
 import type {
   MemoryConsent,
+  MemoryScope,
   MemoryInvalidationRecord,
   MemoryShareGrant,
   MemoryVectorHit,
@@ -25,19 +26,12 @@ import type {
   VectorQuery,
   VectorScanMetadataQuery,
   VectorStore,
-  WorkingMemoryKey,
-  WorkingMemoryRecord,
-  WorkingMemoryStore,
-  WorkingMemoryUpdateOptions,
 } from "../types.js";
 import {
-  assertByteLimit,
   assertFiniteVector,
   assertRecordEmbedding,
   assertNotAborted,
   assertTextLimit,
-  cloneJsonObject,
-  mergeJsonObjects,
   requireNonEmptyString,
   requireScope,
 } from "../util.js";
@@ -49,13 +43,11 @@ export interface PostgresMemoryStoresOptions {
   readonly poolMax?: number;
   readonly poolConfig?: Omit<PoolConfig, "connectionString" | "max">;
   readonly skipMigrations?: boolean;
-  readonly maxWorkingMemoryBytes?: number;
   readonly maxEntryTextChars?: number;
   readonly dimensions?: number;
 }
 
 export interface PostgresMemoryStores {
-  readonly workingStore: WorkingMemoryStore;
   readonly vectorStore: PostgresVectorStore;
   readonly pool: Pool;
   readonly schema: string;
@@ -103,7 +95,6 @@ export interface PostgresVectorStoreOptions {
 
 export async function createPostgresMemoryStores(options: PostgresMemoryStoresOptions): Promise<PostgresMemoryStores> {
   const schema = validateIdentifier(options.schema ?? DEFAULT_MEMORY_SCHEMA, "schema");
-  const maxWorkingMemoryBytes = options.maxWorkingMemoryBytes ?? 256 * 1024;
   const maxEntryTextChars = options.maxEntryTextChars ?? 64_384;
   const dimensions = options.dimensions;
   if (dimensions !== undefined && (!Number.isInteger(dimensions) || dimensions <= 0)) {
@@ -136,103 +127,7 @@ export async function createPostgresMemoryStores(options: PostgresMemoryStoresOp
     await pool.query(buildVectorSearchDdl(schema, DEFAULT_VECTOR_TABLE, dimensions)).catch(() => undefined);
   }
 
-  const workingTable = qualifyTable(schema, "working_memory");
   const semanticTable = qualifyTable(schema, DEFAULT_VECTOR_TABLE);
-
-  const workingStore: WorkingMemoryStore = {
-    async get(key, getOptions = {}) {
-      assertNotAborted(getOptions.signal);
-      const scope = requireScope(key);
-      const threadId = scope.threadId ?? "";
-      const result = await pool.query(
-        `SELECT tenant_id, resource_id, thread_id, value, version, updated_at
-         FROM ${workingTable}
-         WHERE tenant_id = $1 AND resource_id = $2 AND thread_id = $3`,
-        [scope.tenantId, scope.resourceId, threadId],
-      );
-      const row = result.rows[0];
-      return row ? mapWorkingRow(row) : undefined;
-    },
-
-    async set(record, setOptions = {}) {
-      assertNotAborted(setOptions.signal);
-      const scope = requireScope(record);
-      if (!Number.isInteger(record.version) || record.version < 1) {
-        throw new MemoryValidationError("version must be an integer >= 1");
-      }
-      assertByteLimit(record.value, maxWorkingMemoryBytes, "working memory");
-      const threadId = scope.threadId ?? "";
-      await pool.query(
-        `INSERT INTO ${workingTable} (tenant_id, resource_id, thread_id, value, version, updated_at)
-         VALUES ($1, $2, $3, $4::jsonb, $5, $6::timestamptz)
-         ON CONFLICT (tenant_id, resource_id, thread_id)
-         DO UPDATE SET value = EXCLUDED.value, version = EXCLUDED.version, updated_at = EXCLUDED.updated_at`,
-        [scope.tenantId, scope.resourceId, threadId, JSON.stringify(record.value), record.version, record.updatedAt],
-      );
-    },
-
-    async update(key, patch, updateOptions: WorkingMemoryUpdateOptions = {}) {
-      assertNotAborted(updateOptions.signal);
-      const scope = requireScope(key);
-      const threadId = scope.threadId ?? "";
-      const client = await pool.connect();
-      try {
-        await client.query("BEGIN");
-        const current = await client.query(
-          `SELECT tenant_id, resource_id, thread_id, value, version, updated_at
-           FROM ${workingTable}
-           WHERE tenant_id = $1 AND resource_id = $2 AND thread_id = $3
-           FOR UPDATE`,
-          [scope.tenantId, scope.resourceId, threadId],
-        );
-        const existing = current.rows[0] ? mapWorkingRow(current.rows[0]) : undefined;
-        if (updateOptions.expectedVersion !== undefined) {
-          const currentVersion = existing?.version ?? 0;
-          if (currentVersion !== updateOptions.expectedVersion) {
-            throw new MemoryConflictError(
-              `working memory version conflict: expected ${updateOptions.expectedVersion}, found ${currentVersion}`,
-            );
-          }
-        }
-        const mode = updateOptions.mode ?? "merge";
-        const nextValue = mode === "replace" ? cloneJsonObject(patch) : mergeJsonObjects(existing?.value ?? {}, patch);
-        assertByteLimit(nextValue, maxWorkingMemoryBytes, "working memory");
-        const nextVersion = (existing?.version ?? 0) + 1;
-        const updatedAt = new Date().toISOString();
-        await client.query(
-          `INSERT INTO ${workingTable} (tenant_id, resource_id, thread_id, value, version, updated_at)
-           VALUES ($1, $2, $3, $4::jsonb, $5, $6::timestamptz)
-           ON CONFLICT (tenant_id, resource_id, thread_id)
-           DO UPDATE SET value = EXCLUDED.value, version = EXCLUDED.version, updated_at = EXCLUDED.updated_at`,
-          [scope.tenantId, scope.resourceId, threadId, JSON.stringify(nextValue), nextVersion, updatedAt],
-        );
-        await client.query("COMMIT");
-        return {
-          ...scope,
-          value: nextValue,
-          version: nextVersion,
-          updatedAt,
-        };
-      } catch (error) {
-        await client.query("ROLLBACK");
-        throw error;
-      } finally {
-        client.release();
-      }
-    },
-
-    async delete(key, deleteOptions = {}) {
-      assertNotAborted(deleteOptions.signal);
-      const scope = requireScope(key);
-      const threadId = scope.threadId ?? "";
-      const result = await pool.query(
-        `DELETE FROM ${workingTable}
-         WHERE tenant_id = $1 AND resource_id = $2 AND thread_id = $3`,
-        [scope.tenantId, scope.resourceId, threadId],
-      );
-      return (result.rowCount ?? 0) > 0;
-    },
-  };
 
   const vectorStore = assembleVectorStore(pool, {
     table: semanticTable,
@@ -247,25 +142,12 @@ export async function createPostgresMemoryStores(options: PostgresMemoryStoresOp
   });
 
   return {
-    workingStore,
     vectorStore,
     pool,
     schema,
     async close() {
       if (ownsPool) await pool.end();
     },
-  };
-}
-
-function mapWorkingRow(row: Record<string, unknown>): WorkingMemoryRecord {
-  const threadId = row.thread_id === "" || row.thread_id == null ? undefined : String(row.thread_id);
-  return {
-    tenantId: String(row.tenant_id),
-    resourceId: String(row.resource_id),
-    ...(threadId ? { threadId } : {}),
-    value: (typeof row.value === "string" ? JSON.parse(row.value) : row.value) as JsonObject,
-    version: Number(row.version),
-    updatedAt: new Date(String(row.updated_at)).toISOString(),
   };
 }
 
@@ -538,7 +420,7 @@ function createVectorMethods(q: Queryable, deps: VectorTableDeps): PostgresVecto
 
     async query(query: VectorQuery) {
       assertNotAborted(query.signal);
-      const scope = requireScope(query, true) as Required<WorkingMemoryKey> & { threadId: string };
+      const scope = requireScope(query, true) as Required<MemoryScope> & { threadId: string };
       // An embedding-less (lexical-only) memory has no vector leg.
       if (query.embedding.length === 0) {
         query.onDeniedSources?.([]);
@@ -690,7 +572,7 @@ function createVectorMethods(q: Queryable, deps: VectorTableDeps): PostgresVecto
     },
 
     async getCurrentGeneration(scope) {
-      const required = requireScope(scope, true) as Required<WorkingMemoryKey> & { threadId: string };
+      const required = requireScope(scope, true) as Required<MemoryScope> & { threadId: string };
       const result = await q.query(
         `SELECT current_generation FROM ${deps.generationsTable}
          WHERE tenant_id = $1 AND resource_id = $2 AND thread_id = $3`,
@@ -709,7 +591,7 @@ function createVectorMethods(q: Queryable, deps: VectorTableDeps): PostgresVecto
       ) {
         throw new MemoryValidationError("generation must be a non-negative integer");
       }
-      const required = requireScope(scope, true) as Required<WorkingMemoryKey> & { threadId: string };
+      const required = requireScope(scope, true) as Required<MemoryScope> & { threadId: string };
       await q.query(
         `INSERT INTO ${deps.generationsTable} (tenant_id, resource_id, thread_id, current_generation)
          VALUES ($1, $2, $3, $4)
@@ -721,7 +603,7 @@ function createVectorMethods(q: Queryable, deps: VectorTableDeps): PostgresVecto
 
     async setSourceAccess(scope, input, accessOptions = {}) {
       assertNotAborted(accessOptions.signal);
-      const required = requireScope(scope, true) as Required<WorkingMemoryKey> & { threadId: string };
+      const required = requireScope(scope, true) as Required<MemoryScope> & { threadId: string };
       const grants = assertAccessGrants(input);
       if (grants.length === 0) return;
       const sourceIds = grants.map((grant) => grant.sourceId);
@@ -754,7 +636,7 @@ function createVectorMethods(q: Queryable, deps: VectorTableDeps): PostgresVecto
 
     async checkSourceAccess(scope, sourceId, authorization, accessOptions = {}) {
       assertNotAborted(accessOptions.signal);
-      const required = requireScope(scope, true) as Required<WorkingMemoryKey> & { threadId: string };
+      const required = requireScope(scope, true) as Required<MemoryScope> & { threadId: string };
       requireNonEmptyString(sourceId, "sourceId");
       const auth = assertAccessConstraint(authorization);
       assertAuthorizationTenant(auth, required.tenantId);
@@ -779,7 +661,7 @@ function createVectorMethods(q: Queryable, deps: VectorTableDeps): PostgresVecto
 
     async invalidate(scope, entries, invalidateOptions = {}) {
       assertNotAborted(invalidateOptions.signal);
-      const required = requireScope(scope, true) as Required<WorkingMemoryKey> & { threadId: string };
+      const required = requireScope(scope, true) as Required<MemoryScope> & { threadId: string };
       const batch = assertInvalidationBatch(entries);
       if (batch.length === 0) return;
       const rows: unknown[] = [];
@@ -818,7 +700,7 @@ function createVectorMethods(q: Queryable, deps: VectorTableDeps): PostgresVecto
 
     async listInvalidated(scope, listOptions = {}) {
       assertNotAborted(listOptions.signal);
-      const required = requireScope(scope, true) as Required<WorkingMemoryKey> & { threadId: string };
+      const required = requireScope(scope, true) as Required<MemoryScope> & { threadId: string };
       const result = await q.query(
         `SELECT id, reason, at, hold, supersedes_id
          FROM ${deps.invalidationTable}
@@ -839,7 +721,7 @@ function createVectorMethods(q: Queryable, deps: VectorTableDeps): PostgresVecto
 
     async clearInvalidation(scope, ids, clearOptions = {}) {
       assertNotAborted(clearOptions.signal);
-      const required = requireScope(scope, true) as Required<WorkingMemoryKey> & { threadId: string };
+      const required = requireScope(scope, true) as Required<MemoryScope> & { threadId: string };
       if (ids.length === 0) return;
       await q.query(
         `DELETE FROM ${deps.invalidationTable}
@@ -852,7 +734,7 @@ function createVectorMethods(q: Queryable, deps: VectorTableDeps): PostgresVecto
 
     async setShareGrant(scope, input, shareOptions = {}) {
       assertNotAborted(shareOptions.signal);
-      const required = requireScope(scope, true) as Required<WorkingMemoryKey> & { threadId: string };
+      const required = requireScope(scope, true) as Required<MemoryScope> & { threadId: string };
       const grant = assertShareGrant({ ...input, tenantId: required.tenantId, parentThreadId: required.threadId });
       if (grant.sourceIds.length === 0) {
         await q.query(
@@ -941,7 +823,7 @@ function createVectorMethods(q: Queryable, deps: VectorTableDeps): PostgresVecto
 
     async getShareGrant(scope, childThreadId, shareOptions = {}) {
       assertNotAborted(shareOptions.signal);
-      const required = requireScope(scope, true) as Required<WorkingMemoryKey> & { threadId: string };
+      const required = requireScope(scope, true) as Required<MemoryScope> & { threadId: string };
       const result = await q.query(
         `SELECT tenant_id, parent_thread_id, child_thread_id, source_ids, expires_at
          FROM ${deps.shareGrantTable}
@@ -969,7 +851,7 @@ function createVectorMethods(q: Queryable, deps: VectorTableDeps): PostgresVecto
     lexicalModes: ["fts"],
     async lexicalQuery(lexicalQuery) {
       assertNotAborted(lexicalQuery.signal);
-      const scope = requireScope(lexicalQuery, true) as Required<WorkingMemoryKey> & { threadId: string };
+      const scope = requireScope(lexicalQuery, true) as Required<MemoryScope> & { threadId: string };
       requireNonEmptyString(lexicalQuery.text, "text");
       // Any analyzed term may match (OR), as in the other stores; terms are letters and digits only.
       const terms = lexicalTerms(lexicalQuery.text);

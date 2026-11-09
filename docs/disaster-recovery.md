@@ -44,7 +44,7 @@ assert.equal(after, before);                              // content equality, n
 
 ## Implementation example
 
-The drill's legs: (1) seed multi-tenant state through `createPostgresPersistence` and `createPostgresEnterpriseState` plus `createPostgresApprovalStore` with a host authority; (2) `pg_dump -F c` into the shared `/dr` mount; (3) `createdb` the confirmed target and `pg_restore --no-owner --no-privileges`, then verify counts and digests per table; (4) build the 0.2.6-era schema from the raw DDL builders with the recorded migration registry rows, seed legacy rows through the real stores, take a backup, run `applyEnterpriseMigrations` (004/005 apply, old rows preserved, new tables empty), then restore the pre-upgrade backup into a fresh database and confirm 0.2.7 tables are absent; (5) on the WAL-archived cluster, take a `pg_basebackup`, insert two marker transactions a known distance apart, switch WAL and wait for archiving, then start a recovered instance with `recovery.signal`, a bounded `restore_command`, and `recovery_target_time` set between the two writes with `recovery_target_action=pause`, and verify the earlier marker exists and the later one does not.
+The drill's legs: (1) seed multi-tenant state through `createPostgresPersistence` and the 0.2-era enterprise-state and approval stores (removed since; the drill is a recorded run); (2) `pg_dump -F c` into the shared `/dr` mount; (3) `createdb` the confirmed target and `pg_restore --no-owner --no-privileges`, then verify counts and digests per table; (4) build the 0.2.6-era schema from the raw DDL builders with the recorded migration registry rows, seed legacy rows through the real stores, take a backup, run the 0.2-era enterprise migration runner (004/005 apply, old rows preserved, new tables empty), then restore the pre-upgrade backup into a fresh database and confirm 0.2.7 tables are absent; (5) on the WAL-archived cluster, take a `pg_basebackup`, insert two marker transactions a known distance apart, switch WAL and wait for archiving, then start a recovered instance with `recovery.signal`, a bounded `restore_command`, and `recovery_target_time` set between the two writes with `recovery_target_action=pause`, and verify the earlier marker exists and the later one does not.
 
 ## Extension and configuration notes
 
@@ -64,8 +64,7 @@ The drill's legs: (1) seed multi-tenant state through `createPostgresPersistence
 
 ## Related APIs
 
-- `createPostgresPersistence` / `createPostgresEnterpriseState` / `createPostgresApprovalStore` — the stores whose state the drill seeds and verifies.
-- `applyEnterpriseMigrations` — the migration runner used for the forward upgrade rehearsal.
+- `createPostgresPersistence` ([`@arnilo/prism-store-postgres`](../packages/stores/postgres/README.md)) — the store whose state the drill seeds and verifies.
 - `scripts/phase27-dr.test.mjs` — the protected drill; `docs/_evidence/phase27-dr-evidence.json` — the recorded run.
 - [Operations runbook: high availability, failover, and fencing](operations.md) — the lease/fence model and failover ceiling the same state relies on.
 - [Signed, hash-chained audit export](../packages/policy/governance/README.md) — the append-only audit ledger preserved through backup/restore.

@@ -142,24 +142,6 @@ export function chunkArray<T>(items: readonly T[], size: number): T[][] {
   return chunks;
 }
 
-export function renderTemplate(template: string, value: JsonObject): string {
-  return template.replace(/\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g, (_match, path: string) => {
-    const resolved = readPath(value, path);
-    if (resolved === undefined || resolved === null) return "";
-    return typeof resolved === "string" ? resolved : JSON.stringify(resolved);
-  });
-}
-
-function readPath(value: JsonObject, path: string): unknown {
-  const parts = path.split(".");
-  let current: unknown = value;
-  for (const part of parts) {
-    if (!isPlainObject(current) || !(part in current)) return undefined;
-    current = current[part];
-  }
-  return current;
-}
-
 export function latestUserText(messages: readonly { readonly role: string; readonly content: readonly unknown[] }[]): string | undefined {
   for (let i = messages.length - 1; i >= 0; i -= 1) {
     const message = messages[i]!;

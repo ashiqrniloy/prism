@@ -306,6 +306,13 @@ Declared capabilities are enforced on the SDK-mediated members; they document in
 access. They are not a process sandbox. A call without the capability throws `PackageLoadError`
 `capability_missing`, naming the member and the capability.
 
+A package whose parts a host can turn off may also define `capabilitiesFor(config)`. The loader calls it once per
+instance with the validated config (defaults applied), and the instance holds only the capabilities it returns, which is
+also what `inspect().packages[].capabilities` reports. `capabilitiesFor` can only narrow: the result must be a
+subset of `capabilities` (the set a manifest records), so a capability outside it, a result that is not an array, or a throw fails the
+load with `definition_invalid`. Defining `capabilitiesFor` without `capabilities` is `definition_invalid` too.
+`@arnilo/prism-memory-system` uses it so that a component turned off declares nothing.
+
 | Capability | Gates |
 | --- | --- |
 | `slot:loop`, `slot:compaction`, `slot:store`, `slot:credentials` | `slots.<slot>.provide` |

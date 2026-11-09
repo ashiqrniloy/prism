@@ -65,10 +65,9 @@ const packages: Array<{
   { dir: "packages/hosts/remote", name: "@arnilo/prism-remote", sourceExport: true },
   { dir: "packages/memory/core", name: "@arnilo/prism-memory-core", sourceExport: true },
   { dir: "packages/knowledge/rag", name: "@arnilo/prism-rag", sourceExport: true },
-  { dir: "packages/memory/fabric", name: "@arnilo/prism-memory-fabric", sourceExport: true },
   { dir: "packages/knowledge/wiki", name: "@arnilo/prism-wiki", sourceExport: true },
   { dir: "packages/memory/compaction", name: "@arnilo/prism-memory-compaction", sourceExport: true },
-  { dir: "packages/memory/observational", name: "@arnilo/prism-memory-observational", sourceExport: true },
+  { dir: "packages/memory/system", name: "@arnilo/prism-memory-system", sourceExport: true },
   { dir: "packages/tools/browser", name: "@arnilo/prism-tools-browser", sourceExport: true },
   { dir: "packages/hosts/ag-ui", name: "@arnilo/prism-ag-ui", sourceExport: true },
   { dir: "packages/tools/coding", name: "@arnilo/prism-tools-coding", sourceExport: true },
@@ -390,10 +389,9 @@ describe("packaging guard", () => {
       [
         "@arnilo/prism-memory-compaction",
         "@arnilo/prism-memory-core",
-        "@arnilo/prism-memory-fabric",
-        "@arnilo/prism-memory-observational",
+        "@arnilo/prism-memory-system",
       ],
-      "the four memory packages are present and the family root is absent",
+      "the three memory packages are present and the family root is absent",
     );
     // Plan 216 Task 3: retrieval and the wiki are knowledge packages outside memory, under packages/knowledge.
     for (const name of ["@arnilo/prism-rag", "@arnilo/prism-wiki"]) {
@@ -411,7 +409,7 @@ describe("packaging guard", () => {
     );
 
     // No memory tarball may ship the retired family's build output or its canary fixture.
-    for (const dir of ["packages/memory/core", "packages/knowledge/rag", "packages/memory/fabric", "packages/knowledge/wiki"]) {
+    for (const dir of ["packages/memory/core", "packages/knowledge/rag", "packages/memory/system", "packages/knowledge/wiki"]) {
       const files = getPackList(dir, readPkg(dir).name as string);
       assert.equal(
         files.some((file) => file.startsWith("dist/") || file.startsWith(".wiki/")),
@@ -911,7 +909,7 @@ describe("packaging guard", () => {
   it("0.4 package set — 61 manifests in lockstep, no shims, family roots stay inert", () => {
     const root = readPkg(".");
     const names = packages.map((pkg) => pkg.name).sort();
-    assert.equal(names.length, 52, "52 active packages including root (Kilo, LiteLLM, Ollama Cloud, then host-builder added)");
+    assert.equal(names.length, 51, "51 active packages including root (Kilo, LiteLLM, Ollama Cloud, then host-builder added; plan 216 Task 5 folded the fabric into memory-system)");
     assert.ok(names.includes("@arnilo/prism-tools-work"), "work package must be present");
     assert.ok(!names.includes("@arnilo/prism-office"), "office package must be absent");
     // Plan 140 Task 1: the SDK is on its own version line (0.1.x).

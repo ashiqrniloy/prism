@@ -8,7 +8,6 @@ This page is the operator runbook for the high-availability story proven by plan
 
 - Before running any multi-replica deployment of the server, workflow coordinator, saga runner, ACP host, or enterprise dispatcher — read the local-registry limitations and the lease/fence model.
 - When an operator or on-call engineer sees a hung lease, an uncertain commit, or a split-brain suspicion: follow "Failover procedure" and "Uncertain commits" below before touching anything.
-- When background workers share a checkpoint queue across tenants: use `admission` on `createWorkflowCoordinator` and `createPrismOperatorHandler` for inspect/cancel/reconcile. Do not add a second job broker.
 - When sizing leases: the failover ceiling is lease TTL plus the peer's acquisition poll interval; the drill asserts `failoverMs <= ttlMs + 5000`.
 
 ## Inputs / request
@@ -63,8 +62,7 @@ tenant's reads, writes, and lease takeover all fail closed.
 
 - Lease TTL is the availability knob: too short spams contention, too long
   delays failover. The frozen drill ceiling is `ttlMs + 5000` ms; renew at
-  `ttlMs / 3` (the workflow coordinator, saga engine, and this drill all
-  follow this pattern).
+  `ttlMs / 3` (this drill follows that pattern).
 - Local in-memory registries (workflow active-run map, coordinator active
   map, A2A live-task registry, ACP session registry, coding-agent sessions,
   RPC active runs) are optional fast paths only. On restart, every component
@@ -93,16 +91,6 @@ tenant's reads, writes, and lease takeover all fail closed.
   with bounded, jittered acquisition polls (no hot loops) and reports the
   measured numbers in the evidence JSON.
 
-## Fair worker admission and operator intervention
-
-`createWorkflowCoordinator({ admission })` is still checkpoint+lease polling — not a job DSL. Each `pollOnce` walks at most `maxPagesPerPoll` list pages from a wrap cursor so a saturated first page cannot hide later tenants. `perTenant` / `perClass` cap **this worker's** concurrent claims. `deadlineMs` skips (does not auto-fail) stale `createdAt`. While `drain.isDraining`, no new claims; after `snapshot().expired`, in-flight work is aborted if the node honors the run signal. Leases are released only via the holder token — never deleted by hand.
-
-`createPrismOperatorHandler({ authorize, checkpoints, workflows, unknownEffects? })` mounts `/ops/queue|suspended|failed|unknown` and `POST /ops/cancel|reconcile`. `authorize` is required and fail-closed; lists are ownership-scoped; bodies omit workflow input/state. Reconcile accepts only `completed` or `failed_terminal` plus optional evidence. Unknown effects are never retried from this route.
-
-Metric hook labels: `outcome` and allowlisted `class` only.
-
-Network-free composition: `examples/server-deployment-seams.ts`.
-
 ## Live probe (plans/064 Task 9)
 
 The outbound webhook notifier has an operator-gated live probe against a receiver you own:
@@ -118,8 +106,7 @@ Probes: one signed delivery to your receiver (verify `x-prism-signature: sha256=
 
 - `LeaseStore` / `CheckpointStore` — the durable contracts this runbook relies on.
 - `createPostgresPersistence` — the PostgreSQL adapter used by the drill.
-- `ErpOutboxStore` — the idempotent side-effect carrier used to make replay safe.
-- `createWorkflowCoordinator` (`admission`) and `createPrismOperatorHandler` — fair claim policy and ownership-scoped cancel/reconcile.
-- `defineSaga`/`runSaga`/`resumeSaga` — higher-level consumers with the same fencing/cursor semantics.
+- An outbox keyed by a stable message id — the idempotent side-effect carrier the drill uses to make replay safe.
+- [`@arnilo/prism-workflows`](../packages/integrations/workflows/README.md) — owns the `CheckpointStore` and `LeaseStore` service contracts; workflow runs use the same fencing/cursor semantics.
 - `scripts/phase27-ha-worker.mjs` / `scripts/phase27-ha.test.mjs` — the reproducible drill; `docs/_evidence/phase27-ha-evidence.json` — the recorded run.
 - [Signed, hash-chained audit export](../packages/policy/governance/README.md) — the cursor/CAS pattern applied to audit exports.

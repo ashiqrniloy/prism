@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runMemoryConformance } from "../../../fabric/src/conformance.js";
+import { runMemoryConformance } from "../../../system/src/ltm/conformance.js";
 import { createHashEmbedder, MemoryValidationError } from "../index.js";
 import { createSqliteMemoryStores } from "../sqlite/index.js";
 
@@ -42,7 +42,6 @@ test("sqlite_store_survives_reopen", async () => {
   const file = path();
   const first = await open(file, 2);
   await first.vectorStore.upsert([{ ...record("one"), generation: 1n, metadata: { generation: { bigint: "12" } } }]);
-  await first.workingStore.update(scope, { name: "Ada" }, { expectedVersion: 0 });
   await first.vectorStore.invalidate(scope, [{ id: "blocked", reason: "legal_hold", at: "2026-10-19T00:00:00Z" }]);
   await first.vectorStore.setSourceAccess(scope, [{ sourceId: "source", principalIds: ["p"], accessVersion: 1 }]);
   await first.vectorStore.setShareGrant(scope, { tenantId: "t", parentThreadId: "a", childThreadId: "b", sourceIds: ["one"] });
@@ -52,7 +51,6 @@ test("sqlite_store_survives_reopen", async () => {
   expect((await second.vectorStore.getByThread(scope))[0]?.text).toBe("coffee");
   expect((await second.vectorStore.getByThread(scope))[0]?.generation).toBe(1n);
   expect((await second.vectorStore.getByThread(scope))[0]?.metadata).toEqual({ generation: { bigint: "12" } });
-  expect((await second.workingStore.get(scope))?.value).toEqual({ name: "Ada" });
   expect((await second.vectorStore.listInvalidated(scope))[0]?.hold).toBe(true);
   expect(await second.vectorStore.checkSourceAccess(scope, "source", { tenantId: "t", principalId: "p" })).toBe(true);
   expect((await second.vectorStore.getShareGrant(scope, "b"))?.sourceIds).toEqual(["one"]);
@@ -94,17 +92,26 @@ test("sqlite_isolates_scope_and_filters_before_ranking", async () => {
   expect((await v.lexicalQuery({ ...scope, text: "coffee", topK: 1, authorization })).map((x) => x.id)).toEqual(["allowed"]);
   expect(await v.query({ ...scope, embedding: [1, 0], topK: 5, ids: [] })).toEqual([]);
 });
-test("sqlite_batches_rollback_and_working_cas_is_atomic", async () => {
-  const file = path();
-  const a = await open(file, 2);
-  const b = await open(file, 2);
+test("sqlite_batches_roll_back_atomically", async () => {
+  const a = await open(path(), 2);
   await expect(a.vectorStore.upsert([record("valid"), record("invalid", "x", [1])])).rejects.toBeInstanceOf(MemoryValidationError);
   expect(await a.vectorStore.countByThread(scope)).toBe(0);
-  const results = await Promise.allSettled([
-    a.workingStore.update(scope, { a: 1 }, { expectedVersion: 0 }),
-    b.workingStore.update(scope, { b: 1 }, { expectedVersion: 0 }),
-  ]);
-  expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+});
+test("sqlite_legacy_working_memory_table_is_left_in_place_and_unread", async () => {
+  // Plan 216 Task 7: working memory left long-term memory. A file written before keeps its table (no migration);
+  // nothing reads it, so the store still opens and a fresh file no longer creates it.
+  const file = path();
+  const fresh = await open(file, 2);
+  fresh.close();
+  const db = new Database(file);
+  expect(db.query("SELECT name FROM sqlite_master WHERE name = 'working_memory'").all()).toEqual([]);
+  db.exec("CREATE TABLE working_memory (tenant_id TEXT, resource_id TEXT, thread_id TEXT, record TEXT)");
+  db.query("INSERT INTO working_memory VALUES ('t', 'r', 'a', '{}')").run();
+  db.close();
+  const reopened = await open(file, 2);
+  await reopened.vectorStore.upsert([record("after")]);
+  expect(await reopened.vectorStore.countByThread(scope)).toBe(1);
+  reopened.close();
 });
 test("sqlite_store_rejects_corrupt_and_unknown_file", async () => {
   const corrupt = path();
@@ -134,7 +141,7 @@ test("memory_core_root_does_not_load_bun_sqlite", () => {
 });
 
 test("sqlite_pagination_generations_holds_and_aborts", async () => {
-  const { vectorStore: v, workingStore: w } = await open();
+  const { vectorStore: v } = await open();
   await v.upsert([record("legacy"), { ...record("old"), generation: 1n }, { ...record("new"), generation: 2n }]);
   expect((await v.query({ ...scope, embedding: [1, 0], topK: 5 })).map((x) => x.id).sort()).toEqual(["legacy", "new"]);
   await v.setCurrentGeneration(scope, 1n);
@@ -152,7 +159,6 @@ test("sqlite_pagination_generations_holds_and_aborts", async () => {
   const controller = new AbortController();
   controller.abort();
   await expect(v.upsert([record("aborted")], { signal: controller.signal })).rejects.toThrow(/aborted/i);
-  await expect(w.update(scope, {}, { signal: controller.signal })).rejects.toThrow(/aborted/i);
   expect(await v.countByThread(scope)).toBe(3);
 });
 test("sqlite_dimensions_and_identifiers_fail_closed", async () => {
@@ -165,8 +171,8 @@ test("sqlite_dimensions_and_identifiers_fail_closed", async () => {
   await expect(open(path(), 0)).rejects.toBeInstanceOf(MemoryValidationError);
 });
 
-test("sqlite_reports_acl_denials_and_isolates_resource_working_memory", async () => {
-  const { vectorStore: v, workingStore: w } = await open();
+test("sqlite_reports_acl_denials", async () => {
+  const { vectorStore: v } = await open();
   await v.upsert([{ ...record("note"), metadata: { _rag: { sourceId: "source" } } }]);
   await v.setSourceAccess(scope, [{ sourceId: "source", principalIds: ["p"], accessVersion: 1 }]);
   const denials: unknown[] = [];
@@ -182,12 +188,6 @@ test("sqlite_reports_acl_denials_and_isolates_resource_working_memory", async ()
   expect(denials).toEqual([[{ sourceId: "source", reason: "version_mismatch" }]]);
   await v.setSourceAccess(scope, [{ sourceId: "source", accessVersion: 2 }]);
   expect(await v.checkSourceAccess(scope, "source", { tenantId: "t", principalId: "p" })).toBe(false);
-  const resource = { tenantId: "t", resourceId: "r" };
-  await w.update(resource, { name: "resource" });
-  expect(await w.get(scope)).toBeUndefined();
-  expect((await w.get(resource))?.version).toBe(1);
-  expect(await w.delete(resource)).toBe(true);
-  expect(await w.delete(resource)).toBe(false);
 });
 
 test("sqlite_bm25_weights_keys_above_body", async () => {

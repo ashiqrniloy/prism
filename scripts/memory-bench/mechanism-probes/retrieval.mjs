@@ -86,7 +86,7 @@ export const probes = [
           vectorStore: core.createMemoryVectorStore(),
           ...(retrieval === "hybrid" ? { embedder: core.createHashEmbedder() } : {}),
         });
-        const f = fabric.createMemoryFabric({ memory, consolidate: false, retrieval });
+        const f = fabric.createLongTermMemory({ memory, consolidate: false, retrieval });
         await f.remember({ kind: "fact", content: "release INC-4471 shipped the cache warmer" });
         await f.remember({ kind: "fact", content: "the release shipped on time" });
         const result = await f.recall("INC-4471 release", { minSimilarity: 0 });

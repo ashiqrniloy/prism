@@ -32,7 +32,7 @@ import { HARD_MAX_SKILL_INSTRUCTION_BYTES } from "../skill-disclosure.js";
 import { createSkillRegistry, isSameSkill } from "../skills.js";
 import { SLOT_NAMES, type SlotAssignments, type SlotName, type SlotRegistry } from "../slots/index.js";
 import { createToolRegistry } from "../tools.js";
-import type { ModelClient, PackageAPI, PackageCommand, PackageCommandInfo, PackageInstance, SlotRegistrar } from "./api.js";
+import type { ModelClient, PackageAPI, PackageCommand, PackageCommandInfo, PackageDefinition, PackageInstance, SlotRegistrar } from "./api.js";
 import { type Capability, requireCapability } from "./capabilities.js";
 import { type PackageConfigSource, resolvePackageConfig } from "./config.js";
 import { type NormalizedPackage, normalizePackageInput } from "./define.js";
@@ -214,6 +214,31 @@ function cloneJson<T extends JsonValue>(value: T): T {
 }
 
 /** Stable topological order over `requires.packages`: dependencies first, otherwise input order. */
+/**
+ * The capabilities one instance holds: the definition's declared set, narrowed by `capabilitiesFor` from the validated
+ * config. Narrowing only removes; a capability outside the declared set, a non-array, or a throw fails closed.
+ */
+function instanceCapabilities(definition: PackageDefinition<any>, config: JsonObject): Set<Capability> {
+  const declared = new Set(definition.capabilities ?? []);
+  if (!definition.capabilitiesFor) return declared;
+  const invalid = (reason: string) =>
+    new PackageLoadError("definition_invalid", `Package ${definition.name} definition is invalid: capabilitiesFor ${reason}.`, {
+      package: definition.name,
+    });
+  let narrowed: unknown;
+  try {
+    narrowed = definition.capabilitiesFor(deepFreeze(cloneJson(config)));
+  } catch {
+    // The thrown value is not echoed: a config-derived message can carry a secret.
+    throw invalid("threw");
+  }
+  if (!Array.isArray(narrowed)) throw invalid("must return an array");
+  for (const capability of narrowed) {
+    if (!declared.has(capability as Capability)) throw invalid(`returned "${String(capability).slice(0, 32)}", which capabilities does not declare`);
+  }
+  return new Set(narrowed as Capability[]);
+}
+
 function orderPackages(entries: readonly Entry[]): Entry[] {
   const byName = new Map(entries.map((entry) => [entry.name, entry]));
   const done = new Set<string>();
@@ -288,7 +313,7 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
       ...item,
       name: definition.name,
       version: definition.version,
-      capabilities: new Set(definition.capabilities ?? []),
+      capabilities: instanceCapabilities(definition, resolved.config),
       config: resolved.config,
       configSources: resolved.sources,
     };

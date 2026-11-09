@@ -75,7 +75,7 @@ The 0.12 config fields and registries are removed, not aliased. Each maps to a h
 | `@arnilo/prism-core` | the kernel `@arnilo/prism` plus the native packages below |
 | `@arnilo/prism-coding-tools` | `@arnilo/prism-tools-coding`, `@arnilo/prism-tools-openapi`, `@arnilo/prism-tools-computer-use`, `@arnilo/prism-approval`, `@arnilo/prism-devtools` |
 | `@arnilo/prism-web-tools` | `@arnilo/prism-tools-web`, `@arnilo/prism-tools-browser` |
-| `@arnilo/prism-memory` | `@arnilo/prism-memory-{core, fabric, rag, wiki, compaction, observational}` |
+| `@arnilo/prism-memory` | `@arnilo/prism-memory-{core, compaction, system}` (the fabric is `memory-system`'s `ltm`), `@arnilo/prism-rag`, `@arnilo/prism-wiki` |
 | `@arnilo/prism-work` | `@arnilo/prism-tools-work` |
 | `@arnilo/prism-hooks` | `@arnilo/prism-hooks-json` |
 | `@arnilo/prism-office` (retired in 0.8) | `@arnilo/prism-tools-work` |
@@ -85,12 +85,22 @@ The 0.12 config fields and registries are removed, not aliased. Each maps to a h
 | `@arnilo/prism-all` | retired; install the packages you list |
 | `@arnilo/prism-mcp`, `@arnilo/prism-ag-ui`, `@arnilo/prism-channels`, `@arnilo/prism-evals`, `@arnilo/prism-workflows`, `@arnilo/prism-model-router` | the same name, reused by the 0.13 package or host library |
 
+### The retired names are unpublished from npm
+
+The 0.12 family is deleted, not deprecated. On 2026-11-09 the 66 legacy names were unpublished, so a
+0.12 host that adds `@arnilo/prism-core` now gets a 404 instead of a deprecation warning. Only
+`@arnilo/prism` keeps its 0.12.x line, because it is the kernel. The names 0.13.0 reuses —
+`@arnilo/prism-mcp`, `prism-ag-ui`, `prism-channels`, `prism-evals`, `prism-workflows`,
+`prism-model-router`, `prism-provider-openrouter`, `prism-rag`, `prism-wiki`,
+`prism-provider-opencode-go` — do not resolve until that publish either. The migration path is the map
+above; the inventory, the plan and the commands that ran are under `docs/_evidence/registry/`.
+
 ## Memory packages
 
-`@arnilo/prism-memory` is replaced by `@arnilo/prism-memory-{core, fabric, compaction, observational}`, with retrieval and the wiki outside memory as `@arnilo/prism-rag` and `@arnilo/prism-wiki` (the map above). In 0.13.0 five of them are **experimental**: `memory-core`, `memory-fabric`, `memory-observational`, `wiki` and `rag` ship as `0.13.0-experimental.N` on the npm dist-tag `experimental`, outside the stability promise of the stable packages. A `^0.13.0` range never matches a prerelease, so install them with the tag:
+`@arnilo/prism-memory` is replaced by `@arnilo/prism-memory-{core, compaction, system}`, with retrieval and the wiki outside memory as `@arnilo/prism-rag` and `@arnilo/prism-wiki` (the map above). In 0.13.0 four of them are **experimental**: `memory-core`, `memory-system`, `wiki` and `rag` ship as `0.13.0-experimental.N` on the npm dist-tag `experimental`, outside the stability promise of the stable packages. A `^0.13.0` range never matches a prerelease, so install them with the tag:
 
 ```bash
-bun add @arnilo/prism-memory-fabric@experimental
+bun add @arnilo/prism-memory-system@experimental
 ```
 
 Their API, config, preset contents and defaults may change or be removed in any release until they graduate. `@arnilo/prism-memory-compaction` is stable and is the only memory package the stable core and the reference host's default agents load.
@@ -150,6 +160,58 @@ Plan 216 Task 3 (owner decision 2026-11-08) moved the ontology out of memory. Th
 | `resolveMemoryWorkerLimits`, `measureWorkerJson`, `truncateWorkerText`, `runMemoryWorkerLoop` (and their types) from `@arnilo/prism-memory-observational`; `ObservationalMemoryError`/`ObservationalMemoryLimitError` from the worker loop | `@arnilo/prism-memory-core`, with `MemoryWorkerError`/`MemoryWorkerLimitError` |
 | `scanScopedMemoryContent` inside the fabric | `@arnilo/prism-memory-core` (the wiki runs the same trust scan) |
 
+## Observational memory → `@arnilo/prism-memory-system`
+
+Plan 216 Task 4 (owner decision 2026-11-08) moved the session tiers into the memory system, under the component names of the memory model (STM → WM → rehearsal → LTM). There is no alias: a manifest or host config that still names `@arnilo/prism-memory-observational` fails closed with the loader's own `package_missing` or `import_failed` error, which names the package. The old name was never published.
+
+| Before | Now |
+| --- | --- |
+| `@arnilo/prism-memory-observational` (`packages/memory/observational`), `memoryObservational(config)` | `@arnilo/prism-memory-system` (`packages/memory/system`), `memorySystem(config)` |
+| `memoryObservationalConfigSchema`, `resolveMemoryObservationalConfig`, `MemoryObservationalConfig` and the `MemoryObservational*` config types | `memorySystemConfigSchema`, `resolveMemorySystemConfig`, `MemorySystemConfig`, `MemorySystem*` |
+| config `observer.*` (`observer.messageTokens`) | `stm.*` (`stm.triggerTokens`); config validation rejects the old key and `resolveMemorySystemConfig` names the successor |
+| config `reflector.*`, `dropper.*` | `wm.*`, `rehearsal.*`; they run today's reflector and dropper until plans 218–219 |
+| no way to pass a worker prompt or reasoning level from package config | `stm`/`wm`/`rehearsal` `.instruction` (appended to the default prompt) and `.thinkingLevel` |
+| commands `om`, `om:model { observer?, reflector? }`, `om:status`, `om:view` | `memory:session`, `memory:session:model { stm?, wm? }`, `memory:session:status`, `memory:session:view` |
+| event `om.status`; background task `om.observe` | `memory.session.status`; `memory.session.observe` |
+| state `om` (`observerModel`, `reflectorModel`) and log `ledger` | state `memory.session` (`stmModel`, `wmModel`) and log `memory.session.ledger` |
+| ledger record types `om.observations.recorded`, `om.reflections.recorded`, `om.observations.dropped`, `om.task_state.recorded`, `om.folded`, `om.compacted`, `om.context.pinned` | `memory.session.*`. A record under an old type fails closed with `MemorySessionLedgerError` (`retired_ledger_type`): export the session with the old package's `om:view`, or start a new session |
+| context block title and compaction strategy `observational-memory`; heading `# Observational Memory`; block metadata `source: "om"` | `session-memory`; `# Session Memory`; `source: "memory.session"` |
+| worker tools answered `{ ok: true }` even when nothing was stored | `{ ok: false, reason }` (`empty_content`, `no_valid_ids`, `unknown_id`, …) |
+| an unread tail over `worker.maxMessageBytes` failed every pass | the tail is observed in batches with per-batch coverage; an oversized entry is cut with a marker |
+| `examples/observational-memory.ts` | `examples/session-memory.ts` |
+
+## Fabric → long-term memory in `@arnilo/prism-memory-system`
+
+Plan 216 Task 5 (owner decision 2026-11-08) moved the fabric into the memory system as its long-term memory, the `ltm` component. There is no alias: a manifest or host config that still names `@arnilo/prism-memory-fabric` fails closed with the loader's own `package_missing` or `import_failed` error, which names the package. The sections above that name `@arnilo/prism-memory-fabric` describe the same fields, now under `ltm`.
+
+| Before | Now |
+| --- | --- |
+| `@arnilo/prism-memory-fabric` (`packages/memory/fabric`), `memoryFabric(config)` | `@arnilo/prism-memory-system` (`packages/memory/system`, sources under `src/ltm`), `memorySystem({ ltm: config })` with the same fields. Without `ltm`, no long-term memory is set up |
+| `memoryFabric(fabricConfig)` and `memorySystem(sessionConfig)` listed side by side | one `memorySystem({ ...sessionConfig, ltm: fabricConfig })`: listing the package twice fails with `duplicate_package` |
+| `createMemoryFabric(options)` (direct SDK callers) | `createLongTermMemory(options)`; the options and the returned object are unchanged |
+| a retired fabric field failed with `<path> unknown key "<field>"` | the same error at `/ltm/<path>` |
+| `packageName` from the fabric root | removed; the package is `@arnilo/prism-memory-system` |
+| the fabric's state (`fabric.*` session keys) under `@arnilo/prism-memory-fabric` | the same keys under `@arnilo/prism-memory-system`; state the old package wrote is not read |
+| the shared session helpers the fabric imported from the memory-system root (`isMemoryId`, `recordData`, `serializeSessionEntry`, `recallObservationalMemoryBranchPage`, the type guards, token estimates and recall paging) | not exported: long-term memory imports them in-package |
+| `memory.*` tools, `memory` commands, presets, stores, the `memory.ltm` service | unchanged: same names and behaviour, and the presets' provider requests are byte-identical |
+
+### Long-term working memory, the episode view and episode merge (removed)
+
+Plan 216 Task 7 (owner decision 2026-11-08) removed three long-term memory features; the working-memory name now belongs to the memory system's WM component. A retired config field fails closed when the package loads (`/ltm/<path> unknown key "<field>"`, or an enum error for a list value); a retired write or store fails with a named `MemoryValidationError` code.
+
+| Removed | Was | Migration |
+| --- | --- | --- |
+| `kind: "working"`, labeled blocks, `MEMORY_FABRIC_WORKING_KEY`, `FABRIC_BLOCK_LABEL`, `readFabricBlock` | per-thread working memory in long-term memory, sent as the `fabric-working` tail block | write a durable kind (`fact`, `preference`, `procedure`, `decision`) or use the WM component; `remember({ kind: "working" })` fails with `working_memory_retired` |
+| the `block` parameter of `memory.insert`, `memory.replace` and `memory.forget`; `working` in `memory.recall` `kinds`; `MemoryFabricForgetInput.block` | edits to a labeled working block | `memory.insert { kind \| path }`, `memory.replace { path \| id }`, `memory.forget { id }`. With `semantic: false` only file paths remain writable |
+| config `ltm.workingMemoryTemplate`, `ltm.limits.maxWorkingMemoryBytes`, `"working"` in `ltm.inject.kinds` | the working block's template and byte cap | remove them |
+| `Memory.getWorking`, `updateWorking`, `deleteWorking`, `renderWorking`, `createWorkingMemoryProcessor`; `CreateMemoryOptions.workingStore`, `.schema`, `.validateWorkingMemory`, `.workingMemoryTemplate`; `MemoryContextProviderOptions.includeWorking`; `MemoryLimits.maxWorkingMemoryBytes` | the library working-memory API | none in long-term memory; drop the calls and options |
+| `WorkingMemoryStore`, `WorkingMemoryRecord`, `WorkingMemoryKey`, `WorkingMemoryUpdateMode`, `WorkingMemoryUpdateOptions`, `WorkingMemoryProcessorOptions`, `renderTemplate` (`@arnilo/prism-memory-core`); `createMemoryWorkingStore`, `MemoryWorkingStoreOptions` (`@arnilo/prism-memory-system`); the `workingStore` member of the SQLite, Postgres, markdown and conformance store sets and of `MemoryOkfStores`; `ExportMemoryOkfResult.working` | the working store contract and its drivers | pass only `vectorStore`. A markdown store (or OKF bundle) that still holds `<resource>/working/<thread>.md` fails to open with `working_memory_retired`: export what you need from the file (one fenced JSON block), then move the `working/` directory out of the root. An SQL `working_memory` table is left in place and never read |
+| the episode view: `remember({ kind: "episode", id })` over an observational-memory id | a note read from the session ledger without writing a row | none yet: the `episode` kind is reserved for the stored episode (plan 219) and writing it fails with `episode_kind_not_available`. `observational` stays for `reflectionId` promotion and `searchConversation` |
+| config `ltm.lifecycle.merge.episodes` (`minCluster`, `model`); `EPISODE_MERGE_TOOL`, `EPISODE_MERGE_SYSTEM`, `episodeClusters`, `summarizeEpisodeCluster`, `MAX_EPISODE_CLUSTER`, `DEFAULT_EPISODE_MIN_CLUSTER`, `EpisodeCluster`, `EpisodeSummary`; `memory:maintain` / `maintain()` report field `episodesMerged` | one model call per episode cluster during maintenance | remove the field; maintenance makes no model call |
+
+The presets' context blocks are unchanged. Their tool schemas changed (the `block` parameters, the `working` kind and the descriptions that named them), so the tool catalogue the model sees changed with them.
+
+
 ### Wiki before plan 216 → ontology tier
 
 `@arnilo/prism-memory-wiki` is no longer a second page store. It is the ontology tier over the fabric: concept notes in the fabric's own store, each claim citing the notes it rests on. It requires `@arnilo/prism-memory-fabric` (with `semantic` memory on) and fails closed with `missing_service` without it. There is no alias for any 0.12 name.
@@ -205,7 +267,7 @@ Plan 216 Task 3 (owner decision 2026-11-08) moved the ontology out of memory. Th
 | The `RunOptions.maxToolRounds` `TypeError` guard (removed in 0.1.5) | deleted; set `RunOptions.limits.maxToolRounds` |
 | `@arnilo/prism-channels/telegram` `CredentialValueSource`; literal `botToken` / `webhookSecret` | `ChannelSecretSource` (`() => Promise<string>`) on `createTelegramAdapter` / `createTelegramWebhookHandler`; `connectTelegram({ webhookSecret })` takes an `env:`/`keyring:` ref and rejects a literal with `ChannelTokenLiteralError` |
 | `@arnilo/prism-tools-web` `WebCredentialSource` (accepted a literal, a callback, or a resolver) | `() => Promise<string \| undefined>`; the package resolves its `x-prism-secret` ref config and builds it |
-| Memory internals that were never documented: prompts, `DEFAULT_*` / `MAX_*` / `MIN_*` / `HARD_*` tuning constants, scoring and eviction helpers, the lifecycle / directory / core builders, the observational workers, settings, flush, commands and compactor, and core's cursor codecs and directory scan (`@arnilo/prism-memory-fabric`, `-core`, `-observational` roots) | no longer exported; the stable set is listed under `## Compatibility` in each package README |
+| Memory internals that were never documented: prompts, `DEFAULT_*` / `MAX_*` / `MIN_*` / `HARD_*` tuning constants, scoring and eviction helpers, the lifecycle / directory / core builders, the observational workers, settings, flush, commands and compactor, and core's cursor codecs and directory scan (`@arnilo/prism-memory-fabric`, `-core`, `-system` roots) | no longer exported; the stable set is listed under `## Compatibility` in each package README |
 
 ## Retired interception mechanisms → hooks
 

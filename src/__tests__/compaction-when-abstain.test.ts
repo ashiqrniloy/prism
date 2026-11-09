@@ -5,7 +5,7 @@
  */
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import memoryObservational from "@arnilo/prism-memory-observational";
+import memorySystem from "@arnilo/prism-memory-system";
 import {
   type AgentEvent,
   createAgent,
@@ -89,7 +89,7 @@ describe("compaction.when abstention", () => {
     const { provider, requests } = multiTurnProvider(8);
     const agent = await createAgent({
       model,
-      packages: [providerPackage("test-provider", [provider]), memoryObservational({})],
+      packages: [providerPackage("test-provider", [provider]), memorySystem({})],
       tools: { add: [workTool] },
       compaction: { thresholdEntries: 4, keepRecentEntries: 2 },
     });
@@ -140,7 +140,7 @@ describe("compaction.when abstention", () => {
       model,
       packages: [
         providerPackage("test-provider", [provider]),
-        memoryObservational({ enabled: true, context: { compactAt: { maxTokens: 1_000_000 } } }),
+        memorySystem({ enabled: true, context: { compactAt: { maxTokens: 1_000_000 } } }),
       ],
       compaction: { thresholdEntries: 0 },
     });

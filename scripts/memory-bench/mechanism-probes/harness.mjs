@@ -138,7 +138,8 @@ async function load() {
     prism: await import("@arnilo/prism"),
     testing: await import("@arnilo/prism/testing"),
     kit: await import("@arnilo/prism/provider-kit"),
-    fabric: await import("@arnilo/prism-memory-fabric"),
+    // The fabric is the memory system's `ltm` component since plan 216 Task 5; the probes keep the `fabric` key.
+    fabric: await import("@arnilo/prism-memory-system"),
     sqlite: await import("@arnilo/prism-memory-core/sqlite"),
   };
   return modules;
@@ -189,7 +190,7 @@ export async function fabricAgent(
   const path = join(dir, "memory.sqlite");
   const stores = await sqlite.createSqliteMemoryStores({ path });
   const memory = fabric.createMemory({ ...SCOPE, ...stores });
-  const writer = fabric.createMemoryFabric({ memory, vectorStore: stores.vectorStore, consolidate: false, ...writerOptions });
+  const writer = fabric.createLongTermMemory({ memory, vectorStore: stores.vectorStore, consolidate: false, ...writerOptions });
   if (seed) await seed({ writer, memory, stores });
   const requests = [];
   const workerRequests = [];
@@ -231,7 +232,7 @@ export async function fabricAgent(
   };
   const agent = await prism.createAgent({
     model: "mock/main",
-    packages: [main, workers, ...extraPackages, fabric.default(fabricConfig), ...afterPackages],
+    packages: [main, workers, ...extraPackages, fabric.default({ ltm: fabricConfig }), ...afterPackages],
     ...agentOptions,
   });
   const stream = agent.subscribe();

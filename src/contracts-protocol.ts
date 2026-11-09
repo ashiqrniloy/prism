@@ -371,7 +371,7 @@ export type AgentEventPayload =
       readonly runId: string;
       /** Registered package that emitted the event. Kernel modules use `"kernel"`. */
       readonly package: string;
-      /** Package-defined event name, e.g. `om.status` or `guardrail.decision`. */
+      /** Package-defined event name, e.g. `memory.session.status` or `guardrail.decision`. */
       readonly name: string;
       readonly data?: JsonValue;
     }

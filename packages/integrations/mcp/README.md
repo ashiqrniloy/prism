@@ -105,14 +105,14 @@ Remote tool names are prefixed as `mcp:<serverId>:<toolName>` by default. Use `c
 
 ## Server exposure
 
-Server exposure (`createPrismMcpServer`, `createPrismMcpWebHandler`, `servePrismMcpStdio`) has moved to the [`@arnilo/prism-mcp-server`](../../hosts/mcp-server) host library package.
+Server exposure (`serveMcp`, `createPrismMcpWebHandler`, `servePrismMcpStdio`) has moved to the [`@arnilo/prism-mcp-server`](../../hosts/mcp-server) host library package.
 
 ```bash
 bun add @arnilo/prism-mcp-server
 ```
 
 ```ts
-import { createPrismMcpServer, createPrismMcpWebHandler, servePrismMcpStdio } from "@arnilo/prism-mcp-server";
+import { createPrismMcpWebHandler, serveMcp, servePrismMcpStdio } from "@arnilo/prism-mcp-server";
 ```
 
 ## Security

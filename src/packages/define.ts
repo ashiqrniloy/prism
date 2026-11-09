@@ -84,6 +84,10 @@ function validate(input: PackageDefinitionInput<any>): void {
       if (!isCapability(capability)) invalid(name, `unknown capability "${String(capability).slice(0, 32)}"`);
     }
   }
+  if (input.capabilitiesFor !== undefined) {
+    if (typeof input.capabilitiesFor !== "function") invalid(name, "capabilitiesFor must be a function");
+    if (input.capabilities === undefined) invalid(name, "capabilitiesFor narrows capabilities, so capabilities must be declared");
+  }
   if (input.config !== undefined) {
     // Fails with `config_schema_unsupported` now rather than at the first load.
     try {
@@ -121,6 +125,7 @@ export function definePackage<C = Readonly<Record<string, never>>>(input: Packag
     description: input.description,
     requires: input.requires === undefined ? undefined : Object.freeze({ ...input.requires }),
     capabilities: input.capabilities === undefined ? undefined : Object.freeze([...input.capabilities]),
+    capabilitiesFor: input.capabilitiesFor,
     config: input.config,
     setup: input.setup,
   };

@@ -22,12 +22,6 @@ import {
 
 const VERSION = "0.0.13";
 
-// Plan 071 Task 1 (plan 070 FA 10): the version the repo claims today, read from the
-// root manifest — fixture graphs above keep their own synthetic VERSION.
-function releaseVersion(): string {
-  return (JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8")) as { version: string }).version;
-}
-
 function fixture() {
   const root = mkdtempSync(join(tmpdir(), "prism-release-"));
   const manifests = [
@@ -229,24 +223,24 @@ test("registry failures stay attributable without leaking environment tokens", a
 
 test("release workflow publishes the lockstep cut once and package tags independently", () => {
   const workflow = readFileSync(join(process.cwd(), ".github/workflows/release.yml"), "utf8");
-  // Plan 071 Task 1 (plan 070 FA 10): the cumulative tag list is history, but the
-  // current cut's tag is a claim — derive it from the root manifest, then assert the
-  // package-tag glob still closes the list. This is the assertion the escaped-literal
-  // sweep missed at the 0.5.7 cut.
+  // Plan 215 Task 36 replaced the cumulative version list with two patterns (`v*` lockstep,
+  // `@arnilo/<name>@<version>` independent), so no workflow edit is needed at the next cut —
+  // the assertion that used to derive the current tag from the root manifest now forbids
+  // any version literal in the trigger. Plan 215 Task 38 owns the publish path below.
   const tags = /tags:\s*\[([^\]]*)\]/
     .exec(workflow)?.[1]
     ?.split(",")
     .map((tag) => tag.trim());
   assert.ok(tags, "release workflow must declare a tag list");
-  assert.ok(tags.includes(`"v${releaseVersion()}"`), `release workflow must trigger on v${releaseVersion()}: ${tags.join(", ")}`);
-  assert.equal(tags.at(-1), '"@arnilo/*@*"', "package-tag glob must stay the last release tag entry");
+  assert.deepEqual(tags, ['"v*"', '"@arnilo/*@*"'], `the tag trigger is pattern-only: ${tags.join(", ")}`);
+  assert.ok(!tags.some((tag) => /\d+\.\d+\.\d+/.test(tag)), "no trigger names a version");
   assert.match(workflow, /id-token:\s*write/);
+  assert.match(workflow, /environment:\s*npm-publish/);
   assert.match(workflow, /release:publish -- --lockstep --version /);
   assert.match(workflow, /release:publish -- --resume/);
   assert.doesNotMatch(workflow, /publish[\s\S]*startsWith\(github\.ref, 'refs\/tags\/v'\)/);
   const releaseCli = readFileSync(join(process.cwd(), "scripts/release.mjs"), "utf8");
-  assert.match(releaseCli, /spawnSync\("bun", publishArgs/);
-  assert.doesNotMatch(releaseCli, /--provenance/);
+  assert.match(releaseCli, /spawnSync\("npm", publishArgs/);
   assert.match(releaseCli, /HEAD must have tag v\$\{version\}/);
 });
 
@@ -274,7 +268,7 @@ test("detectBaselineTag skips current release tags and resolves prior baseline",
 const PRE = "0.13.0-experimental.0";
 
 /** Kernel + a stable addon on 0.13.0, and two experimental packages on the prerelease that pin each other exactly. */
-function experimentalFixture(experimental: unknown = ["@arnilo/prism-memory-core", "@arnilo/prism-memory-fabric"]) {
+function experimentalFixture(experimental: unknown = ["@arnilo/prism-memory-core", "@arnilo/prism-memory-system"]) {
   const root = mkdtempSync(join(tmpdir(), "prism-release-exp-"));
   const kernelPeer = ">=0.13.0 <1.0.0";
   const manifests: Array<[string, Record<string, unknown>]> = [
@@ -282,9 +276,9 @@ function experimentalFixture(experimental: unknown = ["@arnilo/prism-memory-core
     ["packages/addon", { name: "@arnilo/prism-addon", version: "0.13.0", peerDependencies: { "@arnilo/prism": kernelPeer } }],
     ["packages/memory/core", { name: "@arnilo/prism-memory-core", version: PRE, peerDependencies: { "@arnilo/prism": kernelPeer } }],
     [
-      "packages/memory/fabric",
+      "packages/memory/system",
       {
-        name: "@arnilo/prism-memory-fabric",
+        name: "@arnilo/prism-memory-system",
         version: PRE,
         dependencies: { "@arnilo/prism-memory-core": PRE },
         peerDependencies: { "@arnilo/prism": kernelPeer, "@arnilo/prism-addon": "^0.13.0" },
@@ -349,17 +343,17 @@ test("bump_prerelease_rewrites_dependent_pins", () => {
   const root = experimentalFixture();
   const release = loadRelease(root);
   const result = bumpPackage(release, "@arnilo/prism-memory-core", "prerelease");
-  assert.deepEqual([result.from, result.to, result.repinned], [PRE, "0.13.0-experimental.1", ["@arnilo/prism-memory-fabric"]]);
+  assert.deepEqual([result.from, result.to, result.repinned], [PRE, "0.13.0-experimental.1", ["@arnilo/prism-memory-system"]]);
   const read = (path: string) => JSON.parse(readFileSync(join(root, path, "package.json"), "utf8"));
   assert.equal(read("packages/memory/core").version, "0.13.0-experimental.1");
-  const fabric = read("packages/memory/fabric");
-  assert.equal(fabric.dependencies["@arnilo/prism-memory-core"], "0.13.0-experimental.1");
-  assert.equal(fabric.devDependencies["@arnilo/prism-memory-core"], "file:../core", "dev file: links are left alone");
-  assert.equal(fabric.peerDependencies["@arnilo/prism-addon"], "^0.13.0", "a loose range into a stable package is left alone");
+  const system = read("packages/memory/system");
+  assert.equal(system.dependencies["@arnilo/prism-memory-core"], "0.13.0-experimental.1");
+  assert.equal(system.devDependencies["@arnilo/prism-memory-core"], "file:../core", "dev file: links are left alone");
+  assert.equal(system.peerDependencies["@arnilo/prism-addon"], "^0.13.0", "a loose range into a stable package is left alone");
   // the bumped graph still validates once the lockfile follows (the CLI regenerates it)
   assert.throws(() => validateReleaseIndependent(loadRelease(root), unchanged), /bun\.lock packages\/memory\/core version is 0\.13\.0-experimental\.0/);
   // an experimental package bumps with prerelease only, and a stable package never takes it
-  assert.throws(() => bumpPackage(release, "@arnilo/prism-memory-fabric", "patch"), /is experimental: bump it with prerelease/);
+  assert.throws(() => bumpPackage(release, "@arnilo/prism-memory-system", "patch"), /is experimental: bump it with prerelease/);
   assert.throws(() => bumpPackage(release, "@arnilo/prism-addon", "prerelease"), /needs a prerelease version/);
 });
 
@@ -382,6 +376,17 @@ test("publish_args_use_experimental_tag", () => {
     "experimental",
     "--dry-run",
   ]);
+  // OIDC provenance is a CI-only flag: a local bootstrap publish has no id-token to exchange.
+  assert.deepEqual(publishArgs(core, PRE, { provenance: true }), [
+    "publish",
+    join("release-artifacts", "arnilo-prism-memory-core-0.13.0-experimental.0.tgz"),
+    "--access",
+    "public",
+    "--tag",
+    "experimental",
+    "--provenance",
+  ]);
+  assert.ok(!publishArgs(core, PRE, { provenance: true, dryRun: true }).includes("--provenance"), "a dry run never asks for provenance");
 });
 
 test("publish_args_reject_mislabeled_versions", async () => {
@@ -420,13 +425,13 @@ test("independent_validate_accepts_exact_prerelease_pins", () => {
   const root = experimentalFixture();
   assert.doesNotThrow(() => validateReleaseIndependent(loadRelease(root), unchanged));
   // a caret into the prerelease fails closed
-  const manifestPath = join(root, "packages/memory/fabric/package.json");
+  const manifestPath = join(root, "packages/memory/system/package.json");
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
   manifest.dependencies["@arnilo/prism-memory-core"] = "^0.13.0-experimental.0";
   writeFileSync(manifestPath, JSON.stringify(manifest));
   assert.throws(
     () => validateReleaseIndependent(loadRelease(root), unchanged),
-    /@arnilo\/prism-memory-fabric dependencies\.@arnilo\/prism-memory-core range \^0\.13\.0-experimental\.0 does not satisfy @arnilo\/prism-memory-core@0\.13\.0-experimental\.0/,
+    /@arnilo\/prism-memory-system dependencies\.@arnilo\/prism-memory-core range \^0\.13\.0-experimental\.0 does not satisfy @arnilo\/prism-memory-core@0\.13\.0-experimental\.0/,
   );
 });
 
@@ -440,7 +445,7 @@ test("release_tag_is_never_latest_for_an_experimental_package_in_the_real_graph"
   const experimental = release.packages.filter((pkg: { experimental: boolean }) => pkg.experimental);
   assert.deepEqual(
     experimental.map((pkg: { manifest: { name: string } }) => pkg.manifest.name).sort(),
-    ["@arnilo/prism-memory-core", "@arnilo/prism-memory-fabric", "@arnilo/prism-memory-observational", "@arnilo/prism-rag", "@arnilo/prism-wiki"],
+    ["@arnilo/prism-memory-core", "@arnilo/prism-memory-system", "@arnilo/prism-rag", "@arnilo/prism-wiki"],
   );
   for (const pkg of experimental) {
     const args = publishArgs(pkg, pkg.manifest.version);

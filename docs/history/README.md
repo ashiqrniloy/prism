@@ -27,3 +27,4 @@ Pages that described the 0.12 runtime and have no 0.13 counterpart. The live con
 - `process-sessions-0.12.md`, `language-intelligence-0.12.md`, `impeccable-0.12.md`: the `@arnilo/prism-coding-tools` 0.12 subpaths.
 - `batch-jobs-0.12.md`, `moderation-0.12.md`, `realtime-voice-0.12.md`: the `@arnilo/prism-providers` 0.12 capability pages.
 - `use-case-model-selection-0.12.md`, `options-index-0.12.md`, `synapta-integration-review-0.12.md`: the 0.12 option index and integration review.
+- `node-filesystem-config-0.12.md`, `run-bundle-0.12.md`: the `@arnilo/prism/node/config` loader and `snapshotRunBundle()`, removed from the kernel by the 0.13.0 train (retired by plan 215 Task 35).

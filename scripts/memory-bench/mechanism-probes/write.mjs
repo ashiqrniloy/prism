@@ -33,7 +33,7 @@ async function reflections(items) {
         "turn.completed",
         async (_event, context) => {
           if (items.length === 0) return;
-          await log.append(context.session, { type: "om.reflections.recorded", reflections: items.splice(0) });
+          await log.append(context.session, { type: "memory.session.reflections.recorded", reflections: items.splice(0) });
         },
         { priority: 100 },
       );

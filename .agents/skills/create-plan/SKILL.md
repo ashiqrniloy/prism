@@ -20,7 +20,7 @@ A plan turns one roadmap phase, or one self-contained change, into checkable tas
    - If code reality conflicts with the roadmap, record the conflict as a finding in the review task and stop. Do not improvise around it.
 2. **Load the references.** Always read both:
    - [references/prism.md](references/prism.md): placement rules, the phase review task, the task probes, chore checklists by change type, and tooling assumptions.
-   - [references/prism-wiki.md](references/prism-wiki.md): where docs go during the 0.13.0 train, and page structures.
+   - [references/prism-wiki.md](references/prism-wiki.md): where docs go (kernel `/docs` pages, package READMEs, `CHANGELOG.md`), and page structures.
 3. **Survey the code with graft before writing approaches.**
    - `graft ask "<scope bullet>" --source` to find the relevant code.
    - `graft callers <symbol> --depth all` for every symbol a task renames, moves, or deletes.
@@ -100,7 +100,7 @@ A plan turns one roadmap phase, or one self-contained change, into checkable tas
   - Name `bun scripts/release.mjs gate --update-baseline` and the `scripts/compat-baseline/` files it rewrites.
   - Require the post-regeneration diff in the task note, with removals attributed to this plan or inherited.
   - This rule exists because plan 083 skipped the regeneration, leaving `release:gate` red for every later plan, and plan 142 missed `assembleAppAgent`'s return type in the prism-code baseline.
-- **A task that changes an error contract (code, class, or refusal shape) or retires a name must require a repo-wide grep** over `src/ packages/ apps/ scripts/ examples/ docs/`, excluding `dist/`, `plans/`, `docs/history/`, and `docs/_evidence/`. Plan 080 left retired errors asserted in a Postgres test and a script fixture.
+- **A task that changes an error contract (code, class, or refusal shape) or retires a name must put the name in the standing sweep.** `bun scripts/retired-names.mjs --generate` picks up removed exports, subpaths, packages, `ERR_*` codes, and `prism` flags from the compat baselines; a removed tool goes in `scripts/retired-tool-names.json`; a name that stays an ordinary word goes in `vocabulary` with a reason. `scripts/retired-names.test.mjs` (`no_retired_name_in_live_tree`, in `bun run test`) then fails on any live use under `src/ packages/ apps/ scripts/ examples/ docs/`. It skips `dist/`, `plans/`, `docs/history/`, `docs/_evidence/`, migration guides, tests, and sentences that state the removal. Plan 080 left retired errors asserted in a Postgres test and a script fixture.
 - **A new opt-in cost or durability knob states its sizing trade-off** (extra writes, requests, or model calls per unit of work, plus the default that avoids them) in the owning docs page or README, not only in the plan.
 - **Every task has a Documentation/Wiki Assessment** per `references/prism-wiki.md`.
 - **Scope discipline.** Implement the roadmap phase. Anything beyond it goes to Further Actions, not into a task.

@@ -267,12 +267,17 @@
   ],
   "byteIdenticalTest": {
     "file": "packages/memory/fabric/src/__tests__/fixtures/removal-byte-identical.json",
-    "sha256": "6ee12dbd48ebe5c14b5c7a5d420d53109aa965e4e91cfac869177f39c316456b",
+    "sha256": "0a02d4e44221c0866ae6d44bd738129dd4c7de88396cc3178c1055a60955981c",
     "repinned": [
       {
         "by": "plan 216 Task 3 (2026-11-08)",
         "previousSha256": "ac549c747c77edc7048a59241a6fadf6d05c8571f19ce5354929665f72730b1e",
         "reason": "the ontology left memory: memory.recall no longer names the concept kind (its kinds enum and description); all 12 tool-schema hashes per preset changed, context blocks unchanged"
+      },
+      {
+        "by": "plan 216 Task 7 (2026-11-09)",
+        "previousSha256": "6ee12dbd48ebe5c14b5c7a5d420d53109aa965e4e91cfac869177f39c316456b",
+        "reason": "working memory, the episode view and episode merge left long-term memory: memory.insert, memory.replace and memory.forget lose the `block` parameter, memory.recall loses the `working` kind, and four descriptions no longer name working blocks; all 12 tool-schema hashes per preset and the tool catalogue in the system message changed, context blocks unchanged (digest 5aec1a4e…). The golden also gained a per-request `messages` hash, pinned on the pre-removal product first. With only the old tool-schema text restored, the post-removal replay matched the pre-removal golden byte for byte (requests, tools, context, messages)."
       }
     ]
   },

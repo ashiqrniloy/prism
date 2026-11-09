@@ -1,22 +1,20 @@
 // scripts/registry-deprecate.mjs
-// Plan 175 Task 8: deprecate the retired npm names for the 0.13.0 train without npm.
+// Plan 175 Task 8, narrowed by plan 215 Task 38: plan the deprecations, print the commands.
 //
-// npm 12's `deprecate` (lib/commands/deprecate.js) is a GET-then-PUT of the packument:
-//   GET /<escapedName>?write=true     -> the full packument
-//   versions[v].deprecated = message  for every v that satisfies the spec (includePrerelease)
-//   PUT /<escapedName>                with the packument body and `Authorization: Bearer <token>`
-// The registry HTTP API is stable, so the release path drops `npm deprecate` exactly as plan 164
-// Task 8.4 dropped `npm publish` (backlog P2 "Phase 11 registry operations without npm").
+// npm's trusted publishing covers `npm publish`, `npm stage publish` and `npm dist-tag`; `npm
+// deprecate` still needs traditional authentication, so this tool holds no credential and mutates
+// nothing. It reads the registry anonymously and prints the exact `npm deprecate` commands for the
+// owner to run locally with 2FA.
 //
 // Modes:
 //   --generate         anonymous GET per name -> release-artifacts/deprecation-plan.json
 //   --dry-run          print the versions in range and the message; mutates nothing
-//   --apply --confirm  authenticated GET + one PUT per name; idempotent resume; fails closed
+//   --commands         print the `npm deprecate` lines for the owner, in plan order
 //
 // The committed list is scripts/deprecations-0.13.json (plan 174 Task 1 (i)). Fixture tests inject
 // `fetch` through createRegistryDeprecator (scripts/registry-deprecate.test.mjs); the registry host
 // defaults to https://registry.npmjs.org and is overridable with PRISM_DEPRECATE_REGISTRY for
-// offline fixtures only. NPM_TOKEN is read from the environment only and is never logged.
+// offline fixtures only. No token is read, stored or logged.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -118,7 +116,6 @@ export function alreadyDeprecated(entry, packument) {
 export function createRegistryDeprecator({
   rootDir = DEFAULT_ROOT,
   registry = process.env.PRISM_DEPRECATE_REGISTRY || DEFAULT_REGISTRY,
-  token = process.env.NPM_TOKEN,
   fetchImpl = globalThis.fetch,
   listPath = process.env.PRISM_DEPRECATE_LIST || join(rootDir, DEFAULT_LIST_REL),
   planPath = process.env.PRISM_DEPRECATE_PLAN || join(rootDir, DEFAULT_PLAN_REL),
@@ -149,15 +146,13 @@ export function createRegistryDeprecator({
   function writePlan(entries, extra = {}) {
     mkdirSync(dirname(planPath), { recursive: true });
     const summary = { total: entries.length };
-    for (const status of ["pending", "applied", "skipped", "failed"]) {
-      summary[status] = entries.filter((entry) => entry.status === status).length;
-    }
+    summary.pending = entries.filter((entry) => entry.status === "pending").length;
     writeFileSync(
       planPath,
       `${JSON.stringify(
         {
           $comment:
-            "Plan 175 Task 8 deprecation plan, generated from scripts/deprecations-0.13.json against the live registry. Apply with `bun scripts/registry-deprecate.mjs --apply --confirm`; idempotent (applied entries are skipped) and fail-closed (any mismatch aborts with zero mutations).",
+            "Plan 175 Task 8 deprecation plan, generated from scripts/deprecations-0.13.json against the live registry. `npm deprecate` is not OIDC-capable, so `bun scripts/registry-deprecate.mjs --commands` prints the commands for the owner to run locally with 2FA; this file changes no registry state.",
           generatedAt: new Date().toISOString(),
           registry: base,
           guide: GUIDE_REL,
@@ -171,25 +166,15 @@ export function createRegistryDeprecator({
     );
   }
 
-  async function readPackument(name, { write }) {
-    const query = write ? "?write=true" : "";
-    const headers = { accept: "application/json" };
-    if (write && token) headers.authorization = `Bearer ${token}`;
-    const res = await fetchImpl(`${base}/${escapedName(name)}${query}`, { headers });
-    if (!res.ok) throw new Error(`GET ${name}: ${res.status}`);
+  async function readPackument(name) {
+    const res = await fetchImpl(`${base}/${escapedName(name)}`, { headers: { accept: "application/json" } });
+    if (!res.ok) {
+      // 404 is the finished state after a cleanup: the name is gone, so there is nothing to deprecate.
+      const error = new Error(`GET ${name}: ${res.status}`);
+      error.status = res.status;
+      throw error;
+    }
     return res.json();
-  }
-
-  async function writePackument(name, packument) {
-    return fetchImpl(`${base}/${escapedName(name)}`, {
-      method: "PUT",
-      headers: {
-        accept: "application/json",
-        "content-type": "application/json",
-        authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(packument),
-    });
   }
 
   /** Anonymous GET per name; optionally write the plan. */
@@ -198,7 +183,17 @@ export function createRegistryDeprecator({
     verifyAnchors(list);
     const entries = [];
     for (const item of list.names) {
-      const packument = await readPackument(item.name, { write: false });
+      let packument;
+      try {
+        packument = await readPackument(item.name);
+      } catch (error) {
+        // Task 37 unpublished the legacy names: an absent name has nothing left to deprecate.
+        if (error.status === 404) {
+          out(`unpublished: ${item.name} (not in the plan)`);
+          continue;
+        }
+        throw error;
+      }
       const versions = sortVersions(Object.keys(packument?.versions ?? {}));
       entries.push({
         name: item.name,
@@ -219,11 +214,17 @@ export function createRegistryDeprecator({
   async function dryRun(entries) {
     let problems = 0;
     let already = 0;
+    let gone = 0;
     for (const entry of entries) {
       let packument;
       try {
-        packument = await readPackument(entry.name, { write: false });
+        packument = await readPackument(entry.name);
       } catch (error) {
+        if (error.status === 404) {
+          gone += 1;
+          out(`unpublished: ${entry.name} (nothing to deprecate)`);
+          continue;
+        }
         err(`DRY-RUN PROBLEM ${entry.name}: ${error.message}`);
         problems += 1;
         continue;
@@ -242,82 +243,30 @@ export function createRegistryDeprecator({
       out(`planned: ${entry.name}@"${entry.range}" -> ${entry.deprecateVersions.length} version(s): ${entry.deprecateVersions.join(", ")}`);
       out(`  message: ${entry.message}`);
     }
-    err(`dry-run complete: ${already}/${entries.length} already deprecated, ${problems} problem(s); no registry state was modified`);
+    err(
+      `dry-run complete: ${already} already deprecated, ${gone} unpublished, ${problems} problem(s) of ${entries.length}; no registry state was modified`,
+    );
     return problems === 0 ? 0 : 1;
   }
 
-  /** Authenticated GET for every entry, then one PUT per changed entry. Fails closed. */
-  async function apply(plan) {
-    if (!token) {
-      err("NPM_TOKEN is required for --apply --confirm");
-      return 2;
-    }
-    const entries = plan.entries;
-    const states = new Map();
-    const mismatched = [];
-    for (const entry of entries) {
-      let packument;
-      try {
-        packument = await readPackument(entry.name, { write: true });
-      } catch (error) {
-        mismatched.push(`${entry.name}: ${error.message}`);
-        continue;
-      }
-      states.set(entry.name, packument);
-      const found = entryProblems(entry, packument);
-      if (found.length > 0) mismatched.push(`${entry.name}: ${found.join("; ")}`);
-    }
-    if (mismatched.length > 0) {
-      for (const problem of mismatched) err(`APPLY ABORT (no state modified): ${problem}`);
-      return 1;
-    }
-    let failed = 0;
-    for (const entry of entries) {
-      const packument = states.get(entry.name);
-      if (alreadyDeprecated(entry, packument)) {
-        entry.status = "skipped";
-        continue;
-      }
-      for (const version of entry.deprecateVersions) packument.versions[version].deprecated = entry.message;
-      let ok = false;
-      try {
-        const res = await writePackument(entry.name, packument);
-        ok = res.ok;
-        if (!ok) entry.detail = `PUT ${entry.name}: ${res.status}`;
-      } catch (error) {
-        entry.detail = `PUT ${entry.name}: ${error.message}`;
-      }
-      if (!ok) {
-        entry.status = "failed";
-        failed += 1;
-        continue;
-      }
-      entry.status = "applied";
-      out(`applied: ${entry.name}@"${entry.range}" (${entry.deprecateVersions.length} version(s))`);
-    }
-    writePlan(entries, { lastApplyAt: new Date().toISOString() });
-    if (failed > 0) {
-      err(`${failed} mutation(s) failed; re-run --apply --confirm to resume (applied entries are skipped)`);
-      return 1;
-    }
-    err(`deprecation apply complete: ${entries.length} entries`);
-    return 0;
+  /** The `npm deprecate` lines for the owner: `deprecate` is the one registry write OIDC cannot do. */
+  function commands(entries) {
+    return entries.map((entry) => `npm deprecate '${entry.name}@${entry.range}' '${String(entry.message).replaceAll("'", "'\\''")}'`);
   }
 
-  return { loadList, loadPlan, generate, dryRun, apply, planPath, listPath, registry: base };
+  return { loadList, loadPlan, generate, dryRun, commands, planPath, listPath, registry: base };
 }
 
 export async function main(argv = process.argv.slice(2)) {
   const wantsGenerate = argv.includes("--generate");
   const wantsDryRun = argv.includes("--dry-run");
-  const wantsApply = argv.includes("--apply");
-  const confirmed = argv.includes("--confirm");
-  if (!wantsGenerate && !wantsDryRun && !wantsApply) {
-    console.error("usage: bun scripts/registry-deprecate.mjs [--generate | --dry-run | --apply --confirm]");
+  const wantsCommands = argv.includes("--commands");
+  if (argv.includes("--apply")) {
+    console.error("no --apply: `npm deprecate` is not OIDC-capable. Run --commands and execute the lines locally with 2FA.");
     return 2;
   }
-  if (wantsApply && !confirmed) {
-    console.error("refusing to mutate the registry without explicit --confirm");
+  if (!wantsGenerate && !wantsDryRun && !wantsCommands) {
+    console.error("usage: bun scripts/registry-deprecate.mjs [--generate | --dry-run | --commands]");
     return 2;
   }
   const deprecator = createRegistryDeprecator();
@@ -326,16 +275,12 @@ export async function main(argv = process.argv.slice(2)) {
     console.error(`deprecation plan written: ${deprecator.planPath} (${entries.length} entries)`);
     return 0;
   }
-  if (wantsApply) {
-    const plan = deprecator.loadPlan();
-    if (!plan) {
-      console.error(`no plan at ${deprecator.planPath}; run --generate first`);
-      return 2;
-    }
-    return deprecator.apply(plan);
-  }
   const plan = deprecator.loadPlan();
   const entries = plan?.entries ?? (await deprecator.generate({ write: false }));
+  if (wantsCommands) {
+    for (const line of deprecator.commands(entries)) console.log(line);
+    return 0;
+  }
   return deprecator.dryRun(entries);
 }
 

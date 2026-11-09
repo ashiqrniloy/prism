@@ -3,20 +3,22 @@
  * cache-stable request segments. Every model call is a scripted `edit_concept` reply; no provider is contacted.
  */
 
-import { describe, it } from "bun:test";
+import { afterEach, describe, it } from "bun:test";
 import assert from "node:assert/strict";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createAgent, definePackage, type JsonObject, type ModelClient, type SecretRedactor, type SessionContext } from "@arnilo/prism";
 import { mockProvider, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism/testing";
 import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
-import {
+import memorySystem, {
   createMemory,
-  createMemoryFabric,
+  createLongTermMemory,
   createMemoryLtmPort,
   encodeMemoryNoteMetadata,
   type FabricScopeLevel,
-  memoryFabric,
   parseMemoryNoteMetadata,
-} from "@arnilo/prism-memory-fabric";
+} from "@arnilo/prism-memory-system";
 import { parseConceptBody } from "../ontology/codec.js";
 import { MEMORY_LTM_SERVICE } from "../ontology/ltm.js";
 import { createWikiOntology, type WikiOntologyPort } from "../ontology/port.js";
@@ -30,6 +32,17 @@ import { CONSOLIDATE_SYSTEM } from "../consolidate/prompt.js";
 import { EDIT_CONCEPT_SCHEMA, EDIT_TOOL_NAME } from "../consolidate/schema.js";
 import { planScope, resolveTriggers, WIKI_TRIGGERS } from "../consolidate/triggers.js";
 import { WIKI_CONSOLIDATE_COMMAND_NAME, WIKI_STATUS_COMMAND_NAME, wiki } from "../index.js";
+
+/** A fresh workspace per package-level test: the wiki's default root is `<workspaceRoot>/.prism/wiki`, never the cwd. */
+const workspaces: string[] = [];
+afterEach(async () => {
+  while (workspaces.length > 0) await rm(workspaces.pop() as string, { recursive: true, force: true });
+});
+async function workspace(): Promise<string> {
+  const dir = await mkdtemp(join(tmpdir(), "wiki-consolidate-"));
+  workspaces.push(dir);
+  return dir;
+}
 
 const scope = { tenantId: "t1", threadId: "th1" };
 const limits = resolveMemoryWorkerLimits();
@@ -96,7 +109,7 @@ function setup(extra: readonly FabricScopeLevel[] = []) {
   const ltm = createMemoryLtmPort({ scopes: () => [...memories].map(([level, memory]) => ({ level, memory, store: vectorStore })) });
   const ontology = createWikiOntology({ store: createMemoryWikiStore(), ltm: () => ltm });
   const fabrics = new Map(
-    [...memories].map(([level, memory]) => [level, createMemoryFabric({ memory, vectorStore, consolidate: false })] as const),
+    [...memories].map(([level, memory]) => [level, createLongTermMemory({ memory, vectorStore, consolidate: false })] as const),
   );
   const note = async (
     text: string,
@@ -739,8 +752,8 @@ describe("concept pass: package wiring", () => {
       model: { provider: "mock", model: "wiki" },
       packages: [
         mockProvider([[providerTextDelta("ok"), providerDone()]]),
-        memoryFabric({}),
-        wiki({ consolidate: { triggers: [] } }),
+        memorySystem({ ltm: {} }),
+        wiki({ workspaceRoot: await workspace(), consolidate: { triggers: [] } }),
         grab,
       ],
     });
@@ -760,8 +773,9 @@ describe("concept pass: package wiring", () => {
     const ok = await createAgent({
       model: { provider: "mock", model: "wiki" },
       packages: [
-        memoryFabric({}),
+        memorySystem({ ltm: {} }),
         wiki({
+          workspaceRoot: await workspace(),
           consolidate: {
             minCoReads: 3,
             minIntervalTurns: 9,
@@ -772,11 +786,12 @@ describe("concept pass: package wiring", () => {
       ],
     });
     await ok.dispose();
+    const root = await workspace();
     await assert.rejects(
       () =>
         createAgent({
           model: { provider: "mock", model: "wiki" },
-          packages: [memoryFabric({}), wiki({ consolidate: { triggers: ["always"] as never } })],
+          packages: [memorySystem({ ltm: {} }), wiki({ workspaceRoot: root, consolidate: { triggers: ["always"] as never } })],
         }),
       (error: unknown) => (error as { code?: string }).code === "config_invalid",
     );

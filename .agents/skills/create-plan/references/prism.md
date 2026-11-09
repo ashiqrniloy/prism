@@ -8,7 +8,7 @@
 2. Phase review task
 3. Task probes
 4. Chore checklists by change type
-5. Tooling assumptions the train must change
+5. Standing gates a change must update
 6. Plan-level rules
 
 ## 1. Place the work
@@ -56,7 +56,7 @@ Ask each probe for every task. Record the answer as an acceptance criterion, a l
 5. **Load cost.** What is imported and when? Heavy dependencies (`pg`, Playwright, Office parsers, NATS, vendor SDKs) are imported only inside their owning package. Where the roadmap names one, add a "not loaded unless listed" test.
 6. **Retirement.** Which 0.12 code, config field, export, or error does this replace?
    - Delete it in this task. Add no compatibility alias (roadmap rule).
-   - Require a repo-wide grep for the retired names and strings.
+   - Require the retired names in the standing sweep (`bun scripts/retired-names.mjs --generate`, or `scripts/retired-tool-names.json` for a tool) and `scripts/retired-names.test.mjs` green.
 7. **Public surface.** Which exports are added, moved, or removed?
    - Regenerate the baseline in this task: `bun scripts/release.mjs gate --update-baseline`, with the diff and its attribution in the task note.
    - Update the root-export freeze in `src/__tests__/public-export-contract.test.ts` deliberately.
@@ -112,16 +112,16 @@ Include every applicable line as a criterion, file, or test.
 
 **Release** — only in the publish phase (roadmap Phase 11). Follow `prism-execution/references/release.md`.
 
-## 5. Tooling assumptions the train must change
+## 5. Standing gates a change must update
 
-These gates assume the 0.12 layout. The first plan that breaks an assumption owns updating its gate, in the same task:
+The 0.13.0 train's layout assumptions are resolved: packages are nested `packages/<group>/<name>` (`loadRelease` in `scripts/release.mjs`), every publishable package ships TypeScript source with no `dist/`, and `/docs` is the 0.13 contract (`docs_next_is_promoted`). These gates stay, and the task that triggers one updates it in the same task:
 
-| Assumption today | Owner |
+| The change | Gate to update |
 | --- | --- |
-| Packages are flat `packages/*`: `workspacePackageCounts()` in `scripts/package-truth.mjs` and the explicit root `workspaces` list | the first plan creating `packages/<group>/<name>` (roadmap Phase 2, `hooks-json`) |
-| Export targets resolve to built `dist/` with sibling `.d.ts` (`public-export-contract.test.ts`, `packaging.test.ts`) | the same plan, which publishes TypeScript source |
-| `docs/index.md` links every `docs/**/*.md` page, and root `files` ships `docs/` | done: plan 175 promoted `docs/next/` into `/docs`; `docs_next_is_promoted` keeps it gone |
-| `scripts/independent-packages.json` lists independently versioned packages | each plan creating a publishable package |
+| Moves, renames, or removes an export | `bun scripts/release.mjs gate --update-baseline` (compat baselines), then `bun scripts/retired-names.mjs --generate` |
+| Retires a package, subpath, error code, `prism` flag, or tool | `scripts/retired-names.json` / `scripts/retired-tool-names.json`; `scripts/retired-names.test.mjs` stays green |
+| Creates a publishable package | root `workspaces`, a compat baseline, `scripts/independent-packages.json` (independent line or `experimental`), package truth |
+| Adds a kernel `/docs` page | one `docs/index.md` link and the `kernelPages`/`apiPages` list in `src/__tests__/docs.test.ts` |
 
 ## 6. Plan-level rules
 

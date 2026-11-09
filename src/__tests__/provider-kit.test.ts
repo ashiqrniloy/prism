@@ -424,6 +424,7 @@ describe("provider-kit", () => {
       "scripts/phase54-package-map.mjs", // 0.3-era consolidation baseline map
       "scripts/phase54-package-map.test.mjs",
       "scripts/retired-providers.test.mjs",
+      "scripts/retired-names.json", // the generated retirement ledger: it must name every retired package
       "src/__tests__/provider-kit.test.ts", // this scan's own allow-list and guards
       "src/__tests__/core-boundaries.test.ts", // asserts src/ never imports the family
       "src/__tests__/docs.test.ts", // retired-name sweep + umbrella guard

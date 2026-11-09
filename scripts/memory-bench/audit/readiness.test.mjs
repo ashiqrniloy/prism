@@ -238,7 +238,10 @@ test("slimmed_record_lists_every_removal_and_passes_cache_pin", async () => {
   const read = (file) => readFile(file, "utf8");
   const record = JSON.parse(await read(`${SLIMMED}/record.json`));
   const decisions = JSON.parse(await read("docs/_evidence/memory-bench/210/decisions.json"));
-  const equivalenceText = await read(`${CACHE_STABILITY}/equivalence.json`);
+  // The slimmed record is plan 210's `P` baseline: it is checked against the attestation of its own product, the copy
+  // kept beside it. The live 202 pin moved on (plan 216 Task 8 re-attested it to the memory-system LTM product).
+  const equivalenceText = await read(`${SLIMMED}/equivalence.json`);
+  assert.notEqual(sha(equivalenceText), sha(await read(`${CACHE_STABILITY}/equivalence.json`)));
   const input = {
     record,
     decisions,

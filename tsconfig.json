@@ -9,7 +9,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["node", "bun-types/test.d.ts"]
+    "types": ["node", "bun-types/test.d.ts", "bun-types/sqlite.d.ts"]
   },
   "include": ["src"],
   "exclude": ["src/__tests__/fixtures"]

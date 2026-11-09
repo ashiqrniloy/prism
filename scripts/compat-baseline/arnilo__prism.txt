@@ -321,7 +321,7 @@
 . PackageCommandInfo	interface PackageCommandInfo { readonly description: string; readonly name: string; readonly package: string; }
 . PackageConfigSource	type PackageConfigSource = "default" | "user" | "project" | "code" | "host"
 . PackageDefinition	interface PackageDefinition<C = Readonly<Record<string, never>>> extends Readonly<Omit<PackageDefinitionInput<C>, "setup">> { (config?: Partial<C>, options?: PackageInstanceOptions): PackageInstance; setup(prism: PackageAPI<C>): void | Promise<void>; }
-. PackageDefinitionInput	interface PackageDefinitionInput<C = Readonly<Record<string, never>>> { readonly capabilities?: readonly Capability[]; readonly config?: JsonSchema; readonly description?: string; readonly name: string; readonly requires?: PackageRequires; readonly version: string; setup(prism: PackageAPI<C>): void | Promise<void>; }
+. PackageDefinitionInput	interface PackageDefinitionInput<C = Readonly<Record<string, never>>> { capabilitiesFor?(config: C): readonly Capability[]; readonly capabilities?: readonly Capability[]; readonly config?: JsonSchema; readonly description?: string; readonly name: string; readonly requires?: PackageRequires; readonly version: string; setup(prism: PackageAPI<C>): void | Promise<void>; }
 . PackageInput	type PackageInput = PackageDefinition<any> | PackageInstance
 . PackageInstance	interface PackageInstance { readonly config: Readonly<Record<string, unknown>> | undefined; readonly definition: PackageDefinition<any>; readonly optional: boolean; readonly source?: PackageSource; }
 . PackageInstanceOptions	interface PackageInstanceOptions { readonly optional?: boolean; }

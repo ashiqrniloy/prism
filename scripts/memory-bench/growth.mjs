@@ -11,8 +11,8 @@ import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { createMemoryVectorStore } from "@arnilo/prism-memory-core";
-import { resolveLifecycleConfig } from "../../packages/memory/fabric/src/config.js";
-import { createMemory, createMemoryFabric } from "../../packages/memory/fabric/src/index.js";
+import { resolveLifecycleConfig } from "../../packages/memory/system/src/ltm/config.js";
+import { createMemory, createLongTermMemory } from "../../packages/memory/system/src/index.js";
 
 const MONTHS = 12;
 const DEFAULT_HOT_TOKENS = 200_000;
@@ -95,7 +95,7 @@ export async function runGrowth(options = {}) {
     exchangeCapacity: { hotTokens: options.hotTokens ?? DEFAULT_HOT_TOKENS },
     archive: { graceSessions: options.graceSessions ?? 10 },
   });
-  const fabric = createMemoryFabric({
+  const fabric = createLongTermMemory({
     memory,
     vectorStore,
     consolidate: false,

@@ -57,14 +57,14 @@ The **host** stays in control:
 import { createAgent } from "@arnilo/prism";
 import coding from "@arnilo/prism-tools-coding";
 import hyper from "@arnilo/prism-provider-hyper";
-import observationalMemory from "@arnilo/prism-memory-observational";
+import memorySystem from "@arnilo/prism-memory-system";
 
 const agent = await createAgent({
   model: "hyper/claude-sonnet-4-5",
   packages: [
     hyper({ apiKey: "env:HYPER_API_KEY" }),
     coding({ root: process.cwd() }),
-    observationalMemory({ observer: { model: "hyper/claude-haiku-4-5" } }),
+    memorySystem({ stm: { model: "hyper/claude-haiku-4-5" } }),
   ],
   host: { ui: myUi }, // answers approvals, questions, secrets
 });
@@ -100,7 +100,7 @@ Prism's own packages are optional, just like third-party ones. None of them is i
 | --- | --- |
 | Model providers | `@arnilo/prism-provider-{hyper, kilo, laya, liquid, litellm, openai-codex, opencode-go, openrouter, typesafe}` |
 | Tools | `@arnilo/prism-tools-{coding, web, browser, work, computer-use, openapi}` |
-| Memory and context | `@arnilo/prism-memory-compaction`, `@arnilo/prism-context-{files, engineering}`; experimental: `@arnilo/prism-memory-{core, observational, rag, wiki, fabric}` |
+| Memory and context | `@arnilo/prism-memory-compaction`, `@arnilo/prism-context-{files, engineering}`; experimental: `@arnilo/prism-memory-{core, system, fabric}`, `@arnilo/prism-rag`, `@arnilo/prism-wiki` |
 | Session stores | `@arnilo/prism-store-{jsonl, sqlite, postgres}` |
 | Policy | `@arnilo/prism-approval`, `@arnilo/prism-governance`, `@arnilo/prism-guardrail-packs`, `@arnilo/prism-model-router` |
 | Integrations | `@arnilo/prism-mcp`, `@arnilo/prism-hooks-json`, `@arnilo/prism-observability`, `@arnilo/prism-workflows`, `@arnilo/prism-delegate` |
@@ -110,11 +110,11 @@ Prism's own packages are optional, just like third-party ones. None of them is i
 
 Memory is two tiers over one store, and each tier is its own package; the ontology is knowledge outside memory, in the wiki. Nothing is installed or on by default.
 
-**Experimental in 0.13.0.** The memory packages (`@arnilo/prism-memory-{core, observational, fabric}`), the wiki (`@arnilo/prism-wiki`) and retrieval (`@arnilo/prism-rag`) ship on an experimental prerelease line (`0.13.0-experimental.N`, npm dist-tag `experimental`; install with `bun add @arnilo/prism-memory-fabric@experimental`). They sit outside the stability promise of the stable packages, so their API, config and defaults may change or be removed in any release. They graduate to stable versions as the last step of the memory track, after 0.13.0, once each feature has been audited against measured evidence. `@arnilo/prism-memory-compaction` is stable. The stable packages and the reference host's default agents load no experimental package.
+**Experimental in 0.13.0.** The memory packages (`@arnilo/prism-memory-{core, system}`), the wiki (`@arnilo/prism-wiki`) and retrieval (`@arnilo/prism-rag`) ship on an experimental prerelease line (`0.13.0-experimental.N`, npm dist-tag `experimental`; install with `bun add @arnilo/prism-memory-system@experimental`). They sit outside the stability promise of the stable packages, so their API, config and defaults may change or be removed in any release. They graduate to stable versions as the last step of the memory track, after 0.13.0, once each feature has been audited against measured evidence. `@arnilo/prism-memory-compaction` is stable. The stable packages and the reference host's default agents load no experimental package.
 
-**Standing rules.** `@arnilo/prism-memory-fabric` keeps the preferences, procedures and decisions a person stated or confirmed as typed notes. A small pinned block of them sits in the prompt prefix and stays byte-identical between turns, and a rule that applies to one subtree arrives as a short cue when the agent touches matching files. A rule is proposed until the person confirms it or it is used in two sessions.
+**Standing rules.** Long-term memory in `@arnilo/prism-memory-system` (`ltm`) keeps the preferences, procedures and decisions a person stated or confirmed as typed notes. A small pinned block of them sits in the prompt prefix and stays byte-identical between turns, and a rule that applies to one subtree arrives as a short cue when the agent touches matching files. A rule is proposed until the person confirms it or it is used in two sessions.
 
-**The record.** The same fabric stores facts and, when `exchanges` is on, every completed turn verbatim. The agent searches it with `memory.recall` and reads what it needs in full with `memory.read`; retrieval is lexical and needs no embeddings. `@arnilo/prism-memory-observational` is the tier below it: it observes the session in the background, and the fabric's promotion pass can read its observations and write them as candidate notes that earn trust by use. Writing and recalling the record makes no model call unless the host opts in to one.
+**The record.** The same fabric stores facts and, when `exchanges` is on, every completed turn verbatim. The agent searches it with `memory.recall` and reads what it needs in full with `memory.read`; retrieval is lexical and needs no embeddings. `@arnilo/prism-memory-system` holds the session tiers below it (short-term memory, working memory and rehearsal, modelled on human memory): they observe the session in the background, and the fabric's promotion pass can read its observations and write them as candidate notes that earn trust by use. Writing and recalling the record makes no model call unless the host opts in to one.
 
 **The ontology.** `@arnilo/prism-wiki` is knowledge outside memory: one concept per subject in its own store, with itemized claims, each citing the memory notes or ingested sources it rests on. An agent searches it with `wiki.search`, which returns concepts with the ids their claims cite, and drills down with `wiki.read`. The wiki reads memory only through a read-only port and never writes it; forgetting a cited memory note removes the claims that rested on it, with no model call. It also runs without memory, on its own sources. The cost is a background model call per due subject on the model the host names in `consolidate.model`; installing the package is what opts in. It is unmeasured, so nothing here claims it improves answers.
 
