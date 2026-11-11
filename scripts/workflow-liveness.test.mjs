@@ -536,6 +536,13 @@ test("manual_release_prepares_attested_bootstrap_artifacts_without_publishing", 
   assert.match(publish, /name: release-artifacts-\$\{\{ env\.SAFE_REF \}\}/);
 });
 
+test("release_security_caller_grants_dependency_review_read_permission", () => {
+  const release = readFileSync(join(WORKFLOWS, "release.yml"), "utf8");
+  const security = readFileSync(join(WORKFLOWS, "security.yml"), "utf8");
+  assert.match(jobBody(security, "dependency-review"), /pull-requests:\s*read/);
+  assert.match(jobBody(release, "security-release"), /pull-requests:\s*read/);
+});
+
 test("release_gate_runs_plan_gates: the gates this plan adds stay in bun run test or release:gate", () => {
   const chain = effectiveTestChain();
   const root = readManifest(join(ROOT, "package.json"));
