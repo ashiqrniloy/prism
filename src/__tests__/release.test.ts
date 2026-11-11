@@ -181,7 +181,7 @@ test("partial publish writes resumable report and publish arguments are explicit
   );
   assert.deepEqual(publishArgs(release.packages[0], VERSION, { dryRun: true }), [
     "publish",
-    join("release-artifacts", "arnilo-prism-0.0.13.tgz"),
+    "./release-artifacts/arnilo-prism-0.0.13.tgz",
     "--access",
     "public",
     "--tag",
@@ -189,7 +189,7 @@ test("partial publish writes resumable report and publish arguments are explicit
     "--dry-run",
   ]);
   assert.ok(!publishArgs(release.packages[0], VERSION).includes("--provenance"), "npm provenance is retired");
-  assert.equal(publishArgs(release.packages[1], VERSION)[1], join("release-artifacts", "arnilo-prism-addon-0.0.13.tgz"));
+  assert.equal(publishArgs(release.packages[1], VERSION)[1], "./release-artifacts/arnilo-prism-addon-0.0.13.tgz");
 });
 
 test("release requires clean tagged git state", () => {
@@ -385,7 +385,7 @@ test("publish_args_use_experimental_tag", () => {
   }
   assert.deepEqual(publishArgs(core, PRE, { dryRun: true }), [
     "publish",
-    join("release-artifacts", "arnilo-prism-memory-core-0.13.0-experimental.0.tgz"),
+    "./release-artifacts/arnilo-prism-memory-core-0.13.0-experimental.0.tgz",
     "--access",
     "public",
     "--tag",
@@ -395,7 +395,7 @@ test("publish_args_use_experimental_tag", () => {
   // OIDC provenance is a CI-only flag: a local bootstrap publish has no id-token to exchange.
   assert.deepEqual(publishArgs(core, PRE, { provenance: true }), [
     "publish",
-    join("release-artifacts", "arnilo-prism-memory-core-0.13.0-experimental.0.tgz"),
+    "./release-artifacts/arnilo-prism-memory-core-0.13.0-experimental.0.tgz",
     "--access",
     "public",
     "--tag",
