@@ -60,7 +60,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "test": "bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 mcp-server/src acp/src ag-ui/src channels/src evals/src devtools/src remote/src headless/src host-builder/src driver-process/src",
+    "test": "bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 mcp-server/src acp/src ag-ui/src channels/src evals/src devtools/src remote/src headless/src host-builder/src driver-process/src --path-ignore-patterns=channels/src/__tests__/postgres.integration.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:postgres": "bun ../../scripts/require-postgres-url.mjs && bun ../../scripts/with-build-lock.mjs --shared bun test --timeout=0 channels/src/__tests__/postgres.integration.test.ts",
     "pack:dry-run": "bun pm pack --dry-run"

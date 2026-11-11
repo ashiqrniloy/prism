@@ -250,6 +250,11 @@ test("the bun-blocked paths stay off the stage file sets", () => {
   for (const file of ["packages/hosts/channels/src/__tests__/postgres.integration.test.ts"]) {
     assert.ok(!stageArgs.includes(file), `${file} must stay off every stage argument`);
   }
+  // release:gate runs the hosts suite with a marker PostgreSQL URL and no server: only test:postgres
+  // (the postgres-integration job) may run the channels journal leg.
+  const hostsScripts = readManifest(join(ROOT, "packages/hosts/package.json")).scripts;
+  assert.ok(hostsScripts.test.includes("--path-ignore-patterns=channels/src/__tests__/postgres.integration.test.ts"));
+  assert.ok(hostsScripts["test:postgres"].includes("channels/src/__tests__/postgres.integration.test.ts"));
   assert.ok(
     STAGES.find((stage) => stage.name === "performance budget")?.args.includes("scripts/budget-gate.test.mjs"),
     "the budget gate stays a solo stage",
