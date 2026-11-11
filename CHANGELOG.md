@@ -525,7 +525,7 @@
 
 - **The 0.13 split left 16 exports with no reader.** `scripts/dead-export-verify.mjs` classifies them in `docs/_evidence/dead-export-verification-2026-09-03.md` (14 deprecate, 2 remove); each carries `@deprecated` JSDoc naming "no replacement", runtime behavior is unchanged. Per package — `@arnilo/prism`: `applyNestedRun`, `suspendNested`, `MANIFEST_COMMANDS`; `@arnilo/prism-extensions/context-engineering`: `AttentionCompilerSetting`, `formatFoldedToolResult`, `isToolDisclosureError`, `resolveToolsDisclosure`; `@arnilo/prism-extensions/workflows`: `exactOwnershipKey`; `@arnilo/prism-extensions/compaction`: `HISTORY_SUMMARIZATION_PROMPT`, `UPDATE_SUMMARIZATION_PROMPT`, `ProviderRequestTransform` (marked for removal); `@arnilo/prism-memory-system/core`: `invalidateAcrossLayers`; `@arnilo/prism-extensions/governance`: `GovernanceEvaluation` (marked for removal), `governancePackage`; `@arnilo/prism-extensions/store-codecs`: `DEFAULT_MAX_HOLD_REASON_BYTES`; `@arnilo/prism-tools/web`: `WebToolSet`. They are removed at the next breaking cut.
 
-## [0.13.0] - 2026-10-15
+## [0.13.0] - 2026-11-11
 
 ### Added
 
