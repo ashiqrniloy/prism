@@ -106,10 +106,19 @@ export const GATE_FILES = [
 // Workspace files with fixed timing ceilings: each runs once in the serial timing stage and is
 // excluded from its leaf, where concurrent leaves would measure host contention instead.
 export const SERIAL_LEAF_FILES = {
-  "packages/extensions": ["governance/src/__tests__/field-policy.test.ts"],
-  "packages/tools": ["coding/src/__tests__/hard-deny.test.ts"],
+  "packages/extensions": [
+    "governance/src/__tests__/field-policy.test.ts",
+    "governance/src/__tests__/claim-grounding.test.ts",
+    "store-sqlite/src/__tests__/sqlite-persistence.test.ts",
+  ],
+  "packages/tools": [
+    "coding/src/__tests__/hard-deny.test.ts",
+    "work/src/sheets/__tests__/decimal.test.ts",
+    "work/src/documents/__tests__/model.test.ts",
+  ],
   "packages/hosts": ["host-builder/src/__tests__/lookup.test.ts"],
   "packages/memory": ["system/src/ltm/__tests__/candidate-enrichment.test.ts"],
+  "packages/knowledge": ["rag/src/__tests__/access-recheck.test.ts"],
 };
 
 const TIMING_FILES = [
