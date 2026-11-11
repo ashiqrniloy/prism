@@ -20,7 +20,6 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 // manifest, which the lockstep cut rewrites first — so every claim surface in this
 // suite derives from it instead of hardcoding the cut. `scripts/version-literal-gate.test.mjs`
 // asserts the same surfaces (manifests, caret ranges, lockfile, version constant).
-const releaseVersion = (): string => readPkg(".").version as string;
 /** The kernel peer window every native package admits: the whole 0.x line, floored at the API-level cut. */
 const KERNEL_PEER = ">=0.13.0 <1.0.0";
 /**
@@ -36,14 +35,11 @@ const independentFile = JSON.parse(readFileSync(join(repoRoot, "scripts", "indep
 const INDEPENDENT_LINES = new Set(independentFile.packages);
 /** The experimental memory line (plan 215 Task 2): independent too, but on `x.y.z-experimental.N` and the kernel window peer. */
 const EXPERIMENTAL_LINES = new Set(independentFile.experimental ?? []);
+// Plan 224 Phase 11: an independent bundle still peers the kernel's 0.x API window (docs/compatibility.md),
+// the same as every code package; only its pins into other independent lines are cut-line claims.
 const corePin = (owner: string, range: string | undefined): string | undefined => {
   if (!INDEPENDENT_LINES.has(owner)) return range;
-  const [major, minor] = (releaseVersion() as string).split(".");
-  assert.match(
-    range ?? "",
-    new RegExp(`^\\^${major}\\.${minor}\\.\\d+$`),
-    `${owner} must pin the core with a caret on the ${major}.${minor} line, got ${range}`,
-  );
+  assert.match(range ?? "", /^>=\d+\.\d+\.\d+ <1\.0\.0$/, `${owner} must peer the core with the 0.x API window, got ${range}`);
   return range;
 };
 

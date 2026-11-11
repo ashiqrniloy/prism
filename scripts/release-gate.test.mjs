@@ -812,3 +812,24 @@ export * as ns from "./mod.js";
     );
   });
 });
+
+// Plan 224 Task 10: the per-bundle versioning decision for the 0.13.0 cut. A new bundle must take a
+// versioning decision here before it can ship, so this fails when one is added without one.
+describe("per-bundle versioning after 0.13", () => {
+  it("independent_packages_after_0_13", () => {
+    const data = JSON.parse(readFileSync("scripts/independent-packages.json", "utf8"));
+    const kernel = "@arnilo/prism";
+    const hosts = "@arnilo/prism-hosts";
+    const published = new Set(loadRelease().packages.map((pkg) => pkg.manifest.name));
+    const independent = new Set(data.packages);
+    const experimental = new Set(data.experimental ?? []);
+    assert.deepEqual([...independent].sort(), ["@arnilo/prism-ai", "@arnilo/prism-extensions", "@arnilo/prism-tools"]);
+    assert.ok(!independent.has(hosts), "hosts stays on the kernel line");
+    assert.ok(!independent.has(kernel), "the kernel is the lockstep line");
+    for (const name of experimental) assert.ok(published.has(name) && !independent.has(name), `${name} is an experimental bundle`);
+    for (const name of published) {
+      if (name === kernel || name === hosts || independent.has(name) || experimental.has(name)) continue;
+      assert.fail(`${name} has no versioning decision: list it in scripts/independent-packages.json or keep it on the kernel line`);
+    }
+  });
+});

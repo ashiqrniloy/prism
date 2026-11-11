@@ -1,6 +1,10 @@
 {
-  "$comment": "Plan 224: experimental lines belong to the memory-system and knowledge bundles; stable bundles stay on the kernel line for the initial 0.13.0 cut.",
-  "packages": [],
+  "$comment": "Plan 224 Phase 11 cut (0.13.0): ai, tools and extensions own their version lines from 0.13.0 and keep the kernel's 0.x API window peer; hosts stays on the kernel line; experimental keeps the memory-system and knowledge bundles until they graduate (plan 223).",
+  "packages": [
+    "@arnilo/prism-ai",
+    "@arnilo/prism-tools",
+    "@arnilo/prism-extensions"
+  ],
   "experimental": [
     "@arnilo/prism-memory-system",
     "@arnilo/prism-knowledge"

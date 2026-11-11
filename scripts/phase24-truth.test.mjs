@@ -161,7 +161,8 @@ test("engines floor lockstep: every publishable manifest declares the Bun runtim
  */
 export function assertCorePin(dep, range, rootVersion, owner) {
   const independent = new Set(JSON.parse(readFileSync(join(ROOT, "scripts", "independent-packages.json"), "utf8")).packages);
-  if (independent.has(owner)) {
+  // The kernel peer is the 0.x API window for every code package, independent or not (Decision B below).
+  if (independent.has(owner) && dep !== "@arnilo/prism") {
     const [major, minor] = rootVersion.split(".");
     assert.match(
       range ?? "",

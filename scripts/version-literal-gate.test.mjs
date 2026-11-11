@@ -335,10 +335,15 @@ test("positive control: a half-finished cut is reported surface by surface", () 
   const half = new Map(files);
   half.set("package.json", bump(files.get("package.json"), `"version": "${current}"`, `"version": "${next}"`));
   half.set(".github/workflows/release.yml", files.get(".github/workflows/release.yml").replace('"v*"', `"v${current}"`));
+  // Independent bundles keep their kernel window and own their pins into other independent lines, so the
+  // lockstep surface with a caret to rewrite is hosts pinning the kernel: a cut that misses it must be reported.
+  const hosts = JSON.parse(files.get("packages/hosts/package.json"));
+  hosts.dependencies = { ...(hosts.dependencies ?? {}), "@arnilo/prism": `^${current}` };
+  half.set("packages/hosts/package.json", `${JSON.stringify(hosts, null, 2)}\n`);
   const halfProblems = claimViolations(half, next);
   for (const [label, fragment] of [
     ["workspace manifest", "packages/hosts/package.json: version"],
-    ["internal range", "package.json: peerDependencies"],
+    ["internal range", "packages/hosts/package.json: dependencies.@arnilo/prism"],
     ["lockfile", "bun.lock:"],
     ["index constant", "src/index.ts: version constant"],
     ["docs banner", "docs/index.md: current line"],
