@@ -317,13 +317,14 @@ test("every workspace test file runs exactly once: default suite or an opt-in le
   assert.ok(claimed.size > 0, "the partition must be non-empty (positive control)");
 });
 
-test("timing-ceiling leaf files (field-policy, hard-deny) run serially and are excluded from the workspace pool", () => {
+test("timing-ceiling leaf files (field-policy, hard-deny, host-builder lookup) run serially and are excluded from the workspace pool", () => {
   const timing = STAGES.find((stage) => stage.name === "timing benchmarks");
   const leaves = STAGES.find((stage) => stage.name === "workspace suites").parallel;
   assert.ok(!timing.args.some((arg) => arg.startsWith("--parallel")));
   const pinned = [
     ["packages/extensions", "governance/src/__tests__/field-policy.test.ts"],
     ["packages/tools", "coding/src/__tests__/hard-deny.test.ts"],
+    ["packages/hosts", "host-builder/src/__tests__/lookup.test.ts"],
   ];
   for (const [leafName, file] of pinned) {
     assert.ok(existsSync(join(ROOT, leafName, file)), `${leafName}/${file} must exist`);

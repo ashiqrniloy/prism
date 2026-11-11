@@ -40,6 +40,7 @@ export interface InstallOptions extends InstallLocation {
 const VERSION_RANGE = /^[A-Za-z0-9^~<>=*.|+_-][A-Za-z0-9^~<>=*.|+_ -]{0,127}$(?![\s\S])/;
 const MAX_OUTPUT = 64 * 1024;
 const SECRET_ENV = /TOKEN|SECRET|PASSWORD|PASSWD|AUTH|API_?KEY|CREDENTIAL/i;
+const BUN_FLAGS = ["--ignore-scripts", "--backend=copyfile"] as const; // copy, not hardlink: a managed file must not share its inode with Bun's cache
 
 function fail(code: "install_failed" | "package_missing", scope: ManifestScope, message: string, pkg?: string): never {
   throw new ManifestError(code, message, { scope, ...(pkg !== undefined ? { package: pkg } : {}) });
@@ -86,13 +87,6 @@ function redactOutput(text: string, location: InstallLocation): string {
     .trim()
     .slice(0, 400);
 }
-
-/**
- * Managed installs copy files out of Bun's global cache instead of hardlinking them (Bun's default).
- * A hardlinked tree shares inodes with the cache, so a tampered managed file would also tamper every
- * later install of that package version from the cache.
- */
-const COPY_BACKEND = "--backend=copyfile";
 
 async function bunStep(
   location: InstallLocation,
@@ -233,16 +227,15 @@ export async function install(spec: string, options: InstallOptions): Promise<Ma
   const rollback = async (): Promise<void> => {
     const current = (await readManaged(dirs)).dependencies ?? {};
     const changed = Object.keys(current).filter((name) => current[name] !== before[name]);
-    if (changed.length)
-      await bunStep(options, ["remove", "--ignore-scripts", COPY_BACKEND, ...changed], dirs.packagesDir, scope, "bun remove rollback");
+    if (changed.length) await bunStep(options, ["remove", ...BUN_FLAGS, ...changed], dirs.packagesDir, scope, "bun remove rollback");
     for (const { path, bytes } of snapshots) {
       if (bytes === undefined) await rm(path, { force: true });
       else await writeFile(path, bytes, { mode: 0o600 });
     }
-    await bunStep(options, ["install", "--ignore-scripts", COPY_BACKEND], dirs.packagesDir, scope, "bun install rollback");
+    await bunStep(options, ["install", ...BUN_FLAGS], dirs.packagesDir, scope, "bun install rollback");
   };
   try {
-    await bunStep(options, ["add", "--ignore-scripts", COPY_BACKEND, resolved.add], dirs.packagesDir, scope, "bun add");
+    await bunStep(options, ["add", ...BUN_FLAGS, resolved.add], dirs.packagesDir, scope, "bun add");
     const after = { ...(await readManaged(dirs)).dependencies };
     const dependency = changedDependency(before, after) ?? (resolved.name ? splitSpecifier(resolved.name).root : undefined);
     if (dependency === undefined || !MODULE_SPECIFIER.test(dependency) || splitSpecifier(dependency).subpath !== undefined)
@@ -296,7 +289,7 @@ export async function remove(name: string, options: InstallLocation): Promise<vo
   const { root } = splitSpecifier(name);
   const siblings = manifest.packages.some((record) => record.name !== name && splitSpecifier(record.name).root === root);
   if (!siblings && (await readManaged(dirs)).dependencies?.[root] !== undefined) {
-    await bunStep(options, ["remove", "--ignore-scripts", COPY_BACKEND, root], dirs.packagesDir, scope, "bun remove");
+    await bunStep(options, ["remove", ...BUN_FLAGS, root], dirs.packagesDir, scope, "bun remove");
   }
   const slots = Object.fromEntries(Object.entries(manifest.slots ?? {}).filter(([, owner]) => owner !== name));
   const { slots: _drop, ...rest } = manifest;
