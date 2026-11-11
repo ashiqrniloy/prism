@@ -52,6 +52,9 @@ export function jsonRpc(
       const handler = Object.hasOwn(adapter.requests ?? {}, method) ? adapter.requests?.[method] : undefined;
       if (!handler) {
         accepting = false;
+        // Fail the run now: if the binary exits before the error reply is written, the
+        // reply path never reports, and the run must not end as a success.
+        fail(new ProcessDriverError("vendor_request_unhandled", redact(method)));
         throw new JsonRpcError(-32601, `unhandled request: ${redact(method)}`);
       }
       try {

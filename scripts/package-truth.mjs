@@ -34,7 +34,11 @@ export function expandWorkspaceDirs(root, globs) {
           } catch {
             return [];
           }
-          return entries.filter((e) => e.isDirectory() && pattern.test(e.name)).map((e) => join(base, e.name));
+          // Sorted so generated evidence does not depend on filesystem readdir order.
+          return entries
+            .filter((e) => e.isDirectory() && pattern.test(e.name))
+            .map((e) => join(base, e.name))
+            .sort();
         });
       } else {
         current = current

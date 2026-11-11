@@ -15,6 +15,8 @@ const MODEL = process.env.PRISM_LIVE_OPENAI_CODEX_MODEL ?? "gpt-6.1-sol";
 let grant: string | undefined;
 
 async function keyringRecord(): Promise<string | false> {
+  // Opt-in first: a skipped suite never touches the OS keychain (CI runners have no usable backend).
+  if (process.env.PRISM_LIVE_PROVIDER_TESTS !== "1") return "set PRISM_LIVE_PROVIDER_TESTS=1 to run provider live tests";
   const keyring = await import("@arnilo/prism-extensions/keyring").catch(() => undefined);
   if (!keyring) return "install @arnilo/prism-extensions/keyring to read the grant";
   if (typeof keyring.createKeychainCredentialStore !== "function") return "the keyring package has no OS backend";
@@ -23,7 +25,12 @@ async function keyringRecord(): Promise<string | false> {
   const resolver = keyring.createKeyringCredentialResolver({
     store: keyring.createKeychainCredentialStore({ service: keyring.KEYRING_DEFAULT_SERVICE }),
   });
-  const secret = await resolver.resolve(CREDENTIAL, {});
+  let secret: Awaited<ReturnType<typeof resolver.resolve>>;
+  try {
+    secret = await resolver.resolve(CREDENTIAL, {});
+  } catch (error) {
+    return `OS keyring read failed: ${error instanceof Error ? error.name : "unknown error"}`;
+  }
   if (secret === undefined || secret.value === "") return `sign in with ChatGPT first: no credential at ${CREDENTIAL}`;
   grant = secret.value;
   return false;

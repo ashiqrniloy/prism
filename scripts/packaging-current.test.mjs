@@ -111,7 +111,7 @@ for (const pkg of packages) {
 test("every publishable manifest declares engines.bun and no engines.node (plan 125 Task 1)", () => {
   for (const pkg of packages) {
     const manifest = readManifest(join(pkg.dir, "package.json"));
-    assert.equal(manifest.engines?.bun, ">=1.4.2", `${pkg.name} must declare engines.bun >=1.4.2`);
+    assert.equal(manifest.engines?.bun, ">=1.4.4", `${pkg.name} must declare engines.bun >=1.4.4`);
     assert.equal(manifest.engines?.node, undefined, `${pkg.name} must not declare the retired engines.node`);
   }
 });

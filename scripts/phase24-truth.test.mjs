@@ -141,7 +141,7 @@ test("engines floor lockstep: every publishable manifest declares the Bun runtim
   // Plan 125 Task 1: the runtime contract is Bun, so the lockstep is engines.bun — a package
   // drifting to a looser floor, or keeping the retired engines.node, fails here.
   const root = readManifest(join(ROOT, "package.json"));
-  assert.equal(root.engines?.bun, ">=1.4.2", "root manifest must declare the Bun runtime floor");
+  assert.equal(root.engines?.bun, ">=1.4.4", "root manifest must declare the Bun runtime floor");
   assert.equal(root.engines?.node, undefined, "root manifest must not declare the retired engines.node");
   const dirs = expandWorkspaceDirs(ROOT, root.workspaces);
   assert.ok(dirs.length > 0, "workspace globs must match at least one package");

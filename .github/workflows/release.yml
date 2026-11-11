@@ -32,13 +32,13 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      # Bun-only since plan 125 Task 1: the manifests declare `engines.bun >=1.4.2`, so the two
+      # Bun-only since plan 125 Task 1: the manifests declare `engines.bun >=1.4.4`, so the two
       # declared Node legs (this job's Node 24 smoke and `node22-compat`) retired with the engines
       # flip. The only Node left in this pipeline is the release-host registry toolchain in
       # `publish`; scripts/phase12-freeze-manifest.json keeps the 0.1.x Node matrix as era record.
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          bun-version: "1.4.2"
+          bun-version: "1.4.4"
       - run: bun ci
       - name: verify SDK readiness
         run: |
@@ -143,7 +143,7 @@ jobs:
           persist-credentials: false
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          bun-version: "1.4.2"
+          bun-version: "1.4.4"
       - run: bun ci
       - run: bun run build
       - name: install libreoffice headless

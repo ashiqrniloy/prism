@@ -54,7 +54,7 @@
     "@arnilo/prism-knowledge": "workspace:*"
   },
   "engines": {
-    "bun": ">=1.4.2"
+    "bun": ">=1.4.4"
   },
   "license": "MIT",
   "repository": {

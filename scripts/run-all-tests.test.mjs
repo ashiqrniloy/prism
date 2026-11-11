@@ -11,7 +11,7 @@ import { existsSync, globSync, readdirSync, readFileSync } from "node:fs";
 import { availableParallelism } from "node:os";
 import { join, relative } from "node:path";
 import { expandWorkspaceDirs, readManifest } from "./package-truth.mjs";
-import { effectiveTestChain, GATE_FILES, runParallelLeaves, runStages, STAGES } from "./run-all-tests.mjs";
+import { effectiveTestChain, GATE_FILES, runParallelLeaves, runStages, SERIAL_LEAF_FILES, STAGES } from "./run-all-tests.mjs";
 
 const ROOT = join(import.meta.dirname, "..");
 
@@ -317,12 +317,19 @@ test("every workspace test file runs exactly once: default suite or an opt-in le
   assert.ok(claimed.size > 0, "the partition must be non-empty (positive control)");
 });
 
-test("the field-policy benchmark runs serially and is excluded from the workspace pool", () => {
+test("timing-ceiling leaf files (field-policy, hard-deny) run serially and are excluded from the workspace pool", () => {
   const timing = STAGES.find((stage) => stage.name === "timing benchmarks");
-  const extensions = STAGES.find((stage) => stage.name === "workspace suites").parallel.find((leaf) => leaf.name === "packages/extensions");
-  assert.equal(timing.args.filter((arg) => arg === "packages/extensions/governance/src/__tests__/field-policy.test.ts").length, 1);
+  const leaves = STAGES.find((stage) => stage.name === "workspace suites").parallel;
   assert.ok(!timing.args.some((arg) => arg.startsWith("--parallel")));
-  assert.ok(extensions.args.includes("--path-ignore-patterns=governance/src/__tests__/field-policy.test.ts"));
+  const pinned = [
+    ["packages/extensions", "governance/src/__tests__/field-policy.test.ts"],
+    ["packages/tools", "coding/src/__tests__/hard-deny.test.ts"],
+  ];
+  for (const [leafName, file] of pinned) {
+    assert.ok(existsSync(join(ROOT, leafName, file)), `${leafName}/${file} must exist`);
+    assert.equal(timing.args.filter((arg) => arg === `${leafName}/${file}`).length, 1);
+    assert.ok(leaves.find((leaf) => leaf.name === leafName).args.includes(`--path-ignore-patterns=${file}`));
+  }
 });
 
 test("the runner spawns bun by name, never through process.execPath, and never node", () => {
@@ -398,7 +405,7 @@ test("the workspace stage is one shared-lock reader per package behind a bounded
       "--cwd",
       leaf.name,
       "test",
-      ...(leaf.name === "packages/extensions" ? ["--path-ignore-patterns=governance/src/__tests__/field-policy.test.ts"] : []),
+      ...(SERIAL_LEAF_FILES[leaf.name] ?? []).map((file) => `--path-ignore-patterns=${file}`),
     ]);
     const script = readManifest(join(ROOT, leaf.name, "package.json")).scripts.test;
     assert.ok(script.includes("with-build-lock.mjs --shared"), `${leaf.name} test must take the shared reader lock`);

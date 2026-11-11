@@ -285,7 +285,7 @@ test("workflows install Bun and declare no Node leg", () => {
   }
   for (const { file, text } of workflows) {
     assert.ok(text.includes(SETUP_BUN), `${file} must set up Bun from the pinned action SHA`);
-    assert.ok(text.includes('bun-version: "1.4.2"'), `${file} must pin bun-version 1.4.2`);
+    assert.ok(text.includes('bun-version: "1.4.4"'), `${file} must pin bun-version 1.4.4`);
     assert.ok(text.includes("bun ci"), `${file} must install with bun ci`);
   }
 });

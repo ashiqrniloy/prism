@@ -103,9 +103,16 @@ export const GATE_FILES = [
   "scripts/__tests__/decision-bench-metrics.test.mjs",
 ];
 
+// Workspace files with fixed timing ceilings: each runs once in the serial timing stage and is
+// excluded from its leaf, where concurrent leaves would measure host contention instead.
+export const SERIAL_LEAF_FILES = {
+  "packages/extensions": ["governance/src/__tests__/field-policy.test.ts"],
+  "packages/tools": ["coding/src/__tests__/hard-deny.test.ts"],
+};
+
 const TIMING_FILES = [
   ...GATE_FILES.filter((file) => file.startsWith("scripts/benchmark-") || file === "scripts/memory-bench/run.test.mjs"),
-  "packages/extensions/governance/src/__tests__/field-policy.test.ts",
+  ...Object.entries(SERIAL_LEAF_FILES).flatMap(([leaf, files]) => files.map((file) => `${leaf}/${file}`)),
 ];
 
 // The old chain left the compiled `dist/__tests__/*.test.js` set to the shell. There is no
@@ -154,7 +161,7 @@ const WORKSPACE_LEAVES = expandWorkspaceDirs(ROOT, readManifest(join(ROOT, "pack
     "--cwd",
     relative(ROOT, dir),
     "test",
-    ...(relative(ROOT, dir) === "packages/extensions" ? ["--path-ignore-patterns=governance/src/__tests__/field-policy.test.ts"] : []),
+    ...(SERIAL_LEAF_FILES[relative(ROOT, dir)] ?? []).map((file) => `--path-ignore-patterns=${file}`),
   ],
 }));
 

@@ -4,7 +4,7 @@
   "description": "Prism coding, web, browser, research, OpenAPI, computer-use and work tools. Import each package through its subpath.",
   "type": "module",
   "engines": {
-    "bun": ">=1.4.2"
+    "bun": ">=1.4.4"
   },
   "license": "MIT",
   "repository": {

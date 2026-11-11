@@ -71,7 +71,8 @@ describe("driverConformance", () => {
         (error: unknown) =>
           error instanceof DriverConformanceError &&
           error.leg === "credential_canary" &&
-          /tried to read a protected credential path/.test(error.message),
+          // EACCES locally; on runners where the read succeeds, the atime check catches it instead.
+          /(tried to read|opened) a protected credential path/.test(error.message),
       );
     },
     LONG,

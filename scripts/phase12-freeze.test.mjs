@@ -39,7 +39,7 @@ test("node support agrees with engines and CI legs", () => {
   // 0.1.x era floor as immutable record, so the assertion is now "the record still names the floor
   // the era shipped, and the live root manifest has moved to the Bun contract".
   assert.equal(node.enginesRange, ">=22", "the era engines range stays as recorded");
-  assert.equal(rootPkg.engines.bun, ">=1.4.2", "the live root manifest declares the Bun runtime floor");
+  assert.equal(rootPkg.engines.bun, ">=1.4.4", "the live root manifest declares the Bun runtime floor");
   assert.equal(rootPkg.engines.node, undefined, "the live root manifest no longer declares engines.node");
   // Plan 071 Task 2: the floor is derived from the manifest's own enginesRange so a
   // floor change touches the manifest, not this assertion.

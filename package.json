@@ -3,7 +3,7 @@
   "version": "0.13.0",
   "description": "Agent harness for AI providers, agents, sessions, and tools.",
   "type": "module",
-  "packageManager": "bun@1.4.2",
+  "packageManager": "bun@1.4.4",
   "exports": {
     ".": "./src/index.ts",
     "./provider-kit": "./src/provider-kit/index.ts",
@@ -75,7 +75,7 @@
     "typescript": "^7.0.2"
   },
   "engines": {
-    "bun": ">=1.4.2"
+    "bun": ">=1.4.4"
   },
   "license": "MIT",
   "repository": {

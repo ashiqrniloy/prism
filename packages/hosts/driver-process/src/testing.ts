@@ -261,7 +261,8 @@ export async function adapterConformance(adapter: AgentAdapter, options: Adapter
       if (Object.hasOwn(adapter.requests ?? {}, method)) throw Error("the unknown-request probe has a handler; remove catch-all handlers");
       await withRun([{ raw: JSON.stringify({ jsonrpc: "2.0", id: "unknown", method, params: {} }) }], async (h) => {
         const result = await h.session.run("go");
-        if (!result.error?.message.includes("vendor_request_unhandled")) throw Error("unknown server request did not fail closed");
+        if (!result.error?.message.includes("vendor_request_unhandled"))
+          throw Error(`unknown server request did not fail closed (got: ${result.error?.message ?? "no error"})`);
       });
     },
     adapter.transport === "json-rpc" ? undefined : "not a JSON-RPC transport",

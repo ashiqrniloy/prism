@@ -141,7 +141,7 @@ const stores = await createSqliteMemoryStores({ path: "./memory.sqlite", dimensi
 stores.close();
 ```
 
-Requires Bun >=1.4.2 and an existing parent directory. New files use mode 0600; existing
+Requires Bun >=1.4.4 and an existing parent directory. New files use mode 0600; existing
 file permissions are preserved. Unknown schemas and corrupt files fail with
 `MemoryValidationError`. Optional dimensions are persisted and checked on reopen.
 Each write batch commits atomically. Scope, ACLs,

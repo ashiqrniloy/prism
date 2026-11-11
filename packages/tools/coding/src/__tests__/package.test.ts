@@ -15,6 +15,7 @@ import {
   toolCallContent,
 } from "@arnilo/prism/testing";
 import toolsCoding from "../index.js";
+import { createNativeSandbox } from "../security/native-sandbox.js";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../../..");
 
@@ -103,7 +104,13 @@ describe("@arnilo/prism-tools/coding package", () => {
     });
     try {
       const names = agent.tools.map((tool) => tool.name);
-      assert.equal(names.includes("shell"), true, `shell stays registered, got ${names.join(", ")}`);
+      // Hosts that refuse unprivileged user namespaces (GitHub's Ubuntu runners) fail the unshare
+      // preflight; the sandbox then fails closed and shell is not registered at all.
+      const nativeAvailable = await createNativeSandbox({ root }).then(
+        async (sandbox) => (await sandbox.close(), true),
+        () => false,
+      );
+      assert.equal(names.includes("shell"), nativeAvailable, `shell registered iff native works, got ${names.join(", ")}`);
       assert.equal(names.includes("shell_output"), false, "no process backend, no shell_output");
     } finally {
       await agent.dispose();

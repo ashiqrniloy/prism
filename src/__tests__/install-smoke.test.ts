@@ -116,9 +116,9 @@ before(() => {
         overrides,
         dependencies: {
           "@modelcontextprotocol/client": "^2.3.0",
-          zod: "^4.6.2",
+          zod: "^4.6.6",
           "@agentclientprotocol/sdk": "1.4.0",
-          "@ag-ui/core": "0.0.59",
+          "@ag-ui/core": "1.0.4",
           "@modelcontextprotocol/server": "^2.3.0",
           ...Object.fromEntries(
             Object.entries(
