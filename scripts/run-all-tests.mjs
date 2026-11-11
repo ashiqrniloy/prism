@@ -109,6 +109,7 @@ export const SERIAL_LEAF_FILES = {
   "packages/extensions": ["governance/src/__tests__/field-policy.test.ts"],
   "packages/tools": ["coding/src/__tests__/hard-deny.test.ts"],
   "packages/hosts": ["host-builder/src/__tests__/lookup.test.ts"],
+  "packages/memory": ["system/src/ltm/__tests__/candidate-enrichment.test.ts"],
 };
 
 const TIMING_FILES = [
