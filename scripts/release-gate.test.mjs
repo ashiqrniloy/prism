@@ -332,6 +332,9 @@ export * as ns from "./mod.js";
     const args = publishArgs(pkg, "0.13.0");
     assert.equal(args[0], "publish");
     assert.ok(args[1].endsWith("/arnilo-prism-sample-0.13.0.tgz"), `must name the prepacked tarball: ${args[1]}`);
+    // npm reads a bare `dir/file.tgz` as a GitHub shorthand and refuses it (v0.13.0 run 43070804747).
+    assert.ok(/^(\.\/|\.\.\/|\/)/.test(args[1]), `npm needs a path prefix to read a local file: ${args[1]}`);
+    assert.equal(publishArgs(pkg, "0.13.0", { artifactsDir: "/abs/out" })[1], "/abs/out/arnilo-prism-sample-0.13.0.tgz");
     assert.ok(!args.includes("--provenance"), "local publishing has no OIDC provenance");
     assert.ok(publishArgs(pkg, "0.13.0", { provenance: true }).includes("--provenance"), "CI publishes attested bytes with npm OIDC");
     assert.ok(!args.some((arg) => arg.includes("packages/core")), "must never publish a package directory");

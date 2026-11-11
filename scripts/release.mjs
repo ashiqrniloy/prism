@@ -499,10 +499,17 @@ function releaseLineErrors(release) {
   return errors;
 }
 
+// npm reads a bare `dir/file.tgz` as a GitHub shorthand (`github:dir/file.tgz`) and refuses it
+// (EALLOWGIT). Only an explicit `./`, `../` or `/` prefix makes the argument a local file, so the
+// relative artifact path gets `./` (v0.13.0 run 43070804747 failed on this before any upload).
+export function npmFileArg(path) {
+  return path.startsWith("/") || path.startsWith("./") || path.startsWith("../") ? path : `./${path}`;
+}
+
 export function publishArgs(pkg, version, { dryRun = false, registry, provenance = false, artifactsDir = "release-artifacts" } = {}) {
   const args = [
     "publish",
-    join(artifactsDir, tarballName(pkg.manifest.name, version)),
+    npmFileArg(join(artifactsDir, tarballName(pkg.manifest.name, version))),
     "--access",
     "public",
     "--tag",

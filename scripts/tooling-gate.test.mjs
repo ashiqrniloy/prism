@@ -328,7 +328,7 @@ describe("tooling gates fail on violations", () => {
         const declared =
           rel === "scripts/release.mjs" &&
           /publishArgs\(pkg, pubVersion,/.test(text) &&
-          /function publishArgs\([\s\S]{0,400}?\[\s*"publish",\s*join\(artifactsDir, tarballName\(pkg.manifest.name, version\)\)/.test(
+          /function publishArgs\([\s\S]{0,400}?\[\s*"publish",\s*npmFileArg\(join\(artifactsDir, tarballName\(pkg.manifest.name, version\)\)\)/.test(
             source,
           );
         sites.push(`${rel}:${line} npm ${declared ? "publish" : "<computed>"}`);
@@ -370,7 +370,7 @@ describe("tooling gates fail on violations", () => {
     const args = publishArgs({ manifest: { name: "@fixture/release" }, experimental: false }, "0.13.0", { provenance: true });
     assert.deepEqual(args, [
       "publish",
-      join("release-artifacts", "fixture-release-0.13.0.tgz"),
+      `./${join("release-artifacts", "fixture-release-0.13.0.tgz")}`,
       "--access",
       "public",
       "--tag",
