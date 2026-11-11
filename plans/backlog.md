@@ -1458,3 +1458,67 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Source: plans/216-Phase-11-Part-O17-Memory-System-Foundation-Criteria-Ontology-Extraction-One-Package-And-Partial-Use.md
 - What: Remove `.cache/memory-bench/216/om-before` once plan 217 has run its `OM-before` arms.
 - Why: Until then it is the base for every plan 216 re-attestation.
+
+## Decide the release snapshot for the post-candidate memory and kernel edits
+- Review (plan 224 Task 10, 2026-11-12): owner decision, open.
+- Section: Further Actions
+- Priority: P0
+- Source: plans/224-Phase-11-Part-AJ-Release-0.13.0-Package-Consolidation-Seven-Bundles-And-Publish.md
+- What: Nine files edited after candidate `2cd2b553` are still uncommitted (`packages/memory/**`, `src/packages/{api,loader}.ts`; 123 insertions, 15 deletions). They are not in 0.13.0. The published memory-system tarball's `stm.ts` and `core/src/worker.ts` equal `HEAD`.
+- Why: The owner decided on 2026-11-09 that the release snapshot is the whole checkout. Decide whether this work ships in 0.13.x or on the memory track. Shipping it needs a rerun of the gates on the new commit.
+
+## Put a stable release on the experimental memory and knowledge names, or unpublish them
+- Review (plan 224 Task 10, 2026-11-12): open owner decision.
+- Section: Further Actions
+- Priority: P1
+- Source: plans/224-Phase-11-Part-AJ-Release-0.13.0-Package-Consolidation-Seven-Bundles-And-Publish.md
+- What: `latest` on `@arnilo/prism-memory-system` and `@arnilo/prism-knowledge` is `0.13.0-experimental.0`. npm refused `npm dist-tag rm … latest` with E400, so a plain install gets the prerelease. Either publish a stable version with `--tag latest`, or unpublish within npm's 72-hour window, which started 2026-11-11 17:03 UTC.
+- Why: The plan's rule is that a stable install never resolves an experimental bundle.
+
+## Run the 0.12 deprecations, if the owner reconsiders
+- Review (plan 224 Task 10, 2026-11-12): the owner declined the step.
+- Section: Further Actions
+- Priority: P2
+- Source: plans/224-Phase-11-Part-AJ-Release-0.13.0-Package-Consolidation-Seven-Bundles-And-Publish.md
+- What: `bun scripts/registry-deprecate.mjs --dry-run` prints the `npm deprecate` commands. The owner runs them with 2FA.
+- Why: The 33 listed names were unpublished at the 2026-11-11 dry run, so nothing is affected today.
+
+## Check where the `0.0.0-stage` version on the experimental names came from
+- Review (plan 224 Task 10, 2026-11-12): unverified.
+- Section: Further Actions
+- Priority: P2
+- Source: plans/224-Phase-11-Part-AJ-Release-0.13.0-Package-Consolidation-Seven-Bundles-And-Publish.md
+- What: npm lists `0.0.0-stage` among the versions of `@arnilo/prism-memory-system` and `@arnilo/prism-knowledge`. Its origin is unverified, probably the trusted-publisher setup. Confirm with npm, then remove it if it is a placeholder.
+- Why: A stray version in `versions` can confuse tools that read the registry.
+
+## Triage the failing `scripts/` freeze and budget suites
+- Review (plan 224 Task 10, 2026-11-12): failing before plan 224's versioning change too.
+- Section: Further Actions
+- Priority: P2
+- Source: plans/224-Phase-11-Part-AJ-Release-0.13.0-Package-Consolidation-Seven-Bundles-And-Publish.md
+- What: These fail with the original versioning config: phase11, phase13, phase15, phase18, phase21, phase27, phase29 and phase34 freezes, the benchmark scenario, the budget gate, and `phase30 release` ("workflow publishes v0.3.0 once"). The verify chain does not run them.
+- Why: They are not evidence against 0.13.0, but they are unchecked gates. Each needs an owner-visible decision: fix, retire, or move into the chain.
+
+## Release the independent bundles on their own tags
+- Review (plan 224 Task 10, 2026-11-12): operational note.
+- Section: Further Actions
+- Priority: P3
+- Source: plans/224-Phase-11-Part-AJ-Release-0.13.0-Package-Consolidation-Seven-Bundles-And-Publish.md
+- What: `@arnilo/prism-ai`, `@arnilo/prism-tools` and `@arnilo/prism-extensions` are on their own version lines from 0.13.0. Each release tags `@arnilo/<bundle>@<version>`, and `release.yml` already matches that pattern. `@arnilo/prism-hosts` stays with the kernel.
+- Why: A lockstep `v*` tag no longer publishes these three.
+
+## Make the Ollama Cloud journey's thinking replay meaningful
+- Review (plan 224 Task 10, 2026-11-12): from the live evidence.
+- Section: Further Actions
+- Priority: P3
+- Source: docs/_evidence/live-release-acceptance-0.13.0.md
+- What: `release/journey-ollama-cloud` runs on `gemma4:31b`, which produces no thinking, so its scenario 2 replay leg checks nothing. Pick a route or model that produces thinking.
+- Why: The leg passes without testing the replay, which is the behavior it exists to check.
+
+## HostUi.kinds capability declaration
+- Review (plan 215 Task 29): carried from plan 215.
+- Section: Further Actions
+- Priority: P3
+- Source: plans/215-Phase-11-Part-AI-Release-0.13.0-Experimental-Memory-Host-Adoption-Cache-Parity-Freeze-Acceptance-And-Publish.md
+- What: A host declares the request kinds it implements, so a package can pick a fallback before asking instead of after an `unavailable`. It is an optional member and can ship in a minor release.
+- Why: Lets a package avoid a round trip that is known to fail.

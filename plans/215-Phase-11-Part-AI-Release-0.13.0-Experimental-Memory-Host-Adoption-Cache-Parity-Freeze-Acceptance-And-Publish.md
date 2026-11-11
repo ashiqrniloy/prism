@@ -3317,9 +3317,10 @@ OpenRouter never uses `openrouter/free` or `openrouter/auto` for parity. Prism r
 
 ## Compromises Made
 
-- To be filled after tasks are completed and tests pass.
+- Task 39 moved to plan 224 Task 10 and executed there: 0.13.0 published 2026-11-11; deprecations declined by the owner 2026-11-12. The live scope and the Ollama Cloud cache verdict are recorded in `docs/_evidence/live-release-acceptance-0.13.0.md`.
+- Nine memory and kernel files edited after candidate `2cd2b553` are not in 0.13.0 (plan 224 Task 10 notes).
 
 ## Further Actions
 
-- To be filled after task completion with improvements, rationale, and priority.
+- Carried to `plans/backlog.md` from plan 224 Task 10: the release snapshot decision, the `latest` tag on the experimental names, the deprecations, the `0.0.0-stage` version, and the failing `scripts/` suites.
 - **`HostUi.kinds` capability declaration** (from Task 29, priority low): a host declares the request kinds it implements, so a package can pick a fallback before asking instead of after an `unavailable`. It is an optional member, so it ships in a minor release under Task 28's rules; `docs/compatibility.md` "Extension and configuration notes" already says so.
