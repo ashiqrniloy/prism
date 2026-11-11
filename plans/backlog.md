@@ -1496,7 +1496,7 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Section: Further Actions
 - Priority: P2
 - Source: plans/224-Phase-11-Part-AJ-Release-0.13.0-Package-Consolidation-Seven-Bundles-And-Publish.md
-- What: These fail with the original versioning config: phase11, phase13, phase15, phase18, phase21, phase27, phase29 and phase34 freezes, the benchmark scenario, the budget gate, and `phase30 release` ("workflow publishes v0.3.0 once"). The verify chain does not run them.
+- What: These fail with the original versioning config: phase11, phase13, phase15, phase18, phase21, phase27, phase29 and phase34 freezes, the benchmark scenario, the budget gate, and `phase30 release` ("workflow publishes v0.3.0 once"). The verify chain does not run them. The phase20, phase21, phase26 and phase27 freeze files and `src/__tests__/docs.test.ts` also have 23 failing tests that fail the same way before the roadmap and changelog edits of plan 224 Task 10.
 - Why: They are not evidence against 0.13.0, but they are unchecked gates. Each needs an owner-visible decision: fix, retire, or move into the chain.
 
 ## Release the independent bundles on their own tags
